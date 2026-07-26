@@ -61,7 +61,7 @@ jobs:
           "$RUNNER_TEMP/installed/bin/python" -m pip install --disable-pip-version-check --no-deps "$RUNNER_TEMP"/wheel/*.whl
 
       - name: Installed CLI smoke
-        run: "$RUNNER_TEMP/installed/bin/supportability-gate" --help
+        run: '"$RUNNER_TEMP/installed/bin/supportability-gate" --help'
 
       - name: Standard integrity
         run: python -m pytest -q tests/test_evaluate_complexity.py::test_standard_hash_change_fails_source_validation
