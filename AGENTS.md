@@ -96,6 +96,31 @@ Stop condition:
   evidence required by the Milestone 1 directive.
 - Do not claim full Supportability Standard runtime while any required milestone remains incomplete.
 
+## Active milestone control
+
+Before editing:
+
+1. Identify the single milestone marked `In progress` in the
+   [Supportability Gate Delivery](https://github.com/orgs/mbh-solutions/projects/2) project.
+2. Read its milestone issue completely.
+3. State:
+   - terminal capability;
+   - direct evidence requirement;
+   - approved scope;
+   - excluded scope;
+   - single next action;
+   - stopping condition.
+4. Do not work on another milestone.
+5. Do not add packages, tooling, cleanup, documentation, architecture, or abstractions not required
+   by the active milestone.
+6. Stop when the terminal capability and required evidence are achieved.
+7. Do not mark Evidence complete without direct proof.
+8. Do not close the milestone until:
+   - Evidence is Complete;
+   - Scope is On scope;
+   - Stop confirmed is Yes.
+9. Do not automatically begin the next milestone.
+
 ## Required source proof
 
 Run all commands with Python 3.12 and exact lock:
