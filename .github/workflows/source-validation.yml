@@ -1,0 +1,73 @@
+name: Supportability Gate Source Validation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-validation:
+    name: Source Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pycache
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install exact dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
+          python -m pip install --disable-pip-version-check --no-build-isolation --no-deps -e .
+
+      - name: Ruff lint
+        run: python -m ruff check src tests --no-cache
+
+      - name: Ruff format
+        run: python -m ruff format --check src tests --no-cache
+
+      - name: Ruff C901
+        run: python -m ruff check src --select C901 --config "lint.mccabe.max-complexity = 10" --no-cache
+
+      - name: Mypy strict
+        run: python -m mypy --strict src
+
+      - name: Import boundaries
+        run: lint-imports --no-cache
+
+      - name: Pytest
+        run: python -m pytest -q
+
+      - name: Compileall
+        run: python -m compileall -q src tests
+
+      - name: Build wheel
+        run: python -m build --wheel --no-isolation --outdir "$RUNNER_TEMP/wheel"
+
+      - name: Install wheel in fresh environment
+        run: |
+          python -m venv "$RUNNER_TEMP/installed"
+          "$RUNNER_TEMP/installed/bin/python" -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
+          "$RUNNER_TEMP/installed/bin/python" -m pip install --disable-pip-version-check --no-deps "$RUNNER_TEMP"/wheel/*.whl
+
+      - name: Installed CLI smoke
+        run: "$RUNNER_TEMP/installed/bin/supportability-gate" --help
+
+      - name: Standard integrity
+        run: python -m pytest -q tests/test_evaluate_complexity.py::test_standard_hash_change_fails_source_validation
+
+      - name: Complete change whitespace except immutable standard
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "$BASE_SHA" "$HEAD_SHA" -- . ":(exclude)docs/supportability_standard.md"

@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools==83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supportability-gate"
+version = "0.1.0"
+description = "Deterministic supportability policy evidence for pull-request changes"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "mccabe==0.7.0",
+    "ruff==0.16.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build==1.5.0",
+    "import-linter==2.13",
+    "mypy==2.3.0",
+    "pip-tools==7.6.0",
+    "pytest==9.1.1",
+]
+
+[project.scripts]
+supportability-gate = "supportability_gate.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.importlinter]
+root_package = "supportability_gate"
+
+[[tool.importlinter.contracts]]
+name = "Supportability gate dependency direction"
+type = "layers"
+layers = [
+    "supportability_gate.__main__",
+    "supportability_gate.cli",
+    "supportability_gate.reporting",
+    "supportability_gate.complexity_policy",
+    "supportability_gate.complexity_metrics",
+    "supportability_gate.function_changes",
+    "supportability_gate.contract | supportability_gate.git_changes",
+]

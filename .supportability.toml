@@ -1,0 +1,8 @@
+schema_version = "1.0"
+language = "python"
+production_paths = ["src"]
+high_risk_paths = []
+
+[complexity]
+adapter = "python.c901-touched.v1"
+maximum = 10
