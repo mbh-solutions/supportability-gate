@@ -11,6 +11,10 @@ without importing or executing target repository code.
 - Maximum complexity: `10`
 - Full Supportability Standard implementation: incomplete
 
+Delivery state and milestone evidence are tracked in the
+[Supportability Gate Delivery](https://github.com/orgs/mbh-solutions/projects/2) organization
+project.
+
 ## Requirements
 
 - Python `>=3.12,<3.13`
