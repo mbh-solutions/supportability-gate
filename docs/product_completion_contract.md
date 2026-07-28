@@ -26,8 +26,25 @@ direct runtime proof.
 
 ## Successor enforcement ledger
 
-- Enforcement Milestone 1: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
-  `Not reached`.
+- Enforcement Milestone 1: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 1 evidence:
+  - Inventory commit `b271efa0f42cc85fff1132d439fd8021a35883ba` maps 218 normative source
+    statements with stable IDs, explicit applicability, owners, evidence, and executable test
+    linkage. Immutable standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Pull request #27 protected-merged base `4e27c287783c8c6e4c4a59527633ddf866be6091`
+    and head `b271efa0f42cc85fff1132d439fd8021a35883ba` as
+    `7dfd6046571533feb2a3c4620218a2b743304188`.
+  - Source Validation run `30396069668`, job/check `90399155198`, and organization-required
+    Supportability Gate run `30396069559`, job/check `90399156619`, succeeded through GitHub
+    Actions App ID `15368`. Active source-protection ruleset: `19767613`.
+  - Python `3.12.13` exact-lock proof passed: Ruff lint/format, C901 maximum 10, strict mypy,
+    Import Linter, 59 pytest tests, compileall, wheel build, fresh exact-lock install, installed CLI
+    help, immutable-standard tamper test, and exact-range whitespace validation.
+  - Merged-main direct canaries proved a 218-clause mapping passes while omitted clause, missing
+    owner, unsupported not-applicable result, missing evidence, absent blocking test, and standard
+    hash mismatch each block with its dedicated deterministic code.
+- Enforcement Milestone 1 remaining work: None. Stop; Milestone 2 is not authorized.
 - Enforcement Milestones 2–11: `NOT_STARTED`; not authorized.
 - Current directive: `docs/enforcement_milestone_1.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
@@ -241,7 +258,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: Enforcement Milestone 1 only
+Current authorized work: None — Enforcement Milestone 1 complete; stop
 Next milestone authorized: NO — Enforcement Milestones 2–11 remain Not started
 ```
 
