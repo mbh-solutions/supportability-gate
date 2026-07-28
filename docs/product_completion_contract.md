@@ -68,10 +68,38 @@ direct runtime proof.
     contracts, 95 tests, compileall, wheel build/fresh install/help, immutable-hash canary, and
     source whitespace validation.
 - Enforcement Milestone 2 remaining work: None. Stop; Milestone 3 is not authorized.
-- Enforcement Milestone 3: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
-  `Not reached`.
-- Enforcement Milestone 3 evidence: Pending direct implementation and runtime proof.
-- Enforcement Milestone 3 remaining work: Entire milestone.
+- Enforcement Milestone 3: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 3 evidence:
+  - Implementation PR #31 normally protected-merged exact head
+    `578e7e91e8d489cb7d5ecbb5b213df0fc1686a75` as
+    `c51c20784c6c184fbd894080df41c234aa970417` after Source Validation check
+    `90422892612`, Supportability Gate check `90422892342`, and App-owned semantic check
+    `90422970649` succeeded.
+  - Python 3.12.12 exact-lock proof passed Ruff lint/format, C901 maximum 10, strict mypy,
+    both import contracts, 109 tests, compileall, wheel build, fresh exact-lock install,
+    installed CLI help, immutable-standard tamper test, and exact-range whitespace validation.
+    Exact-head self-evaluation passed twice with byte-identical JSON SHA-256
+    `fd4bff725184d6a69e92a236a110ecf085cb2bc62f86ae96248b5c030e87b60b`.
+  - Active organization ruleset `19929500` pins the merged workflow SHA to retained Python and
+    TypeScript proof repositories. Active repository rulesets `19929504` and `19929505` require
+    strict `Supportability Gate` from App ID `15368` and `Supportability Semantic Review` from
+    App ID `4418989`, with zero bypass actors.
+  - Clean Python PR #1 head `cd7757fb6792e64486f172acbcaf272c388c8643` passed checks
+    `90424256699` and `90424303582` and normally merged as
+    `78f008f23e979500d21e192074d310cf329d57fd`. Clean TypeScript PR #1 head
+    `361c3c566bd9da9684566bd10205587fb12a746d` passed checks `90424263599` and
+    `90424333471` and normally merged as `94102d78492bd98f8a1ebcab60cb6b31991ae658`.
+  - Protected blocking canaries proved Python complexity 11 in PR #2/check `90424533460`,
+    non-improving legacy complexity 12 in PR #3/check `90424759349`, threshold weakening in
+    PR #4/check `90425474745`, TypeScript over-limit extraction complexity 11 in PR #2/check
+    `90424539104`, and semantic vague-helper extraction in Python PR #5/check `90424881051`.
+    Normal merges were rejected by base policy; all failed canary PRs were closed unmerged and
+    their branches deleted.
+  - The installed scheduled semantic runtime remains enabled on exact model `gpt-5.6-sol`, exact
+    base URL `http://127.0.0.1:8317/v1/responses`, rubric `complexity-anti-gaming.v1`, and schema
+    `semantic-review.v1`. The immutable standard SHA-256 remains
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement Milestone 3 remaining work: None. Stop; Milestone 4 is not authorized.
 - Enforcement Milestones 4–11: `NOT_STARTED`; not authorized.
 - Current directive: `docs/enforcement_milestone_3.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
@@ -285,7 +313,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: Enforcement Milestone 3
+Current authorized work: None — Enforcement Milestone 3 is complete
 Next milestone authorized: NO — Enforcement Milestones 4–11 remain Not started
 ```
 
