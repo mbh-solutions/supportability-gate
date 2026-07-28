@@ -126,9 +126,42 @@ workflow, check-run, ruleset, or GitHub state supports them.
 - Capability: Apply the organization required workflow to one temporary target repository.
 - Required runtime proof: Direct GitHub proof that the required workflow runs on pull-request
   changes and blocks merge when its required result fails.
-- Current status: `NOT_STARTED`
-- Verified evidence: None recorded.
-- Remaining work: Entire milestone; no owner-authorized execution directive.
+- Current status: `COMPLETE`
+- Verified evidence:
+  - Native organization ruleset capability returned HTTP `200` from
+    `GET /orgs/mbh-solutions/rulesets`; existing organization workflow rule `19746254` confirmed
+    rule type `workflows` before activation.
+  - Final workflow implementation commit: `5a8c5d161b5abd383cc2df7b038bf66fabe8d1e6`;
+    protected merge commit: `e72d7a1e62a21278d68ce92f6b657ddaa51e0faa`; pull request #13.
+    Exact implementation-head runs `30381201862` and `30381201873` succeeded through workflow IDs
+    `320787297` and `322361049`, job/check-run IDs `90349205989` and `90349205908`, contexts
+    `Source Validation` and `Supportability Gate`, and GitHub Actions App ID `15368`.
+  - Python `3.12.13` exact-lock proof passed at the implementation head: Ruff lint and format;
+    C901 at maximum 10; strict mypy; Import Linter; 52 pytest tests; compileall; wheel build; fresh
+    environment wheel install; installed `supportability-gate --help`; immutable-standard tamper
+    test; and exact-range whitespace validation excluding only the immutable standard.
+  - Temporary target repository `mbh-solutions/supportability-gate-m4-proof-20260728`, repository ID
+    `1315235523`, was initialized at `3f0d32b35e4268a2981a5a70728b94eee0b9954d` and retained for
+    independently verifiable evidence.
+  - Active organization ruleset `19913103` targets only that repository's `main`, has no bypass
+    actors, and pins `.github/workflows/organization-required.yml` from source repository ID
+    `1312412529` at `e72d7a1e62a21278d68ce92f6b657ddaa51e0faa`. Repository-only rulesets
+    were empty and legacy branch protection returned HTTP `404`, so enforcement is the native
+    organization workflow rule rather than a repository lookalike.
+  - Passing target pull request #1 ran the native workflow at exact head
+    `68ae2117d0a330a54c187727e65f0e419193e861`; run `30381513391`, workflow ID `322364809`, and
+    job/check-run `90350223702` succeeded as context `Supportability Gate` from GitHub Actions App
+    ID `15368`. The protected merge then succeeded as `0798dadd8e115ccbd69a16cacc69cb2e55c0bbfe`.
+  - Failing target pull request #2 ran the same native workflow at exact head
+    `b268d9ae7f06506b5d193b4fc09b89dbb81afe05`; run `30381622786`, workflow ID `322364809`, and
+    job/check-run `90350587650` failed as context `Supportability Gate` from GitHub Actions App ID
+    `15368`. Authoritative evidence reported complexity 11, decision `BLOCK`, and overall `BLOCK`.
+    A normal merge attempt exited 1 because base-branch policy prohibited the merge. The pull
+    request was closed unmerged and its branch deleted; only remote `main` remains.
+  - No production file, threshold, approved adapter, gate scope, or highest-risk-file coverage
+    changed. The workflow is directly covered by successful source and target GitHub execution;
+    all existing Python production and highest-risk files remain inside every approved source gate.
+- Remaining work: None for Milestone 4. Stop; Milestone 5 is not authorized.
 
 ### 5. TWMN adoption with clean, defect, gate-weakening, and scope-narrowing canaries.
 
@@ -144,7 +177,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 ```text
 Deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Milestone 3 complete; stop
+Current authorized work: None — Milestone 4 complete; stop
 Next milestone authorized: NO
 ```
 
