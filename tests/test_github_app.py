@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import urllib.error
 from typing import Any
@@ -10,7 +11,21 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from supportability_gate.github_app import CHECK_NAME, GitHubApp, app_jwt
-from supportability_gate.semantic_review import EvidencePacket, SemanticReviewError
+from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
+
+CONTRACT = b"""schema_version = "1.0"
+language = "python"
+production_paths = ["src"]
+high_risk_paths = []
+
+[[gates]]
+adapter = "python.c901-touched.v1"
+paths = ["src"]
+
+[complexity]
+adapter = "python.c901-touched.v1"
+maximum = 10
+"""
 
 
 class _Reply:
@@ -43,6 +58,20 @@ def _private_key() -> bytes:
 
 def _decode(segment: str) -> object:
     return json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
+
+
+def _blob_sha(content: bytes) -> str:
+    return hashlib.sha1(
+        f"blob {len(content)}\0".encode() + content, usedforsecurity=False
+    ).hexdigest()
+
+
+def _blob_payload(content: bytes) -> dict[str, str]:
+    return {
+        "content": base64.b64encode(content).decode(),
+        "encoding": "base64",
+        "sha": _blob_sha(content),
+    }
 
 
 def test_app_jwt_binds_app_and_short_lifetime() -> None:
@@ -115,12 +144,32 @@ def test_replay_truncation_blocks() -> None:
 
 def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     requests: list[Any] = []
+    source = b"def safe():\n    return 1\n"
+    source_sha = _blob_sha(source)
+    contract_sha = _blob_sha(CONTRACT)
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
+        if "/contents/.supportability.toml" in request.full_url:
+            return _Reply({"sha": contract_sha})
+        if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
+            return _Reply(_blob_payload(CONTRACT))
+        if request.full_url.endswith(f"/git/blobs/{source_sha}"):
+            return _Reply(_blob_payload(source))
         if "/compare/" in request.full_url:
             if request.get_header("Accept") != "application/vnd.github.v3.diff":
-                return _Reply({"files": [{}]})
+                return _Reply(
+                    {
+                        "files": [
+                            {
+                                "filename": "src/a.py",
+                                "patch": "@@ -1 +1,2 @@\n+def safe():\n+    return 1",
+                                "sha": source_sha,
+                                "status": "modified",
+                            }
+                        ]
+                    }
+                )
             return _RawReply("diff --git a/src/a.py b/src/a.py\n+safe")
         body = json.loads(request.data)
         return _Reply({"app": {"id": 42}, "head_sha": body["head_sha"], "id": 99})
@@ -138,6 +187,32 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     assert payload["name"] == CHECK_NAME
     assert payload["head_sha"] == "b" * 40
     assert packet.sha256 in payload["output"]["summary"]
+    assert packet.evidence["reviewed_sources"] == [
+        {
+            "blob_sha": source_sha,
+            "boundaries": [{"end_line": 2, "kind": "function", "name": "safe", "start_line": 1}],
+            "line_count": 2,
+            "lines": [
+                {"line": 1, "text": "def safe():"},
+                {"line": 2, "text": "    return 1"},
+            ],
+            "path": "src/a.py",
+        }
+    ]
+
+
+def test_frontend_component_boundary_uses_complete_parser_span() -> None:
+    app = GitHubApp(42, 7, b"unused")
+    source = "export function SaveButton() {\n  const label = 'Save';\n  return <button>{label}</button>;\n}\n"
+    boundaries = app._source_boundaries(
+        "src/SaveButton.tsx",
+        source,
+        "@@ -2 +2 @@\n-  const label = 'Go';\n+  const label = 'Save';",
+    )
+    assert boundaries == [
+        {"end_line": 4, "kind": "component", "name": "SaveButton", "start_line": 1}
+    ]
+    assert [item["line"] for item in app._source_excerpt(source, boundaries)] == [1, 2, 3, 4]
 
 
 @pytest.mark.parametrize(
@@ -161,19 +236,39 @@ def test_incomplete_diff_evidence_blocks(diff: str) -> None:
 
 
 def test_binary_marker_inside_source_text_is_evidence() -> None:
-    diff = '+marker = "Binary files a/image.png and b/image.png differ"'
+    source = b'marker = "Binary files a/image.png and b/image.png differ"\n'
+    source_sha = _blob_sha(source)
+    contract_sha = _blob_sha(CONTRACT)
+    patch = '@@ -1 +1 @@\n+marker = "Binary files a/image.png and b/image.png differ"'
+    diff = f"diff --git a/src/a.py b/src/a.py\n{patch}"
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/contents/.supportability.toml" in request.full_url:
+            return _Reply({"sha": contract_sha})
+        if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
+            return _Reply(_blob_payload(CONTRACT))
+        if request.full_url.endswith(f"/git/blobs/{source_sha}"):
+            return _Reply(_blob_payload(source))
         if request.get_header("Accept") == "application/vnd.github.v3.diff":
             return _RawReply(diff)
-        return _Reply({"files": []})
+        return _Reply(
+            {
+                "files": [
+                    {
+                        "filename": "src/a.py",
+                        "patch": patch,
+                        "sha": source_sha,
+                        "status": "modified",
+                    }
+                ]
+            }
+        )
 
     app = GitHubApp(42, 7, b"unused", opener=open_request)
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
-    assert (
-        app.evidence_packet("mbh-solutions/supportability-gate", pull, "token").evidence["diff"]
-        == diff
-    )
+    packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+    assert packet.evidence["diff"] == "No candidate responsibility declaration changed."
+    assert packet.evidence["reviewed_sources"][0]["lines"][0]["text"] == source.decode().strip()
 
 
 def test_compare_file_limit_blocks_before_diff_fetch() -> None:
@@ -186,6 +281,69 @@ def test_compare_file_limit_blocks_before_diff_fetch() -> None:
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
         app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+
+
+def test_invalid_exact_head_source_blob_blocks() -> None:
+    contract_sha = _blob_sha(CONTRACT)
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/contents/.supportability.toml" in request.full_url:
+            return _Reply({"sha": contract_sha})
+        if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
+            return _Reply(_blob_payload(CONTRACT))
+        if "/git/blobs/" in request.full_url:
+            return _Reply({"content": "not-base64!", "encoding": "base64", "sha": "c" * 40})
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply("diff --git a/src/a.py b/src/a.py\n+safe")
+        return _Reply(
+            {
+                "files": [
+                    {
+                        "filename": "src/a.py",
+                        "patch": "@@ -1 +1 @@\n+safe",
+                        "sha": "c" * 40,
+                        "status": "modified",
+                    }
+                ]
+            }
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+
+
+def test_only_base_contract_production_paths_are_reviewed() -> None:
+    contract_sha = _blob_sha(CONTRACT)
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/contents/.supportability.toml" in request.full_url:
+            return _Reply({"sha": contract_sha})
+        if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
+            return _Reply(_blob_payload(CONTRACT))
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply("diff --git a/tests/test_a.py b/tests/test_a.py\n+test")
+        return _Reply(
+            {"files": [{"filename": "tests/test_a.py", "sha": "c" * 40, "status": "modified"}]}
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+    assert packet.evidence["reviewed_sources"] == []
+
+
+def test_removed_source_needs_no_outside_head_evidence() -> None:
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply("diff --git a/src/a.py b/src/a.py\n-deleted")
+        return _Reply({"files": [{"filename": "src/a.py", "sha": None, "status": "removed"}]})
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+    assert packet.evidence["reviewed_sources"] == []
 
 
 def test_check_response_from_wrong_app_blocks() -> None:

@@ -55,6 +55,9 @@ user-scoped scheduled task under `docs/enforcement_milestone_2.md`. Owner-author
 Enforcement Milestone 3 adds only Python and TypeScript touched-function complexity enforcement and
 its narrow vague-helper extraction rubric under `docs/enforcement_milestone_3.md`; no other
 exclusion is relaxed.
+Owner-authorized successor Enforcement Milestone 4 adds only exact-head Python and frontend source
+evidence plus its narrow responsibility-boundary rubric under `docs/enforcement_milestone_4.md`; no
+other exclusion is relaxed.
 
 ## Package dependency direction
 

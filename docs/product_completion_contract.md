@@ -100,8 +100,12 @@ direct runtime proof.
     `semantic-review.v1`. The immutable standard SHA-256 remains
     `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
 - Enforcement Milestone 3 remaining work: None. Stop; Milestone 4 is not authorized.
-- Enforcement Milestones 4–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_3.md`.
+- Enforcement Milestone 4: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
+  `Not reached`.
+- Enforcement Milestone 4 evidence: Pending direct implementation and runtime proof.
+- Enforcement Milestone 4 remaining work: Entire milestone.
+- Enforcement Milestones 5–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_4.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -313,8 +317,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 3 is complete
-Next milestone authorized: NO — Enforcement Milestones 4–11 remain Not started
+Current authorized work: Enforcement Milestone 4
+Next milestone authorized: NO — Enforcement Milestones 5–11 remain Not started
 ```
 
 ## Milestone transition rules

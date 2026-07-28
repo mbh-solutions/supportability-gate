@@ -44,6 +44,16 @@ class FunctionSpan:
 
 
 @dataclass(frozen=True)
+class ResponsibilitySpan:
+    """One changed function, module, or frontend-component boundary."""
+
+    start_line: int
+    end_line: int
+    kind: str
+    name: str
+
+
+@dataclass(frozen=True)
 class FunctionDefinition:
     """A function span bound to its parsed AST node."""
 
@@ -241,6 +251,49 @@ def parse_typescript_file(path: str, content: bytes) -> ParsedSourceFile:
     collector = _TypeScriptFunctionCollector(path, content)
     collector.visit(tree.root_node)
     return ParsedSourceFile(path, content, _unique_functions(path, collector.functions))
+
+
+def _line_spans(lines: set[int]) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    for line in sorted(lines):
+        if not spans or line > spans[-1][1] + 1:
+            spans.append((line, line))
+        else:
+            spans[-1] = (spans[-1][0], line)
+    return spans
+
+
+def responsibility_spans(
+    path: str, content: bytes, changed_lines: set[int]
+) -> tuple[ResponsibilitySpan, ...]:
+    """Map changed lines to exact parser-derived responsibility spans."""
+    parsed = (
+        parse_python_file(path, content)
+        if path.endswith(".py")
+        else parse_typescript_file(path, content)
+    )
+    touched = tuple(
+        item.span
+        for item in parsed.functions
+        if changed_lines.intersection(range(item.span.start_line, item.span.end_line + 1))
+    )
+    boundaries = [
+        ResponsibilitySpan(
+            span.start_line,
+            span.end_line,
+            "component"
+            if not path.endswith(".py") and span.qualified_name.rsplit(".", 1)[-1][:1].isupper()
+            else "function",
+            span.qualified_name,
+        )
+        for span in touched
+    ]
+    covered = {line for span in touched for line in range(span.start_line, span.end_line + 1)}
+    module_spans = (
+        _line_spans(changed_lines - covered) if changed_lines else [(1, len(content.splitlines()))]
+    )
+    boundaries.extend(ResponsibilitySpan(start, end, "module", path) for start, end in module_spans)
+    return tuple(boundaries)
 
 
 def _deltas(

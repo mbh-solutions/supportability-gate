@@ -6,7 +6,23 @@ import argparse
 from pathlib import Path
 
 from supportability_gate.github_app import GitHubApp
-from supportability_gate.semantic_review import SemanticReviewError, call_responses
+from supportability_gate.responses_transport import request_response
+from supportability_gate.semantic_contract import SemanticReviewError, SemanticVerdict
+from supportability_gate.semantic_review import parse_response
+
+
+def _verdict_summary(verdict: SemanticVerdict) -> str:
+    """Render resolvable ownership evidence for the GitHub check summary."""
+    lines = [verdict.verdict]
+    for item in verdict.boundaries:
+        lines.append(
+            f"{item.path}:{item.start_line}-{item.end_line} {item.kind} {item.name} | "
+            f"owns: {item.owns} | does not own: {item.does_not_own}"
+        )
+    lines.extend(f"finding: {finding}" for finding in verdict.findings)
+    if not verdict.reviewed_paths:
+        lines.append("No changed Python or frontend boundary.")
+    return "\n".join(lines)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -25,7 +41,7 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         return replay
     check_id = app.start_check(packet, token)
     try:
-        verdict = call_responses(packet)
+        verdict = parse_response(packet, request_response(packet))
         pull_number = packet.evidence["pull_request"]
         if not isinstance(pull_number, int):
             raise SemanticReviewError("MALFORMED_PULL_REQUEST")
@@ -34,9 +50,9 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         app.complete_check(packet, token, check_id, "failure", f"TECHNICAL_FAILURE: {error.code}")
         return False
     if verdict.verdict == "PASS":
-        app.complete_check(packet, token, check_id, "success", "PASS")
+        app.complete_check(packet, token, check_id, "success", _verdict_summary(verdict))
         return True
-    app.complete_check(packet, token, check_id, "failure", "BLOCK: " + "; ".join(verdict.findings))
+    app.complete_check(packet, token, check_id, "failure", _verdict_summary(verdict))
     return False
 
 

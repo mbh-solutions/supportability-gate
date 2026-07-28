@@ -7,35 +7,82 @@ import urllib.error
 
 import pytest
 
-from supportability_gate.semantic_review import (
+from supportability_gate.responses_transport import request_response
+from supportability_gate.semantic_cli import _verdict_summary
+from supportability_gate.semantic_contract import (
     MODEL,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
     STANDARD_SHA256,
     EvidencePacket,
     SemanticReviewError,
-    call_responses,
-    parse_response,
     request_payload,
 )
+from supportability_gate.semantic_review import parse_response
+
+PYTHON_PATH = "src/sample.py"
+PYTHON_SOURCE = "def parse_input(value: str) -> str:\n    return value.strip()\n"
+PYTHON_BOUNDARY = {
+    "path": PYTHON_PATH,
+    "start_line": 1,
+    "end_line": 2,
+    "kind": "function",
+    "name": "parse_input",
+    "owns": "Parsing one input value.",
+    "does_not_own": "Validation, persistence, logging, or presentation.",
+}
+
+
+def _reviewed_source(path: str, content: str, blob_sha: str) -> dict[str, object]:
+    name = "parse_input" if path.endswith(".py") else path.rsplit("/", 1)[-1].removesuffix(".tsx")
+    return {
+        "blob_sha": blob_sha,
+        "boundaries": [
+            {
+                "start_line": 1,
+                "end_line": len(content.splitlines()),
+                "kind": "function" if path.endswith(".py") else "component",
+                "name": name,
+            }
+        ],
+        "line_count": len(content.splitlines()),
+        "lines": [
+            {"line": number, "text": text}
+            for number, text in enumerate(content.splitlines(), start=1)
+        ],
+        "path": path,
+    }
 
 
 def _packet(evidence: dict[str, object] | None = None) -> EvidencePacket:
+    payload: dict[str, object] = {
+        "diff": "+def parse_input(value: str) -> str:",
+        "reviewed_sources": [_reviewed_source(PYTHON_PATH, PYTHON_SOURCE, "c" * 40)],
+    }
+    if evidence:
+        payload.update(evidence)
     return EvidencePacket(
         "mbh-solutions/supportability-gate",
         "a" * 40,
         "b" * 40,
         42,
-        evidence or {"diff": "small safe change"},
+        payload,
     )
 
 
 def _response(
-    packet: EvidencePacket, verdict: str = "PASS", findings: list[str] | None = None
+    packet: EvidencePacket,
+    verdict: str = "PASS",
+    findings: list[str] | None = None,
+    *,
+    reviewed_paths: list[str] | None = None,
+    boundaries: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     content = {
         "verdict": verdict,
         "findings": findings or [],
+        "reviewed_paths": reviewed_paths if reviewed_paths is not None else [PYTHON_PATH],
+        "boundaries": boundaries if boundaries is not None else [PYTHON_BOUNDARY],
         "app_id": packet.app_id,
         "repository": packet.repository,
         "base_sha": packet.base_sha,
@@ -75,6 +122,138 @@ def test_clean_fixture_passes_and_is_deterministic() -> None:
     second = parse_response(packet, _response(packet))
     assert first == second
     assert first.verdict == "PASS"
+    assert _verdict_summary(first).startswith("PASS\nsrc/sample.py:1-2 function parse_input")
+
+
+def test_evidence_packet_is_immutable_after_construction() -> None:
+    evidence = {"diff": "+safe", "reviewed_sources": []}
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, evidence)
+    digest = packet.sha256
+    evidence["diff"] = "+mutated"
+    packet.evidence["diff"] = "+also-mutated"
+    assert packet.evidence["diff"] == "+safe"
+    assert packet.sha256 == digest
+
+
+def test_focused_frontend_component_passes_with_line_evidence() -> None:
+    path = "src/SaveButton.tsx"
+    source = "export function SaveButton() {\n  return <button>Save</button>;\n}\n"
+    packet = _packet(
+        {
+            "diff": "+export function SaveButton()",
+            "reviewed_sources": [_reviewed_source(path, source, "d" * 40)],
+        }
+    )
+    boundary = {
+        "path": path,
+        "start_line": 1,
+        "end_line": 3,
+        "kind": "component",
+        "name": "SaveButton",
+        "owns": "Rendering one save action.",
+        "does_not_own": "Data loading, validation, state, domain rules, or client calls.",
+    }
+    verdict = parse_response(
+        packet,
+        _response(packet, reviewed_paths=[path], boundaries=[boundary]),
+    )
+    assert verdict.boundaries[0].path == path
+
+
+def test_non_source_change_passes_without_invented_boundary() -> None:
+    packet = EvidencePacket(
+        "mbh-solutions/supportability-gate",
+        "a" * 40,
+        "b" * 40,
+        42,
+        {"diff": "+documentation", "reviewed_sources": []},
+    )
+    verdict = parse_response(
+        packet,
+        _response(packet, reviewed_paths=[], boundaries=[]),
+    )
+    assert _verdict_summary(verdict) == "PASS\nNo changed Python or frontend boundary."
+
+
+@pytest.mark.parametrize(
+    "responsibilities",
+    [
+        "parsing and validation",
+        "validation and business rules",
+        "business rules and persistence",
+        "persistence and external calls",
+        "external calls and logging",
+        "logging and presentation",
+    ],
+)
+def test_mixed_responsibilities_block_with_line_evidence(responsibilities: str) -> None:
+    packet = _packet()
+    verdict = parse_response(
+        packet,
+        _response(
+            packet,
+            "BLOCK",
+            [f"{PYTHON_PATH}:1-2 mixes {responsibilities}."],
+        ),
+    )
+    assert verdict.verdict == "BLOCK"
+
+
+@pytest.mark.parametrize("claim", ["unsupported ownership claim", "vague boundary claim"])
+def test_unsupported_or_vague_candidate_claim_blocks(claim: str) -> None:
+    packet = _packet()
+    verdict = parse_response(
+        packet,
+        _response(packet, "BLOCK", [f"{PYTHON_PATH}:1-2 {claim}."]),
+    )
+    assert verdict.verdict == "BLOCK"
+
+
+@pytest.mark.parametrize(
+    ("defect", "code"),
+    [
+        ("missing_path", "MISSING_REVIEWED_PATHS"),
+        ("outside_head", "EVIDENCE_OUTSIDE_HEAD"),
+        ("unsupported_name", "UNSUPPORTED_OWNERSHIP_CLAIM"),
+        ("vague", "VAGUE_BOUNDARY"),
+        ("missing_boundary", "MISSING_BOUNDARY_EVIDENCE"),
+    ],
+)
+def test_invalid_responsibility_evidence_blocks(defect: str, code: str) -> None:
+    packet = _packet()
+    boundary = copy.deepcopy(PYTHON_BOUNDARY)
+    reviewed_paths = [PYTHON_PATH]
+    boundaries = [boundary]
+    if defect == "missing_path":
+        reviewed_paths = []
+    elif defect == "outside_head":
+        boundary["end_line"] = 3
+    elif defect == "unsupported_name":
+        boundary["name"] = "invented_boundary"
+    elif defect == "vague":
+        boundary["does_not_own"] = boundary["owns"]
+    else:
+        boundaries = []
+    with pytest.raises(SemanticReviewError, match=code):
+        parse_response(
+            packet,
+            _response(packet, reviewed_paths=reviewed_paths, boundaries=boundaries),
+        )
+
+
+def test_evidence_path_not_in_exact_head_blocks() -> None:
+    packet = _packet()
+    boundary = copy.deepcopy(PYTHON_BOUNDARY)
+    boundary["path"] = "src/outside.py"
+    with pytest.raises(SemanticReviewError, match="EVIDENCE_OUTSIDE_HEAD"):
+        parse_response(
+            packet,
+            _response(
+                packet,
+                reviewed_paths=[PYTHON_PATH, "src/outside.py"],
+                boundaries=[boundary],
+            ),
+        )
 
 
 def test_reasoning_item_before_message_is_allowed() -> None:
@@ -107,9 +286,9 @@ def test_untrusted_or_unavailable_model_results_block(defect: str, code: str) ->
     elif defect == "refusal":
         response["output"][0]["content"][0] = {"type": "refusal", "refusal": "no"}  # type: ignore[index]
     elif defect == "uncertain":
-        response = _response(packet, "UNCERTAIN", ["cannot determine"])
+        response = _response(packet, "UNCERTAIN", [f"{PYTHON_PATH}:1-2 cannot determine"])
     elif defect == "conflict":
-        response = _response(packet, "PASS", ["blocking defect"])
+        response = _response(packet, "PASS", [f"{PYTHON_PATH}:1-2 blocking defect"])
     elif defect == "hash":
         content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
         content["evidence_sha256"] = "0" * 64
@@ -137,7 +316,7 @@ def test_transport_failures_block(error: Exception, code: str) -> None:
         raise error
 
     with pytest.raises(SemanticReviewError, match=code):
-        call_responses(_packet(), opener=fail)
+        request_response(_packet(), opener=fail)
 
 
 @pytest.mark.parametrize(
@@ -153,6 +332,7 @@ def test_prompt_injection_stays_untrusted_data(injection: str) -> None:
     payload = request_payload(_packet({"diff": injection}))
     assert payload["tools"] == []
     assert payload["tool_choice"] == "none"
+    assert payload["reasoning"] == {"effort": "low"}
     assert injection in payload["input"]
     assert injection not in payload["instructions"]
     assert payload["text"]["format"]["strict"] is True
@@ -162,9 +342,10 @@ def test_complexity_anti_gaming_rubric_is_narrow_and_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "complexity-anti-gaming.v1"
+    assert RUBRIC_VERSION == "responsibility-boundaries.v1"
     assert "vaguely named production helpers" in payload["instructions"]
-    assert "broader separation of concerns" in payload["instructions"]
+    assert "separation of concerns" in payload["instructions"]
+    assert "candidate-provided responsibility declarations" in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()
 
 
@@ -179,7 +360,11 @@ def test_bound_vague_helper_verdict_blocks_python_and_typescript(diff: str) -> N
     packet = _packet({"diff": diff})
     verdict = parse_response(
         packet,
-        _response(packet, "BLOCK", ["Vague helper extraction hides complexity."]),
+        _response(
+            packet,
+            "BLOCK",
+            [f"{PYTHON_PATH}:1-2 Vague helper extraction hides complexity."],
+        ),
     )
 
     assert verdict.verdict == "BLOCK"
@@ -188,7 +373,9 @@ def test_bound_vague_helper_verdict_blocks_python_and_typescript(diff: str) -> N
 
 def test_live_shape_from_transport_passes() -> None:
     packet = _packet()
-    verdict = call_responses(packet, opener=lambda *args, **kwargs: _Reply(_response(packet)))
+    verdict = parse_response(
+        packet, request_response(packet, opener=lambda *args, **kwargs: _Reply(_response(packet)))
+    )
     assert verdict.verdict == "PASS"
 
 
