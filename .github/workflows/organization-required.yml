@@ -1,0 +1,57 @@
+name: Organization Required Supportability Gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  supportability-gate:
+    name: Supportability Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out target pull-request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: target
+
+      - name: Check out exact gate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install exact gate
+        run: |
+          python -m venv "$RUNNER_TEMP/gate-venv"
+          "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
+          "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --no-build-isolation --no-deps ./gate
+
+      - name: Evaluate immutable pull-request commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          set +e
+          "$RUNNER_TEMP/gate-venv/bin/python" -P -m supportability_gate evaluate-complexity \
+            --repository "$GITHUB_WORKSPACE/target" \
+            --base-ref "$BASE_SHA" \
+            --head-ref "$HEAD_SHA" \
+            --contract-path .supportability.toml \
+            --output-directory "$RUNNER_TEMP/evidence"
+          status=$?
+          cat "$RUNNER_TEMP/evidence/complexity-result.json"
+          exit "$status"
