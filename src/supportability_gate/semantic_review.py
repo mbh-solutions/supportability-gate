@@ -161,6 +161,15 @@ def _output_text(response: dict[str, Any]) -> str:
     return str(content[0]["text"])
 
 
+def _findings(data: dict[str, Any]) -> tuple[str, ...]:
+    findings = data.get("findings")
+    if not isinstance(findings, list) or any(
+        not isinstance(item, str) or not item for item in findings
+    ):
+        raise SemanticReviewError("MALFORMED_SCHEMA")
+    return tuple(findings)
+
+
 def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
     """Validate model identity, schema, bindings, certainty, and verdict consistency."""
     if not isinstance(response, dict):
@@ -174,11 +183,7 @@ def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
     expected = set(result_schema()["properties"])
     if not isinstance(data, dict) or set(data) != expected:
         raise SemanticReviewError("MALFORMED_SCHEMA")
-    findings = data["findings"]
-    if not isinstance(findings, list) or any(
-        not isinstance(item, str) or not item for item in findings
-    ):
-        raise SemanticReviewError("MALFORMED_SCHEMA")
+    findings = _findings(data)
     bindings = {
         "app_id": packet.app_id,
         "repository": packet.repository,
@@ -199,7 +204,7 @@ def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
         raise SemanticReviewError("CONFLICTING_VERDICT")
     return SemanticVerdict(
         verdict=verdict,
-        findings=tuple(findings),
+        findings=findings,
         app_id=packet.app_id,
         repository=packet.repository,
         base_sha=packet.base_sha,
