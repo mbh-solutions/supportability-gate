@@ -26,7 +26,7 @@ Before planning or editing, read:
 2. `docs/supportability_standard.md`
 3. `docs/fixed_roadmap.md`
 4. `docs/product_completion_contract.md`
-5. the owner-authorized active milestone execution directive
+5. `docs/enforcement_milestone_1.md` while Enforcement Milestone 1 is active
 
 Before editing, report:
 
@@ -101,7 +101,8 @@ Stop condition:
 Before editing:
 
 1. Identify the single milestone marked `In progress` in the
-   [Supportability Gate Delivery](https://github.com/orgs/mbh-solutions/projects/2) project.
+   [Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3)
+   project. Project #2 is historical and must not be changed.
 2. Read its milestone issue completely.
 3. State:
    - terminal capability;

@@ -1,0 +1,3246 @@
+{
+  "schema_version": "1.0",
+  "standard_sha256": "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2",
+  "clauses": [
+    {
+      "clause_id": "SS-0018",
+      "source_line": 18,
+      "statement": "Use this standard when asking an AI coding agent to build, refactor, clean up, package, or productionize code.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 18.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0026",
+      "source_line": 26,
+      "statement": "The AI must treat this standard as a pass/fail supportability standard.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 26.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0028",
+      "source_line": 28,
+      "statement": "The AI must not use feasibility language as an escape hatch.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 28.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0030",
+      "source_line": 30,
+      "statement": "If a required item is not completed, the AI must mark that item as failed or incomplete.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 30.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0032",
+      "source_line": 32,
+      "statement": "The AI must not convert a required item into an optional recommendation.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 32.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0034",
+      "source_line": 34,
+      "statement": "The AI must not claim completion when required evidence is missing.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 34.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0040",
+      "source_line": 40,
+      "statement": "Use this standard for:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 40.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0042",
+      "source_line": 42,
+      "statement": "* New features",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 42.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0043",
+      "source_line": 43,
+      "statement": "* Refactoring",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 43.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0044",
+      "source_line": 44,
+      "statement": "* Legacy code cleanup",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 44.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0045",
+      "source_line": 45,
+      "statement": "* Package/runtime changes",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 45.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0046",
+      "source_line": 46,
+      "statement": "* CLI or wrapper changes",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 46.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0047",
+      "source_line": 47,
+      "statement": "* Architecture cleanup",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 47.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0048",
+      "source_line": 48,
+      "statement": "* Test hardening",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 48.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0049",
+      "source_line": 49,
+      "statement": "* Repo maintainability work",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 49.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0050",
+      "source_line": 50,
+      "statement": "* AI-generated code review",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task matches the listed build, refactor, maintenance, or review type."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 50.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0052",
+      "source_line": 52,
+      "statement": "Do not use the full standard for very small tasks such as:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 52.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0054",
+      "source_line": 54,
+      "statement": "* Renaming one variable",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 54.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0055",
+      "source_line": 55,
+      "statement": "* Fixing a typo",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 55.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0056",
+      "source_line": 56,
+      "statement": "* Explaining an error message",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 56.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0057",
+      "source_line": 57,
+      "statement": "* Adding one log line",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 57.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0058",
+      "source_line": 58,
+      "statement": "* Making a small documentation edit",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 58.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0060",
+      "source_line": 60,
+      "statement": "For small tasks, use this shorter instruction:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 60.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0062",
+      "source_line": 62,
+      "statement": "> Follow the Supportability Standard where relevant. Keep the change small, preserve behavior, avoid vague helpers, and validate the result.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is small enough for the shortened instruction."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 62.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0068",
+      "source_line": 68,
+      "statement": "Do not accept “the code runs” as the only success condition.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 68.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0070",
+      "source_line": 70,
+      "statement": "A good AI-generated change must also be:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 70.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0072",
+      "source_line": 72,
+      "statement": "* understandable",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 72.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0073",
+      "source_line": 73,
+      "statement": "* modular",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 73.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0074",
+      "source_line": 74,
+      "statement": "* testable",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 74.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0075",
+      "source_line": 75,
+      "statement": "* reviewable",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 75.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0076",
+      "source_line": 76,
+      "statement": "* behavior-preserving",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 76.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0077",
+      "source_line": 77,
+      "statement": "* low-risk",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 77.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0078",
+      "source_line": 78,
+      "statement": "* validated",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 78.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0080",
+      "source_line": 80,
+      "statement": "The minimum standard is:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 80.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0083",
+      "source_line": 83,
+      "statement": "C901 improvement + boundary improvement + behavior proof",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 83.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0086",
+      "source_line": 86,
+      "statement": "Additional required proof:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 86.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0089",
+      "source_line": 89,
+      "statement": "gate coverage proof",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 89.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0092",
+      "source_line": 92,
+      "statement": "The AI must prove that the validation gates cover the files that were changed and the highest-risk production files in the repo.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 92.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0100",
+      "source_line": 100,
+      "statement": "Lowering complexity alone is not enough. An AI agent can pass C901 by chopping one messy function into several badly named helper functions. That lowers the metric while leaving the repo just as messy.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Supportability Standard is invoked."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 100.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0120",
+      "source_line": 120,
+      "statement": "Keep McCabe/cyclomatic complexity under 10 per touched production function.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 120.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0122",
+      "source_line": 122,
+      "statement": "Do not reduce complexity by creating vague helper functions.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 122.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0124",
+      "source_line": 124,
+      "statement": "For legacy code that starts above 10, use progressive tightening:",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 124.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0126",
+      "source_line": 126,
+      "statement": "* No new or extracted production function may exceed 10.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 126.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0127",
+      "source_line": 127,
+      "statement": "* Touched legacy functions must move lower than their starting complexity.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 127.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0128",
+      "source_line": 128,
+      "statement": "* A temporary ceiling must be labeled as temporary.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 128.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0129",
+      "source_line": 129,
+      "statement": "* New modules must be designed for the final ceiling of 10, not for a temporary ceiling.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 129.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0130",
+      "source_line": 130,
+      "statement": "* Do not weaken global gate settings to make the change pass.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 130.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0131",
+      "source_line": 131,
+      "statement": "* The completion report must show starting complexity, ending complexity, remaining gap, and next target.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 131.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0155",
+      "source_line": 155,
+      "statement": "The touched function should be easier to read, easier to test, and easier to name after the refactor.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 155.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0157",
+      "source_line": 157,
+      "statement": "For legacy functions that remain above 10 after a pass, the AI must report the exact remaining functions, current complexity values, why they remain, and the next extraction target. The AI must not describe the complexity gate as satisfied until the configured gate covers the relevant files and the reported values meet the active target.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
+      },
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 157.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0165",
+      "source_line": 165,
+      "statement": "Each function, file, or module should have one clear job.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 165.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0167",
+      "source_line": 167,
+      "statement": "Parsing, validation, business rules, file access, logging, CLI output, and packaging behavior should not all be tangled together.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 167.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0175",
+      "source_line": 175,
+      "statement": "Split code along real responsibility boundaries:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 175.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0177",
+      "source_line": 177,
+      "statement": "* parsing",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 177.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0178",
+      "source_line": 178,
+      "statement": "* validation",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 178.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0179",
+      "source_line": 179,
+      "statement": "* business rules",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 179.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0180",
+      "source_line": 180,
+      "statement": "* orchestration",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 180.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0181",
+      "source_line": 181,
+      "statement": "* transformation",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 181.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0182",
+      "source_line": 182,
+      "statement": "* persistence",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 182.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0183",
+      "source_line": 183,
+      "statement": "* external API calls",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 183.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0184",
+      "source_line": 184,
+      "statement": "* configuration",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 184.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0185",
+      "source_line": 185,
+      "statement": "* error handling",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 185.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0186",
+      "source_line": 186,
+      "statement": "* logging",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 186.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0187",
+      "source_line": 187,
+      "statement": "* CLI/UI presentation",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 187.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0188",
+      "source_line": 188,
+      "statement": "* tests",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 188.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0192",
+      "source_line": 192,
+      "statement": "Another engineer should be able to answer:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 192.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0195",
+      "source_line": 195,
+      "statement": "What is this file responsible for?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 195.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0196",
+      "source_line": 196,
+      "statement": "What does this function own?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 196.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0197",
+      "source_line": 197,
+      "statement": "What does this module not own?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 197.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0200",
+      "source_line": 200,
+      "statement": "If the answer is unclear, the boundary is still weak.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates or modifies a function, file, module, or component boundary."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 200.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0204",
+      "source_line": 204,
+      "statement": "For frontend codebases, apply the same supportability rules.",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 204.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0206",
+      "source_line": 206,
+      "statement": "A large React, Vue, Svelte, Angular, or route/page component is the same supportability problem as a large backend script.",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 206.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0208",
+      "source_line": 208,
+      "statement": "Frontend code must separate:",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 208.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0210",
+      "source_line": 210,
+      "statement": "* route/page composition",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 210.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0211",
+      "source_line": 211,
+      "statement": "* data loading",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 211.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0212",
+      "source_line": 212,
+      "statement": "* query parsing",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 212.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0213",
+      "source_line": 213,
+      "statement": "* state management",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 213.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0214",
+      "source_line": 214,
+      "statement": "* rendering",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 214.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0215",
+      "source_line": 215,
+      "statement": "* form handling",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 215.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0216",
+      "source_line": 216,
+      "statement": "* validation",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 216.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0217",
+      "source_line": 217,
+      "statement": "* domain/business rules",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 217.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0218",
+      "source_line": 218,
+      "statement": "* reusable UI components",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 218.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0219",
+      "source_line": 219,
+      "statement": "* API/client calls",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 219.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0221",
+      "source_line": 221,
+      "statement": "Do not leave giant dashboard, route, page, or component files that mix these responsibilities.",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 221.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0223",
+      "source_line": 223,
+      "statement": "Frontend validation must use the stack's own gates, such as eslint, prettier, tsc or framework typecheck, vitest/jest, playwright/cypress, build, and import-boundary or dependency checks.",
+      "applicability": {
+        "profiles": [
+          "frontend"
+        ],
+        "condition": "Target includes frontend or component code."
+      },
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 223.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0231",
+      "source_line": 231,
+      "statement": "Code should depend in predictable directions.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change can affect imports or dependency direction."
+      },
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 231.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0251",
+      "source_line": 251,
+      "statement": "Do not introduce circular imports.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change can affect imports or dependency direction."
+      },
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 251.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0253",
+      "source_line": 253,
+      "statement": "Do not make domain or business logic depend directly on CLI code, UI code, framework glue, package runtime details, database clients, or external service clients unless the current architecture already requires it.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change can affect imports or dependency direction."
+      },
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 253.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0255",
+      "source_line": 255,
+      "statement": "Keep dependency direction predictable.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change can affect imports or dependency direction."
+      },
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 255.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0259",
+      "source_line": 259,
+      "statement": "The AI must explain whether dependency direction was preserved or improved.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change can affect imports or dependency direction."
+      },
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 259.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0267",
+      "source_line": 267,
+      "statement": "Related code should live together. Unrelated code should not be forced together.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 267.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0279",
+      "source_line": 279,
+      "statement": "Prefer domain-based or responsibility-based modules.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 279.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0281",
+      "source_line": 281,
+      "statement": "Avoid vague dumping-ground folders and files.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 281.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0283",
+      "source_line": 283,
+      "statement": "Before creating a new package, folder tree, or module location, check whether an existing governed package already owns the domain.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 283.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0285",
+      "source_line": 285,
+      "statement": "Prefer extending an existing typed, linted, tested, and documented package over creating a parallel package.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 285.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0287",
+      "source_line": 287,
+      "statement": "A new package or top-level module is acceptable only when all of the following are true:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 287.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0289",
+      "source_line": 289,
+      "statement": "* the responsibility does not belong in an existing governed package",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 289.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0290",
+      "source_line": 290,
+      "statement": "* the new location is covered by lint",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 290.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0291",
+      "source_line": 291,
+      "statement": "* the new location is covered by type-checking",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 291.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0292",
+      "source_line": 292,
+      "statement": "* the new location is covered by tests",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 292.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0293",
+      "source_line": 293,
+      "statement": "* the new location is covered by complexity checks",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 293.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0294",
+      "source_line": 294,
+      "statement": "* the new location is covered by architecture or import-boundary checks",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 294.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0295",
+      "source_line": 295,
+      "statement": "* the dependency direction is clear",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 295.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0296",
+      "source_line": 296,
+      "statement": "* the completion report explains why the new location is justified",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 296.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0298",
+      "source_line": 298,
+      "statement": "A second package means a second set of gate scopes to maintain.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 298.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0335",
+      "source_line": 335,
+      "statement": "The AI must explain why the new module or folder boundary reflects a real responsibility or domain concept.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
+      },
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 335.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0343",
+      "source_line": 343,
+      "statement": "Before changing legacy or complex code, capture what the current behavior does.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
+      },
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 343.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0345",
+      "source_line": 345,
+      "statement": "This does not mean the current behavior is perfect. It means the current behavior is known before it is changed.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
+      },
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 345.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0353",
+      "source_line": 353,
+      "statement": "Before changing legacy, wrapper, orchestration, package, or runtime-sensitive code, characterize current behavior.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
+      },
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 353.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0355",
+      "source_line": 355,
+      "statement": "Use tests, sample inputs/outputs, snapshots, golden files, CLI output captures, or focused regression tests.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
+      },
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 355.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0359",
+      "source_line": 359,
+      "statement": "The AI must show what behavior was captured before the refactor and which validation proves compatibility afterward.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
+      },
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 359.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0367",
+      "source_line": 367,
+      "statement": "Replace messy code gradually instead of rewriting everything at once.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 367.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0369",
+      "source_line": 369,
+      "statement": "Choose one small target, create a safer boundary, validate it, then continue.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 369.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0377",
+      "source_line": 377,
+      "statement": "Prefer incremental strangler-style cleanup over big-bang rewrites.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 377.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0379",
+      "source_line": 379,
+      "statement": "Pick one small high-value target first.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 379.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0381",
+      "source_line": 381,
+      "statement": "Keep each logical step small and runnable.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 381.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0383",
+      "source_line": 383,
+      "statement": "Do not attempt repo-wide cleanup unless explicitly asked.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 383.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0387",
+      "source_line": 387,
+      "statement": "The change should be reviewable as a focused improvement, not a sprawling rewrite.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task includes refactoring or cleanup."
+      },
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 387.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0403",
+      "source_line": 403,
+      "statement": "Run the relevant validation commands before claiming completion.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 403.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0405",
+      "source_line": 405,
+      "statement": "Quality gates must cover the files that matter.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 405.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0407",
+      "source_line": 407,
+      "statement": "The AI must verify and report:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 407.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0409",
+      "source_line": 409,
+      "statement": "1. Which files were changed",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 409.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0410",
+      "source_line": 410,
+      "statement": "2. Which gates apply to each changed file",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 410.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0411",
+      "source_line": 411,
+      "statement": "3. Which high-risk production files are excluded from any gate",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 411.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0412",
+      "source_line": 412,
+      "statement": "4. Whether any gate threshold was changed",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 412.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0413",
+      "source_line": 413,
+      "statement": "5. Whether any gate scope was narrowed",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 413.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0414",
+      "source_line": 414,
+      "statement": "6. Whether any production file was excluded from lint, type-check, complexity, tests, or architecture checks",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 414.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0416",
+      "source_line": 416,
+      "statement": "If lint, type-check, complexity, architecture, or test gates exclude production code, changed files, large files, legacy wrappers, generated-looking source, or files carrying the most risk, the AI must report that exclusion as a supportability failure.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 416.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0418",
+      "source_line": 418,
+      "statement": "The AI must not claim quality gates passed unless the relevant gates cover the changed files and the highest-risk production files.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 418.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0420",
+      "source_line": 420,
+      "statement": "The AI must not weaken thresholds, exclude files, rename files to avoid checks, move files outside checked paths, or narrow gate scope to make validation pass.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 420.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0438",
+      "source_line": 438,
+      "statement": "Use the repo’s actual commands when available.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 438.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0442",
+      "source_line": 442,
+      "statement": "The AI must report exactly which validation commands ran, which passed, which failed, and what was not tested.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 442.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0444",
+      "source_line": 444,
+      "statement": "The AI must also report gate coverage. The report must include changed files, gate names, gate scope, excluded production files, threshold changes, and scope changes. Missing gate coverage proof means validation is incomplete.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A validation or quality-gate claim is made."
+      },
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 444.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0452",
+      "source_line": 452,
+      "statement": "The AI must explain the change in a way another engineer could review.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 452.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0454",
+      "source_line": 454,
+      "statement": "ADR means Architectural Decision Record. For AI work, this can be lighter than a formal ADR, but the agent still needs to explain the decision.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 454.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0462",
+      "source_line": 462,
+      "statement": "After the change, provide a completion report explaining:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 462.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0464",
+      "source_line": 464,
+      "statement": "1. What changed",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 464.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0465",
+      "source_line": 465,
+      "statement": "2. Which responsibilities were separated",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 465.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0466",
+      "source_line": 466,
+      "statement": "3. Which functions were simplified",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 466.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0467",
+      "source_line": 467,
+      "statement": "4. Any McCabe/C901 improvements",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 467.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0468",
+      "source_line": 468,
+      "statement": "5. Why the new boundary is cleaner",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 468.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0469",
+      "source_line": 469,
+      "statement": "6. Which validation commands ran",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 469.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0470",
+      "source_line": 470,
+      "statement": "7. Risks, gaps, or follow-up work",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 470.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0471",
+      "source_line": 471,
+      "statement": "8. Gate coverage proof, including changed files, gates applied, excluded production files, threshold changes, and scope changes",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 471.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0475",
+      "source_line": 475,
+      "statement": "The completion report should make it clear whether the change improved architecture or merely rearranged code.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "A completion report or review handoff is produced."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 475.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0481",
+      "source_line": 481,
+      "statement": "When asking AI to build or refactor, use this workflow:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 481.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0485",
+      "source_line": 485,
+      "statement": "Ask the AI to inspect the target area and identify where responsibilities are tangled.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 485.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0501",
+      "source_line": 501,
+      "statement": "Before changing risky code, ask the AI to prove what the code currently does.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 501.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0506",
+      "source_line": 506,
+      "statement": "Capture current CLI behavior before refactoring.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 506.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0510",
+      "source_line": 510,
+      "statement": "Create golden-master tests for the existing output.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 510.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0514",
+      "source_line": 514,
+      "statement": "Add regression tests around current package/runtime behavior.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 514.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0521",
+      "source_line": 521,
+      "statement": "Do not let the AI clean up the whole repo at once.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 521.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0526",
+      "source_line": 526,
+      "statement": "Pick one small high-value refactoring target.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 526.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0530",
+      "source_line": 530,
+      "statement": "Do not perform repo-wide cleanup.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 530.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0534",
+      "source_line": 534,
+      "statement": "Do not move files unless the move improves a real responsibility or dependency boundary.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 534.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0541",
+      "source_line": 541,
+      "statement": "Ask the AI to split by responsibility, not by line count.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 541.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0566",
+      "source_line": 566,
+      "statement": "Use McCabe/C901 as a hard guardrail, but not as the only goal.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 566.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0571",
+      "source_line": 571,
+      "statement": "Keep touched production functions under McCabe/cyclomatic complexity 10.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 571.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0578",
+      "source_line": 578,
+      "statement": "Ask the AI to preserve or improve dependency direction.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 578.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0583",
+      "source_line": 583,
+      "statement": "Do not introduce circular imports or dependency inversions. Keep domain/business logic independent from CLI, UI, framework, package, database, or external-service glue unless the current architecture explicitly requires otherwise.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 583.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0590",
+      "source_line": 590,
+      "statement": "The AI must run the repo’s relevant checks.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 590.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0595",
+      "source_line": 595,
+      "statement": "Run lint, format check, C901, type checks, tests, compile/package validation, and any repo-specific audit commands before claiming completion.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 595.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0602",
+      "source_line": 602,
+      "statement": "The AI must explain what got better.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 602.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0607",
+      "source_line": 607,
+      "statement": "Do not only say tests passed. Explain which responsibility boundary improved, why the new names are better, what behavior was preserved, and what risks remain.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI is asked to build or refactor; the referenced workflow step applies."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 607.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0614",
+      "source_line": 614,
+      "statement": "Use this when starting a build, refactor, or cleanup mission:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 614.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0617",
+      "source_line": 617,
+      "statement": "Apply the Supportability Standard.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 617.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0619",
+      "source_line": 619,
+      "statement": "Goal: improve clarity, modularity, maintainability, testability, and peer-review quality without changing intended behavior.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 619.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0621",
+      "source_line": 621,
+      "statement": "This is not a cosmetic folder shuffle. Improve real code boundaries.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 621.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0623",
+      "source_line": 623,
+      "statement": "Before editing code, inspect the repo and produce a short plan covering:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 623.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0625",
+      "source_line": 625,
+      "statement": "1. Code that is too complex or poorly organized",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 625.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0626",
+      "source_line": 626,
+      "statement": "2. Functions exceeding or approaching McCabe/cyclomatic complexity 10",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 626.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0627",
+      "source_line": 627,
+      "statement": "3. Mixed responsibilities",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 627.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0628",
+      "source_line": 628,
+      "statement": "4. The smallest safe target for this change",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 628.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0629",
+      "source_line": 629,
+      "statement": "5. Files intended to change",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 629.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0630",
+      "source_line": 630,
+      "statement": "6. Files explicitly not touched",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 630.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0631",
+      "source_line": 631,
+      "statement": "7. Tests and validation commands to run",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 631.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0632",
+      "source_line": 632,
+      "statement": "8. Gate coverage: which validation gates cover the files intended to change and the highest-risk production files",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 632.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0634",
+      "source_line": 634,
+      "statement": "Do not edit code until the plan is complete.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 634.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0638",
+      "source_line": 638,
+      "statement": "- Keep touched production functions under McCabe/cyclomatic complexity 10.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 638.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0639",
+      "source_line": 639,
+      "statement": "- For legacy functions already above 10, no new or extracted production function may exceed 10, and touched legacy functions must move lower than their starting complexity.",
+      "applicability": {
+        "profiles": [
+          "python"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 639.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0640",
+      "source_line": 640,
+      "statement": "- Do not game C901 by creating vague helper functions.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 640.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0641",
+      "source_line": 641,
+      "statement": "- Extract only responsibility-named functions or modules.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 641.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0642",
+      "source_line": 642,
+      "statement": "- Split along real boundaries: parsing, validation, business rules, orchestration, transformation, persistence, external APIs, config, error handling, logging, CLI/UI presentation, and tests.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 642.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0643",
+      "source_line": 643,
+      "statement": "- Avoid vague dumping grounds such as `utils`, `helpers`, `common`, `misc`, or `stuff`.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 643.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0644",
+      "source_line": 644,
+      "statement": "- Before creating a new package or top-level module, check whether an existing governed package already owns the domain. Extend the existing governed package when it owns the domain.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 644.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0645",
+      "source_line": 645,
+      "statement": "- Keep dependency direction predictable.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 645.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0646",
+      "source_line": 646,
+      "statement": "- Do not introduce circular imports or dependency inversions.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 646.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0647",
+      "source_line": 647,
+      "statement": "- Characterize current behavior before changing complex or legacy code.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 647.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0648",
+      "source_line": 648,
+      "statement": "- Prefer incremental strangler-style cleanup over big-bang rewrites.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 648.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0649",
+      "source_line": 649,
+      "statement": "- Keep each logical step small and runnable.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 649.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0650",
+      "source_line": 650,
+      "statement": "- Preserve intended behavior unless explicitly told otherwise.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 650.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0654",
+      "source_line": 654,
+      "statement": "Run the repo’s relevant checks before claiming completion, including lint, format check, C901, type checks, architecture/import-boundary checks, tests, compile/package validation, and any repo-specific audit commands.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 654.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0656",
+      "source_line": 656,
+      "statement": "Also verify and report gate coverage. The validation report must identify which changed files and high-risk production files are covered by lint, type-check, complexity, tests, and architecture/import-boundary checks. Do not claim validation is complete when changed files or high-risk production files are outside the gate scope.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 656.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0660",
+      "source_line": 660,
+      "statement": "After editing, explain:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 660.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0662",
+      "source_line": 662,
+      "statement": "1. What changed",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 662.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0663",
+      "source_line": 663,
+      "statement": "2. Which responsibilities were separated",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 663.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0664",
+      "source_line": 664,
+      "statement": "3. Which functions were simplified",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 664.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0665",
+      "source_line": 665,
+      "statement": "4. Any McCabe/C901 improvements",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 665.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0666",
+      "source_line": 666,
+      "statement": "5. Why the new boundary is cleaner",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 666.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0667",
+      "source_line": 667,
+      "statement": "6. Validation commands run and results",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 667.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0668",
+      "source_line": 668,
+      "statement": "7. Risks, gaps, or follow-up work",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 668.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0669",
+      "source_line": 669,
+      "statement": "8. Gate coverage proof, including changed files, gates applied, excluded production files, threshold changes, and scope changes",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Default build, refactor, or cleanup instruction is used."
+      },
+      "enforcement_owner": "Milestone 1 traceability validator",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 669.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0676",
+      "source_line": 676,
+      "statement": "Use this when the task is narrow:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is narrow and the short instruction applies."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 676.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0679",
+      "source_line": 679,
+      "statement": "Follow the Supportability Standard where relevant.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is narrow and the short instruction applies."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 679.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0681",
+      "source_line": 681,
+      "statement": "Keep the change small. Preserve behavior. Avoid vague helpers. Do not introduce circular imports or dependency inversions. Validate the result. If you refactor, explain which responsibility boundary improved.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "Task is narrow and the short instruction applies."
+      },
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 681.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0688",
+      "source_line": 688,
+      "statement": "Do not judge the AI only by whether the code runs.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 688.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0690",
+      "source_line": 690,
+      "statement": "Ask these questions:",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 690.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0692",
+      "source_line": 692,
+      "statement": "1. Did it preserve behavior?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 692.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0693",
+      "source_line": 693,
+      "statement": "2. Did it reduce complexity without creating vague helpers?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 693.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0694",
+      "source_line": 694,
+      "statement": "3. Did it separate real responsibilities?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 694.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0695",
+      "source_line": 695,
+      "statement": "4. Did it improve or preserve dependency direction?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 695.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0696",
+      "source_line": 696,
+      "statement": "5. Did it avoid dumping-ground modules?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 696.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0697",
+      "source_line": 697,
+      "statement": "6. Did it add or preserve useful tests?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 697.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0698",
+      "source_line": 698,
+      "statement": "7. Did it run validation?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 698.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0699",
+      "source_line": 699,
+      "statement": "8. Did it verify that quality gates actually cover the changed files and the highest-risk production files?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 699.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0700",
+      "source_line": 700,
+      "statement": "9. Did it avoid weakening thresholds, excluding files, narrowing gate scope, or moving files outside checked paths to make validation pass?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 700.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0701",
+      "source_line": 701,
+      "statement": "10. Did it explain the architectural improvement clearly?",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 701.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    },
+    {
+      "clause_id": "SS-0703",
+      "source_line": 703,
+      "statement": "If the answer is mostly no, the AI did not clean the repo. It rearranged the mess.",
+      "applicability": {
+        "profiles": [
+          "python",
+          "frontend"
+        ],
+        "condition": "AI output is being judged for completion."
+      },
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 703.",
+      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    }
+  ]
+}
