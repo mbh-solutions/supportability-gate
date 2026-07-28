@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m venv "$RUNNER_TEMP/gate-venv"
           "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
-          "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --no-build-isolation --no-deps gate
+          "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --no-build-isolation --no-deps ./gate
 
       - name: Evaluate immutable pull-request commits
         env:
