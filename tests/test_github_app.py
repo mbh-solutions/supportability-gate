@@ -119,6 +119,8 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     def open_request(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
         if "/compare/" in request.full_url:
+            if request.get_header("Accept") != "application/vnd.github.v3.diff":
+                return _Reply({"files": [{}]})
             return _RawReply("diff --git a/src/a.py b/src/a.py\n+safe")
         body = json.loads(request.data)
         return _Reply({"app": {"id": 42}, "head_sha": body["head_sha"], "id": 99})
@@ -147,7 +149,12 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     ],
 )
 def test_incomplete_diff_evidence_blocks(diff: str) -> None:
-    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _RawReply(diff))
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply(diff)
+        return _Reply({"files": [{}]})
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
         app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
@@ -155,12 +162,30 @@ def test_incomplete_diff_evidence_blocks(diff: str) -> None:
 
 def test_binary_marker_inside_source_text_is_evidence() -> None:
     diff = '+marker = "Binary files a/image.png and b/image.png differ"'
-    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _RawReply(diff))
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply(diff)
+        return _Reply({"files": []})
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     assert (
         app.evidence_packet("mbh-solutions/supportability-gate", pull, "token").evidence["diff"]
         == diff
     )
+
+
+def test_compare_file_limit_blocks_before_diff_fetch() -> None:
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply({"files": [{}] * 300}),
+    )
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
 
 
 def test_check_response_from_wrong_app_blocks() -> None:

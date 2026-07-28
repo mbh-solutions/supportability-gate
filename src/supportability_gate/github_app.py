@@ -165,9 +165,16 @@ class GitHubApp:
         )
 
     def _comparison_diff(self, repository: str, base_sha: str, head_sha: str, token: str) -> str:
+        path = (
+            f"/repos/{repository}/compare/"
+            f"{urllib.parse.quote(base_sha)}...{urllib.parse.quote(head_sha)}"
+        )
+        comparison = self._request("GET", path, token)
+        files = comparison.get("files") if isinstance(comparison, dict) else None
+        if not isinstance(files, list) or len(files) >= 300:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         request = urllib.request.Request(
-            f"{API}/repos/{repository}/compare/"
-            f"{urllib.parse.quote(base_sha)}...{urllib.parse.quote(head_sha)}",
+            f"{API}{path}",
             headers={
                 "Accept": "application/vnd.github.v3.diff",
                 "Authorization": f"Bearer {token}",
@@ -185,7 +192,14 @@ class GitHubApp:
         binary = "GIT binary patch" in lines or any(
             line.startswith("Binary files ") and line.endswith(" differ") for line in lines
         )
-        if not diff or binary:
+        diff_files = sum(line.startswith("diff --git ") for line in lines)
+        if (
+            not diff
+            or binary
+            or diff_files != len(files)
+            or len(diff.encode("utf-8")) >= 900_000
+            or len(lines) >= 18_000
+        ):
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return diff
 
