@@ -11,11 +11,11 @@ Every required `NOT_IMPLEMENTED` row keeps full product incomplete.
 | Progressive tightening for touched legacy functions | DETERMINISTIC | 1 | IMPLEMENTED |
 | Deterministic JSON and derived Markdown evidence | DETERMINISTIC | 1 | IMPLEMENTED |
 | Product source lint, format, type, complexity, test, package, and import-boundary gates | DETERMINISTIC | 1 | IMPLEMENTED |
-| Approved external gate adapters | DETERMINISTIC | 2 | NOT_IMPLEMENTED |
-| Changed-file gate coverage proof | DETERMINISTIC | 2 | NOT_IMPLEMENTED |
-| Highest-risk-file gate coverage proof | DETERMINISTIC | 2 | NOT_IMPLEMENTED |
-| Threshold anti-weakening | DETERMINISTIC | 2 | NOT_IMPLEMENTED |
-| Gate-scope anti-narrowing | DETERMINISTIC | 2 | NOT_IMPLEMENTED |
+| Approved external gate adapters | DETERMINISTIC | 2 | IMPLEMENTED |
+| Changed-file gate coverage proof | DETERMINISTIC | 2 | IMPLEMENTED |
+| Highest-risk-file gate coverage proof | DETERMINISTIC | 2 | IMPLEMENTED |
+| Threshold anti-weakening | DETERMINISTIC | 2 | IMPLEMENTED |
+| Gate-scope anti-narrowing | DETERMINISTIC | 2 | IMPLEMENTED |
 | Behavior and characterization proof | STRUCTURED_REVIEW_EVIDENCE | 3 | NOT_IMPLEMENTED |
 | Separation-of-concerns evidence | STRUCTURED_REVIEW_EVIDENCE | 3 | NOT_IMPLEMENTED |
 | Architecture and dependency-direction review evidence | STRUCTURED_REVIEW_EVIDENCE | 3 | NOT_IMPLEMENTED |

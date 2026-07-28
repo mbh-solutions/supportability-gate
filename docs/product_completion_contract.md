@@ -67,9 +67,28 @@ workflow, check-run, ruleset, or GitHub state supports them.
   anti-weakening.
 - Required runtime proof: Direct evaluations proving changed-file and high-risk-file coverage,
   approved adapter enforcement, and deterministic blocking of threshold or scope weakening.
-- Current status: `NOT_STARTED`
-- Verified evidence: None recorded.
-- Remaining work: Entire milestone; no owner-authorized execution directive.
+- Current status: `COMPLETE`
+- Verified evidence:
+  - Implementation commit: `47e31397b06a1375d007ca2f7f83dd8eca35d4ce`.
+  - Python `3.12.13` exact-lock proof passed on 2026-07-28: Ruff lint and format; C901 at
+    maximum 10; strict mypy; Import Linter; 26 pytest tests; compileall; wheel build; fresh
+    environment wheel install; installed `supportability-gate --help`; immutable-standard tamper
+    test; and whitespace validation from `ec71c5671ae05a5e02915a4d6e9a531547bf1f86` through
+    `47e31397b06a1375d007ca2f7f83dd8eca35d4ce` excluding only the immutable standard.
+  - Seven direct Milestone 2 evaluations passed: approved adapters pass; unapproved adapters,
+    changed-file coverage gaps, highest-risk-file coverage gaps, threshold weakening, and gate-scope
+    narrowing block; repeated blocking evidence is byte-identical.
+  - Pull request #11 workflow run `30373526163` succeeded at the implementation commit through
+    workflow ID `320787297`, job/check-run ID `90323233603`, required context
+    `Source Validation`, and GitHub Actions App ID `15368`.
+  - Active repository ruleset `19767613` targets `refs/heads/main`, requires strict
+    `Source Validation` from App ID `15368`, requires pull requests, and blocks deletion and
+    non-fast-forward updates.
+  - Approved adapters are fixed to C901 touched-function, Import Linter, strict mypy, pytest, and
+    Ruff lint adapters. Every adapter covers the complete `src` production scope, including all
+    changed production files and the four recorded highest-risk trust-boundary files. Complexity
+    maximum remained 10; production scope was not narrowed; no production file was excluded.
+- Remaining work: None for Milestone 2. Stop; Milestone 3 is not authorized.
 
 ### 3. Behavior proof, characterization evidence, architecture-review evidence, responsibility-boundary reporting.
 
@@ -104,7 +123,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 ```text
 Deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Milestone 1 complete; stop
+Current authorized work: None — Milestone 2 complete; stop
 Next milestone authorized: NO
 ```
 
