@@ -49,6 +49,10 @@ logic, SQLite or database logic, security scanners, AI review orchestration, aut
 periodic audits, arbitrary command configuration, waivers, allowlists, known-debt approval, and
 report-only pass conversion.
 
+The historical V1 exclusions remain intact. Owner-authorized successor Enforcement Milestone 2
+adds only its outbound GitHub App semantic verifier, localhost CLIProxyAPI call, polling, and
+user-scoped scheduled task under `docs/enforcement_milestone_2.md`; no other exclusion is relaxed.
+
 ## Package dependency direction
 
 ```text
