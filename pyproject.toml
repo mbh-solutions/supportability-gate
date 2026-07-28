@@ -64,5 +64,5 @@ layers = [
     "supportability_gate.gate_policy | supportability_gate.complexity_policy",
     "supportability_gate.complexity_metrics",
     "supportability_gate.function_changes",
-    "supportability_gate.contract | supportability_gate.git_changes | supportability_gate.review_evidence",
+    "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.git_changes | supportability_gate.review_evidence",
 ]

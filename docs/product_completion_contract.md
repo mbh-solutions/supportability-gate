@@ -11,15 +11,31 @@ Product requirements come only from:
 Global skills, memory, prior chats, former Governance repositories, unrelated repositories, and
 agent assumptions are not product requirement sources.
 
+Successor execution authority is
+[Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3). Historical
+Project #2 remains unchanged and is not authority for successor enforcement work.
+
 ## Final product objective
 
-`supportability-gate` must centrally enforce the Supportability Standard on pull-request changes
-across repositories in the `mbh-solutions` organization.
+`supportability-gate` must centrally enforce every applicable normative Supportability Standard
+clause on Python and frontend/component pull-request changes across repositories in the
+`mbh-solutions` organization.
 
-The product is not complete or deployable to target repositories until all five frozen milestones
-have direct runtime proof.
+Full Supportability Standard runtime is not complete until all eleven successor milestones have
+direct runtime proof.
 
-## Frozen milestone ledger
+## Successor enforcement ledger
+
+- Enforcement Milestone 1: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
+  `Not reached`.
+- Enforcement Milestones 2–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_1.md`.
+- Current inventory: `docs/normative_clause_inventory.json`.
+
+## Historical delivery ledger
+
+The five entries below preserve direct evidence from historical Project #2. They do not establish
+completion of the eleven-milestone successor enforcement project or full current Standard runtime.
 
 Allowed status values are `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED_EXTERNAL`, and `COMPLETE`.
 
@@ -222,10 +238,11 @@ workflow, check-run, ruleset, or GitHub state supports them.
 ## Product status
 
 ```text
-Deployable to target repositories: YES
-Full Supportability Standard runtime: YES
-Current authorized work: None — Milestone 5 complete; stop
-Next milestone authorized: NO — no additional milestone exists in the frozen roadmap
+Historical deterministic gate deployable to target repositories: YES
+Full Supportability Standard enforcement deployable to target repositories: NO
+Full Supportability Standard runtime: NO
+Current authorized work: Enforcement Milestone 1 only
+Next milestone authorized: NO — Enforcement Milestones 2–11 remain Not started
 ```
 
 ## Milestone transition rules
@@ -244,7 +261,8 @@ Next milestone authorized: NO — no additional milestone exists in the frozen r
 
 ## Final completion rule
 
-The product may claim full Supportability Standard runtime only when all five milestones are
-`COMPLETE` and their required evidence is recorded.
+The product may claim full Supportability Standard runtime only when Enforcement Milestones 1–11
+in Project #3 are `Complete`, their Evidence is `Complete`, Scope is `On scope`, Stop confirmed is
+`Yes`, and their required direct proof is recorded.
 
 Do not create a new terminal label not authorized by an active milestone directive.

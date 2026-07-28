@@ -1,19 +1,19 @@
 # Supportability Gate
 
-`supportability-gate` produces deterministic PASS or BLOCK evidence for Python functions
-touched between immutable Git commits. Milestone 1 enforces progressive McCabe/C901 complexity
-without importing or executing target repository code.
+`supportability-gate` produces deterministic PASS or BLOCK evidence from immutable Git commits
+without importing or executing target repository code. Successor enforcement work is mapping every
+normative Supportability Standard clause before adding later clause-specific enforcement.
 
 ## Status
 
-- Foundation scope: Milestone 1
-- Complexity adapter: `python.c901-touched.v1`
-- Maximum complexity: `10`
-- Full Supportability Standard implementation: incomplete
+- Active scope: Supportability Standard Enforcement Milestone 1 only
+- Active capability: complete normative-clause inventory and fail-closed traceability validation
+- Existing complexity adapter: `python.c901-touched.v1`; maximum complexity: `10`
+- Full Supportability Standard runtime: **incomplete**
 
 Delivery state and milestone evidence are tracked in the
-[Supportability Gate Delivery](https://github.com/orgs/mbh-solutions/projects/2) organization
-project.
+[Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3)
+organization project. Project #2 is historical and is not successor execution authority.
 
 ## Requirements
 
