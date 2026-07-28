@@ -155,7 +155,7 @@ class GitHubApp:
             raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
         if not isinstance(number, int):
             raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-        diff = self._pull_diff(repository, number, token)
+        diff = self._comparison_diff(repository, str(base_sha), str(head_sha), token)
         return EvidencePacket(
             repository,
             str(base_sha),
@@ -164,9 +164,10 @@ class GitHubApp:
             {"diff": diff, "pull_request": number},
         )
 
-    def _pull_diff(self, repository: str, number: int, token: str) -> str:
+    def _comparison_diff(self, repository: str, base_sha: str, head_sha: str, token: str) -> str:
         request = urllib.request.Request(
-            f"{API}/repos/{repository}/pulls/{number}",
+            f"{API}/repos/{repository}/compare/"
+            f"{urllib.parse.quote(base_sha)}...{urllib.parse.quote(head_sha)}",
             headers={
                 "Accept": "application/vnd.github.v3.diff",
                 "Authorization": f"Bearer {token}",

@@ -118,7 +118,7 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
-        if "/pulls/3" in request.full_url:
+        if "/compare/" in request.full_url:
             return _RawReply("diff --git a/src/a.py b/src/a.py\n+safe")
         body = json.loads(request.data)
         return _Reply({"app": {"id": 42}, "head_sha": body["head_sha"], "id": 99})
