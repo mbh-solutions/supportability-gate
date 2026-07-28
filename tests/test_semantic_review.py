@@ -93,6 +93,7 @@ def test_reasoning_item_before_message_is_allowed() -> None:
         ("uncertain", "UNCERTAIN_VERDICT"),
         ("conflict", "CONFLICTING_VERDICT"),
         ("hash", "EVIDENCE_BINDING_MISMATCH"),
+        ("type", "MALFORMED_SCHEMA"),
         ("tool", "TOOL_OR_MALFORMED_OUTPUT"),
     ],
 )
@@ -112,6 +113,10 @@ def test_untrusted_or_unavailable_model_results_block(defect: str, code: str) ->
     elif defect == "hash":
         content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
         content["evidence_sha256"] = "0" * 64
+        response["output"][0]["content"][0]["text"] = json.dumps(content)  # type: ignore[index]
+    elif defect == "type":
+        content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
+        content["app_id"] = 42.0
         response["output"][0]["content"][0]["text"] = json.dumps(content)  # type: ignore[index]
     else:
         response["output"] = [{"type": "function_call"}]

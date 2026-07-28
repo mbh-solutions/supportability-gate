@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -153,35 +153,36 @@ class GitHubApp:
             number = pull["number"]
         except (KeyError, TypeError) as error:
             raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
-        comparison = self._request(
-            "GET",
-            f"/repos/{repository}/compare/{urllib.parse.quote(base_sha)}...{urllib.parse.quote(head_sha)}",
-            token,
-        )
-        files = comparison.get("files") if isinstance(comparison, dict) else None
-        if not isinstance(files, list) or len(files) >= 300:
-            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-        evidence_files = []
-        for item in files:
-            if not isinstance(item, dict) or not isinstance(item.get("filename"), str):
-                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-            if not isinstance(item.get("patch"), str):
-                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-            evidence_files.append(
-                {
-                    "filename": item["filename"],
-                    "patch": item.get("patch"),
-                    "sha": item.get("sha"),
-                    "status": item.get("status"),
-                }
-            )
+        if not isinstance(number, int):
+            raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+        diff = self._pull_diff(repository, number, token)
         return EvidencePacket(
             repository,
             str(base_sha),
             str(head_sha),
             self.app_id,
-            {"files": evidence_files, "pull_request": number},
+            {"diff": diff, "pull_request": number},
         )
+
+    def _pull_diff(self, repository: str, number: int, token: str) -> str:
+        request = urllib.request.Request(
+            f"{API}/repos/{repository}/pulls/{number}",
+            headers={
+                "Accept": "application/vnd.github.v3.diff",
+                "Authorization": f"Bearer {token}",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "User-Agent": "supportability-gate-semantic-review",
+            },
+            method="GET",
+        )
+        try:
+            with self.opener(request, timeout=30) as result:
+                diff = cast(str, result.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, UnicodeDecodeError) as error:
+            raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
+        if not diff or "GIT binary patch" in diff or "Binary files " in diff:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        return diff
 
     def publish_check(
         self,

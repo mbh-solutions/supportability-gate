@@ -185,6 +185,15 @@ def _findings(data: dict[str, Any]) -> tuple[str, ...]:
     return tuple(findings)
 
 
+def _validate_bindings(data: dict[str, Any], bindings: dict[str, object]) -> None:
+    if type(data.get("app_id")) is not int:
+        raise SemanticReviewError("MALFORMED_SCHEMA")
+    if any(type(data.get(key)) is not str for key in bindings if key != "app_id"):
+        raise SemanticReviewError("MALFORMED_SCHEMA")
+    if any(data.get(key) != value for key, value in bindings.items()):
+        raise SemanticReviewError("EVIDENCE_BINDING_MISMATCH")
+
+
 def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
     """Validate model identity, schema, bindings, certainty, and verdict consistency."""
     if not isinstance(response, dict):
@@ -209,8 +218,7 @@ def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
         "schema_version": SCHEMA_VERSION,
         "standard_sha256": STANDARD_SHA256,
     }
-    if any(data.get(key) != value for key, value in bindings.items()):
-        raise SemanticReviewError("EVIDENCE_BINDING_MISMATCH")
+    _validate_bindings(data, bindings)
     verdict = data.get("verdict")
     if verdict == "UNCERTAIN":
         raise SemanticReviewError("UNCERTAIN_VERDICT")

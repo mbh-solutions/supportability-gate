@@ -27,6 +27,11 @@ class _Reply:
         return json.dumps(self.payload).encode()
 
 
+class _RawReply(_Reply):
+    def read(self) -> bytes:
+        return str(self.payload).encode()
+
+
 def _private_key() -> bytes:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     return key.private_bytes(
@@ -110,14 +115,11 @@ def test_replay_truncation_blocks() -> None:
 
 def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     requests: list[Any] = []
-    comparison = {
-        "files": [{"filename": "src/a.py", "patch": "+safe", "sha": "c" * 40, "status": "modified"}]
-    }
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
-        if "/compare/" in request.full_url:
-            return _Reply(comparison)
+        if "/pulls/3" in request.full_url:
+            return _RawReply("diff --git a/src/a.py b/src/a.py\n+safe")
         body = json.loads(request.data)
         return _Reply({"app": {"id": 42}, "head_sha": body["head_sha"], "id": 99})
 
@@ -137,14 +139,15 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
 
 
 @pytest.mark.parametrize(
-    "files",
+    "diff",
     [
-        [{"filename": "large.bin", "patch": None}],
-        [{"filename": f"file-{index}", "patch": "+safe"} for index in range(300)],
+        "",
+        "Binary files a/image.png and b/image.png differ",
+        "GIT binary patch",
     ],
 )
-def test_incomplete_compare_evidence_blocks(files: list[dict[str, object]]) -> None:
-    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply({"files": files}))
+def test_incomplete_diff_evidence_blocks(diff: str) -> None:
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _RawReply(diff))
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
         app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
