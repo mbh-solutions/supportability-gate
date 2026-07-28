@@ -168,17 +168,64 @@ workflow, check-run, ruleset, or GitHub state supports them.
 - Capability: Adopt the completed gate in TWMN and exercise all frozen canaries.
 - Required runtime proof: Direct TWMN pull-request and GitHub evidence that the clean canary passes
   and the defect, gate-weakening, and scope-narrowing canaries block.
-- Current status: `NOT_STARTED`
-- Verified evidence: None recorded.
-- Remaining work: Entire milestone; no owner-authorized execution directive.
+- Current status: `COMPLETE`
+- Verified evidence:
+  - TWMN adoption pull request #21 changed only `.supportability.toml` and
+    `.supportability-review.toml`; base `11b6eb668852b65c4e0d51d22d8f64c34f3c73ac`, head
+    `0882007bd53d1969ef2ff92671fc2b13904f05ad`, protected repository-supported squash merge
+    `9fad14040a9760e9490370365744b364967409e9`. The final contract covers production root `src`
+    with all five approved adapters, maximum complexity 10, and the recorded external-I/O,
+    persistence, citation, and financial-decision trust boundaries.
+  - Active organization ruleset `19913103`, `supportability-gate-m4-proof`, targets both TWMN
+    repository ID `1296846001` and the retained Milestone 4 proof repository ID `1315235523`.
+    It has no bypass actors and preserves required workflow `.github/workflows/organization-required.yml`
+    from source repository ID `1312412529` at pinned SHA
+    `e72d7a1e62a21278d68ce92f6b657ddaa51e0faa`. Effective TWMN branch rules report the
+    organization workflow rule directly; no repository ruleset or duplicate status check was added.
+  - Clean canary pull request #22, base `9fad14040a9760e9490370365744b364967409e9`, head
+    `b45066d4cdaaa89dc2dbab01a5e1294912f40a97`, passed with complexity 1 and overall `PASS`.
+    Workflow run `30390778523`, workflow ID `322447435`, and job/check-run `90381509165`
+    produced context `Supportability Gate` through GitHub Actions App ID `15368`; the open pull
+    request was merge-eligible before it was closed unmerged and its branch deleted.
+  - Complexity-defect canary pull request #23, head
+    `7f1fd6eb0eab3c8009b502ef26c0b74a18752292`, failed through workflow run `30390911030`,
+    workflow ID `322447435`, and job/check-run `90381956708`. Authoritative JSON reported
+    `supportability_complexity_canary` at complexity 11, function decision `BLOCK`, no technical
+    error, and overall `BLOCK`. A normal squash merge attempt exited 1 because base-branch policy
+    prohibited the merge; the pull request was closed unmerged and its branch deleted.
+  - Threshold-weakening canary pull request #24, head
+    `064970aa3b7de3ec0de91454635597d3ff7ea296`, failed through workflow run `30391031210`,
+    workflow ID `322447435`, and job/check-run `90382363750`. Authoritative JSON reported
+    `CANDIDATE_CONTRACT_CHANGE`, `THRESHOLD_WEAKENING`, no technical error, and overall `BLOCK`.
+    A normal squash merge attempt exited 1 because base-branch policy prohibited the merge; the
+    pull request was closed unmerged and its branch deleted.
+  - Gate-scope-narrowing canary pull request #25, head
+    `b273b58d36a6611711c14e86898cdd9195474117`, failed through workflow run `30391139336`,
+    workflow ID `322447435`, and job/check-run `90382725193`. Authoritative JSON reported
+    `CANDIDATE_CONTRACT_CHANGE`, `GATE_SCOPE_NARROWING`, no technical error, and overall `BLOCK`.
+    A normal squash merge attempt exited 1 because base-branch policy prohibited the merge; the
+    pull request was closed unmerged and its branch deleted.
+  - Every canary used base `9fad14040a9760e9490370365744b364967409e9`, exact head checkout,
+    check context `Supportability Gate`, workflow ID `322447435`, and GitHub Actions App ID `15368`.
+    All four canaries were closed unmerged; all remote canary branches were deleted; TWMN remote
+    retained only `main`; local and remote `main` were clean and equal at the adoption merge.
+  - Final Python `3.12.13` exact-lock source proof passed: Ruff lint and format; C901 at maximum 10;
+    strict mypy; Import Linter; 52 pytest tests; compileall; wheel build; fresh-environment exact-lock
+    install; installed `supportability-gate --help`; immutable-standard tamper test; and exact-range
+    whitespace validation excluding only the separately hash-protected standard. Immutable standard
+    SHA-256 remained `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Final TWMN validation passed with 97 tests, 3 subtests, strict mypy across 12 source files,
+    structural quality, SQL supportability and behavior proof, and `VALIDATION=PASS`. Native
+    Dependency Graph workflow ID `311554933` remained active and independent.
+- Remaining work: None. All five frozen milestones are complete; stop and await owner authorization.
 
 ## Product status
 
 ```text
-Deployable to target repositories: NO
-Full Supportability Standard runtime: NO
-Current authorized work: None — Milestone 4 complete; stop
-Next milestone authorized: NO
+Deployable to target repositories: YES
+Full Supportability Standard runtime: YES
+Current authorized work: None — Milestone 5 complete; stop
+Next milestone authorized: NO — no additional milestone exists in the frozen roadmap
 ```
 
 ## Milestone transition rules
