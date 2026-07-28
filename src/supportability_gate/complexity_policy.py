@@ -9,6 +9,14 @@ from supportability_gate.contract import Contract
 from supportability_gate.function_changes import FunctionDelta
 
 
+class ComplexityPolicyError(ValueError):
+    """A deterministic progressive-reporting failure."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class FunctionDecision:
     """One fixed-table decision with exact base/head metrics."""
@@ -56,6 +64,20 @@ def decide_functions(
         return metric.span.path, metric.span.qualified_name
 
     return tuple(sorted(decisions, key=identity))
+
+
+def validate_reporting(decisions: tuple[FunctionDecision, ...], maximum: int) -> None:
+    """Require exact progressive legacy values before a result can pass."""
+    for decision in decisions:
+        if decision.state != "EXISTING_LEGACY":
+            continue
+        if (
+            decision.base is None
+            or decision.head is None
+            or decision.remaining_debt != max(0, decision.head.complexity - maximum)
+            or decision.next_target != maximum
+        ):
+            raise ComplexityPolicyError("INCOMPLETE_REMAINING_GAP")
 
 
 def _decide_one(

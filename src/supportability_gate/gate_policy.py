@@ -12,7 +12,16 @@ APPROVED_ADAPTERS = (
     "python.pytest.v1",
     "python.ruff-lint.v1",
 )
+APPROVED_ADAPTERS_BY_LANGUAGE = {
+    "python": APPROVED_ADAPTERS,
+    "typescript": ("typescript.c901-equivalent-touched.v1",),
+}
 MAXIMUM_COMPLEXITY = 10
+_SOURCE_SUFFIXES = (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx")
+_PROFILE_SUFFIXES = {
+    "python": (".py", ".pyi"),
+    "typescript": (".cts", ".mts", ".ts", ".tsx"),
+}
 
 
 def _gate_map(policy: Contract) -> dict[str, GateAdapter]:
@@ -31,23 +40,49 @@ def _changed_production_paths(
     return tuple(sorted(paths))
 
 
+def _unassessed_source_paths(
+    policy: Contract,
+    assessments: tuple[ChangedFileAssessment, ...],
+) -> tuple[str, ...]:
+    allowed = _PROFILE_SUFFIXES[policy.language]
+    paths: set[str] = set()
+    for item in assessments:
+        sides = (
+            (item.change.old_path, item.base_production),
+            (item.change.new_path, item.head_production),
+        )
+        paths.update(
+            path
+            for path, production in sides
+            if path
+            and production
+            and path.endswith(_SOURCE_SUFFIXES)
+            and not path.endswith(allowed)
+        )
+    return tuple(sorted(paths))
+
+
 def evaluate_contract(
     policy: Contract,
     assessments: tuple[ChangedFileAssessment, ...],
 ) -> tuple[str, ...]:
     """Return deterministic base-contract adapter and coverage blocks."""
     gates = _gate_map(policy)
+    approved_adapters = APPROVED_ADAPTERS_BY_LANGUAGE[policy.language]
     blocks = [
-        f"UNAPPROVED_ADAPTER:{adapter}" for adapter in sorted(set(gates) - set(APPROVED_ADAPTERS))
+        f"UNAPPROVED_ADAPTER:{adapter}" for adapter in sorted(set(gates) - set(approved_adapters))
     ]
     blocks.extend(
         f"MISSING_REQUIRED_ADAPTER:{adapter}"
-        for adapter in APPROVED_ADAPTERS
+        for adapter in approved_adapters
         if adapter not in gates
     )
     if policy.maximum > MAXIMUM_COMPLEXITY:
         blocks.append("MAXIMUM_EXCEEDS_APPROVED_THRESHOLD")
-    for adapter in APPROVED_ADAPTERS:
+    blocks.extend(
+        f"PROFILE_SOURCE_MISMATCH:{path}" for path in _unassessed_source_paths(policy, assessments)
+    )
+    for adapter in approved_adapters:
         gate = gates.get(adapter)
         if gate is None:
             continue

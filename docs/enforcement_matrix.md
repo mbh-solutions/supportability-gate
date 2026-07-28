@@ -6,7 +6,9 @@ historical deterministic-gate delivery; they are not complete normative-clause c
 | Successor enforcement requirement | Milestone | Current state |
 |---|---:|---|
 | Complete normative-clause inventory and traceability validator | 1 | IMPLEMENTED |
-| Trusted semantic judgment plus principle-specific enforcement | 2–10 | NOT_IMPLEMENTED |
+| Trusted semantic judgment channel | 2 | IMPLEMENTED |
+| Python and TypeScript touched-function complexity and narrow anti-gaming | 3 | IN_PROGRESS |
+| Remaining principle-specific enforcement | 4–10 | NOT_IMPLEMENTED |
 | Full Python/frontend protected-merge qualification | 11 | NOT_IMPLEMENTED |
 
 | Supportability requirement | Enforcement class | Milestone | Current state |

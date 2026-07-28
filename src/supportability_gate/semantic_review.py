@@ -14,7 +14,7 @@ from typing import Any
 
 MODEL = "gpt-5.6-sol"
 ENDPOINT = "http://127.0.0.1:8317/v1/responses"
-RUBRIC_VERSION = "feasibility-security.v1"
+RUBRIC_VERSION = "complexity-anti-gaming.v1"
 SCHEMA_VERSION = "semantic-review.v1"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
@@ -110,7 +110,8 @@ def result_schema() -> dict[str, Any]:
 def request_payload(packet: EvidencePacket) -> dict[str, Any]:
     """Build tool-free structured request; evidence remains untrusted data."""
     instructions = (
-        "Judge only the candidate change's feasibility and security, not deployment completion. "
+        "Judge the candidate change's feasibility, security, and narrow complexity anti-gaming; "
+        "do not judge deployment completion or broader separation of concerns. "
         "Feasibility means the shown code paths can perform their stated behavior without a "
         "blocking internal defect. Security means identities, secrets, evidence, and trust "
         "boundaries fail closed and target code cannot execute. Runtime and protected-merge proof "
@@ -118,6 +119,10 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "without a trusted verdict is the offline fail-closed case; a completed unchanged exact-"
         "evidence verdict may be replayed. Strict up-to-date branch protection handles later base "
         "movement, while the verifier rechecks base/head immediately before publication. "
+        "For complexity anti-gaming, BLOCK only when reduced complexity is achieved by extracting "
+        "vaguely named production helpers whose names do not express one concrete responsibility, "
+        "including numbered parts, generic helper/handler/processor names, misc/stuff, or equivalent "
+        "obfuscation. Clear responsibility-named extraction passes this narrow rubric. "
         "The owner-authorized loopback CLIProxyAPI process is the trusted subscription-OAuth "
         "boundary; plaintext loopback and its downstream dummy bearer are required local design, "
         "not candidate defects. "

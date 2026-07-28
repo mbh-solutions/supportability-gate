@@ -51,7 +51,10 @@ report-only pass conversion.
 
 The historical V1 exclusions remain intact. Owner-authorized successor Enforcement Milestone 2
 adds only its outbound GitHub App semantic verifier, localhost CLIProxyAPI call, polling, and
-user-scoped scheduled task under `docs/enforcement_milestone_2.md`; no other exclusion is relaxed.
+user-scoped scheduled task under `docs/enforcement_milestone_2.md`. Owner-authorized successor
+Enforcement Milestone 3 adds only Python and TypeScript touched-function complexity enforcement and
+its narrow vague-helper extraction rubric under `docs/enforcement_milestone_3.md`; no other
+exclusion is relaxed.
 
 ## Package dependency direction
 

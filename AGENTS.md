@@ -11,7 +11,7 @@
 
 ## Product boundary
 
-- Execute Enforcement Milestone 2 only under `docs/enforcement_milestone_2.md`.
+- Execute Enforcement Milestone 3 only under `docs/enforcement_milestone_3.md`.
 - Never import or execute target repository code.
 - Git and Ruff use fixed argument vectors, finite timeouts, captured output, and no shell.
 - Do not add commands, executable paths, environment controls, exclusions, waivers, or threshold
@@ -26,7 +26,7 @@ Before planning or editing, read:
 2. `docs/supportability_standard.md`
 3. `docs/fixed_roadmap.md`
 4. `docs/product_completion_contract.md`
-5. `docs/enforcement_milestone_2.md` while Enforcement Milestone 2 is active
+5. `docs/enforcement_milestone_3.md` while Enforcement Milestone 3 is active
 
 Before editing, report:
 

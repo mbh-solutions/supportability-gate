@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.metadata
 import json
@@ -16,11 +17,30 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from mccabe import PathGraphingAstVisitor  # type: ignore[import-untyped]
+from tree_sitter import Node
 
 from supportability_gate.function_changes import FunctionDefinition, FunctionSpan
 
 RUFF_TIMEOUT_SECONDS = 60
 _COMPLEXITY = re.compile(r"\((\d+) > 10\)$")
+_TYPESCRIPT_BRANCHES = {
+    "catch_clause",
+    "do_statement",
+    "for_in_statement",
+    "for_statement",
+    "if_statement",
+    "switch_case",
+    "ternary_expression",
+    "while_statement",
+}
+_TYPESCRIPT_FUNCTIONS = {
+    "arrow_function",
+    "function_declaration",
+    "function_expression",
+    "generator_function",
+    "generator_function_declaration",
+    "method_definition",
+}
 
 
 class MetricsError(RuntimeError):
@@ -76,10 +96,15 @@ def _digest(value: bytes) -> str:
 
 def measure_definitions(
     definitions: tuple[FunctionDefinition, ...],
+    language: str = "python",
 ) -> tuple[FunctionMetric, ...]:
-    """Measure each function independently through mccabe's graph visitor."""
+    """Measure each function through the selected fixed profile."""
+    if language == "typescript":
+        return _measure_typescript(definitions)
     metrics: list[FunctionMetric] = []
     for definition in definitions:
+        if not isinstance(definition.node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            raise MetricsError("PROFILE_NODE_MISMATCH", definition.span.path)
         visitor: Any = PathGraphingAstVisitor()
         visitor.preorder(definition.node, visitor)
         graphs = list(visitor.graphs.values())
@@ -89,6 +114,40 @@ def measure_definitions(
                 f"expected one mccabe graph: {definition.span.path}:{definition.span.qualified_name}",
             )
         metrics.append(FunctionMetric(definition.span, int(graphs[0].complexity())))
+    return tuple(sorted(metrics, key=lambda item: (item.span.path, item.span.qualified_name)))
+
+
+def _typescript_complexity(node: Node) -> int:
+    complexity = 1
+
+    def visit(current: Node) -> None:
+        nonlocal complexity
+        if current is not node and current.type in _TYPESCRIPT_FUNCTIONS:
+            return
+        if current.type in _TYPESCRIPT_BRANCHES:
+            complexity += 1
+        if current.type == "binary_expression" and any(
+            child.type in {"&&", "||", "??"} for child in current.children
+        ):
+            complexity += 1
+        for child in current.named_children:
+            visit(child)
+
+    body = node.child_by_field_name("body")
+    if body is None:
+        raise MetricsError("MISSING_FUNCTION_BODY", str(node.start_point.row + 1))
+    visit(body)
+    return complexity
+
+
+def _measure_typescript(
+    definitions: tuple[FunctionDefinition, ...],
+) -> tuple[FunctionMetric, ...]:
+    metrics: list[FunctionMetric] = []
+    for definition in definitions:
+        if not isinstance(definition.node, Node):
+            raise MetricsError("PROFILE_NODE_MISMATCH", definition.span.path)
+        metrics.append(FunctionMetric(definition.span, _typescript_complexity(definition.node)))
     return tuple(sorted(metrics, key=lambda item: (item.span.path, item.span.qualified_name)))
 
 
@@ -240,4 +299,6 @@ def tool_versions() -> dict[str, str]:
         "python": platform.python_version(),
         "ruff": importlib.metadata.version("ruff"),
         "supportability_gate": "0.1.0",
+        "tree_sitter": importlib.metadata.version("tree-sitter"),
+        "tree_sitter_typescript": importlib.metadata.version("tree-sitter-typescript"),
     }
