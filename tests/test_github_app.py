@@ -71,6 +71,30 @@ def test_open_pull_truncation_blocks() -> None:
         app.open_pulls("mbh-solutions/supportability-gate", "token")
 
 
+def test_stale_pull_evidence_blocks_before_publication() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    current = {"base": {"sha": "c" * 40}, "head": {"sha": "b" * 40}}
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.assert_current(packet, 3, "token")
+
+
+def test_exact_evidence_replay_reuses_app_result() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    runs = {
+        "check_runs": [
+            {
+                "app": {"id": 42},
+                "conclusion": "success",
+                "external_id": packet.sha256,
+                "status": "completed",
+            }
+        ]
+    }
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(runs))
+    assert app.replay_result(packet, "token") is True
+
+
 def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     requests: list[Any] = []
     comparison = {
@@ -123,6 +147,29 @@ def test_check_response_from_wrong_app_blocks() -> None:
     )
     with pytest.raises(SemanticReviewError, match="CHECK_APP_IDENTITY_MISMATCH"):
         app.publish_check(packet, "token", "success", "PASS")
+
+
+def test_pending_check_is_completed_with_same_evidence_binding() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    requests: list[Any] = []
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        return _Reply(
+            {
+                "app": {"id": 42},
+                "external_id": packet.sha256,
+                "head_sha": packet.head_sha,
+                "id": 99,
+            }
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    check_id = app.start_check(packet, "token")
+    result = app.complete_check(packet, "token", check_id, "success", "PASS")
+    assert result["id"] == 99
+    assert json.loads(requests[0].data)["status"] == "in_progress"
+    assert requests[1].method == "PATCH"
 
 
 def test_github_outage_leaves_no_check() -> None:

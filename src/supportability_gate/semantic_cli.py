@@ -20,15 +20,23 @@ def _parser() -> argparse.ArgumentParser:
 
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
     packet = app.evidence_packet(repository, pull, token)
+    replay = app.replay_result(packet, token)
+    if replay is not None:
+        return replay
+    check_id = app.start_check(packet, token)
     try:
         verdict = call_responses(packet)
+        pull_number = packet.evidence["pull_request"]
+        if not isinstance(pull_number, int):
+            raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+        app.assert_current(packet, pull_number, token)
     except SemanticReviewError as error:
-        app.publish_check(packet, token, "failure", f"TECHNICAL_FAILURE: {error.code}")
+        app.complete_check(packet, token, check_id, "failure", f"TECHNICAL_FAILURE: {error.code}")
         return False
     if verdict.verdict == "PASS":
-        app.publish_check(packet, token, "success", "PASS")
+        app.complete_check(packet, token, check_id, "success", "PASS")
         return True
-    app.publish_check(packet, token, "failure", "BLOCK: " + "; ".join(verdict.findings))
+    app.complete_check(packet, token, check_id, "failure", "BLOCK: " + "; ".join(verdict.findings))
     return False
 
 

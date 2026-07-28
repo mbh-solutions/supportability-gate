@@ -105,6 +105,43 @@ class GitHubApp:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return tuple(result)
 
+    def assert_current(self, packet: EvidencePacket, pull_number: int, token: str) -> None:
+        """Reject evidence if the pull request moved before publication."""
+        pull = self._request("GET", f"/repos/{packet.repository}/pulls/{pull_number}", token)
+        try:
+            base_sha = pull["base"]["sha"]
+            head_sha = pull["head"]["sha"]
+        except (KeyError, TypeError) as error:
+            raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
+        if base_sha != packet.base_sha or head_sha != packet.head_sha:
+            raise SemanticReviewError("STALE_EVIDENCE")
+
+    def replay_result(self, packet: EvidencePacket, token: str) -> bool | None:
+        """Reuse one trusted exact-evidence App verdict instead of recalling the model."""
+        result = self._request(
+            "GET",
+            f"/repos/{packet.repository}/commits/{packet.head_sha}/check-runs"
+            f"?check_name={urllib.parse.quote(CHECK_NAME)}&per_page=100",
+            token,
+        )
+        runs = result.get("check_runs") if isinstance(result, dict) else None
+        if not isinstance(runs, list):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        conclusions = {
+            run.get("conclusion")
+            for run in runs
+            if isinstance(run, dict)
+            and run.get("external_id") == packet.sha256
+            and isinstance(run.get("app"), dict)
+            and run["app"].get("id") == self.app_id
+            and run.get("status") == "completed"
+        }
+        if not conclusions:
+            return None
+        if len(conclusions) != 1 or not conclusions <= {"success", "failure"}:
+            raise SemanticReviewError("CONFLICTING_REPLAY")
+        return conclusions.pop() == "success"
+
     def evidence_packet(self, repository: str, pull: dict[str, Any], token: str) -> EvidencePacket:
         """Build immutable evidence from exact GitHub base/head comparison."""
         try:
@@ -158,6 +195,7 @@ class GitHubApp:
             {
                 "name": CHECK_NAME,
                 "head_sha": packet.head_sha,
+                "external_id": packet.sha256,
                 "status": "completed",
                 "conclusion": conclusion,
                 "output": {
@@ -173,5 +211,69 @@ class GitHubApp:
             raise SemanticReviewError("CHECK_HEAD_MISMATCH")
         app = result.get("app")
         if not isinstance(app, dict) or app.get("id") != self.app_id:
+            raise SemanticReviewError("CHECK_APP_IDENTITY_MISMATCH")
+        return result
+
+    def start_check(self, packet: EvidencePacket, token: str) -> int:
+        """Publish a pending exact-evidence check before model transport begins."""
+        result = self._request(
+            "POST",
+            f"/repos/{packet.repository}/check-runs",
+            token,
+            {
+                "name": CHECK_NAME,
+                "head_sha": packet.head_sha,
+                "external_id": packet.sha256,
+                "status": "in_progress",
+                "output": {
+                    "title": CHECK_NAME,
+                    "summary": f"Evidence SHA-256: `{packet.sha256}`",
+                },
+            },
+        )
+        app = result.get("app") if isinstance(result, dict) else None
+        check_id = result.get("id") if isinstance(result, dict) else None
+        if (
+            not isinstance(check_id, int)
+            or result.get("head_sha") != packet.head_sha
+            or not isinstance(app, dict)
+            or app.get("id") != self.app_id
+        ):
+            raise SemanticReviewError("CHECK_APP_IDENTITY_MISMATCH")
+        return check_id
+
+    def complete_check(
+        self,
+        packet: EvidencePacket,
+        token: str,
+        check_id: int,
+        conclusion: str,
+        summary: str,
+    ) -> dict[str, Any]:
+        """Complete one previously started exact-evidence check."""
+        result = self._request(
+            "PATCH",
+            f"/repos/{packet.repository}/check-runs/{check_id}",
+            token,
+            {
+                "status": "completed",
+                "conclusion": conclusion,
+                "output": {
+                    "title": CHECK_NAME,
+                    "summary": (
+                        f"{summary}\n\nEvidence SHA-256: `{packet.sha256}`\n"
+                        f"Base: `{packet.base_sha}`\nHead: `{packet.head_sha}`"
+                    ),
+                },
+            },
+        )
+        app = result.get("app") if isinstance(result, dict) else None
+        if (
+            not isinstance(result, dict)
+            or result.get("head_sha") != packet.head_sha
+            or result.get("external_id") != packet.sha256
+            or not isinstance(app, dict)
+            or app.get("id") != self.app_id
+        ):
             raise SemanticReviewError("CHECK_APP_IDENTITY_MISMATCH")
         return result
