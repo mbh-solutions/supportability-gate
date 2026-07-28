@@ -40,6 +40,45 @@ adapter = "python.c901-touched.v1"
 maximum = 10
 """
 
+REVIEW_EVIDENCE = """\
+schema_version = "1.0"
+
+[behavior]
+intended_behavior = "Changed behavior remains covered by focused tests."
+proof = "tests/test_behavior.py::test_changed_behavior"
+
+[characterization]
+captured_behavior = "Pre-change behavior is captured before refactoring."
+proof = "tests/test_behavior.py::test_characterized_behavior"
+
+[separation_of_concerns]
+before = "The changed boundary previously mixed responsibilities."
+after = "The changed boundary now has one named responsibility."
+
+[architecture]
+dependency_direction = "Dependencies continue to point toward domain policy."
+reviewed_paths = ["src/sample.py"]
+
+[responsibility_boundary]
+path = "src/sample.py"
+owns = "Sample behavior."
+does_not_own = "CLI presentation."
+
+[incremental_refactor]
+target = "One focused sample boundary."
+completed_step = "Characterized and changed only that boundary."
+
+[review_handoff]
+summary = "Focused behavior-preserving change ready for review."
+remaining_risks = ["No known remaining risk in the focused boundary."]
+
+[human_review]
+naming = "Names express owned responsibilities."
+cohesion = "Changed code remains cohesive."
+intended_behavior = "Reported behavior remains intended."
+reviewability = "Change is small enough for direct review."
+"""
+
 
 def _run_git(repository: Path, *arguments: str) -> str:
     completed = subprocess.run(
@@ -83,6 +122,7 @@ def _initialize_repository(tmp_path: Path, contract_text: str = CONTRACT) -> Pat
     _run_git(repository, "config", "core.autocrlf", "false")
     _run_git(repository, "remote", "add", "origin", "https://github.com/example/fixture.git")
     _write(repository / ".supportability.toml", contract_text)
+    _write(repository / ".supportability-review.toml", REVIEW_EVIDENCE)
     return repository
 
 
@@ -427,6 +467,150 @@ def test_milestone_two_block_evidence_is_byte_identical(tmp_path: Path) -> None:
     second_exit, _ = _evaluate(repository, base_sha, head_sha, second)
 
     assert first_exit == second_exit == 1
+    assert (first / "complexity-result.json").read_bytes() == (
+        second / "complexity-result.json"
+    ).read_bytes()
+
+
+def _section_span(content: str, section: str) -> tuple[int, int, list[str]]:
+    lines = content.splitlines()
+    start = lines.index(f"[{section}]")
+    end = next(
+        (index for index in range(start + 1, len(lines)) if lines[index].startswith("[")),
+        len(lines),
+    )
+    return start, end, lines
+
+
+def _defective_review_evidence(section: str, defect: str) -> str:
+    start, end, lines = _section_span(REVIEW_EVIDENCE, section)
+    if defect == "missing":
+        del lines[start:end]
+    else:
+        field_index = next(index for index in range(start + 1, end) if "=" in lines[index])
+        field = lines[field_index].split("=", 1)[0]
+        lines[field_index] = f"{field}= {1 if defect == 'malformed' else '""'}"
+    return "\n".join(lines) + "\n"
+
+
+@pytest.mark.parametrize(
+    "section",
+    [
+        "behavior",
+        "characterization",
+        "separation_of_concerns",
+        "architecture",
+        "responsibility_boundary",
+        "incremental_refactor",
+        "review_handoff",
+        "human_review",
+    ],
+)
+def test_missing_milestone_three_evidence_blocks(tmp_path: Path, section: str) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / ".supportability-review.toml", _defective_review_evidence(section, "missing")
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"][0].startswith("MISSING_REVIEW_EVIDENCE:")
+
+
+@pytest.mark.parametrize(
+    "section",
+    [
+        "behavior",
+        "characterization",
+        "separation_of_concerns",
+        "architecture",
+        "responsibility_boundary",
+        "incremental_refactor",
+        "review_handoff",
+        "human_review",
+    ],
+)
+def test_malformed_milestone_three_evidence_blocks(tmp_path: Path, section: str) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / ".supportability-review.toml",
+        _defective_review_evidence(section, "malformed"),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"][0].startswith("MALFORMED_REVIEW_EVIDENCE:")
+
+
+@pytest.mark.parametrize(
+    "section",
+    [
+        "behavior",
+        "characterization",
+        "separation_of_concerns",
+        "architecture",
+        "responsibility_boundary",
+        "incremental_refactor",
+        "review_handoff",
+        "human_review",
+    ],
+)
+def test_insufficient_milestone_three_evidence_blocks(tmp_path: Path, section: str) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / ".supportability-review.toml",
+        _defective_review_evidence(section, "insufficient"),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"][0].startswith("INSUFFICIENT_REVIEW_EVIDENCE:")
+
+
+def test_valid_milestone_three_evidence_passes_and_reports_judgment(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _repository(
+        tmp_path,
+        _function_source("existing", 1),
+        _function_source("existing", 1, 1),
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["review_evidence"]["behavior"]["proof"].endswith("::test_changed_behavior")
+    assert result["review_evidence"]["human_review"] == {
+        "cohesion": "Changed code remains cohesive.",
+        "intended_behavior": "Reported behavior remains intended.",
+        "naming": "Names express owned responsibilities.",
+        "reviewability": "Change is small enough for direct review.",
+    }
+    markdown = (tmp_path / "result" / "complexity-result.md").read_text(encoding="utf-8")
+    assert "## Structured review evidence" in markdown
+    assert '"reviewability": "Change is small enough for direct review."' in markdown
+
+
+def test_milestone_three_evidence_is_byte_identical(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _repository(
+        tmp_path,
+        _function_source("existing", 1),
+        _function_source("existing", 1, 1),
+    )
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    first_exit, _ = _evaluate(repository, base_sha, head_sha, first)
+    second_exit, _ = _evaluate(repository, base_sha, head_sha, second)
+
+    assert first_exit == second_exit == 0
     assert (first / "complexity-result.json").read_bytes() == (
         second / "complexity-result.json"
     ).read_bytes()

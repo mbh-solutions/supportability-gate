@@ -11,6 +11,7 @@ from supportability_gate.complexity_metrics import RuffCommandRecord, RuffDiagno
 from supportability_gate.complexity_policy import FunctionDecision
 from supportability_gate.function_changes import ChangedFileAssessment
 from supportability_gate.git_changes import CommandRecord, RepositoryIdentity
+from supportability_gate.review_evidence import ReviewEvidence
 
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 
@@ -43,6 +44,7 @@ class EvaluationResult:
     tool_versions: dict[str, str]
     git_commands: tuple[CommandRecord, ...]
     ruff_commands: tuple[RuffCommandRecord, ...]
+    review_evidence: ReviewEvidence | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -123,6 +125,8 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "production_paths": list(result.production_paths),
         "rename_bindings": renames,
         "repository_remote": identity["remote"],
+        "review_evidence": result.review_evidence,
+        "review_evidence_path": ".supportability-review.toml",
         "ruff_diagnostics": [asdict(item) for item in result.ruff_diagnostics],
         "schema_version": "1.0",
         "standard_sha256": STANDARD_SHA256,
@@ -167,6 +171,19 @@ def markdown_from_json(payload: dict[str, Any]) -> str:
     if payload["policy_blocks"]:
         lines.extend(["", "## Policy blocks", ""])
         lines.extend(f"- `{item}`" for item in payload["policy_blocks"])
+    if payload["review_evidence"]:
+        lines.extend(
+            [
+                "",
+                "## Structured review evidence",
+                "",
+                "```json",
+                json.dumps(
+                    payload["review_evidence"], ensure_ascii=False, indent=2, sort_keys=True
+                ),
+                "```",
+            ]
+        )
     lines.extend(["", "Derived from `complexity-result.json`.", ""])
     return "\n".join(lines)
 
