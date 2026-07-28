@@ -15,6 +15,26 @@ language = "python"
 production_paths = ["src"]
 high_risk_paths = []
 
+[[gates]]
+adapter = "python.c901-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.import-linter.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.mypy-strict.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.pytest.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.ruff-lint.v1"
+paths = ["src"]
+
 [complexity]
 adapter = "python.c901-touched.v1"
 maximum = 10
@@ -115,6 +135,13 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
     assert result["overall_result"] == "PASS"
     assert result["functions"][0]["decision"] == "PASS"
     assert result["functions"][0]["head"]["complexity"] == 10
+    assert [gate["adapter"] for gate in result["gate_coverage"]] == [
+        "python.c901-touched.v1",
+        "python.import-linter.v1",
+        "python.mypy-strict.v1",
+        "python.pytest.v1",
+        "python.ruff-lint.v1",
+    ]
 
 
 def test_new_complexity_11_blocks(tmp_path: Path) -> None:
@@ -290,6 +317,119 @@ def test_candidate_contract_change_blocks(tmp_path: Path) -> None:
     assert exit_code == 1
     assert result["overall_result"] == "BLOCK"
     assert result["policy_blocks"] == ["CANDIDATE_CONTRACT_CHANGE"]
+
+
+def test_unapproved_gate_adapter_blocks(tmp_path: Path) -> None:
+    policy = CONTRACT.replace("python.ruff-lint.v1", "python.unapproved.v1")
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["overall_result"] == "BLOCK"
+    assert "UNAPPROVED_ADAPTER:python.unapproved.v1" in result["policy_blocks"]
+
+
+def test_changed_file_gate_coverage_gap_blocks(tmp_path: Path) -> None:
+    policy = CONTRACT.replace(
+        'adapter = "python.ruff-lint.v1"\npaths = ["src"]',
+        'adapter = "python.ruff-lint.v1"\npaths = ["other"]',
+    )
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "CHANGED_FILE_GATE_COVERAGE:python.ruff-lint.v1:src/sample.py"
+    ]
+
+
+def test_high_risk_file_gate_coverage_gap_blocks(tmp_path: Path) -> None:
+    policy = CONTRACT.replace(
+        "high_risk_paths = []",
+        'high_risk_paths = ["src/risk.py"]',
+    ).replace(
+        'adapter = "python.ruff-lint.v1"\npaths = ["src"]',
+        'adapter = "python.ruff-lint.v1"\npaths = ["src/sample.py"]',
+    )
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    _write(repository / "src" / "risk.py", _function_source("risk", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "HIGH_RISK_FILE_GATE_COVERAGE:python.ruff-lint.v1:src/risk.py"
+    ]
+
+
+def test_threshold_weakening_blocks(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(repository / ".supportability.toml", CONTRACT.replace("maximum = 10", "maximum = 11"))
+    head_sha = _commit(repository, "weaken threshold")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "CANDIDATE_CONTRACT_CHANGE",
+        "THRESHOLD_WEAKENING",
+    ]
+
+
+def test_gate_scope_narrowing_blocks(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    narrowed = CONTRACT.replace(
+        'adapter = "python.ruff-lint.v1"\npaths = ["src"]',
+        'adapter = "python.ruff-lint.v1"\npaths = ["src/package"]',
+    )
+    _write(repository / ".supportability.toml", narrowed)
+    head_sha = _commit(repository, "narrow gate scope")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "CANDIDATE_CONTRACT_CHANGE",
+        "GATE_SCOPE_NARROWING",
+    ]
+
+
+def test_milestone_two_block_evidence_is_byte_identical(tmp_path: Path) -> None:
+    policy = CONTRACT.replace(
+        'adapter = "python.ruff-lint.v1"\npaths = ["src"]',
+        'adapter = "python.ruff-lint.v1"\npaths = ["other"]',
+    )
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    head_sha = _commit(repository, "head")
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    first_exit, _ = _evaluate(repository, base_sha, head_sha, first)
+    second_exit, _ = _evaluate(repository, base_sha, head_sha, second)
+
+    assert first_exit == second_exit == 1
+    assert (first / "complexity-result.json").read_bytes() == (
+        second / "complexity-result.json"
+    ).read_bytes()
 
 
 def test_malformed_base_contract_is_technical_failure(tmp_path: Path) -> None:

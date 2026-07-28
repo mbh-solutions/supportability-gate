@@ -12,6 +12,7 @@ from supportability_gate import (
     complexity_policy,
     contract,
     function_changes,
+    gate_policy,
     git_changes,
     reporting,
 )
@@ -145,11 +146,16 @@ def _versions(identity: git_changes.RepositoryIdentity | None) -> dict[str, str]
     return versions
 
 
+def _gate_coverage(policy: contract.Contract) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    return tuple((gate.adapter, gate.paths) for gate in policy.gates)
+
+
 def _result(
     identity: git_changes.RepositoryIdentity,
     contract_path: str,
     blob: git_changes.GitBlob,
     policy: contract.Contract,
+    candidate_policy: contract.Contract | None,
     analyzed: _AnalyzedChanges,
     records: list[git_changes.CommandRecord],
     ruff_records: list[complexity_metrics.RuffCommandRecord],
@@ -165,11 +171,35 @@ def _result(
             policy.sha256,
             policy.production_paths,
             policy.high_risk_paths,
+            _gate_coverage(policy),
             analyzed.assessments,
             (),
             (),
             (),
-            ("CANDIDATE_CONTRACT_CHANGE",),
+            (
+                "CANDIDATE_CONTRACT_CHANGE",
+                *gate_policy.contract_change_blocks(policy, candidate_policy),
+            ),
+            "BLOCK",
+            _versions(identity),
+            tuple(records),
+            (),
+        )
+    policy_blocks = gate_policy.evaluate_contract(policy, analyzed.assessments)
+    if policy_blocks:
+        return reporting.EvaluationResult(
+            identity,
+            contract_path,
+            blob.object_sha,
+            policy.sha256,
+            policy.production_paths,
+            policy.high_risk_paths,
+            _gate_coverage(policy),
+            analyzed.assessments,
+            (),
+            (),
+            (),
+            policy_blocks,
             "BLOCK",
             _versions(identity),
             tuple(records),
@@ -197,6 +227,7 @@ def _result(
         policy.sha256,
         policy.production_paths,
         policy.high_risk_paths,
+        _gate_coverage(policy),
         analyzed.assessments,
         decisions,
         ruff.diagnostics,
@@ -228,6 +259,7 @@ def _technical_result(
         contract.content_sha256(blob.content) if blob else None,
         policy.production_paths if policy else (),
         policy.high_risk_paths if policy else (),
+        _gate_coverage(policy) if policy else (),
         assessments,
         (),
         (),
@@ -247,6 +279,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
     blob: git_changes.GitBlob | None = None
     policy: contract.Contract | None = None
     assessments: tuple[function_changes.ChangedFileAssessment, ...] = ()
+    candidate_policy: contract.Contract | None = None
     contract_path = str(arguments.contract_path)
     try:
         contract_path = contract.validate_contract_path(contract_path)
@@ -274,6 +307,17 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
         contract_changed = any(
             contract_path in {item.change.old_path, item.change.new_path} for item in assessments
         )
+        if contract_changed and any(item.change.new_path == contract_path for item in assessments):
+            try:
+                candidate_blob = git_changes.read_regular_blob(
+                    repository,
+                    identity.head_sha,
+                    contract_path,
+                    records,
+                )
+                candidate_policy = contract.parse_contract(candidate_blob.content)
+            except (contract.ContractError, git_changes.GitError):
+                candidate_policy = None
         analyzed = (
             _AnalyzedChanges(assessments, (), {})
             if contract_changed
@@ -284,6 +328,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             contract_path,
             blob,
             policy,
+            candidate_policy,
             analyzed,
             records,
             ruff_records,
