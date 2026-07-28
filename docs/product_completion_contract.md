@@ -34,12 +34,32 @@ workflow, check-run, ruleset, or GitHub state supports them.
   required-check context, check-run, workflow run, job, and producing App identities; active `main`
   ruleset bound to that check and App; successful harmless probe; probe cleanup; remote `main` equal
   to the published Milestone 1 commit; clean local worktree; and final recorded evidence.
-- Current status: `IN_PROGRESS`
-- Verified evidence: Local implementation and local source proof exist. The staged repository tree
-  directly contains the package, contract, tests, documentation, and source-validation workflow.
-  No live publication or source-protection evidence is recorded here.
-- Remaining work: Live GitHub publication, workflow proof, required-check identity, active ruleset,
-  probe verification, cleanup, and final evidence.
+- Current status: `COMPLETE`
+- Verified evidence:
+  - Published source implementation commit: `f7fe1daea040e6901b07ebde8d24be0184ce3958`.
+  - Python `3.12.13` exact-lock proof passed on 2026-07-28: Ruff lint and format; C901 at
+    maximum 10; strict mypy; Import Linter; 20 pytest tests; compileall; wheel build; fresh
+    environment wheel install; installed `supportability-gate --help`; immutable-standard tamper
+    test; and whitespace validation from `f13b2a8e79b2cad7c8b5b1e8fbdaadac237e4b09` through
+    `f0fc89106c21bfc71560fb8b3943bc0df1687400` excluding only the immutable standard.
+  - Immutable standard SHA-256:
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - GitHub workflow run `30206119346` succeeded for harmless probe pull request #1 at
+    `99a5dd2a3cc6316a911cf5297376b4d672514899`; workflow ID `320787297` and job/check-run ID
+    `89804372250` produced required context `Source Validation` through GitHub Actions App ID
+    `15368`.
+  - Active repository ruleset `19767613` targets `refs/heads/main`, requires strict
+    `Source Validation` from App ID `15368`, requires pull requests, and blocks deletion and
+    non-fast-forward updates.
+  - Probe pull request #1 closed unmerged after success; its branch was deleted; only `main`
+    remained remotely. Remote `main` and clean local `HEAD` both resolved to
+    `f0fc89106c21bfc71560fb8b3943bc0df1687400` before this evidence-only completion change.
+  - Source gate coverage includes all production and test Python files for lint and format; all
+    production Python files for C901 and strict typing; the complete package graph for import
+    boundaries; runtime tests; compile; wheel build/install; CLI smoke; immutable-standard
+    integrity; and complete changed-file whitespace except the separately hash-protected standard.
+    No threshold or gate scope changed, and no production file was excluded.
+- Remaining work: None for Milestone 1. Stop; Milestone 2 is not authorized.
 
 ### 2. Approved gate adapters, changed-file gate coverage, high-risk-file gate coverage, threshold and scope anti-weakening.
 
@@ -84,7 +104,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 ```text
 Deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: Complete Milestone 1 publication and source protection
+Current authorized work: None — Milestone 1 complete; stop
 Next milestone authorized: NO
 ```
 
