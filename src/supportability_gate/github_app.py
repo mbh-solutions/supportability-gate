@@ -180,7 +180,11 @@ class GitHubApp:
                 diff = cast(str, result.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, UnicodeDecodeError) as error:
             raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
-        if not diff or "GIT binary patch" in diff or "Binary files " in diff:
+        lines = diff.splitlines()
+        binary = "GIT binary patch" in lines or any(
+            line.startswith("Binary files ") and line.endswith(" differ") for line in lines
+        )
+        if not diff or binary:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return diff
 

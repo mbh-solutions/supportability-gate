@@ -153,6 +153,16 @@ def test_incomplete_diff_evidence_blocks(diff: str) -> None:
         app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
 
 
+def test_binary_marker_inside_source_text_is_evidence() -> None:
+    diff = '+marker = "Binary files a/image.png and b/image.png differ"'
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _RawReply(diff))
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    assert (
+        app.evidence_packet("mbh-solutions/supportability-gate", pull, "token").evidence["diff"]
+        == diff
+    )
+
+
 def test_check_response_from_wrong_app_blocks() -> None:
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
     app = GitHubApp(
