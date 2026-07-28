@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from supportability_gate import cli, complexity_metrics, function_changes, reporting
+from supportability_gate import (
+    cli,
+    complexity_metrics,
+    complexity_policy,
+    function_changes,
+    reporting,
+)
 
 CONTRACT = """\
 schema_version = "1.0"
@@ -37,6 +43,21 @@ paths = ["src"]
 
 [complexity]
 adapter = "python.c901-touched.v1"
+maximum = 10
+"""
+
+TYPESCRIPT_CONTRACT = """\
+schema_version = "1.0"
+language = "typescript"
+production_paths = ["src"]
+high_risk_paths = []
+
+[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["src"]
+
+[complexity]
+adapter = "typescript.c901-equivalent-touched.v1"
 maximum = 10
 """
 
@@ -107,6 +128,16 @@ def _function_source(name: str, complexity: int, return_value: int = 0) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _typescript_source(name: str, complexity: int, return_value: int = 0) -> str:
+    lines = [f"export function {name}(value: number): number {{"]
+    lines.extend(
+        f"  if (value === {index}) {{ return {index}; }}" for index in range(complexity - 1)
+    )
+    lines.append(f"  return {return_value};")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
 def _commit(repository: Path, message: str) -> str:
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", message)
@@ -136,6 +167,26 @@ def _repository(
         _write(repository / "src" / "sample.py", base_source)
     base_sha = _commit(repository, "base")
     sample = repository / "src" / "sample.py"
+    if head_source is None:
+        sample.unlink(missing_ok=True)
+    else:
+        _write(sample, head_source)
+    head_sha = _commit(repository, "head")
+    return repository, base_sha, head_sha
+
+
+def _typescript_repository(
+    tmp_path: Path,
+    base_source: str | None,
+    head_source: str | None,
+    *,
+    extension: str = ".ts",
+) -> tuple[Path, str, str]:
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    sample = repository / "src" / f"sample{extension}"
+    if base_source is not None:
+        _write(sample, base_source)
+    base_sha = _commit(repository, "base")
     if head_source is None:
         sample.unlink(missing_ok=True)
     else:
@@ -175,6 +226,7 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
     assert result["overall_result"] == "PASS"
     assert result["functions"][0]["decision"] == "PASS"
     assert result["functions"][0]["head"]["complexity"] == 10
+    assert result["language"] == "python"
     assert [gate["adapter"] for gate in result["gate_coverage"]] == [
         "python.c901-touched.v1",
         "python.import-linter.v1",
@@ -210,7 +262,165 @@ def test_legacy_14_to_12_passes_progressively(tmp_path: Path) -> None:
     assert decision["base"]["complexity"] == 14
     assert decision["head"]["complexity"] == 12
     assert decision["remaining_debt"] == 2
+    assert decision["remaining_gap"] == 2
+    assert decision["starting_complexity"] == 14
+    assert decision["ending_complexity"] == 12
     assert decision["next_target"] == 10
+
+
+def test_typescript_clean_complexity_10_passes(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path, None, _typescript_source("cleanChange", 10)
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["language"] == "typescript"
+    assert result["functions"][0]["head"]["complexity"] == 10
+    assert result["touched_qualified_functions"] == ["cleanChange"]
+    assert result["ruff_diagnostics"] == []
+
+
+def test_typescript_complexity_11_blocks(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path, None, _typescript_source("tooComplex", 11)
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["functions"][0]["decision"] == "BLOCK"
+    assert result["functions"][0]["ending_complexity"] == 11
+
+
+def test_typescript_legacy_must_improve_and_reports_gap(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path,
+        _typescript_source("legacyFlow", 14, 0),
+        _typescript_source("legacyFlow", 12, 1),
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    decision = result["functions"][0]
+    assert exit_code == 0
+    assert decision["decision"] == "PASS_PROGRESSIVE"
+    assert decision["starting_complexity"] == 14
+    assert decision["ending_complexity"] == 12
+    assert decision["remaining_gap"] == 2
+    assert decision["next_target"] == 10
+
+
+def test_typescript_non_improving_legacy_touch_blocks(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path,
+        _typescript_source("legacyFlow", 14, 0),
+        _typescript_source("legacyFlow", 14, 1),
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["functions"][0]["decision"] == "BLOCK"
+
+
+def test_typescript_new_over_limit_extraction_blocks(tmp_path: Path) -> None:
+    base = _typescript_source("existingFlow", 1)
+    head = base + "\n" + _typescript_source("validateCustomerRows", 11)
+    repository, base_sha, head_sha = _typescript_repository(tmp_path, base, head)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    extracted = next(
+        item
+        for item in result["functions"]
+        if item["head"]["qualified_name"] == "validateCustomerRows"
+    )
+    assert exit_code == 1
+    assert extracted["state"] == "NEW"
+    assert extracted["decision"] == "BLOCK"
+
+
+def test_typescript_tsx_arrow_function_is_bound(tmp_path: Path) -> None:
+    source = "export const CustomerCard = (active: boolean) => active ? <div /> : null;\n"
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path, None, source, extension=".tsx"
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["touched_qualified_functions"] == ["CustomerCard"]
+    assert result["functions"][0]["ending_complexity"] == 2
+
+
+def test_typescript_ambiguous_callback_fails_closed(tmp_path: Path) -> None:
+    source = "export const values = [1].map((value) => value + 1);\n"
+    repository, base_sha, head_sha = _typescript_repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 2
+    assert result["technical_errors"][0]["code"] == "AMBIGUOUS_FUNCTION_IDENTITY"
+
+
+def test_typescript_profile_mismatch_blocks_instead_of_skipping(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.js", "export function skipped() { return 1; }\n")
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["PROFILE_SOURCE_MISMATCH:src/sample.js"]
+
+
+def test_typescript_threshold_weakening_blocks(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / ".supportability.toml",
+        TYPESCRIPT_CONTRACT.replace("maximum = 10", "maximum = 11"),
+    )
+    head_sha = _commit(repository, "weaken threshold")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "CANDIDATE_CONTRACT_CHANGE",
+        "THRESHOLD_WEAKENING",
+    ]
+
+
+def test_typescript_evidence_is_byte_identical(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path, None, _typescript_source("stableResult", 10)
+    )
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    first_exit, _ = _evaluate(repository, base_sha, head_sha, first)
+    second_exit, _ = _evaluate(repository, base_sha, head_sha, second)
+
+    assert first_exit == second_exit == 0
+    assert (first / "complexity-result.json").read_bytes() == (
+        second / "complexity-result.json"
+    ).read_bytes()
+
+
+def test_incomplete_remaining_gap_blocks() -> None:
+    span = function_changes.FunctionSpan("src/sample.py", "legacy", 1, 2)
+    base = complexity_metrics.FunctionMetric(span, 14)
+    head = complexity_metrics.FunctionMetric(span, 12)
+    incomplete = complexity_policy.FunctionDecision(
+        base, head, "EXISTING_LEGACY", "PASS_PROGRESSIVE", None, None
+    )
+
+    with pytest.raises(complexity_policy.ComplexityPolicyError, match="INCOMPLETE_REMAINING_GAP"):
+        complexity_policy.validate_reporting((incomplete,), 10)
 
 
 def test_legacy_14_to_14_blocks(tmp_path: Path) -> None:

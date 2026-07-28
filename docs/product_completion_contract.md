@@ -68,8 +68,12 @@ direct runtime proof.
     contracts, 95 tests, compileall, wheel build/fresh install/help, immutable-hash canary, and
     source whitespace validation.
 - Enforcement Milestone 2 remaining work: None. Stop; Milestone 3 is not authorized.
-- Enforcement Milestones 3–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_2.md`.
+- Enforcement Milestone 3: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
+  `Not reached`.
+- Enforcement Milestone 3 evidence: Pending direct implementation and runtime proof.
+- Enforcement Milestone 3 remaining work: Entire milestone.
+- Enforcement Milestones 4–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_3.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -281,8 +285,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 2 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 3–11 remain Not started
+Current authorized work: Enforcement Milestone 3
+Next milestone authorized: NO — Enforcement Milestones 4–11 remain Not started
 ```
 
 ## Milestone transition rules

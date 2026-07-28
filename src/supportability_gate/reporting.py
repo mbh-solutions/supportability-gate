@@ -45,6 +45,7 @@ class EvaluationResult:
     git_commands: tuple[CommandRecord, ...]
     ruff_commands: tuple[RuffCommandRecord, ...]
     review_evidence: ReviewEvidence | None = None
+    language: str | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -64,9 +65,12 @@ def _decision_payload(decision: FunctionDecision) -> dict[str, Any]:
     return {
         "base": _span_metric(decision.base),
         "decision": decision.decision,
+        "ending_complexity": decision.head.complexity if decision.head else None,
         "head": _span_metric(decision.head),
         "next_target": decision.next_target,
         "remaining_debt": decision.remaining_debt,
+        "remaining_gap": decision.remaining_debt,
+        "starting_complexity": decision.base.complexity if decision.base else None,
         "state": decision.state,
     }
 
@@ -116,6 +120,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "head_sha": identity["head_sha"],
         "head_tree_sha": identity["head_tree_sha"],
         "high_risk_paths": list(result.high_risk_paths),
+        "language": result.language,
         "gate_coverage": [
             {"adapter": adapter, "paths": list(paths)} for adapter, paths in result.gate_coverage
         ],
@@ -150,16 +155,18 @@ def markdown_from_json(payload: dict[str, Any]) -> str:
         f"- Base: `{payload['base_sha']}`",
         f"- Head: `{payload['head_sha']}`",
         "",
-        "| Function | Base | Head | Decision |",
-        "|---|---:|---:|---|",
+        "| Function | Start | End | Gap | Next target | Decision |",
+        "|---|---:|---:|---:|---:|---|",
     ]
     for item in payload["functions"]:
         metric = item["head"] or item["base"]
         lines.append(
-            "| {name} | {base} | {head} | {decision} |".format(
+            "| {name} | {base} | {head} | {gap} | {target} | {decision} |".format(
                 name=_escape(metric["qualified_name"]),
                 base=item["base"]["complexity"] if item["base"] else "—",
                 head=item["head"]["complexity"] if item["head"] else "—",
+                gap=item["remaining_gap"] if item["remaining_gap"] is not None else "—",
+                target=item["next_target"] if item["next_target"] is not None else "—",
                 decision=item["decision"],
             )
         )

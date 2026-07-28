@@ -158,6 +158,34 @@ def test_prompt_injection_stays_untrusted_data(injection: str) -> None:
     assert payload["text"]["format"]["strict"] is True
 
 
+def test_complexity_anti_gaming_rubric_is_narrow_and_bound() -> None:
+    packet = _packet({"diff": "+def handle_stuff(): pass"})
+    payload = request_payload(packet)
+
+    assert RUBRIC_VERSION == "complexity-anti-gaming.v1"
+    assert "vaguely named production helpers" in payload["instructions"]
+    assert "broader separation of concerns" in payload["instructions"]
+    assert RUBRIC_VERSION in packet.canonical_bytes().decode()
+
+
+@pytest.mark.parametrize(
+    "diff",
+    [
+        "+def handle_stuff(value): return value",
+        "+const processPart1 = (value: number) => value;",
+    ],
+)
+def test_bound_vague_helper_verdict_blocks_python_and_typescript(diff: str) -> None:
+    packet = _packet({"diff": diff})
+    verdict = parse_response(
+        packet,
+        _response(packet, "BLOCK", ["Vague helper extraction hides complexity."]),
+    )
+
+    assert verdict.verdict == "BLOCK"
+    assert verdict.evidence_sha256 == packet.sha256
+
+
 def test_live_shape_from_transport_passes() -> None:
     packet = _packet()
     verdict = call_responses(packet, opener=lambda *args, **kwargs: _Reply(_response(packet)))

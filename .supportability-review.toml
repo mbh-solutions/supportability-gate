@@ -1,40 +1,41 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Existing complexity and gate-policy decisions remain unchanged; complete review evidence passes, while missing, malformed, or insufficient evidence blocks."
-proof = "tests/test_evaluate_complexity.py::test_valid_milestone_three_evidence_passes_and_reports_judgment"
+intended_behavior = "Python behavior remains unchanged while TypeScript and TSX receive the same touched-function maximum-10 and progressive legacy policy."
+proof = "tests/test_evaluate_complexity.py::test_typescript_clean_complexity_10_passes"
 
 [characterization]
-captured_behavior = "All 26 Milestone 1 and Milestone 2 regression tests remain green with the Milestone 3 evidence requirement active."
+captured_behavior = "The pre-change 95-test suite passed before TypeScript profile implementation; Python complexity and semantic fail-closed regressions remain in the full suite."
 proof = "tests/test_evaluate_complexity.py"
 
 [separation_of_concerns]
-before = "The evaluator had no owner for structured review-evidence parsing or validation."
-after = "review_evidence owns the fixed schema; cli owns immutable Git reads and orchestration; reporting owns deterministic JSON and derived Markdown."
+before = "The proven source-analysis and metric boundaries supported only Python."
+after = "function_changes owns static function binding for both profiles; complexity_metrics owns both fixed metric calculations; policy and reporting remain shared."
 
 [architecture]
-dependency_direction = "cli and reporting depend on the bottom-layer review_evidence module; review_evidence uses only Python standard-library parsing."
+dependency_direction = "CLI orchestration still points through contract, function analysis, metrics, policy, and reporting; tree-sitter remains an external leaf dependency used only by source analysis and metrics."
 reviewed_paths = [
     "src/supportability_gate/cli.py",
-    "src/supportability_gate/reporting.py",
-    "src/supportability_gate/review_evidence.py",
+    "src/supportability_gate/function_changes.py",
+    "src/supportability_gate/complexity_metrics.py",
+    "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/review_evidence.py"
-owns = "Fixed structured review-evidence schema validation and deterministic defect classification."
-does_not_own = "Git access, target-code execution, gate-policy waivers, semantic scoring, or report rendering."
+path = "src/supportability_gate/function_changes.py"
+owns = "Static Python, TypeScript, and TSX parsing plus immutable changed-line to qualified-function binding."
+does_not_own = "Complexity decisions, semantic verdicts, Git command execution, or report rendering."
 
 [incremental_refactor]
-target = "Add only the Milestone 3 evidence boundary to the proven evaluator."
-completed_step = "One parser module, one orchestration read, and one reporting field were added without replacing Milestone 1 or Milestone 2 interfaces."
+target = "Extend the existing touched-function path with the minimum TypeScript profile."
+completed_step = "The existing analysis, metric, policy, report, and App boundaries were extended without a parallel evaluator or Node runtime."
 
 [review_handoff]
-summary = "Review the fixed schema, fail-closed classifications, unchanged deterministic policy blocks, and JSON-to-Markdown reporting."
-remaining_risks = ["Evidence sufficiency is structural; approved executable gates and human review remain independently required and cannot be waived by this metadata."]
+summary = "Review TypeScript identity binding, fixed branch counting, explicit gap reporting, profile mismatch blocking, and the narrow vague-helper rubric."
+remaining_risks = ["Anonymous TypeScript callbacks intentionally fail closed because no stable cross-commit identity can be proven."]
 
 [human_review]
-naming = "Names state evidence categories and parser responsibility directly."
-cohesion = "Schema validation is cohesive in one module; Git reads and rendering remain separate."
-intended_behavior = "The change preserves existing gate decisions and adds the authorized Milestone 3 requirement."
-reviewability = "The focused implementation and parameterized direct evaluations are reviewable as one milestone slice."
+naming = "New names describe TypeScript parsing, profile source detection, metric calculation, and remaining-gap validation directly."
+cohesion = "Existing modules retain their established source-analysis, metric, policy, reporting, and semantic-review responsibilities."
+intended_behavior = "Python decisions remain stable; TypeScript and TSX now fail closed under the authorized Milestone 3 policy."
+reviewability = "One profile extension and its direct passing, blocking, deterministic, and ambiguity tests form the implementation slice."

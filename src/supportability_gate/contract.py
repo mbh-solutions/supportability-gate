@@ -9,6 +9,11 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any
 
+COMPLEXITY_ADAPTERS = {
+    "python": "python.c901-touched.v1",
+    "typescript": "typescript.c901-equivalent-touched.v1",
+}
+
 
 class ContractError(ValueError):
     """A fail-closed base contract error."""
@@ -138,20 +143,22 @@ def parse_contract(content: bytes) -> Contract:
     _require_keys(complexity, {"adapter", "maximum"}, "complexity")
     if data["schema_version"] != "1.0":
         raise ContractError("UNSUPPORTED_SCHEMA", "schema_version must equal '1.0'")
-    if data["language"] != "python":
-        raise ContractError("UNSUPPORTED_LANGUAGE", "language must equal 'python'")
-    if complexity["adapter"] != "python.c901-touched.v1":
-        raise ContractError("UNSUPPORTED_ADAPTER", "adapter must equal 'python.c901-touched.v1'")
+    language = data["language"]
+    if language not in COMPLEXITY_ADAPTERS:
+        raise ContractError("UNSUPPORTED_LANGUAGE", "language must equal 'python' or 'typescript'")
+    expected_adapter = COMPLEXITY_ADAPTERS[language]
+    if complexity["adapter"] != expected_adapter:
+        raise ContractError("UNSUPPORTED_ADAPTER", f"adapter must equal {expected_adapter!r}")
     if type(complexity["maximum"]) is not int or complexity["maximum"] < 1:
         raise ContractError("INVALID_MAXIMUM", "complexity.maximum must be a positive integer")
     return Contract(
         schema_version="1.0",
-        language="python",
+        language=language,
         production_paths=_path_list(
             data["production_paths"], "production_paths", allow_empty=False
         ),
         high_risk_paths=_path_list(data["high_risk_paths"], "high_risk_paths", allow_empty=True),
-        adapter="python.c901-touched.v1",
+        adapter=expected_adapter,
         maximum=complexity["maximum"],
         gates=_gate_adapters(data["gates"]),
         sha256=content_sha256(content),

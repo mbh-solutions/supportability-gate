@@ -12,6 +12,8 @@ dependencies = [
     "cryptography==46.0.7",
     "mccabe==0.7.0",
     "ruff==0.16.0",
+    "tree-sitter==0.26.0",
+    "tree-sitter-typescript==0.23.2",
 ]
 
 [project.optional-dependencies]

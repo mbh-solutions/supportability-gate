@@ -26,6 +26,16 @@ class _AnalyzedChanges:
     head_sources: dict[str, bytes]
 
 
+def _is_profile_source(path: str | None, language: str) -> bool:
+    if path is None:
+        return False
+    return (
+        path.endswith((".py", ".pyi"))
+        if language == "python"
+        else path.endswith((".cts", ".mts", ".ts", ".tsx"))
+    )
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="supportability-gate")
     parser.add_argument("--version", action="version", version=__version__)
@@ -50,9 +60,9 @@ def _classify_changes(
     for change in changes:
         base_production = bool(change.old_path and policy.is_production_path(change.old_path))
         head_production = bool(change.new_path and policy.is_production_path(change.new_path))
-        python_source = bool(
-            (base_production and change.old_path and change.old_path.endswith(".py"))
-            or (head_production and change.new_path and change.new_path.endswith(".py"))
+        profile_source = bool(
+            (base_production and _is_profile_source(change.old_path, policy.language))
+            or (head_production and _is_profile_source(change.new_path, policy.language))
         )
         lines = (
             git_changes.changed_head_lines(
@@ -62,7 +72,7 @@ def _classify_changes(
                 change.new_path,
                 records,
             )
-            if python_source and change.new_path
+            if profile_source and change.new_path
             else ()
         )
         assessments.append(
@@ -70,7 +80,7 @@ def _classify_changes(
                 change,
                 base_production,
                 head_production,
-                python_source,
+                profile_source,
                 lines,
             )
         )
@@ -82,9 +92,12 @@ def _regular_source(
     commit: str,
     path: str | None,
     production: bool,
+    language: str,
     records: list[git_changes.CommandRecord],
 ) -> bytes | None:
-    if not path or not production or not path.endswith(".py"):
+    if not production or not _is_profile_source(path, language):
+        return None
+    if path is None:
         return None
     return git_changes.read_regular_blob(repository, commit, path, records).content
 
@@ -92,6 +105,7 @@ def _regular_source(
 def _analyze_changes(
     repository: Path,
     identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
     records: list[git_changes.CommandRecord],
 ) -> _AnalyzedChanges:
@@ -106,6 +120,7 @@ def _analyze_changes(
             identity.base_sha,
             change.old_path,
             assessment.base_production,
+            policy.language,
             records,
         )
         head_content = _regular_source(
@@ -113,9 +128,12 @@ def _analyze_changes(
             identity.head_sha,
             change.new_path,
             assessment.head_production,
+            policy.language,
             records,
         )
-        analysis = function_changes.analyze_file(assessment, base_content, head_content)
+        analysis = function_changes.analyze_file(
+            assessment, base_content, head_content, policy.language
+        )
         analyses.append(analysis)
         if change.new_path and head_content is not None:
             head_sources[change.new_path] = head_content
@@ -188,6 +206,7 @@ def _result(
             tuple(records),
             (),
             structured_review,
+            policy.language,
         )
     policy_blocks = (*gate_policy.evaluate_contract(policy, analyzed.assessments), *review_blocks)
     if policy_blocks:
@@ -209,21 +228,28 @@ def _result(
             tuple(records),
             (),
             structured_review,
+            policy.language,
         )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")
-    base_metrics = complexity_metrics.measure_definitions(base_definitions)
-    head_metrics = complexity_metrics.measure_definitions(head_definitions)
-    ruff = complexity_metrics.run_ruff(analyzed.head_sources, head_definitions)
+    base_metrics = complexity_metrics.measure_definitions(base_definitions, policy.language)
+    head_metrics = complexity_metrics.measure_definitions(head_definitions, policy.language)
+    ruff = (
+        complexity_metrics.run_ruff(analyzed.head_sources, head_definitions)
+        if policy.language == "python"
+        else complexity_metrics.RuffResult((), None)
+    )
     if ruff.command:
         ruff_records.append(ruff.command)
-    complexity_metrics.verify_ruff_parity(head_metrics, ruff.diagnostics)
+    if policy.language == "python":
+        complexity_metrics.verify_ruff_parity(head_metrics, ruff.diagnostics)
     decisions = complexity_policy.decide_functions(
         policy,
         _all_deltas(analyzed.analyses),
         base_metrics,
         head_metrics,
     )
+    complexity_policy.validate_reporting(decisions, policy.maximum)
     overall = "BLOCK" if any(item.decision == "BLOCK" for item in decisions) else "PASS"
     return reporting.EvaluationResult(
         identity,
@@ -243,6 +269,7 @@ def _result(
         tuple(records),
         tuple(ruff_records),
         structured_review,
+        policy.language,
     )
 
 
@@ -296,6 +323,8 @@ def _technical_result(
         _versions(identity),
         tuple(records),
         tuple(ruff_records),
+        None,
+        policy.language if policy else None,
     )
 
 
@@ -355,7 +384,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
         analyzed = (
             _AnalyzedChanges(assessments, (), {})
             if contract_changed
-            else _analyze_changes(repository, identity, assessments, records)
+            else _analyze_changes(repository, identity, policy, assessments, records)
         )
         return _result(
             identity,
