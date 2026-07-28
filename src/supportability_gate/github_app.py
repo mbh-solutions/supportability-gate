@@ -36,7 +36,10 @@ def app_jwt(app_id: int, private_key: bytes, now: int | None = None) -> str:
             sort_keys=True,
         ).encode()
     )
-    key = serialization.load_pem_private_key(private_key, password=None)
+    try:
+        key = serialization.load_pem_private_key(private_key, password=None)
+    except (TypeError, ValueError) as error:
+        raise SemanticReviewError("INVALID_APP_PRIVATE_KEY") from error
     if not isinstance(key, rsa.RSAPrivateKey):
         raise SemanticReviewError("INVALID_APP_PRIVATE_KEY")
     signing_input = f"{header}.{payload}".encode("ascii")
@@ -98,6 +101,8 @@ class GitHubApp:
         result = self._request("GET", f"/repos/{repository}/pulls?state=open&per_page=100", token)
         if not isinstance(result, list) or any(not isinstance(item, dict) for item in result):
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        if len(result) >= 100:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return tuple(result)
 
     def evidence_packet(self, repository: str, pull: dict[str, Any], token: str) -> EvidencePacket:

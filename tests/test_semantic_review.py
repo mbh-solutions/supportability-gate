@@ -11,6 +11,7 @@ from supportability_gate.semantic_review import (
     MODEL,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
+    STANDARD_SHA256,
     EvidencePacket,
     SemanticReviewError,
     call_responses,
@@ -42,6 +43,7 @@ def _response(
         "evidence_sha256": packet.sha256,
         "rubric_version": RUBRIC_VERSION,
         "schema_version": SCHEMA_VERSION,
+        "standard_sha256": STANDARD_SHA256,
     }
     return {
         "model": MODEL,

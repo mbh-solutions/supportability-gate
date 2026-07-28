@@ -48,6 +48,11 @@ def test_app_jwt_binds_app_and_short_lifetime() -> None:
     assert signature
 
 
+def test_invalid_private_key_blocks_with_stable_error() -> None:
+    with pytest.raises(SemanticReviewError, match="INVALID_APP_PRIVATE_KEY"):
+        app_jwt(42, b"not a key")
+
+
 def test_installation_auth_verifies_app_identity() -> None:
     replies = iter([{"id": 42}, {"token": "installation-token"}])
     app = GitHubApp(42, 7, _private_key(), opener=lambda *args, **kwargs: _Reply(next(replies)))
@@ -58,6 +63,12 @@ def test_wrong_app_identity_blocks() -> None:
     app = GitHubApp(42, 7, _private_key(), opener=lambda *args, **kwargs: _Reply({"id": 41}))
     with pytest.raises(SemanticReviewError, match="APP_IDENTITY_MISMATCH"):
         app.installation_token()
+
+
+def test_open_pull_truncation_blocks() -> None:
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply([{}] * 100))
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.open_pulls("mbh-solutions/supportability-gate", "token")
 
 
 def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
