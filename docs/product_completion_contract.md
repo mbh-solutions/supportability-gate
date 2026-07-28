@@ -45,8 +45,29 @@ direct runtime proof.
     owner, unsupported not-applicable result, missing evidence, absent blocking test, and standard
     hash mismatch each block with its dedicated deterministic code.
 - Enforcement Milestone 1 remaining work: None.
-- Enforcement Milestone 2: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
-  `Not reached`.
+- Enforcement Milestone 2: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 2 evidence:
+  - Implementation PR #29 normally merged at
+    `58ab826bd6407abb962dadbbb00843bc49e3111a` after Source Validation, Supportability Gate,
+    and App-owned Supportability Semantic Review passed on exact head
+    `b1067d4fe2c22afca72945e0ecf7491fa07321b4`.
+  - GitHub App ID `4418989`, installation ID `149688216`, and ruleset `19767613` bind required
+    context `Supportability Semantic Review` to that App with no bypass actors.
+  - Passing check-run `90414882242` bound evidence
+    `ac87ee46e5295d283275a85a516d4192d4215b0c00f391efe1d06f87b2003b25` to the exact
+    repository/base/head/App/model/rubric/schema/standard contract.
+  - With the user task disabled, exact head `b1067d4fe2c22afca72945e0ecf7491fa07321b4` had
+    Source Validation and Supportability Gate success but no semantic check; normal merge was
+    rejected by base policy. Re-enabling the task produced the passing required check and allowed
+    the normal merge.
+  - Exact-evidence replay on head `85921d93593bbade71dd0e307973c7289081717e` reused one
+    App check without another check/model call. Live prompt-injection evidence
+    `275e0f436577d98f858395e0acde3ed90c3763d9dbc477a49bdaf9dc93702b38` returned exact
+    model `gpt-5.6-sol`, no tool output, and blocked as `UNCERTAIN_VERDICT`.
+  - Python 3.12.12 exact-lock source proof passed Ruff lint/format/C901, mypy strict, both import
+    contracts, 95 tests, compileall, wheel build/fresh install/help, immutable-hash canary, and
+    source whitespace validation.
+- Enforcement Milestone 2 remaining work: None. Stop; Milestone 3 is not authorized.
 - Enforcement Milestones 3–11: `NOT_STARTED`; not authorized.
 - Current directive: `docs/enforcement_milestone_2.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
@@ -260,7 +281,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: Enforcement Milestone 2 — Trusted AI judgment channel
+Current authorized work: None — Enforcement Milestone 2 complete; stop
 Next milestone authorized: NO — Enforcement Milestones 3–11 remain Not started
 ```
 
