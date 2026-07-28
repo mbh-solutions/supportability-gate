@@ -25,6 +25,6 @@ Every required `NOT_IMPLEMENTED` row keeps full product incomplete.
 | Naming, cohesion, intended behavior, and reviewability judgment | HUMAN_REVIEW | 3 | IMPLEMENTED |
 | Organization required-workflow enforcement proof | DETERMINISTIC | 4 | IMPLEMENTED |
 | Temporary target-repository protected merge proof | DETERMINISTIC | 4 | IMPLEMENTED |
-| TWMN clean and defect canaries | DETERMINISTIC | 5 | NOT_IMPLEMENTED |
-| TWMN gate-weakening and scope-narrowing canaries | DETERMINISTIC | 5 | NOT_IMPLEMENTED |
+| TWMN clean and defect canaries | DETERMINISTIC | 5 | IMPLEMENTED |
+| TWMN gate-weakening and scope-narrowing canaries | DETERMINISTIC | 5 | IMPLEMENTED |
 | Frontend framework gate execution in Python-only V1 | DETERMINISTIC | 1 | NOT_APPLICABLE_TO_PRODUCT |
