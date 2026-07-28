@@ -1,0 +1,40 @@
+schema_version = "1.0"
+
+[behavior]
+intended_behavior = "Existing complexity and gate-policy decisions remain unchanged; complete review evidence passes, while missing, malformed, or insufficient evidence blocks."
+proof = "tests/test_evaluate_complexity.py::test_valid_milestone_three_evidence_passes_and_reports_judgment"
+
+[characterization]
+captured_behavior = "All 26 Milestone 1 and Milestone 2 regression tests remain green with the Milestone 3 evidence requirement active."
+proof = "tests/test_evaluate_complexity.py"
+
+[separation_of_concerns]
+before = "The evaluator had no owner for structured review-evidence parsing or validation."
+after = "review_evidence owns the fixed schema; cli owns immutable Git reads and orchestration; reporting owns deterministic JSON and derived Markdown."
+
+[architecture]
+dependency_direction = "cli and reporting depend on the bottom-layer review_evidence module; review_evidence uses only Python standard-library parsing."
+reviewed_paths = [
+    "src/supportability_gate/cli.py",
+    "src/supportability_gate/reporting.py",
+    "src/supportability_gate/review_evidence.py",
+]
+
+[responsibility_boundary]
+path = "src/supportability_gate/review_evidence.py"
+owns = "Fixed structured review-evidence schema validation and deterministic defect classification."
+does_not_own = "Git access, target-code execution, gate-policy waivers, semantic scoring, or report rendering."
+
+[incremental_refactor]
+target = "Add only the Milestone 3 evidence boundary to the proven evaluator."
+completed_step = "One parser module, one orchestration read, and one reporting field were added without replacing Milestone 1 or Milestone 2 interfaces."
+
+[review_handoff]
+summary = "Review the fixed schema, fail-closed classifications, unchanged deterministic policy blocks, and JSON-to-Markdown reporting."
+remaining_risks = ["Evidence sufficiency is structural; approved executable gates and human review remain independently required and cannot be waived by this metadata."]
+
+[human_review]
+naming = "Names state evidence categories and parser responsibility directly."
+cohesion = "Schema validation is cohesive in one module; Git reads and rendering remain separate."
+intended_behavior = "The change preserves existing gate decisions and adds the authorized Milestone 3 requirement."
+reviewability = "The focused implementation and parameterized direct evaluations are reviewable as one milestone slice."

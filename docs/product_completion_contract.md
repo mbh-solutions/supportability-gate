@@ -96,9 +96,30 @@ workflow, check-run, ruleset, or GitHub state supports them.
   responsibility-boundary evidence.
 - Required runtime proof: Direct evaluations proving required evidence is accepted when valid and
   blocked when missing, malformed, or insufficient.
-- Current status: `NOT_STARTED`
-- Verified evidence: None recorded.
-- Remaining work: Entire milestone; no owner-authorized execution directive.
+- Current status: `COMPLETE`
+- Verified evidence:
+  - Implementation commit: `d45e3335effc65a79087145aebfe167291dd8347`.
+  - Python `3.12.13` exact-lock proof passed on 2026-07-28: Ruff lint and format; C901 at
+    maximum 10; strict mypy; Import Linter; 52 pytest tests; compileall; wheel build; fresh
+    environment wheel install; installed `supportability-gate --help`; immutable-standard tamper
+    test; and exact-range whitespace validation excluding only the immutable standard.
+  - Twenty-six direct Milestone 3 evaluations passed: complete valid evidence passes and reports
+    the required judgment; behavior, characterization, separation-of-concerns, architecture and
+    dependency direction, responsibility boundary, incremental refactor, review handoff and
+    remaining risk, and human-review evidence each block when missing, malformed, or insufficient;
+    repeated identical inputs emit byte-identical JSON.
+  - Exact implementation-head self-evaluation passed twice with byte-identical JSON, all three
+    changed production files covered by all five approved adapters, and no policy block.
+  - Pull request #12 workflow run `30376335471` succeeded through workflow ID `320787297`,
+    job/check-run ID `90332853177`, required context `Source Validation`, and GitHub Actions App ID
+    `15368`.
+  - Active repository ruleset `19767613` targets `refs/heads/main`, requires strict
+    `Source Validation` from App ID `15368`, requires pull requests, and blocks deletion and
+    non-fast-forward updates.
+  - Approved gate scopes, maximum complexity 10, and the four recorded highest-risk trust-boundary
+    files remain unchanged. All changed production files remain inside every approved `src` gate
+    scope; no production file is excluded.
+- Remaining work: None for Milestone 3. Stop; Milestone 4 is not authorized.
 
 ### 4. Organization required workflow proof in one temporary target repository.
 
@@ -123,7 +144,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 ```text
 Deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Milestone 2 complete; stop
+Current authorized work: None — Milestone 3 complete; stop
 Next milestone authorized: NO
 ```
 

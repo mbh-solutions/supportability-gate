@@ -15,6 +15,7 @@ from supportability_gate import (
     gate_policy,
     git_changes,
     reporting,
+    review_evidence,
 )
 
 
@@ -159,6 +160,8 @@ def _result(
     analyzed: _AnalyzedChanges,
     records: list[git_changes.CommandRecord],
     ruff_records: list[complexity_metrics.RuffCommandRecord],
+    structured_review: review_evidence.ReviewEvidence | None,
+    review_blocks: tuple[str, ...],
 ) -> reporting.EvaluationResult:
     if any(
         contract_path in {item.change.old_path, item.change.new_path}
@@ -184,8 +187,9 @@ def _result(
             _versions(identity),
             tuple(records),
             (),
+            structured_review,
         )
-    policy_blocks = gate_policy.evaluate_contract(policy, analyzed.assessments)
+    policy_blocks = (*gate_policy.evaluate_contract(policy, analyzed.assessments), *review_blocks)
     if policy_blocks:
         return reporting.EvaluationResult(
             identity,
@@ -204,6 +208,7 @@ def _result(
             _versions(identity),
             tuple(records),
             (),
+            structured_review,
         )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")
@@ -237,7 +242,29 @@ def _result(
         _versions(identity),
         tuple(records),
         tuple(ruff_records),
+        structured_review,
     )
+
+
+def _read_review_evidence(
+    repository: Path,
+    head_sha: str,
+    records: list[git_changes.CommandRecord],
+) -> tuple[review_evidence.ReviewEvidence | None, tuple[str, ...]]:
+    try:
+        blob = git_changes.read_regular_blob(
+            repository,
+            head_sha,
+            review_evidence.REVIEW_EVIDENCE_PATH,
+            records,
+        )
+    except git_changes.GitError as error:
+        if error.code == "MISSING_BLOB":
+            return review_evidence.evaluate_review_evidence(None)
+        if error.code == "SYMLINK_OR_NONFILE":
+            return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
+        raise
+    return review_evidence.evaluate_review_evidence(blob.content)
 
 
 def _technical_result(
@@ -280,6 +307,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
     policy: contract.Contract | None = None
     assessments: tuple[function_changes.ChangedFileAssessment, ...] = ()
     candidate_policy: contract.Contract | None = None
+    structured_review: review_evidence.ReviewEvidence | None = None
+    review_blocks: tuple[str, ...] = ()
     contract_path = str(arguments.contract_path)
     try:
         contract_path = contract.validate_contract_path(contract_path)
@@ -304,6 +333,11 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
         )
         assessments = _classify_changes(repository, identity, policy, changes, records)
+        structured_review, review_blocks = _read_review_evidence(
+            repository,
+            identity.head_sha,
+            records,
+        )
         contract_changed = any(
             contract_path in {item.change.old_path, item.change.new_path} for item in assessments
         )
@@ -332,6 +366,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             analyzed,
             records,
             ruff_records,
+            structured_review,
+            review_blocks,
         )
     except Exception as error:  # fail closed at the CLI trust boundary
         return _technical_result(
