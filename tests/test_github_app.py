@@ -82,6 +82,7 @@ def test_stale_pull_evidence_blocks_before_publication() -> None:
 def test_exact_evidence_replay_reuses_app_result() -> None:
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
     runs = {
+        "total_count": 1,
         "check_runs": [
             {
                 "app": {"id": 42},
@@ -89,10 +90,22 @@ def test_exact_evidence_replay_reuses_app_result() -> None:
                 "external_id": packet.sha256,
                 "status": "completed",
             }
-        ]
+        ],
     }
     app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(runs))
     assert app.replay_result(packet, "token") is True
+
+
+def test_replay_truncation_blocks() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply({"total_count": 100, "check_runs": []}),
+    )
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.replay_result(packet, "token")
 
 
 def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:

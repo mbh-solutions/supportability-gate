@@ -125,8 +125,11 @@ class GitHubApp:
             token,
         )
         runs = result.get("check_runs") if isinstance(result, dict) else None
-        if not isinstance(runs, list):
+        total = result.get("total_count") if isinstance(result, dict) else None
+        if not isinstance(runs, list) or not isinstance(total, int):
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        if total >= 100:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         conclusions = {
             run.get("conclusion")
             for run in runs
