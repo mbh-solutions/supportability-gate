@@ -33,6 +33,7 @@ class EvaluationResult:
     contract_sha256: str | None
     production_paths: tuple[str, ...]
     high_risk_paths: tuple[str, ...]
+    gate_coverage: tuple[tuple[str, tuple[str, ...]], ...]
     changed_files: tuple[ChangedFileAssessment, ...]
     functions: tuple[FunctionDecision, ...]
     ruff_diagnostics: tuple[RuffDiagnostic, ...]
@@ -113,6 +114,9 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "head_sha": identity["head_sha"],
         "head_tree_sha": identity["head_tree_sha"],
         "high_risk_paths": list(result.high_risk_paths),
+        "gate_coverage": [
+            {"adapter": adapter, "paths": list(paths)} for adapter, paths in result.gate_coverage
+        ],
         "functions": functions,
         "overall_result": result.overall_result,
         "policy_blocks": list(result.policy_blocks),

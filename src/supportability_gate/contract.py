@@ -19,6 +19,18 @@ class ContractError(ValueError):
 
 
 @dataclass(frozen=True)
+class GateAdapter:
+    """One approved external gate identity and declared repository scope."""
+
+    adapter: str
+    paths: tuple[str, ...]
+
+    def covers(self, path: str) -> bool:
+        """Return whether the declared scope covers a repository path."""
+        return any(path == root or path.startswith(f"{root}/") for root in self.paths)
+
+
+@dataclass(frozen=True)
 class Contract:
     """Validated base-ref policy contract."""
 
@@ -28,6 +40,7 @@ class Contract:
     high_risk_paths: tuple[str, ...]
     adapter: str
     maximum: int
+    gates: tuple[GateAdapter, ...]
     sha256: str
 
     def is_production_path(self, path: str) -> bool:
@@ -79,6 +92,28 @@ def _path_list(value: object, field: str, *, allow_empty: bool) -> tuple[str, ..
     return paths
 
 
+def _gate_adapters(value: object) -> tuple[GateAdapter, ...]:
+    if not isinstance(value, list) or not value:
+        raise ContractError("INVALID_GATES", "gates must be a non-empty array of tables")
+    gates: list[GateAdapter] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ContractError("INVALID_GATE", f"gates[{index}] must be a table")
+        _require_keys(item, {"adapter", "paths"}, f"gates[{index}]")
+        adapter = item["adapter"]
+        if not isinstance(adapter, str) or not adapter:
+            raise ContractError("INVALID_ADAPTER", f"gates[{index}].adapter must be non-empty")
+        gates.append(
+            GateAdapter(
+                adapter,
+                _path_list(item["paths"], f"gates[{index}].paths", allow_empty=False),
+            )
+        )
+    if len(gates) != len({item.adapter for item in gates}):
+        raise ContractError("DUPLICATE_ADAPTER", "gates contains duplicate adapters")
+    return tuple(sorted(gates, key=lambda item: item.adapter))
+
+
 def parse_contract(content: bytes) -> Contract:
     """Parse the only supported contract schema."""
     try:
@@ -87,7 +122,14 @@ def parse_contract(content: bytes) -> Contract:
         raise ContractError("MALFORMED_CONTRACT", str(error)) from error
     _require_keys(
         data,
-        {"schema_version", "language", "production_paths", "high_risk_paths", "complexity"},
+        {
+            "schema_version",
+            "language",
+            "production_paths",
+            "high_risk_paths",
+            "complexity",
+            "gates",
+        },
         "contract",
     )
     complexity = data["complexity"]
@@ -100,8 +142,8 @@ def parse_contract(content: bytes) -> Contract:
         raise ContractError("UNSUPPORTED_LANGUAGE", "language must equal 'python'")
     if complexity["adapter"] != "python.c901-touched.v1":
         raise ContractError("UNSUPPORTED_ADAPTER", "adapter must equal 'python.c901-touched.v1'")
-    if type(complexity["maximum"]) is not int or complexity["maximum"] != 10:
-        raise ContractError("INVALID_MAXIMUM", "complexity.maximum must equal 10")
+    if type(complexity["maximum"]) is not int or complexity["maximum"] < 1:
+        raise ContractError("INVALID_MAXIMUM", "complexity.maximum must be a positive integer")
     return Contract(
         schema_version="1.0",
         language="python",
@@ -110,6 +152,7 @@ def parse_contract(content: bytes) -> Contract:
         ),
         high_risk_paths=_path_list(data["high_risk_paths"], "high_risk_paths", allow_empty=True),
         adapter="python.c901-touched.v1",
-        maximum=10,
+        maximum=complexity["maximum"],
+        gates=_gate_adapters(data["gates"]),
         sha256=content_sha256(content),
     )

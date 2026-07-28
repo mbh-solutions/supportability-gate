@@ -61,7 +61,7 @@ layers = [
     "supportability_gate.__main__",
     "supportability_gate.cli",
     "supportability_gate.reporting",
-    "supportability_gate.complexity_policy",
+    "supportability_gate.gate_policy | supportability_gate.complexity_policy",
     "supportability_gate.complexity_metrics",
     "supportability_gate.function_changes",
     "supportability_gate.contract | supportability_gate.git_changes",
