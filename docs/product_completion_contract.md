@@ -44,9 +44,11 @@ direct runtime proof.
   - Merged-main direct canaries proved a 218-clause mapping passes while omitted clause, missing
     owner, unsupported not-applicable result, missing evidence, absent blocking test, and standard
     hash mismatch each block with its dedicated deterministic code.
-- Enforcement Milestone 1 remaining work: None. Stop; Milestone 2 is not authorized.
-- Enforcement Milestones 2–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_1.md`.
+- Enforcement Milestone 1 remaining work: None.
+- Enforcement Milestone 2: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
+  `Not reached`.
+- Enforcement Milestones 3–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_2.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -258,8 +260,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 1 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 2–11 remain Not started
+Current authorized work: Enforcement Milestone 2 — Trusted AI judgment channel
+Next milestone authorized: NO — Enforcement Milestones 3–11 remain Not started
 ```
 
 ## Milestone transition rules
