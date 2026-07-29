@@ -1,0 +1,16 @@
+{
+  "scenarios": [
+    {
+      "covers": [
+        "src/supportability_gate/characterization.py",
+        "src/supportability_gate/cli.py",
+        "src/supportability_gate/complexity_metrics.py",
+        "src/supportability_gate/contract.py",
+        "src/supportability_gate/git_changes.py"
+      ],
+      "id": "gate-cli",
+      "kind": "cli"
+    }
+  ],
+  "schema_version": "1.0"
+}
