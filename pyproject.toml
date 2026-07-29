@@ -76,6 +76,7 @@ name = "Semantic verifier dependency direction"
 type = "layers"
 layers = [
     "supportability_gate.semantic_cli",
-    "supportability_gate.github_app",
-    "supportability_gate.semantic_review",
+    "supportability_gate.github_app | supportability_gate.responses_transport",
+    "supportability_gate.semantic_review | supportability_gate.function_changes",
+    "supportability_gate.semantic_contract | supportability_gate.contract",
 ]

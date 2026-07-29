@@ -1,41 +1,43 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Python behavior remains unchanged while TypeScript and TSX receive the same touched-function maximum-10 and progressive legacy policy."
-proof = "tests/test_evaluate_complexity.py::test_typescript_clean_complexity_10_passes"
+intended_behavior = "Existing fail-closed semantic transport remains while Python and frontend boundary verdicts gain exact-head path-and-line ownership evidence."
+proof = "tests/test_semantic_review.py::test_clean_fixture_passes_and_is_deterministic"
 
 [characterization]
-captured_behavior = "The pre-change 95-test suite passed before TypeScript profile implementation; Python complexity and semantic fail-closed regressions remain in the full suite."
-proof = "tests/test_evaluate_complexity.py"
+captured_behavior = "The pre-change 109-test suite passed in a Python 3.12.13 exact-lock environment before Milestone 4 implementation."
+proof = "tests/test_semantic_review.py"
 
 [separation_of_concerns]
-before = "The proven source-analysis and metric boundaries supported only Python."
-after = "function_changes owns static function binding for both profiles; complexity_metrics owns both fixed metric calculations; policy and reporting remain shared."
+before = "The semantic verifier received a raw diff and returned unstructured finding strings without exact source-backed responsibility boundaries."
+after = "GitHubApp orchestrates authenticated evidence and checks; function_changes derives source boundaries; semantic_contract owns the request/result contract; semantic_review validates evidence; responses_transport owns localhost transport; semantic_cli orchestrates publication."
 
 [architecture]
-dependency_direction = "CLI orchestration still points through contract, function analysis, metrics, policy, and reporting; tree-sitter remains an external leaf dependency used only by source analysis and metrics."
+dependency_direction = "semantic_cli points to GitHub acquisition and Responses transport; both point inward through response validation to the immutable semantic contract."
 reviewed_paths = [
-    "src/supportability_gate/cli.py",
     "src/supportability_gate/function_changes.py",
-    "src/supportability_gate/complexity_metrics.py",
+    "src/supportability_gate/github_app.py",
+    "src/supportability_gate/responses_transport.py",
+    "src/supportability_gate/semantic_cli.py",
+    "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/function_changes.py"
-owns = "Static Python, TypeScript, and TSX parsing plus immutable changed-line to qualified-function binding."
-does_not_own = "Complexity decisions, semantic verdicts, Git command execution, or report rendering."
+path = "src/supportability_gate/responses_transport.py"
+owns = "Fixed localhost Responses transport boundary."
+does_not_own = "Semantic evidence validation, GitHub authentication or source retrieval, check rendering or publication, target execution, or import-direction policy."
 
 [incremental_refactor]
-target = "Extend the existing touched-function path with the minimum TypeScript profile."
-completed_step = "The existing analysis, metric, policy, report, and App boundaries were extended without a parallel evaluator or Node runtime."
+target = "Extend the existing semantic verdict with the minimum exact-head responsibility evidence."
+completed_step = "The existing GitHub App and check publisher were extended; the request/result contract was isolated from response validation without a new service or dependency."
 
 [review_handoff]
-summary = "Review TypeScript identity binding, fixed branch counting, explicit gap reporting, profile mismatch blocking, and the narrow vague-helper rubric."
-remaining_risks = ["Anonymous TypeScript callbacks intentionally fail closed because no stable cross-commit identity can be proven."]
+summary = "Review exact-head blob binding, bounded source excerpts, strict reviewed-path equality, line/name resolution, mixed-boundary rubric, and check-summary evidence."
+remaining_risks = ["Semantic uncertainty or malformed path-and-line evidence intentionally fails the required check closed."]
 
 [human_review]
-naming = "New names describe TypeScript parsing, profile source detection, metric calculation, and remaining-gap validation directly."
-cohesion = "Existing modules retain their established source-analysis, metric, policy, reporting, and semantic-review responsibilities."
-intended_behavior = "Python decisions remain stable; TypeScript and TSX now fail closed under the authorized Milestone 3 policy."
-reviewability = "One profile extension and its direct passing, blocking, deterministic, and ambiguity tests form the implementation slice."
+naming = "New names directly describe reviewed sources, boundary evidence, exact-head validation, and verdict summaries."
+cohesion = "GitHub source acquisition, semantic validation, localhost model transport, and check publication each have a named module boundary."
+intended_behavior = "Existing complexity anti-gaming remains; changed Python and frontend boundaries now require resolvable ownership evidence."
+reviewability = "Four focused production boundaries and passing, blocking, binding, transport, and replay tests form the implementation slice."

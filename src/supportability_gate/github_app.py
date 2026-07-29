@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import hashlib
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -15,10 +18,15 @@ from typing import Any, cast
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-from supportability_gate.semantic_review import EvidencePacket, SemanticReviewError
+from supportability_gate.contract import ContractError, parse_contract
+from supportability_gate.function_changes import PythonSourceError, responsibility_spans
+from supportability_gate.semantic_contract import SHA_PATTERN, EvidencePacket, SemanticReviewError
 
 API = "https://api.github.com"
 CHECK_NAME = "Supportability Semantic Review"
+REVIEWED_SUFFIXES = frozenset({".py", ".ts", ".tsx"})
+HUNK_PATTERN = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+SourceBoundary = dict[str, int | str]
 
 
 def _encoded(value: bytes) -> str:
@@ -45,6 +53,21 @@ def app_jwt(app_id: int, private_key: bytes, now: int | None = None) -> str:
     signing_input = f"{header}.{payload}".encode("ascii")
     signature = key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
     return f"{header}.{payload}.{_encoded(signature)}"
+
+
+def _response_bytes(request: urllib.request.Request, opener: Callable[..., Any]) -> bytes:
+    try:
+        with opener(request, timeout=30) as result:
+            return bytes(result.read())
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
+
+
+def _decoded_response(body: bytes) -> Any:
+    try:
+        return json.loads(body)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise SemanticReviewError("GITHUB_MALFORMED_RESPONSE") from error
 
 
 @dataclass
@@ -76,11 +99,7 @@ class GitHubApp:
             },
             method=method,
         )
-        try:
-            with self.opener(request, timeout=30) as result:
-                return json.loads(result.read())
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
-            raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
+        return _decoded_response(_response_bytes(request, self.opener))
 
     def installation_token(self) -> str:
         """Verify App identity, then obtain one installation token."""
@@ -155,24 +174,39 @@ class GitHubApp:
             raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
         if not isinstance(number, int):
             raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-        diff = self._comparison_diff(repository, str(base_sha), str(head_sha), token)
+        _, files = self._comparison_evidence(repository, str(base_sha), str(head_sha), token)
+        reviewed_sources = self._reviewed_sources(repository, str(base_sha), files, token)
+        review_diff = self._review_diff(files)
         return EvidencePacket(
             repository,
             str(base_sha),
             str(head_sha),
             self.app_id,
-            {"diff": diff, "pull_request": number},
+            {"diff": review_diff, "pull_request": number, "reviewed_sources": reviewed_sources},
         )
 
-    def _comparison_diff(self, repository: str, base_sha: str, head_sha: str, token: str) -> str:
+    def _comparison_evidence(
+        self, repository: str, base_sha: str, head_sha: str, token: str
+    ) -> tuple[str, tuple[dict[str, Any], ...]]:
         path = (
             f"/repos/{repository}/compare/"
             f"{urllib.parse.quote(base_sha)}...{urllib.parse.quote(head_sha)}"
         )
+        files = self._comparison_files(path, token)
+        diff = self._comparison_diff(path, token)
+        self._validate_comparison(diff, files)
+        return diff, files
+
+    def _comparison_files(self, path: str, token: str) -> tuple[dict[str, Any], ...]:
         comparison = self._request("GET", path, token)
         files = comparison.get("files") if isinstance(comparison, dict) else None
         if not isinstance(files, list) or len(files) >= 300:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        if any(not isinstance(item, dict) for item in files):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        return tuple(files)
+
+    def _comparison_diff(self, path: str, token: str) -> str:
         request = urllib.request.Request(
             f"{API}{path}",
             headers={
@@ -188,6 +222,9 @@ class GitHubApp:
                 diff = cast(str, result.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, UnicodeDecodeError) as error:
             raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
+        return diff
+
+    def _validate_comparison(self, diff: str, files: tuple[dict[str, Any], ...]) -> None:
         lines = diff.splitlines()
         binary = "GIT binary patch" in lines or any(
             line.startswith("Binary files ") and line.endswith(" differ") for line in lines
@@ -201,7 +238,154 @@ class GitHubApp:
             or len(lines) >= 18_000
         ):
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-        return diff
+
+    def _reviewed_sources(
+        self,
+        repository: str,
+        base_sha: str,
+        files: tuple[dict[str, Any], ...],
+        token: str,
+    ) -> list[dict[str, Any]]:
+        candidates = self._source_candidates(files)
+        if not candidates:
+            return []
+        production_paths = self._production_paths(repository, base_sha, token)
+        sources = [
+            self._reviewed_source(repository, item, token)
+            for item in self._production_candidates(candidates, production_paths)
+        ]
+        self._validate_review_size(sources)
+        return sources
+
+    def _production_candidates(
+        self, candidates: tuple[dict[str, Any], ...], production_paths: tuple[str, ...]
+    ) -> tuple[dict[str, Any], ...]:
+        return tuple(
+            item
+            for item in candidates
+            if any(
+                item["filename"] == root or item["filename"].startswith(f"{root}/")
+                for root in production_paths
+            )
+        )
+
+    def _validate_review_size(self, sources: list[dict[str, Any]]) -> None:
+        if sum(len(source["lines"]) for source in sources) > 2_000:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+
+    def _source_candidates(self, files: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
+        candidates: list[dict[str, Any]] = []
+        for item in files:
+            path, status = item.get("filename"), item.get("status")
+            if not isinstance(path, str) or not isinstance(status, str):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            if status != "removed" and any(path.lower().endswith(ext) for ext in REVIEWED_SUFFIXES):
+                candidates.append(item)
+        return tuple(sorted(candidates, key=lambda item: str(item["filename"])))
+
+    def _reviewed_source(self, repository: str, item: dict[str, Any], token: str) -> dict[str, Any]:
+        path, blob_sha, patch = item["filename"], item.get("sha"), item.get("patch")
+        if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        if not isinstance(patch, str) or not patch:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        content = self._blob_content(repository, blob_sha, token)
+        boundaries = self._source_boundaries(path, content, patch)
+        return {
+            "boundaries": boundaries,
+            "blob_sha": blob_sha,
+            "line_count": len(content.splitlines()),
+            "lines": self._source_excerpt(content, boundaries),
+            "path": path,
+        }
+
+    def _source_boundaries(self, path: str, content: str, patch: str) -> list[SourceBoundary]:
+        try:
+            spans = responsibility_spans(path, content.encode(), self._changed_lines(patch))
+        except PythonSourceError as error:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
+        boundaries: list[SourceBoundary] = [
+            {
+                "end_line": span.end_line,
+                "kind": span.kind,
+                "name": span.name,
+                "start_line": span.start_line,
+            }
+            for span in spans
+        ]
+        if not boundaries:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        return boundaries
+
+    def _changed_lines(self, patch: str) -> set[int]:
+        changed: set[int] = set()
+        head_line: int | None = None
+        for line in patch.splitlines():
+            match = HUNK_PATTERN.match(line)
+            if match:
+                head_line = int(match.group(1))
+            elif head_line is not None and line.startswith("+"):
+                changed.add(head_line)
+                head_line += 1
+            elif head_line is not None and not line.startswith("-"):
+                head_line += 1
+        return changed
+
+    def _source_excerpt(
+        self, content: str, boundaries: list[SourceBoundary]
+    ) -> list[dict[str, object]]:
+        source_lines = content.splitlines()
+        selected = {
+            number
+            for boundary in boundaries
+            for number in range(
+                cast(int, boundary["start_line"]), cast(int, boundary["end_line"]) + 1
+            )
+        }
+        return [
+            {"line": number, "text": source_lines[number - 1]}
+            for number in range(min(selected), max(selected) + 1)
+        ]
+
+    def _review_diff(self, files: tuple[dict[str, Any], ...]) -> str:
+        for item in sorted(files, key=lambda value: str(value.get("filename"))):
+            path, patch = item.get("filename"), item.get("patch")
+            if path == ".supportability-review.toml":
+                if not isinstance(patch, str) or not patch:
+                    raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+                return f"path: {path}\n{patch}"
+        return "No candidate responsibility declaration changed."
+
+    def _production_paths(self, repository: str, base_sha: str, token: str) -> tuple[str, ...]:
+        path = f"/repos/{repository}/contents/.supportability.toml?ref={base_sha}"
+        result = self._request("GET", path, token)
+        blob_sha = result.get("sha") if isinstance(result, dict) else None
+        if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        try:
+            return parse_contract(
+                self._blob_content(repository, blob_sha, token).encode()
+            ).production_paths
+        except ContractError as error:
+            raise SemanticReviewError("INVALID_BASE_CONTRACT") from error
+
+    def _blob_content(self, repository: str, blob_sha: str, token: str) -> str:
+        result = self._request("GET", f"/repos/{repository}/git/blobs/{blob_sha}", token)
+        if not isinstance(result, dict) or result.get("sha") != blob_sha:
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        encoded = result.get("content")
+        if result.get("encoding") != "base64" or not isinstance(encoded, str):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        try:
+            raw = base64.b64decode("".join(encoded.split()), validate=True)
+            content = raw.decode("utf-8")
+        except (binascii.Error, UnicodeDecodeError) as error:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
+        object_bytes = f"blob {len(raw)}\0".encode() + raw
+        verified_sha = hashlib.sha1(object_bytes, usedforsecurity=False).hexdigest()
+        if verified_sha != blob_sha or not content.splitlines() or len(raw) >= 300_000:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        return content
 
     def publish_check(
         self,
