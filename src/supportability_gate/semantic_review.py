@@ -228,12 +228,25 @@ def _architecture_evidence(
 ) -> tuple[str, tuple[str, ...]]:
     direction = data.get("dependency_direction")
     citations = data.get("architecture_citations")
-    expected = tuple(citation for path in sources for citation in sources[path][3])
+    expected = tuple(
+        citation.removeprefix("import:")
+        for path in sources
+        for citation in sources[path][3]
+        if citation.startswith("import:")
+    )
     if not isinstance(direction, str) or not direction.strip():
         raise SemanticReviewError("MISSING_DEPENDENCY_DIRECTION")
-    if not isinstance(citations, list) or any(not isinstance(item, str) for item in citations):
+    if not isinstance(citations, list):
         raise SemanticReviewError("MALFORMED_SCHEMA")
-    if tuple(citations) != expected or any(citation not in direction for citation in expected):
+    actual: list[str] = []
+    for item in citations:
+        if not isinstance(item, dict) or set(item) != {"source", "line", "specifier"}:
+            raise SemanticReviewError("MALFORMED_SCHEMA")
+        source, line, specifier = item["source"], item["line"], item["specifier"]
+        if not isinstance(source, str) or type(line) is not int or not isinstance(specifier, str):
+            raise SemanticReviewError("MALFORMED_SCHEMA")
+        actual.append(f"{source}:{line}:{specifier}")
+    if tuple(actual) != expected:
         raise SemanticReviewError("UNVERIFIED_ARCHITECTURE_CITATION")
     return direction, expected
 

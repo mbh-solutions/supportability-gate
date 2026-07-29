@@ -81,23 +81,17 @@ def _response(
 ) -> dict[str, object]:
     sources = packet.evidence.get("reviewed_sources", [])
     citations = [
-        citation
+        {"source": source["path"], "line": item["line"], "specifier": item["specifier"]}
         for source in sources
-        for citation in (
-            f"path:{source['path']}",
-            *(
-                f"import:{source['path']}:{item['line']}:{item['specifier']}"
-                for item in source["imports"]
-            ),
-        )
+        for item in source["imports"]
     ]
     content = {
         "verdict": verdict,
         "findings": findings or [],
         "reviewed_paths": reviewed_paths if reviewed_paths is not None else [PYTHON_PATH],
         "boundaries": boundaries if boundaries is not None else [PYTHON_BOUNDARY],
-        "dependency_direction": "Verified " + ", ".join(citations)
-        if citations
+        "dependency_direction": "Verified structured import graph."
+        if sources
         else "No changed production paths.",
         "architecture_citations": citations,
         "app_id": packet.app_id,
@@ -139,7 +133,7 @@ def test_clean_fixture_passes_and_is_deterministic() -> None:
     second = parse_response(packet, _response(packet))
     assert first == second
     assert first.verdict == "PASS"
-    assert first.architecture_citations == ("path:src/sample.py",)
+    assert first.architecture_citations == ()
     assert _verdict_summary(first).startswith("PASS\nsrc/sample.py:1-2 function parse_input")
 
 
@@ -200,11 +194,21 @@ def test_unverified_architecture_citation_blocks() -> None:
     packet = _packet()
     response = _response(packet)
     content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
-    content["architecture_citations"] = []
+    content["architecture_citations"] = [{"source": "outside.py", "line": 1, "specifier": "domain"}]
     response["output"][0]["content"][0]["text"] = json.dumps(content)  # type: ignore[index]
 
     with pytest.raises(SemanticReviewError, match="UNVERIFIED_ARCHITECTURE_CITATION"):
         parse_response(packet, response)
+
+
+def test_structured_import_citation_is_source_backed() -> None:
+    source = _reviewed_source(PYTHON_PATH, PYTHON_SOURCE, "c" * 40)
+    source["imports"] = [{"line": 1, "specifier": "domain.model"}]
+    packet = _packet({"reviewed_sources": [source]})
+
+    verdict = parse_response(packet, _response(packet))
+
+    assert verdict.architecture_citations == ("src/sample.py:1:domain.model",)
 
 
 @pytest.mark.parametrize(
