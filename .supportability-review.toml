@@ -10,7 +10,7 @@ proof = "tests/test_quality_profile.py"
 
 [separation_of_concerns]
 before = "Declared gate adapters proved configured coverage but did not prove every stack-native command actually executed successfully in an isolated hosted job."
-after = "A disposable hosted job owns fixed no-shell command execution; the production quality-profile module only authenticates the resulting GitHub artifact and verifies its exact-head attestation before the existing evaluator can pass."
+after = "The quality-runner module constructs fixed no-shell commands, a disposable hosted job executes them, and the quality-profile module authenticates and verifies the resulting exact-head GitHub artifact before the existing evaluator can pass."
 
 [architecture]
 dependency_direction = "The organization workflow captures behavior, runs the fixed hosted quality profile, then the existing CLI verifies its immutable attestation before complexity, architecture, modularity, reporting, and semantic-review paths complete."
@@ -22,6 +22,7 @@ reviewed_paths = [
     "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
     "src/supportability_gate/quality_profile.py",
+    "src/supportability_gate/quality_runner.py",
     "src/supportability_gate/reporting.py",
     "src/supportability_gate/refactor_policy.py",
     "src/supportability_gate/semantic_cli.py",
@@ -44,7 +45,7 @@ remaining_risks = ["Missing, malformed, unexecuted, failed, uncovered, excluded,
 
 [human_review]
 naming = "Quality-profile names directly describe fixed commands, hosted execution, attestation identity, coverage, and anti-weakening."
-cohesion = "One production module owns deterministic Milestone 9 artifact authentication and verification; the disposable hosted runner owns target execution, while existing characterization, refactor, evaluator, reporting, semantic, and Git evidence retain their responsibilities."
+cohesion = "One production module constructs fixed Milestone 9 command vectors and one authenticates and verifies their evidence; the disposable hosted job owns target execution, while existing characterization, refactor, evaluator, reporting, semantic, and Git evidence retain their responsibilities."
 intended_behavior = "Existing enforcement remains; Python and TypeScript quality claims now block every missing, failed, unexecuted, uncovered, excluded, weakened, narrowed, moved, malformed, stale, or non-hosted condition."
 reviewability = "Focused fixtures cover both fixed profiles, all required failure classes, exact identities and vectors, workstation refusal, and byte-identical evidence."
 
@@ -53,6 +54,12 @@ path = "src/supportability_gate/quality_profile.py"
 owner_path = "src/supportability_gate/quality_profile.py"
 basis = "responsibility"
 justification = "Owns GitHub-authenticated quality artifact and exact attestation verification without executing target code or adding repository-controlled commands, paths, environments, exclusions, waivers, or thresholds."
+
+[[module_boundaries]]
+path = "src/supportability_gate/quality_runner.py"
+owner_path = "src/supportability_gate/quality_runner.py"
+basis = "responsibility"
+justification = "Owns fixed Python and TypeScript command construction and immutable tool configuration while the disposable GitHub-hosted job alone executes target code."
 
 [[module_boundaries]]
 path = "src/supportability_gate/refactor_policy.py"
