@@ -17,7 +17,8 @@ def _verdict_summary(verdict: SemanticVerdict) -> str:
     for item in verdict.boundaries:
         lines.append(
             f"{item.path}:{item.start_line}-{item.end_line} {item.kind} {item.name} | "
-            f"owns: {item.owns} | does not own: {item.does_not_own}"
+            f"{item.basis} | owns: {item.owns} | does not own: {item.does_not_own} | "
+            f"evidence lines: {','.join(str(line) for line in item.evidence_lines)}"
         )
     lines.append(f"dependency direction: {verdict.dependency_direction}")
     lines.extend(

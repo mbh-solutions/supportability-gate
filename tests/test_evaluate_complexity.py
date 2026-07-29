@@ -105,6 +105,20 @@ reviewability = "Change is small enough for direct review."
 """
 
 
+def _review_evidence_for_new_path(path: str) -> str:
+    return (
+        REVIEW_EVIDENCE
+        + f'''\
+
+[[module_boundaries]]
+path = "{path}"
+owner_path = "{path}"
+basis = "responsibility"
+justification = "Exact source path owns one cohesive fixture boundary."
+'''
+    )
+
+
 def _run_git(repository: Path, *arguments: str) -> str:
     completed = subprocess.run(
         ["git", *arguments],
@@ -175,6 +189,11 @@ def _repository(
         sample.unlink(missing_ok=True)
     else:
         _write(sample, head_source)
+        if base_source is None:
+            _write(
+                repository / ".supportability-review.toml",
+                _review_evidence_for_new_path("src/sample.py"),
+            )
     head_sha = _commit(repository, "head")
     return repository, base_sha, head_sha
 
@@ -195,6 +214,11 @@ def _typescript_repository(
         sample.unlink(missing_ok=True)
     else:
         _write(sample, head_source)
+        if base_source is None:
+            _write(
+                repository / ".supportability-review.toml",
+                _review_evidence_for_new_path(f"src/sample{extension}"),
+            )
     head_sha = _commit(repository, "head")
     return repository, base_sha, head_sha
 
@@ -233,6 +257,9 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
     assert result["language"] == "python"
     assert result["architecture"]["executed"] is True
     assert result["architecture"]["covered_paths"] == ["src/sample.py"]
+    assert result["modularity"]["new_paths"] == ["src/sample.py"]
+    assert result["modularity"]["coverage"][0]["architecture"] is True
+    assert len(result["modularity"]["coverage"][0]["adapters"]) == 5
     assert (
         "changed production paths ['src/sample.py']" in result["dependency_direction_explanation"]
     )
@@ -495,14 +522,30 @@ def test_renamed_file_with_legacy_improvement_passes_progressively(tmp_path: Pat
     base_sha = _commit(repository, "base")
     _run_git(repository, "mv", "src/old.py", "src/new.py")
     _write(repository / "src" / "new.py", _function_source("legacy", 12))
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_for_new_path("src/new.py"),
+    )
     head_sha = _commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 0
-    assert result["changed_files"][0]["status"] == "RENAMED"
+    assert any(item["status"] == "RENAMED" for item in result["changed_files"])
     assert result["rename_bindings"] == [{"old_path": "src/old.py", "new_path": "src/new.py"}]
     assert result["functions"][0]["decision"] == "PASS_PROGRESSIVE"
+
+
+def test_new_location_without_exact_justification_blocks(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "unowned.py", _function_source("new", 1))
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["MISSING_NEW_LOCATION_JUSTIFICATION:src/unowned.py"]
 
 
 def test_deleted_high_complexity_function_is_evidence_not_block(tmp_path: Path) -> None:

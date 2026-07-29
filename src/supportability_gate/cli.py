@@ -15,6 +15,7 @@ from supportability_gate import (
     function_changes,
     gate_policy,
     git_changes,
+    modularity_policy,
     reporting,
     review_evidence,
 )
@@ -197,6 +198,7 @@ def _result(
     structured_review: review_evidence.ReviewEvidence | None,
     review_blocks: tuple[str, ...],
     architecture: architecture_policy.ArchitectureResult,
+    modularity: modularity_policy.ModularityResult,
 ) -> reporting.EvaluationResult:
     if any(
         contract_path in {item.change.old_path, item.change.new_path}
@@ -229,6 +231,7 @@ def _result(
     policy_blocks = (
         *gate_policy.evaluate_contract(policy, analyzed.assessments),
         *architecture.blocks,
+        *modularity.blocks,
         *review_blocks,
     )
     if policy_blocks:
@@ -252,6 +255,7 @@ def _result(
             structured_review,
             policy.language,
             architecture,
+            modularity,
         )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")
@@ -294,6 +298,7 @@ def _result(
         structured_review,
         policy.language,
         architecture,
+        modularity,
     )
 
 
@@ -424,6 +429,12 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             _architecture_sources(repository, identity.head_sha, policy, records),
             architecture_gate,
         )
+        modularity = modularity_policy.evaluate_modularity(
+            policy,
+            assessments,
+            structured_review,
+            architecture,
+        )
         return _result(
             identity,
             contract_path,
@@ -436,6 +447,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             structured_review,
             review_blocks,
             architecture,
+            modularity,
         )
     except Exception as error:  # fail closed at the CLI trust boundary
         return _technical_result(
