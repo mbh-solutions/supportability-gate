@@ -10,6 +10,15 @@
       ],
       "id": "gate-cli",
       "kind": "cli"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/github_app.py",
+        "src/supportability_gate/refactor_policy.py",
+        "src/supportability_gate/semantic_contract.py"
+      ],
+      "id": "refactor-policy",
+      "kind": "cli"
     }
   ],
   "schema_version": "1.0"

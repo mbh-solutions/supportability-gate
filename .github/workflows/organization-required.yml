@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   characterize-base:
@@ -206,7 +207,7 @@ jobs:
           name: characterization-head-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/head
 
-      - name: Verify exact base and head behavior
+      - name: Verify exact behavior and refactor policy
         env:
           BASE_ARTIFACT_DIGEST: ${{ needs.characterize-base.outputs.artifact-digest }}
           BASE_ARTIFACT_ID: ${{ needs.characterize-base.outputs.artifact-id }}
@@ -216,6 +217,8 @@ jobs:
           HEAD_ARTIFACT_ID: ${{ needs.characterize-head.outputs.artifact-id }}
           HEAD_CAPTURE_SHA256: ${{ needs.characterize-head.outputs.capture-sha256 }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         working-directory: ${{ runner.temp }}
         run: |
           set +e
@@ -237,9 +240,17 @@ jobs:
             --head-artifact-digest "$HEAD_ARTIFACT_DIGEST" \
             --head-capture-sha256 "$HEAD_CAPTURE_SHA256" \
             --output "$RUNNER_TEMP/evidence/characterization-result.json"
-          status=$?
+          characterization_status=$?
           cat "$RUNNER_TEMP/evidence/characterization-result.json"
-          exit "$status"
+          "$RUNNER_TEMP/gate-venv/bin/python" -P -m supportability_gate.refactor_policy \
+            --repository "$GITHUB_WORKSPACE/target" \
+            --event "$GITHUB_EVENT_PATH" \
+            --characterization-result "$RUNNER_TEMP/evidence/characterization-result.json" \
+            --output "$RUNNER_TEMP/evidence/refactor-policy-result.json"
+          refactor_status=$?
+          cat "$RUNNER_TEMP/evidence/refactor-policy-result.json"
+          if [ "$characterization_status" -ne 0 ]; then exit "$characterization_status"; fi
+          exit "$refactor_status"
 
       - name: Evaluate immutable pull-request commits
         env:

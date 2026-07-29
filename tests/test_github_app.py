@@ -156,6 +156,16 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
             return _Reply(_blob_payload(CONTRACT))
         if request.full_url.endswith(f"/git/blobs/{source_sha}"):
             return _Reply(_blob_payload(source))
+        if "/issues/3/comments" in request.full_url:
+            return _Reply(
+                [
+                    {
+                        "body": "Supportability-Refactor-Authorization: {}",
+                        "id": 11,
+                        "user": {"id": 229662739},
+                    }
+                ]
+            )
         if "/compare/" in request.full_url:
             if request.get_header("Accept") != "application/vnd.github.v3.diff":
                 return _Reply(
@@ -177,8 +187,11 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     app = GitHubApp(42, 7, b"unused", opener=open_request)
     pull: dict[str, Any] = {
         "number": 3,
+        "author_association": "MEMBER",
         "base": {"sha": "a" * 40},
+        "body": "Supportability-Refactor-Authorization: {}",
         "head": {"sha": "b" * 40},
+        "user": {"id": 229662739, "login": "markheck-solutions"},
     }
     packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
     result = app.publish_check(packet, "token", "success", "PASS")
@@ -200,6 +213,20 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
             "path": "src/a.py",
         }
     ]
+    assert packet.evidence["refactor_context"] == {
+        "author_association": "MEMBER",
+        "author_id": 229662739,
+        "author_login": "markheck-solutions",
+        "authorization_comments": [
+            {
+                "body": "Supportability-Refactor-Authorization: {}",
+                "id": 11,
+                "user_id": 229662739,
+            }
+        ],
+        "changed_files": [{"path": "src/a.py", "status": "modified"}],
+        "trusted_owner_id": 229662739,
+    }
 
 
 def test_frontend_component_boundary_uses_complete_parser_span() -> None:
@@ -244,6 +271,8 @@ def test_binary_marker_inside_source_text_is_evidence() -> None:
     diff = f"diff --git a/src/a.py b/src/a.py\n{patch}"
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/issues/3/comments" in request.full_url:
+            return _Reply([])
         if "/contents/.supportability.toml" in request.full_url:
             return _Reply({"sha": contract_sha})
         if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
@@ -288,6 +317,8 @@ def test_invalid_exact_head_source_blob_blocks() -> None:
     contract_sha = _blob_sha(CONTRACT)
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/issues/3/comments" in request.full_url:
+            return _Reply([])
         if "/contents/.supportability.toml" in request.full_url:
             return _Reply({"sha": contract_sha})
         if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
@@ -319,6 +350,8 @@ def test_only_base_contract_production_paths_are_reviewed() -> None:
     contract_sha = _blob_sha(CONTRACT)
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/issues/3/comments" in request.full_url:
+            return _Reply([])
         if "/contents/.supportability.toml" in request.full_url:
             return _Reply({"sha": contract_sha})
         if request.full_url.endswith(f"/git/blobs/{contract_sha}"):
@@ -337,6 +370,8 @@ def test_only_base_contract_production_paths_are_reviewed() -> None:
 
 def test_removed_source_needs_no_outside_head_evidence() -> None:
     def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/issues/3/comments" in request.full_url:
+            return _Reply([])
         if request.get_header("Accept") == "application/vnd.github.v3.diff":
             return _RawReply("diff --git a/src/a.py b/src/a.py\n-deleted")
         return _Reply({"files": [{"filename": "src/a.py", "sha": None, "status": "removed"}]})

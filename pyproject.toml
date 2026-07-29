@@ -68,6 +68,7 @@ layers = [
     "supportability_gate.modularity_policy",
     "supportability_gate.architecture_policy | supportability_gate.gate_policy | supportability_gate.complexity_policy",
     "supportability_gate.complexity_metrics",
+    "supportability_gate.refactor_policy",
     "supportability_gate.function_changes",
     "supportability_gate.characterization",
     "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.git_changes | supportability_gate.review_evidence",
