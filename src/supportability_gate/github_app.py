@@ -21,7 +21,12 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from supportability_gate.architecture_policy import source_imports
 from supportability_gate.contract import ContractError, parse_contract
 from supportability_gate.function_changes import PythonSourceError, responsibility_spans
-from supportability_gate.semantic_contract import SHA_PATTERN, EvidencePacket, SemanticReviewError
+from supportability_gate.semantic_contract import (
+    SHA_PATTERN,
+    TRUSTED_OWNER_ID,
+    EvidencePacket,
+    SemanticReviewError,
+)
 
 API = "https://api.github.com"
 CHECK_NAME = "Supportability Semantic Review"
@@ -178,6 +183,7 @@ class GitHubApp:
         _, files = self._comparison_evidence(repository, str(base_sha), str(head_sha), token)
         reviewed_sources = self._reviewed_sources(repository, str(base_sha), files, token)
         review_diff = self._review_diff(files)
+        comments = self.issue_comments(repository, number, token)
         return EvidencePacket(
             repository,
             str(base_sha),
@@ -186,13 +192,16 @@ class GitHubApp:
             {
                 "diff": review_diff,
                 "pull_request": number,
-                "refactor_context": self._refactor_context(pull, files),
+                "refactor_context": self._refactor_context(pull, files, comments),
                 "reviewed_sources": reviewed_sources,
             },
         )
 
     def _refactor_context(
-        self, pull: dict[str, Any], files: tuple[dict[str, Any], ...]
+        self,
+        pull: dict[str, Any],
+        files: tuple[dict[str, Any], ...],
+        comments: tuple[dict[str, Any], ...],
     ) -> dict[str, object]:
         """Return authenticated author identity plus exact changed-file metadata."""
         user = pull.get("user")
@@ -201,12 +210,36 @@ class GitHubApp:
             "author_association": pull.get("author_association"),
             "author_id": author.get("id"),
             "author_login": author.get("login"),
-            "authorization": pull.get("body"),
+            "authorization_comments": [
+                {
+                    "body": item.get("body"),
+                    "id": item.get("id"),
+                    "user_id": item.get("user", {}).get("id"),
+                }
+                for item in sorted(comments, key=lambda value: int(value.get("id", 0)))
+                if isinstance(item.get("user"), dict)
+            ],
             "changed_files": [
                 {"path": item.get("filename"), "status": item.get("status")}
                 for item in sorted(files, key=lambda value: str(value.get("filename")))
             ],
+            "trusted_owner_id": TRUSTED_OWNER_ID,
         }
+
+    def issue_comments(
+        self, repository: str, pull_number: int, token: str
+    ) -> tuple[dict[str, Any], ...]:
+        """Return authenticated issue comments used for owner authorization."""
+        result = self._request(
+            "GET", f"/repos/{repository}/issues/{pull_number}/comments?per_page=100", token
+        )
+        if (
+            not isinstance(result, list)
+            or len(result) >= 100
+            or any(not isinstance(item, dict) for item in result)
+        ):
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        return tuple(result)
 
     def _comparison_evidence(
         self, repository: str, base_sha: str, head_sha: str, token: str

@@ -12,6 +12,7 @@ MODEL = "gpt-5.6-sol"
 RUBRIC_VERSION = "incremental-strangler.v1"
 SCHEMA_VERSION = "semantic-review.v1"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
+TRUSTED_OWNER_ID = 229662739
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 
@@ -214,7 +215,7 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "BLOCK repo-wide cleanup, unrelated churn, multiple unbounded targets, or non-runnable "
         "steps unless trusted owner metadata contains exact broad scope for this head. Broad "
         "authorization never waives complexity, architecture, characterization, modularity, or "
-        "any other Supportability Standard clause. "
+        f"any other Supportability Standard clause. Trusted owner GitHub user ID is {TRUSTED_OWNER_ID}. "
         "Each reviewed source supplies trusted parser-derived boundaries. Return exactly every "
         "supplied function, module, or frontend component boundary, copying its name, kind, and "
         "inclusive line span. State one clear owned "

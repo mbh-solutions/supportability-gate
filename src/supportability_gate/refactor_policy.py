@@ -7,6 +7,8 @@ import hashlib
 import json
 import os
 import re
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -18,7 +20,6 @@ AUTHORIZATION_SCHEMA = "1.0"
 RESULT_SCHEMA = "refactor-policy-result.v1"
 CHARACTERIZATION_SCHEMA = "characterization-result.v1"
 TRUSTED_OWNER_ID = 229662739
-TRUSTED_OWNER_LOGIN = "markheck-solutions"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 MAX_JSON_BYTES = 1_000_000
 
@@ -155,27 +156,26 @@ def _pull_request(event: dict[str, Any]) -> dict[str, Any]:
     return pull
 
 
-def _event_values(event: dict[str, Any]) -> tuple[str, str, str, dict[str, Any]]:
+def _event_values(event: dict[str, Any]) -> tuple[str, str, str, int]:
     pull = _pull_request(event)
     try:
         repository = event["repository"]["full_name"]
         base_sha = pull["base"]["sha"]
         head_sha = pull["head"]["sha"]
-        author = pull["user"]
+        number = pull["number"]
     except (KeyError, TypeError) as error:
         raise RefactorPolicyError("UNAUTHENTICATED_OWNER_AUTHORIZATION") from error
-    if not all(
-        isinstance(item, str) for item in (repository, base_sha, head_sha)
-    ) or not isinstance(author, dict):
+    if (
+        not all(isinstance(item, str) for item in (repository, base_sha, head_sha))
+        or type(number) is not int
+    ):
         raise RefactorPolicyError("UNAUTHENTICATED_OWNER_AUTHORIZATION")
-    return repository, base_sha, head_sha, author
+    return repository, base_sha, head_sha, number
 
 
 def _authorization_blocks(event: dict[str, Any], authorization: Authorization) -> list[str]:
-    repository, base_sha, head_sha, author = _event_values(event)
+    repository, base_sha, head_sha, _ = _event_values(event)
     blocks: list[str] = []
-    if author.get("id") != TRUSTED_OWNER_ID:
-        blocks.append("UNAUTHENTICATED_OWNER_AUTHORIZATION")
     if authorization.repository != repository:
         blocks.append("AUTHORIZATION_REPOSITORY_MISMATCH")
     if authorization.base_sha != base_sha or authorization.head_sha != head_sha:
@@ -183,6 +183,76 @@ def _authorization_blocks(event: dict[str, Any], authorization: Authorization) -
     if authorization.sequence.predecessor_sha != base_sha:
         blocks.append("INVALID_STRANGLER_SEQUENCE")
     return blocks
+
+
+def _owner_authorization(
+    event: dict[str, Any], comments: tuple[dict[str, Any], ...]
+) -> tuple[Authorization, int]:
+    _, _, head_sha, _ = _event_values(event)
+    candidates: list[tuple[Authorization, int]] = []
+    stale = False
+    untrusted = False
+    for comment in comments:
+        user = comment.get("user")
+        if not isinstance(user, dict) or user.get("id") != TRUSTED_OWNER_ID:
+            body = comment.get("body")
+            untrusted = untrusted or (
+                isinstance(body, str)
+                and any(line.startswith(AUTHORIZATION_PREFIX) for line in body.splitlines())
+            )
+            continue
+        try:
+            authorization = _parse_authorization(comment.get("body"))
+        except RefactorPolicyError as error:
+            if error.code == "MISSING_OWNER_AUTHORIZATION":
+                continue
+            raise
+        comment_id = comment.get("id")
+        if type(comment_id) is not int:
+            raise RefactorPolicyError("UNAUTHENTICATED_OWNER_AUTHORIZATION")
+        if authorization.head_sha == head_sha:
+            candidates.append((authorization, comment_id))
+        else:
+            stale = True
+    if not candidates:
+        raise RefactorPolicyError(
+            "UNAUTHENTICATED_OWNER_AUTHORIZATION"
+            if untrusted
+            else "STALE_OWNER_AUTHORIZATION"
+            if stale
+            else "MISSING_OWNER_AUTHORIZATION"
+        )
+    if len(candidates) != 1:
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    return candidates[0]
+
+
+def _github_comments(
+    repository: str,
+    pull_number: int,
+    token: str,
+    opener: Any = urllib.request.urlopen,
+) -> tuple[dict[str, Any], ...]:
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repository}/issues/{pull_number}/comments?per_page=100",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with opener(request, timeout=30) as response:
+            value = json.loads(response.read())
+    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
+        raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE") from error
+    if (
+        not isinstance(value, list)
+        or len(value) >= 100
+        or any(not isinstance(item, dict) for item in value)
+    ):
+        raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
+    return tuple(value)
 
 
 def _profile_source(path: str, language: str) -> bool:
@@ -300,6 +370,7 @@ def verify_refactor(
     repository: Path,
     event: dict[str, Any],
     characterization: dict[str, Any],
+    comments: tuple[dict[str, Any], ...],
 ) -> dict[str, object]:
     """Return deterministic M8 authorization, focus, runnability, and sequence evidence."""
     records: list[git_changes.CommandRecord] = []
@@ -314,12 +385,12 @@ def verify_refactor(
     actual_scope = _changed_scope(changes)
     targets, unbounded = _target_identities(repository, identity, policy, changes, records)
     applicable = bool(targets or unbounded)
-    pull = _pull_request(event)
     blocks: list[str] = []
     authorization: Authorization | None = None
+    authorization_comment_id: int | None = None
     if applicable:
         try:
-            authorization = _parse_authorization(pull.get("body"))
+            authorization, authorization_comment_id = _owner_authorization(event, comments)
             blocks.extend(_authorization_blocks(event, authorization))
             blocks.extend(_focus_blocks(authorization, actual_scope, targets, unbounded, policy))
         except RefactorPolicyError as error:
@@ -349,6 +420,7 @@ def verify_refactor(
             if authorization
             else None
         ),
+        "authorization_comment_id": authorization_comment_id,
         "base_sha": base_sha,
         "characterization_sha256": hashlib.sha256(
             json.dumps(
@@ -396,7 +468,12 @@ def main(argv: list[str] | None = None) -> int:
         characterization, _ = _read_json(
             Path(arguments.characterization_result), "MALFORMED_CHARACTERIZATION_RESULT"
         )
-        result = verify_refactor(Path(arguments.repository), event, characterization)
+        repository_name, _, _, pull_number = _event_values(event)
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
+        comments = _github_comments(repository_name, pull_number, token)
+        result = verify_refactor(Path(arguments.repository), event, characterization, comments)
         _write_result(Path(arguments.output), result)
     except Exception as error:  # fail closed at hosted-job boundary
         print(getattr(error, "code", "TECHNICAL_FAILURE"))

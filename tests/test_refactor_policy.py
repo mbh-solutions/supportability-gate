@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -22,6 +23,20 @@ paths = ["src"]
 adapter = "python.c901-touched.v1"
 maximum = 10
 """
+
+
+class _Reply:
+    def __init__(self, value: object) -> None:
+        self.content = json.dumps(value).encode()
+
+    def __enter__(self) -> _Reply:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self.content
 
 
 def _git(repository: Path, *arguments: str) -> str:
@@ -103,9 +118,10 @@ def _event(base_sha: str, head_sha: str, body: str | None) -> dict[str, object]:
             "base": {"sha": base_sha},
             "body": body,
             "head": {"sha": head_sha},
+            "number": 7,
             "user": {
                 "id": refactor_policy.TRUSTED_OWNER_ID,
-                "login": refactor_policy.TRUSTED_OWNER_LOGIN,
+                "login": "markheck-solutions",
             },
         },
     }
@@ -130,6 +146,18 @@ def _characterization(
     }
 
 
+def _verify(
+    repository: Path,
+    event: dict[str, object],
+    characterization: dict[str, object],
+    *,
+    owner_id: int = refactor_policy.TRUSTED_OWNER_ID,
+) -> dict[str, object]:
+    body = event["pull_request"]["body"]  # type: ignore[index]
+    comments = () if body is None else ({"body": body, "id": 11, "user": {"id": owner_id}},)
+    return refactor_policy.verify_refactor(repository, event, characterization, comments)
+
+
 @pytest.mark.parametrize(
     ("language", "path"), [("python", "src/sample.py"), ("typescript", "src/sample.ts")]
 )
@@ -142,8 +170,8 @@ def test_bounded_runnable_python_and_typescript_refactors_pass(
     event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, [path], [target]))
     characterization = _characterization(base_sha, head_sha, [path])
 
-    first = refactor_policy.verify_refactor(repository, event, characterization)
-    second = refactor_policy.verify_refactor(repository, event, characterization)
+    first = _verify(repository, event, characterization)
+    second = _verify(repository, event, characterization)
 
     assert first == second
     assert first["overall_result"] == "PASS"
@@ -166,9 +194,7 @@ def test_repo_wide_cleanup_requires_exact_broad_authorization(tmp_path: Path) ->
     ]
     event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, paths, targets))
 
-    result = refactor_policy.verify_refactor(
-        repository, event, _characterization(base_sha, head_sha, paths)
-    )
+    result = _verify(repository, event, _characterization(base_sha, head_sha, paths))
 
     assert result["overall_result"] == "BLOCK"
     assert "BROAD_AUTHORIZATION_REQUIRED" in result["policy_blocks"]
@@ -193,9 +219,7 @@ def test_exact_broad_authorization_cannot_waive_other_clauses(tmp_path: Path) ->
         _authorization(base_sha, head_sha, paths, targets, broad=True),
     )
 
-    result = refactor_policy.verify_refactor(
-        repository, event, _characterization(base_sha, head_sha, paths)
-    )
+    result = _verify(repository, event, _characterization(base_sha, head_sha, paths))
 
     assert result["overall_result"] == "PASS"
     assert result["other_standard_clauses_waived"] is False
@@ -213,9 +237,7 @@ def test_unrelated_churn_requires_broad_authorization(tmp_path: Path) -> None:
     target = "src/sample.py::function:calculate:1-2"
     event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, scope, [target]))
 
-    result = refactor_policy.verify_refactor(
-        repository, event, _characterization(base_sha, head_sha, ["src/sample.py"])
-    )
+    result = _verify(repository, event, _characterization(base_sha, head_sha, ["src/sample.py"]))
 
     assert "BROAD_AUTHORIZATION_REQUIRED" in result["policy_blocks"]
 
@@ -240,9 +262,7 @@ def test_multiple_unbounded_targets_block(tmp_path: Path) -> None:
         ),
     )
 
-    result = refactor_policy.verify_refactor(
-        repository, event, _characterization(base_sha, head_sha, ["src/sample.py"])
-    )
+    result = _verify(repository, event, _characterization(base_sha, head_sha, ["src/sample.py"]))
 
     assert "UNVERIFIABLE_BOUNDED_TARGET" in result["policy_blocks"]
     assert "BROAD_AUTHORIZATION_REQUIRED" in result["policy_blocks"]
@@ -254,7 +274,7 @@ def test_non_runnable_intermediate_state_blocks(tmp_path: Path) -> None:
     target = f"{path}::function:calculate:1-2"
     event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, [path], [target]))
 
-    result = refactor_policy.verify_refactor(
+    result = _verify(
         repository,
         event,
         _characterization(base_sha, head_sha, [path], runnable=False),
@@ -265,7 +285,7 @@ def test_non_runnable_intermediate_state_blocks(tmp_path: Path) -> None:
 
 def test_missing_owner_authorization_blocks(tmp_path: Path) -> None:
     repository, base_sha, head_sha = _repository(tmp_path)
-    result = refactor_policy.verify_refactor(
+    result = _verify(
         repository,
         _event(base_sha, head_sha, None),
         _characterization(base_sha, head_sha, ["src/sample.py"]),
@@ -279,7 +299,7 @@ def test_non_production_change_is_not_a_refactor(tmp_path: Path) -> None:
     _write(repository / "docs/evidence.md", "record\n")
     head_sha = _commit(repository, "evidence")
 
-    result = refactor_policy.verify_refactor(
+    result = _verify(
         repository,
         _event(base_sha, head_sha, None),
         _characterization(base_sha, head_sha, []),
@@ -287,6 +307,21 @@ def test_non_production_change_is_not_a_refactor(tmp_path: Path) -> None:
 
     assert result["applicable"] is False
     assert result["overall_result"] == "PASS"
+
+
+def test_github_comment_evidence_uses_fixed_authenticated_endpoint() -> None:
+    requests: list[Any] = []
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        assert kwargs == {"timeout": 30}
+        return _Reply([{"body": "authorization", "id": 11, "user": {"id": 7}}])
+
+    comments = refactor_policy._github_comments("example/fixture", 7, "token", opener)
+
+    assert comments[0]["id"] == 11
+    assert requests[0].full_url.endswith("/repos/example/fixture/issues/7/comments?per_page=100")
+    assert requests[0].get_header("Authorization") == "Bearer token"
 
 
 @pytest.mark.parametrize(
@@ -319,11 +354,11 @@ def test_authorization_focus_and_sequence_are_exact(tmp_path: Path, defect: str,
             predecessor_sha=predecessor,
         ),
     )
-    if defect == "identity":
-        event["pull_request"]["user"]["id"] = 1  # type: ignore[index]
-
-    result = refactor_policy.verify_refactor(
-        repository, event, _characterization(base_sha, head_sha, scope)
+    result = _verify(
+        repository,
+        event,
+        _characterization(base_sha, head_sha, scope),
+        owner_id=1 if defect == "identity" else refactor_policy.TRUSTED_OWNER_ID,
     )
 
     assert code in result["policy_blocks"]

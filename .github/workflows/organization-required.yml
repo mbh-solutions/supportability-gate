@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   characterize-base:
@@ -216,6 +217,7 @@ jobs:
           HEAD_ARTIFACT_ID: ${{ needs.characterize-head.outputs.artifact-id }}
           HEAD_CAPTURE_SHA256: ${{ needs.characterize-head.outputs.capture-sha256 }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         working-directory: ${{ runner.temp }}
         run: |
