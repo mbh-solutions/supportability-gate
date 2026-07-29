@@ -22,6 +22,7 @@ reviewed_paths = [
     "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
     "src/supportability_gate/reporting.py",
+    "src/supportability_gate/responses_transport.py",
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_review.py",

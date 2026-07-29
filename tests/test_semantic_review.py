@@ -7,7 +7,7 @@ import urllib.error
 
 import pytest
 
-from supportability_gate.responses_transport import request_response
+from supportability_gate.responses_transport import SEMANTIC_TIMEOUT_SECONDS, request_response
 from supportability_gate.semantic_cli import _verdict_summary
 from supportability_gate.semantic_contract import (
     MODEL,
@@ -437,6 +437,20 @@ def test_live_shape_from_transport_passes() -> None:
         packet, request_response(packet, opener=lambda *args, **kwargs: _Reply(_response(packet)))
     )
     assert verdict.verdict == "PASS"
+
+
+def test_semantic_transport_uses_fixed_finite_timeout() -> None:
+    packet = _packet()
+    observed: list[float] = []
+
+    def open_response(*args: object, **kwargs: object) -> _Reply:
+        observed.append(float(kwargs["timeout"]))
+        return _Reply(_response(packet))
+
+    request_response(packet, opener=open_response)
+
+    assert observed == [SEMANTIC_TIMEOUT_SECONDS]
+    assert SEMANTIC_TIMEOUT_SECONDS == 240.0
 
 
 def test_evidence_change_changes_hash_and_replay_binding() -> None:
