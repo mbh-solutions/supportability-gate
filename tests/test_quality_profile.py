@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import shutil
 import subprocess
 import sys
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
@@ -277,9 +279,17 @@ def test_fixed_environment_imports_only_the_target_source(tmp_path: Path) -> Non
 
 
 def _run_git(repository: Path, *arguments: str) -> str:
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z",
+            "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z",
+        }
+    )
     completed = subprocess.run(
         ["git", *arguments],
         cwd=repository,
+        env=environment,
         check=True,
         capture_output=True,
         text=True,
@@ -288,13 +298,298 @@ def _run_git(repository: Path, *arguments: str) -> str:
     return completed.stdout.strip()
 
 
+def _hosted_root(language: str) -> Path:
+    runner_temp = Path(os.environ["RUNNER_TEMP"]).resolve()
+    repository = runner_temp / f"m9-coverage-{language}"
+    if repository.exists():
+        shutil.rmtree(repository)
+    repository.mkdir()
+    return repository
+
+
+def _run_hosted_profile(
+    repository: Path, base_sha: str, head_sha: str, output: Path, name: str
+) -> tuple[subprocess.CompletedProcess[bytes], quality_profile.QualityEvidence]:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-P",
+            str(Path(__file__).with_name("hosted_quality_profile.py")),
+            "--repository",
+            str(repository),
+            "--repository-name",
+            name,
+            "--repository-id",
+            "123",
+            "--base-ref",
+            base_sha,
+            "--head-ref",
+            head_sha,
+            "--workflow-sha",
+            WORKFLOW_SHA,
+            "--run-id",
+            "456",
+            "--run-attempt",
+            "1",
+            "--output",
+            str(output),
+        ],
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    return completed, quality_profile.load_evidence(output)
+
+
+def _coverage_blocks(
+    evidence: quality_profile.QualityEvidence,
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    poison_path: str,
+) -> tuple[str, ...]:
+    records: list[git_changes.CommandRecord] = []
+    identity = git_changes.inspect_repository(repository, base_sha, head_sha, records)
+    policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
+    trusted = replace(
+        evidence,
+        artifact_id="789",
+        artifact_digest="d" * 64,
+        capture_sha256="e" * 64,
+    )
+    assessment = ChangedFileAssessment(
+        git_changes.ChangedPath("MODIFIED", poison_path, poison_path),
+        True,
+        True,
+        True,
+        (1,),
+    )
+    return quality_profile.evidence_blocks(trusted, policy, identity, (assessment,), WORKFLOW_SHA)
+
+
+def _write_coverage_receipt(
+    language: str,
+    poison_path: str,
+    evidence: quality_profile.QualityEvidence,
+    original_blocks: tuple[str, ...],
+    removed_claim_blocks: tuple[str, ...],
+    declared_untested_blocks: tuple[str, ...],
+    failed: quality_profile.QualityEvidence,
+) -> None:
+    receipt_directory = os.environ.get("M9_COVERAGE_RECEIPT_DIRECTORY")
+    if receipt_directory is None:
+        return
+    payload = {
+        "changed_paths": list(evidence.changed_paths),
+        "commands": [asdict(command) for command in evidence.commands],
+        "declared_untested_blocks": list(declared_untested_blocks),
+        "failed_control": {
+            "commands": [asdict(command) for command in failed.commands],
+            "untested_areas": list(failed.untested_areas),
+        },
+        "high_risk_paths": list(evidence.high_risk_paths),
+        "language": language,
+        "original_blocks": list(original_blocks),
+        "poison_path": poison_path,
+        "poison_proof": "top-level exception plus passing test command proves non-execution",
+        "production_files": list(evidence.production_files),
+        "removed_claim_blocks": list(removed_claim_blocks),
+        "schema_version": "m9-coverage-falsification.v1",
+        "untested_areas": list(evidence.untested_areas),
+    }
+    content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    destination = Path(receipt_directory)
+    destination.mkdir(parents=True, exist_ok=True)
+    (destination / f"{language}.json").write_text(content, encoding="utf-8", newline="\n")
+
+
+def _assert_coverage_falsification(
+    *,
+    language: str,
+    test_adapter: str,
+    poison_path: str,
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    evidence: quality_profile.QualityEvidence,
+    failed: quality_profile.QualityEvidence,
+) -> None:
+    test_result = next(command for command in evidence.commands if command.adapter == test_adapter)
+    assert test_result.executed and test_result.exit_code == 0
+    assert test_result.covered_paths == ("src",)
+    assert evidence.changed_paths == (poison_path,)
+    assert evidence.high_risk_paths == (poison_path,)
+    assert poison_path in evidence.production_files
+    assert evidence.untested_areas == ()
+
+    original_blocks = _coverage_blocks(evidence, repository, base_sha, head_sha, poison_path)
+    removed_claim = replace(
+        evidence,
+        commands=tuple(
+            replace(command, covered_paths=()) if command.adapter == test_adapter else command
+            for command in evidence.commands
+        ),
+    )
+    removed_claim_blocks = _coverage_blocks(
+        removed_claim, repository, base_sha, head_sha, poison_path
+    )
+    declared_untested_blocks = _coverage_blocks(
+        replace(evidence, untested_areas=(poison_path,)),
+        repository,
+        base_sha,
+        head_sha,
+        poison_path,
+    )
+    assert original_blocks == ()
+    assert f"QUALITY_CHANGED_FILE_COVERAGE:{test_adapter}:{poison_path}" in removed_claim_blocks
+    assert f"QUALITY_HIGH_RISK_FILE_COVERAGE:{test_adapter}:{poison_path}" in removed_claim_blocks
+    assert f"UNTESTED_AREA:{poison_path}" in declared_untested_blocks
+
+    failed_test = next(command for command in failed.commands if command.adapter == test_adapter)
+    assert failed_test.executed and failed_test.exit_code != 0
+    assert set(failed.untested_areas) == set(failed.production_files)
+    _write_coverage_receipt(
+        language,
+        poison_path,
+        evidence,
+        original_blocks,
+        removed_claim_blocks,
+        declared_untested_blocks,
+        failed,
+    )
+
+
 @pytest.mark.skipif(
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="target quality commands are forbidden outside GitHub-hosted runners",
 )
-def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path: Path) -> None:
-    repository = tmp_path / "typescript-target"
-    repository.mkdir()
+def test_python_profile_falsifies_declared_test_coverage() -> None:
+    repository = _hosted_root("python")
+    _run_git(repository, "init", "--initial-branch=main")
+    _run_git(repository, "config", "user.name", "Fixture")
+    _run_git(repository, "config", "user.email", "fixture@example.invalid")
+    _run_git(repository, "remote", "add", "origin", "https://github.com/example/python.git")
+    (repository / ".supportability.toml").write_text(
+        """schema_version = "1.0"
+language = "python"
+production_paths = ["src"]
+high_risk_paths = ["src/sample/unexecuted.py"]
+
+[[gates]]
+adapter = "python.c901-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.import-linter.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.mypy-strict.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.pytest.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.ruff-lint.v1"
+paths = ["src"]
+
+[complexity]
+adapter = "python.c901-touched.v1"
+maximum = 10
+""",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (repository / "pyproject.toml").write_text(
+        """[build-system]
+requires = ["setuptools==83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "m9-python-coverage-fixture"
+version = "1.0.0"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+""",
+        encoding="utf-8",
+        newline="\n",
+    )
+    source = repository / "src" / "sample"
+    source.mkdir(parents=True)
+    (source / "__init__.py").write_text("", encoding="utf-8")
+    (source / "covered.py").write_text(
+        "def score(value: int) -> int:\n    return value + 1\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    poison = source / "unexecuted.py"
+    poison.write_text('raise RuntimeError("M9_UNEXECUTED_BASE")\n', encoding="utf-8", newline="\n")
+    tests = repository / "tests"
+    tests.mkdir()
+    test_file = tests / "test_covered.py"
+    test_file.write_text(
+        "from sample.covered import score\n\n\ndef test_score() -> None:\n"
+        "    assert score(1) == 2\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    poison.write_text('raise RuntimeError("M9_UNEXECUTED_HEAD")\n', encoding="utf-8", newline="\n")
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+
+    completed, evidence = _run_hosted_profile(
+        repository,
+        base_sha,
+        head_sha,
+        repository.parent / "m9-python-success" / "quality-gates.json",
+        "example/python",
+    )
+    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
+    assert all(command.executed and command.exit_code == 0 for command in evidence.commands)
+
+    test_file.write_text(
+        "from sample import unexecuted\n"
+        "from sample.covered import score\n\n\ndef test_score() -> None:\n"
+        "    assert score(1) == 2\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "failure-control")
+    failure_sha = _run_git(repository, "rev-parse", "HEAD")
+    failed_completed, failed = _run_hosted_profile(
+        repository,
+        base_sha,
+        failure_sha,
+        repository.parent / "m9-python-failure" / "quality-gates.json",
+        "example/python",
+    )
+    assert failed_completed.returncode == 1
+    _assert_coverage_falsification(
+        language="python",
+        test_adapter="python.pytest.v1",
+        poison_path="src/sample/unexecuted.py",
+        repository=repository,
+        base_sha=base_sha,
+        head_sha=head_sha,
+        evidence=evidence,
+        failed=failed,
+    )
+
+
+@pytest.mark.skipif(
+    os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="target quality commands are forbidden outside GitHub-hosted runners",
+)
+def test_typescript_profile_falsifies_declared_test_coverage() -> None:
+    repository = _hosted_root("typescript")
     _run_git(repository, "init", "--initial-branch=main")
     _run_git(repository, "config", "user.name", "Fixture")
     _run_git(repository, "config", "user.email", "fixture@example.invalid")
@@ -303,7 +598,7 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
         """schema_version = "1.0"
 language = "typescript"
 production_paths = ["src"]
-high_risk_paths = ["src/domain/model.ts"]
+high_risk_paths = ["src/domain/unexecuted.ts"]
 
 [[gates]]
 adapter = "typescript.c901-equivalent-touched.v1"
@@ -320,67 +615,66 @@ maximum = 10
         encoding="utf-8",
         newline="\n",
     )
-    source = repository / "src" / "domain" / "model.ts"
-    source.parent.mkdir(parents=True)
-    source.write_text(
-        "export function score(value: number): number {\n  return value;\n}\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    tests = repository / "tests"
-    tests.mkdir()
-    (tests / "quality.test.mjs").write_text(
-        'import assert from "node:assert/strict";\n'
-        'import test from "node:test";\n\n'
-        'import { score } from "../src/domain/model.ts";\n\n'
-        'test("score", () => {\n  assert.equal(score(1), 2);\n});\n',
-        encoding="utf-8",
-        newline="\n",
-    )
-    _run_git(repository, "add", "--all")
-    _run_git(repository, "commit", "-m", "base")
-    base_sha = _run_git(repository, "rev-parse", "HEAD")
-    source.write_text(
+    source = repository / "src" / "domain"
+    source.mkdir(parents=True)
+    (source / "model.ts").write_text(
         "export function score(value: number): number {\n  return value + 1;\n}\n",
         encoding="utf-8",
         newline="\n",
     )
+    poison = source / "unexecuted.ts"
+    poison.write_text('throw new Error("M9_UNEXECUTED_BASE");\n', encoding="utf-8", newline="\n")
+    tests = repository / "tests"
+    tests.mkdir()
+    test_file = tests / "quality.test.mjs"
+    passing_test = (
+        'import assert from "node:assert/strict";\n'
+        'import test from "node:test";\n\n'
+        'import { score } from "../src/domain/model.ts";\n\n'
+        'test("score", () => {\n  assert.equal(score(1), 2);\n});\n'
+    )
+    test_file.write_text(passing_test, encoding="utf-8", newline="\n")
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    poison.write_text('throw new Error("M9_UNEXECUTED_HEAD");\n', encoding="utf-8", newline="\n")
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", "head")
     head_sha = _run_git(repository, "rev-parse", "HEAD")
 
-    output = tmp_path / "evidence" / "quality-gates.json"
-    runner = Path(__file__).with_name("hosted_quality_profile.py")
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-P",
-            str(runner),
-            "--repository",
-            str(repository.resolve()),
-            "--repository-name",
-            "example/typescript",
-            "--repository-id",
-            "123",
-            "--base-ref",
-            base_sha,
-            "--head-ref",
-            head_sha,
-            "--workflow-sha",
-            WORKFLOW_SHA,
-            "--run-id",
-            "456",
-            "--run-attempt",
-            "1",
-            "--output",
-            str(output.resolve()),
-        ],
-        check=False,
-        capture_output=True,
-        timeout=quality_profile.TIMEOUT_SECONDS,
+    completed, evidence = _run_hosted_profile(
+        repository,
+        base_sha,
+        head_sha,
+        repository.parent / "m9-typescript-success" / "quality-gates.json",
+        "example/typescript",
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
-    evidence = quality_profile.load_evidence(output)
-
-    assert evidence.untested_areas == ()
     assert all(command.executed and command.exit_code == 0 for command in evidence.commands)
+
+    test_file.write_text(
+        'import "../src/domain/unexecuted.ts";\n' + passing_test,
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "failure-control")
+    failure_sha = _run_git(repository, "rev-parse", "HEAD")
+    failed_completed, failed = _run_hosted_profile(
+        repository,
+        base_sha,
+        failure_sha,
+        repository.parent / "m9-typescript-failure" / "quality-gates.json",
+        "example/typescript",
+    )
+    assert failed_completed.returncode == 1
+    _assert_coverage_falsification(
+        language="typescript",
+        test_adapter="typescript.test.v1",
+        poison_path="src/domain/unexecuted.ts",
+        repository=repository,
+        base_sha=base_sha,
+        head_sha=head_sha,
+        evidence=evidence,
+        failed=failed,
+    )

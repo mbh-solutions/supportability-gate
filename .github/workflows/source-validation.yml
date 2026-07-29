@@ -25,6 +25,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+
       - name: Install exact dependencies
         run: |
           python -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
@@ -47,8 +52,21 @@ jobs:
 
       - name: Pytest
         env:
+          M9_COVERAGE_RECEIPT_DIRECTORY: ${{ runner.temp }}/m9-coverage-receipts
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: python -m pytest -q
+
+      - name: Verify candidate production source is unchanged
+        env:
+          M9_CANDIDATE_HEAD: 86c6f2b808c68094127c0f07cc9ad57fd5bef763
+        run: git diff --quiet "$M9_CANDIDATE_HEAD" HEAD -- src
+
+      - name: Upload M9 coverage-falsification receipts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m9-coverage-falsification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/m9-coverage-receipts/*.json
+          if-no-files-found: error
 
       - name: Compileall
         run: python -m compileall -q src tests
