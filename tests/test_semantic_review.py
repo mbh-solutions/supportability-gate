@@ -45,6 +45,7 @@ def _reviewed_source(path: str, content: str, blob_sha: str) -> dict[str, object
                 "name": name,
             }
         ],
+        "imports": [],
         "line_count": len(content.splitlines()),
         "lines": [
             {"line": number, "text": text}
@@ -78,11 +79,27 @@ def _response(
     reviewed_paths: list[str] | None = None,
     boundaries: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
+    sources = packet.evidence.get("reviewed_sources", [])
+    citations = [
+        citation
+        for source in sources
+        for citation in (
+            f"path:{source['path']}",
+            *(
+                f"import:{source['path']}:{item['line']}:{item['specifier']}"
+                for item in source["imports"]
+            ),
+        )
+    ]
     content = {
         "verdict": verdict,
         "findings": findings or [],
         "reviewed_paths": reviewed_paths if reviewed_paths is not None else [PYTHON_PATH],
         "boundaries": boundaries if boundaries is not None else [PYTHON_BOUNDARY],
+        "dependency_direction": "Verified " + ", ".join(citations)
+        if citations
+        else "No changed production paths.",
+        "architecture_citations": citations,
         "app_id": packet.app_id,
         "repository": packet.repository,
         "base_sha": packet.base_sha,
@@ -122,6 +139,7 @@ def test_clean_fixture_passes_and_is_deterministic() -> None:
     second = parse_response(packet, _response(packet))
     assert first == second
     assert first.verdict == "PASS"
+    assert first.architecture_citations == ("path:src/sample.py",)
     assert _verdict_summary(first).startswith("PASS\nsrc/sample.py:1-2 function parse_input")
 
 
@@ -172,7 +190,21 @@ def test_non_source_change_passes_without_invented_boundary() -> None:
         packet,
         _response(packet, reviewed_paths=[], boundaries=[]),
     )
-    assert _verdict_summary(verdict) == "PASS\nNo changed Python or frontend boundary."
+    assert _verdict_summary(verdict) == (
+        "PASS\ndependency direction: No changed production paths."
+        "\nNo changed Python or frontend boundary."
+    )
+
+
+def test_unverified_architecture_citation_blocks() -> None:
+    packet = _packet()
+    response = _response(packet)
+    content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
+    content["architecture_citations"] = []
+    response["output"][0]["content"][0]["text"] = json.dumps(content)  # type: ignore[index]
+
+    with pytest.raises(SemanticReviewError, match="UNVERIFIED_ARCHITECTURE_CITATION"):
+        parse_response(packet, response)
 
 
 @pytest.mark.parametrize(
@@ -342,7 +374,7 @@ def test_complexity_anti_gaming_rubric_is_narrow_and_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "responsibility-boundaries.v1"
+    assert RUBRIC_VERSION == "dependency-direction.v1"
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
     assert "candidate-provided responsibility declarations" in payload["instructions"]

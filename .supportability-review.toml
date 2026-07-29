@@ -1,43 +1,46 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Existing fail-closed semantic transport remains while Python and frontend boundary verdicts gain exact-head path-and-line ownership evidence."
-proof = "tests/test_semantic_review.py::test_clean_fixture_passes_and_is_deterministic"
+intended_behavior = "Existing complexity and responsibility enforcement remains while fixed Python and TypeScript import graphs block cycles, inversions, forbidden domain dependencies, unexecuted checks, and incomplete coverage."
+proof = "tests/test_architecture_policy.py"
 
 [characterization]
-captured_behavior = "The pre-change 109-test suite passed in a Python 3.12.13 exact-lock environment before Milestone 4 implementation."
+captured_behavior = "The pre-change 130-test suite passed in a Python 3.12.13 exact-lock environment before Milestone 5 implementation."
 proof = "tests/test_semantic_review.py"
 
 [separation_of_concerns]
-before = "The semantic verifier received a raw diff and returned unstructured finding strings without exact source-backed responsibility boundaries."
-after = "GitHubApp orchestrates authenticated evidence and checks; function_changes derives source boundaries; semantic_contract owns the request/result contract; semantic_review validates evidence; responses_transport owns localhost transport; semantic_cli orchestrates publication."
+before = "Declared import gates proved scope but the evaluator did not execute a cross-stack source import graph or bind dependency explanations to parser-backed imports and changed paths."
+after = "architecture_policy statically builds and enforces fixed Python and TypeScript graphs; the evaluator records execution and complete coverage; semantic evidence binds dependency explanations to parser-backed changed-path citations."
 
 [architecture]
-dependency_direction = "semantic_cli points to GitHub acquisition and Responses transport; both point inward through response validation to the immutable semantic contract."
+dependency_direction = "cli and github_app point to architecture_policy; architecture_policy points inward to immutable contract and source parsing; semantic_cli points through semantic_review to semantic_contract. The authoritative evaluator report cites every verified import edge and changed production path."
 reviewed_paths = [
-    "src/supportability_gate/function_changes.py",
+    "src/supportability_gate/architecture_policy.py",
+    "src/supportability_gate/cli.py",
+    "src/supportability_gate/gate_policy.py",
+    "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
-    "src/supportability_gate/responses_transport.py",
+    "src/supportability_gate/reporting.py",
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/responses_transport.py"
-owns = "Fixed localhost Responses transport boundary."
-does_not_own = "Semantic evidence validation, GitHub authentication or source retrieval, check rendering or publication, target execution, or import-direction policy."
+path = "src/supportability_gate/architecture_policy.py"
+owns = "Static fixed-profile import graph construction, dependency-direction decisions, cycle detection, and execution coverage evidence."
+does_not_own = "Git repository commands, complexity policy, semantic transport, GitHub authentication, check publication, or target execution."
 
 [incremental_refactor]
-target = "Extend the existing semantic verdict with the minimum exact-head responsibility evidence."
-completed_step = "The existing GitHub App and check publisher were extended; the request/result contract was isolated from response validation without a new service or dependency."
+target = "Execute one fixed Python and TypeScript architecture gate through established evidence paths."
+completed_step = "Reused AST, tree-sitter, immutable Git blobs, existing gate adapters, reporting, and semantic checks without a new package or configurable command surface."
 
 [review_handoff]
-summary = "Review exact-head blob binding, bounded source excerpts, strict reviewed-path equality, line/name resolution, mixed-boundary rubric, and check-summary evidence."
-remaining_risks = ["Semantic uncertainty or malformed path-and-line evidence intentionally fails the required check closed."]
+summary = "Review fixed layer names, Python and TypeScript import resolution, graph cycle and inversion blocks, executed-path coverage, deterministic report evidence, and semantic citation binding."
+remaining_risks = ["Unsupported or ambiguous source syntax intentionally fails the required check closed."]
 
 [human_review]
-naming = "New names directly describe reviewed sources, boundary evidence, exact-head validation, and verdict summaries."
-cohesion = "GitHub source acquisition, semantic validation, localhost model transport, and check publication each have a named module boundary."
-intended_behavior = "Existing complexity anti-gaming remains; changed Python and frontend boundaries now require resolvable ownership evidence."
-reviewability = "Four focused production boundaries and passing, blocking, binding, transport, and replay tests form the implementation slice."
+naming = "Architecture names describe import edges, fixed layers, coverage, direction, and execution evidence."
+cohesion = "One architecture_policy module owns static graph enforcement; existing CLI, reporting, GitHub, and semantic modules only integrate its evidence."
+intended_behavior = "Existing complexity and responsibility checks remain; architecture checks now execute for Python and TypeScript."
+reviewability = "Focused fixtures cover valid graphs, cycles, inversions, forbidden dependencies, execution, complete coverage, determinism, and semantic citation binding."

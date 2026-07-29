@@ -56,6 +56,10 @@ high_risk_paths = []
 adapter = "typescript.c901-equivalent-touched.v1"
 paths = ["src"]
 
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["src"]
+
 [complexity]
 adapter = "typescript.c901-equivalent-touched.v1"
 maximum = 10
@@ -227,6 +231,11 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
     assert result["functions"][0]["decision"] == "PASS"
     assert result["functions"][0]["head"]["complexity"] == 10
     assert result["language"] == "python"
+    assert result["architecture"]["executed"] is True
+    assert result["architecture"]["covered_paths"] == ["src/sample.py"]
+    assert (
+        "changed production paths ['src/sample.py']" in result["dependency_direction_explanation"]
+    )
     assert [gate["adapter"] for gate in result["gate_coverage"]] == [
         "python.c901-touched.v1",
         "python.import-linter.v1",

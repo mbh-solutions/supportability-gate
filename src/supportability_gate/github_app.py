@@ -18,6 +18,7 @@ from typing import Any, cast
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
+from supportability_gate.architecture_policy import source_imports
 from supportability_gate.contract import ContractError, parse_contract
 from supportability_gate.function_changes import PythonSourceError, responsibility_spans
 from supportability_gate.semantic_contract import SHA_PATTERN, EvidencePacket, SemanticReviewError
@@ -294,6 +295,10 @@ class GitHubApp:
         return {
             "boundaries": boundaries,
             "blob_sha": blob_sha,
+            "imports": [
+                {"line": line, "specifier": specifier}
+                for line, specifier in source_imports(path, content.encode())
+            ],
             "line_count": len(content.splitlines()),
             "lines": self._source_excerpt(content, boundaries),
             "path": path,
