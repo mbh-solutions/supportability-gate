@@ -61,7 +61,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/gate/src
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
-          python -P -m supportability_gate.characterization capture \
+          python -P "$GITHUB_WORKSPACE/gate/tests/hosted_characterization.py" \
             --target-repository "$GITHUB_WORKSPACE/target" \
             --definition-repository "$GITHUB_WORKSPACE/definition" \
             --base-ref "$BASE_SHA" \
@@ -138,7 +138,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/gate/src
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
-          python -P -m supportability_gate.characterization capture \
+          python -P "$GITHUB_WORKSPACE/gate/tests/hosted_characterization.py" \
             --target-repository "$GITHUB_WORKSPACE/target" \
             --definition-repository "$GITHUB_WORKSPACE/definition" \
             --base-ref "$BASE_SHA" \

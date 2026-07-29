@@ -10,10 +10,10 @@ proof = "tests/test_characterization.py"
 
 [separation_of_concerns]
 before = "Review text could claim characterization without authenticated base execution, exact artifact identity, replay, or post-change comparison."
-after = "characterization requires GitHub-hosted runners, runs fixed Python or Node drivers twice against exact base and head commits in separate jobs, and binds downloaded bytes to trusted job-output hashes before verifying artifact identity, golden identity, compatibility, and coverage."
+after = "The trusted organization workflow runs fixed Python or Node drivers twice in separate GitHub-hosted base and head jobs; characterization statically binds downloaded bytes to trusted job-output hashes and verifies identity, golden immutability, compatibility, and coverage without executing target code."
 
 [architecture]
-dependency_direction = "The organization workflow points to characterization, which depends only on immutable contract and Git evidence; the existing evaluator and semantic-review paths remain unchanged and run after characterization passes."
+dependency_direction = "The organization workflow captures isolated behavior, then points to characterization for static verification; characterization depends only on immutable contract and Git evidence, and existing evaluator and semantic-review paths run after it passes."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -22,7 +22,6 @@ reviewed_paths = [
     "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
     "src/supportability_gate/reporting.py",
-    "src/supportability_gate/responses_transport.py",
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_review.py",
@@ -30,12 +29,12 @@ reviewed_paths = [
 
 [responsibility_boundary]
 path = "src/supportability_gate/characterization.py"
-owns = "Orchestration of the fixed-convention GitHub-hosted characterization evidence lifecycle through focused capture, authentication, compatibility, golden, replay, and coverage boundaries."
-does_not_own = "General quality-gate execution, refactor sizing, semantic model transport, GitHub authentication, check publication, or local target execution."
+owns = "Static authentication, artifact identity, compatibility, golden immutability, replay, and coverage verification for captured characterization evidence."
+does_not_own = "Target execution, general quality-gate execution, semantic model transport, GitHub authentication, or check publication."
 
 [incremental_refactor]
 target = "Require one authenticated exact-base and exact-head characterization stage before the existing evaluator."
-completed_step = "Added one fixed-convention module and separate GitHub-hosted jobs with trusted raw-capture hashes, without target-supplied commands, new dependencies, contract changes, or later-milestone gate execution."
+completed_step = "Added one static verifier and one trusted hosted capture script with separate base and head jobs and raw-capture hashes, without target-supplied commands, new dependencies, contract changes, or later-milestone gate execution."
 
 [review_handoff]
 summary = "Review hosted-runner enforcement, exact checkout identity, isolated base/head execution, job-output capture hashes, immutable artifact handoff, fixed Python and Node commands, golden immutability, deterministic replay, compatibility, and changed/high-risk path coverage."
@@ -43,7 +42,7 @@ remaining_risks = ["A missing or malformed manifest, driver, golden file, captur
 
 [human_review]
 naming = "Characterization names describe captures, manifests, golden outputs, behavior fingerprints, artifact identity, compatibility, and replay drift."
-cohesion = "One characterization module owns Milestone 7 evidence; existing evaluator and semantic modules remain unchanged."
+cohesion = "One production module statically verifies Milestone 7 evidence; one trusted workflow script owns isolated hosted capture; existing evaluator and semantic modules remain unchanged."
 intended_behavior = "Existing enforcement remains; fixed Python and TypeScript characterization now blocks missing, stale, unauthenticated, changed, drifting, or incompatible evidence."
 reviewability = "Focused fixtures cover both supported profiles, existing and new scenarios, exact identity, all required blocks, coverage, and deterministic verification."
 
@@ -51,7 +50,7 @@ reviewability = "Focused fixtures cover both supported profiles, existing and ne
 path = "src/supportability_gate/characterization.py"
 owner_path = "src/supportability_gate/characterization.py"
 basis = "responsibility"
-justification = "Owns deterministic Milestone 7 evidence orchestration through focused fixed-convention GitHub-hosted capture and verification boundaries."
+justification = "Owns deterministic static verification of authenticated Milestone 7 capture artifacts without executing target code."
 
 [[module_boundaries]]
 path = "src/supportability_gate/modularity_policy.py"

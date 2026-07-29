@@ -27,7 +27,6 @@ dev = [
 
 [project.scripts]
 supportability-gate = "supportability_gate.cli:main"
-supportability-characterization = "supportability_gate.characterization:main"
 supportability-semantic-review = "supportability_gate.semantic_cli:main"
 
 [tool.setuptools]

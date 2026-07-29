@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import subprocess
 from pathlib import Path
@@ -8,6 +9,13 @@ from pathlib import Path
 import pytest
 
 from supportability_gate import characterization
+
+_SPEC = importlib.util.spec_from_file_location(
+    "hosted_characterization", Path(__file__).with_name("hosted_characterization.py")
+)
+assert _SPEC and _SPEC.loader
+hosted_characterization = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(hosted_characterization)
 
 
 @pytest.fixture(autouse=True)
@@ -171,14 +179,14 @@ def _captures(
         "run_id": "456",
         "run_attempt": "1",
     }
-    base = characterization.capture_evidence(
+    base = hosted_characterization.capture_evidence(
         base_checkout,
         repository,
         side="base",
         job="characterize-base",
         **common,
     )
-    head = characterization.capture_evidence(
+    head = hosted_characterization.capture_evidence(
         repository,
         repository,
         side="head",
@@ -379,7 +387,7 @@ def test_capture_requires_github_hosted_runner(
         characterization.CharacterizationError,
         match="CHARACTERIZATION_REQUIRES_GITHUB_HOSTED_RUNNER",
     ):
-        characterization.capture_evidence(
+        hosted_characterization.capture_evidence(
             tmp_path,
             tmp_path,
             base_sha="a" * 40,

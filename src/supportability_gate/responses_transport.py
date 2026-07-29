@@ -17,7 +17,6 @@ from supportability_gate.semantic_contract import (
 
 ENDPOINT = "http://127.0.0.1:8317/v1/responses"
 LOCAL_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
-SEMANTIC_TIMEOUT_SECONDS = 240.0
 
 
 def _request(packet: EvidencePacket) -> urllib.request.Request:
@@ -53,7 +52,7 @@ def _decoded_response(body: bytes) -> object:
 def request_response(
     packet: EvidencePacket,
     *,
-    timeout_seconds: float = SEMANTIC_TIMEOUT_SECONDS,
+    timeout_seconds: float = 120.0,
     opener: Callable[..., Any] = LOCAL_OPENER,
 ) -> object:
     """Return one decoded response from the fixed localhost transport."""
