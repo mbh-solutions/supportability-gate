@@ -10,7 +10,7 @@ proof = "tests/test_quality_profile.py"
 
 [separation_of_concerns]
 before = "Declared gate adapters proved configured coverage but did not prove every stack-native command actually executed successfully in an isolated hosted job."
-after = "The quality-profile module defines the immutable approved command contract and verifies its exact-head attestation, the quality-runner module materializes fixed no-shell plans and tool configuration from that contract, and a disposable hosted job alone executes them."
+after = "The quality-profile module defines the immutable approved command contract and verifies its exact-head attestation, the quality-runner module materializes no-shell plans from that contract and independently defines their fixed tool configuration, and a disposable hosted job alone executes them."
 
 [architecture]
 dependency_direction = "The organization workflow captures behavior, runs the fixed hosted quality profile, then the existing CLI verifies its immutable attestation before complexity, architecture, modularity, reporting, and semantic-review paths complete."
@@ -59,7 +59,7 @@ justification = "Owns the immutable approved command contract and verification o
 path = "src/supportability_gate/quality_runner.py"
 owner_path = "src/supportability_gate/quality_runner.py"
 basis = "responsibility"
-justification = "Owns materialization of concrete Python and TypeScript command plans and immutable tool configuration from the quality-profile contract while the disposable GitHub-hosted job alone executes target code."
+justification = "Owns materialization of concrete Python and TypeScript command plans from the quality-profile contract and independently defines their immutable tool configuration while the disposable GitHub-hosted job alone executes target code."
 
 [[module_boundaries]]
 path = "src/supportability_gate/refactor_policy.py"
