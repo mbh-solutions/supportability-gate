@@ -10,7 +10,7 @@ proof = "tests/test_characterization.py"
 
 [separation_of_concerns]
 before = "Review text could claim characterization without authenticated base execution, exact artifact identity, replay, or post-change comparison."
-after = "characterization runs fixed Python or Node drivers twice against exact base and head commits in separate hosted jobs, then verifies artifacts, golden identity, compatibility, and coverage before the existing evaluator."
+after = "characterization requires GitHub-hosted runners, runs fixed Python or Node drivers twice against exact base and head commits in separate jobs, and binds downloaded bytes to trusted job-output hashes before verifying artifact identity, golden identity, compatibility, and coverage."
 
 [architecture]
 dependency_direction = "The organization workflow points to characterization, which depends only on immutable contract and Git evidence; the existing evaluator and semantic-review paths remain unchanged and run after characterization passes."
@@ -29,15 +29,15 @@ reviewed_paths = [
 
 [responsibility_boundary]
 path = "src/supportability_gate/characterization.py"
-owns = "Fixed-convention hosted characterization capture, authenticated artifact verification, behavior compatibility, golden identity, replay, and coverage evidence."
+owns = "Orchestration of the fixed-convention GitHub-hosted characterization evidence lifecycle through focused capture, authentication, compatibility, golden, replay, and coverage boundaries."
 does_not_own = "General quality-gate execution, refactor sizing, semantic model transport, GitHub authentication, check publication, or local target execution."
 
 [incremental_refactor]
 target = "Require one authenticated exact-base and exact-head characterization stage before the existing evaluator."
-completed_step = "Added one fixed-convention module and separate hosted jobs without target-supplied commands, new dependencies, contract changes, or later-milestone gate execution."
+completed_step = "Added one fixed-convention module and separate GitHub-hosted jobs with trusted raw-capture hashes, without target-supplied commands, new dependencies, contract changes, or later-milestone gate execution."
 
 [review_handoff]
-summary = "Review exact checkout identity, isolated base/head execution, immutable artifact handoff, fixed Python and Node commands, golden immutability, deterministic replay, compatibility, and changed/high-risk path coverage."
+summary = "Review hosted-runner enforcement, exact checkout identity, isolated base/head execution, job-output capture hashes, immutable artifact handoff, fixed Python and Node commands, golden immutability, deterministic replay, compatibility, and changed/high-risk path coverage."
 remaining_risks = ["A missing or malformed manifest, driver, golden file, capture, or artifact identity intentionally fails the required workflow closed."]
 
 [human_review]
@@ -50,7 +50,7 @@ reviewability = "Focused fixtures cover both supported profiles, existing and ne
 path = "src/supportability_gate/characterization.py"
 owner_path = "src/supportability_gate/characterization.py"
 basis = "responsibility"
-justification = "Owns deterministic Milestone 7 capture and compatibility evidence through one fixed-convention hosted-job boundary."
+justification = "Owns deterministic Milestone 7 evidence orchestration through focused fixed-convention GitHub-hosted capture and verification boundaries."
 
 [[module_boundaries]]
 path = "src/supportability_gate/modularity_policy.py"

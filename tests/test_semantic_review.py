@@ -405,6 +405,7 @@ def test_complexity_anti_gaming_rubric_is_narrow_and_bound() -> None:
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
     assert "candidate-provided responsibility declarations" in payload["instructions"]
+    assert "separate GitHub-hosted base/head jobs" in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()
 
 

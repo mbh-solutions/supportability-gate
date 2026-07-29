@@ -145,6 +145,14 @@ def _safe_environment(target: Path, definition: Path) -> dict[str, str]:
     return environment
 
 
+def _require_hosted_runner() -> None:
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted"
+    ):
+        raise CharacterizationError("CHARACTERIZATION_REQUIRES_GITHUB_HOSTED_RUNNER")
+
+
 def _command(language: str, relative_driver: str, driver: Path) -> tuple[list[str], list[str]]:
     if language == "python":
         return [sys.executable, "-P", str(driver)], ["python3.12", "-P", relative_driver]
@@ -248,6 +256,7 @@ def capture_evidence(
     job: str,
 ) -> dict[str, object]:
     """Execute every fixed-convention scenario twice and return authenticated evidence."""
+    _require_hosted_runner()
     records: list[git_changes.CommandRecord] = []
     target = git_changes.validate_repository(target, records)
     definition = git_changes.validate_repository(definition, records)
@@ -302,6 +311,20 @@ def _load_capture(path: Path, missing_code: str) -> tuple[dict[str, Any] | None,
         return None, "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"
     value["_capture_sha256"] = _sha256(content)
     return value, None
+
+
+def _capture_digest_blocks(
+    base: dict[str, Any] | None,
+    head: dict[str, Any] | None,
+    base_sha256: str,
+    head_sha256: str,
+) -> list[str]:
+    blocks: list[str] = []
+    if base is not None and base.get("_capture_sha256") != base_sha256:
+        blocks.append("BASE_CAPTURE_DIGEST_MISMATCH")
+    if head is not None and head.get("_capture_sha256") != head_sha256:
+        blocks.append("HEAD_CAPTURE_DIGEST_MISMATCH")
+    return blocks
 
 
 def _authentication_blocks(
@@ -453,86 +476,37 @@ def _coverage_blocks(
     return blocks, required, covered
 
 
-def verify_evidence(
-    repository: Path,
-    base_sha: str,
+def _verified_capture_rows(
+    artifact: dict[str, Any] | None,
+    side: str,
+    expected_common: dict[str, str],
+    target_sha: str,
     head_sha: str,
-    base_path: Path,
-    head_path: Path,
-    *,
-    repository_name: str,
-    repository_id: str,
-    workflow_sha: str,
-    run_id: str,
-    run_attempt: str,
-    base_artifact_id: str,
-    base_artifact_digest: str,
-    head_artifact_id: str,
-    head_artifact_digest: str,
-) -> dict[str, object]:
-    """Verify exact-identity captures, compatibility, golden immutability, and coverage."""
-    records: list[git_changes.CommandRecord] = []
-    repository = git_changes.validate_repository(repository, records)
-    identity = git_changes.inspect_repository(repository, base_sha, head_sha, records)
-    policy_blob = git_changes.read_regular_blob(
-        repository, base_sha, ".supportability.toml", records
-    )
-    policy = contract.parse_contract(policy_blob.content)
-    manifest = _manifest(repository, head_sha, records)
-    base, base_error = _load_capture(base_path, "MISSING_BASELINE")
-    head, head_error = _load_capture(head_path, "HEAD_ONLY_CHARACTERIZATION_CLAIM")
-    blocks = [item for item in (base_error, head_error) if item]
-    if base is None and head is not None:
-        blocks.append("HEAD_ONLY_CHARACTERIZATION_CLAIM")
-    expected_common = {
-        "base_sha": base_sha,
-        "head_sha": head_sha,
-        "repository": repository_name,
-        "repository_id": repository_id,
-        "run_attempt": run_attempt,
-        "run_id": run_id,
-        "workflow_sha": workflow_sha,
-    }
-    base_rows: dict[str, dict[str, Any]] = {}
-    head_rows: dict[str, dict[str, Any]] = {}
-    if base is not None:
-        expected = {**expected_common, "job": "characterize-base", "side": "base"}
-        blocks.extend(_authentication_blocks(base, expected))
-        if base.get("target_sha") != base_sha or base.get("definition_sha") != head_sha:
-            blocks.append("STALE_BASELINE_ARTIFACT")
-        capture_blocks, base_rows = _capture_blocks(base, manifest, policy.language)
-        blocks.extend(capture_blocks)
-        blocks.extend(
-            _artifact_identity_blocks(
-                repository, head_sha, policy.language, manifest, base_rows, records
-            )
-        )
-    if head is not None:
-        expected = {**expected_common, "job": "characterize-head", "side": "head"}
-        blocks.extend(_authentication_blocks(head, expected))
-        if head.get("target_sha") != head_sha or head.get("definition_sha") != head_sha:
-            blocks.append("STALE_POST_CHANGE_ARTIFACT")
-        capture_blocks, head_rows = _capture_blocks(head, manifest, policy.language)
-        blocks.extend(capture_blocks)
-        blocks.extend(
-            _artifact_identity_blocks(
-                repository, head_sha, policy.language, manifest, head_rows, records
-            )
-        )
+    repository: Path,
+    policy: contract.Contract,
+    manifest: Manifest,
+    records: list[git_changes.CommandRecord],
+) -> tuple[list[str], dict[str, dict[str, Any]]]:
+    if artifact is None:
+        return [], {}
+    expected = {**expected_common, "job": f"characterize-{side}", "side": side}
+    blocks = _authentication_blocks(artifact, expected)
+    if artifact.get("target_sha") != target_sha or artifact.get("definition_sha") != head_sha:
+        blocks.append(f"STALE_{'BASELINE' if side == 'base' else 'POST_CHANGE'}_ARTIFACT")
+    capture_blocks, rows = _capture_blocks(artifact, manifest, policy.language)
+    blocks.extend(capture_blocks)
     blocks.extend(
-        _definition_blocks(repository, base_sha, head_sha, policy.language, manifest, records)
+        _artifact_identity_blocks(repository, head_sha, policy.language, manifest, rows, records)
     )
-    coverage_blocks, required, covered = _coverage_blocks(
-        repository, base_sha, head_sha, policy, manifest, records
-    )
-    blocks.extend(coverage_blocks)
-    if (
-        not base_artifact_id.isdecimal()
-        or not head_artifact_id.isdecimal()
-        or SHA256.fullmatch(base_artifact_digest) is None
-        or SHA256.fullmatch(head_artifact_digest) is None
-    ):
-        blocks.append("INVALID_ARTIFACT_IDENTITY")
+    return blocks, rows
+
+
+def _compatibility_evidence(
+    manifest: Manifest,
+    base_rows: dict[str, dict[str, Any]],
+    head_rows: dict[str, dict[str, Any]],
+) -> tuple[list[str], list[dict[str, object]]]:
+    blocks: list[str] = []
     scenarios: list[dict[str, object]] = []
     for item in manifest.scenarios:
         base_row, head_row = base_rows.get(item.id), head_rows.get(item.id)
@@ -557,6 +531,24 @@ def verify_evidence(
                 "kind": item.kind,
             }
         )
+    return blocks, scenarios
+
+
+def _verification_result(
+    identity: git_changes.RepositoryIdentity,
+    manifest: Manifest,
+    base: dict[str, Any] | None,
+    head: dict[str, Any] | None,
+    scenarios: list[dict[str, object]],
+    blocks: list[str],
+    required: list[str],
+    covered: list[str],
+    workflow_sha: str,
+    base_artifact_id: str,
+    base_artifact_digest: str,
+    head_artifact_id: str,
+    head_artifact_digest: str,
+) -> dict[str, object]:
     unique_blocks = sorted(set(blocks))
     return {
         "artifacts": {
@@ -586,6 +578,91 @@ def verify_evidence(
         "schema_version": RESULT_SCHEMA,
         "workflow_sha": workflow_sha,
     }
+
+
+def verify_evidence(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    base_path: Path,
+    head_path: Path,
+    *,
+    repository_name: str,
+    repository_id: str,
+    workflow_sha: str,
+    run_id: str,
+    run_attempt: str,
+    base_artifact_id: str,
+    base_artifact_digest: str,
+    base_capture_sha256: str,
+    head_artifact_id: str,
+    head_artifact_digest: str,
+    head_capture_sha256: str,
+) -> dict[str, object]:
+    """Verify exact-identity captures, compatibility, golden immutability, and coverage."""
+    records: list[git_changes.CommandRecord] = []
+    repository = git_changes.validate_repository(repository, records)
+    identity = git_changes.inspect_repository(repository, base_sha, head_sha, records)
+    policy_blob = git_changes.read_regular_blob(
+        repository, base_sha, ".supportability.toml", records
+    )
+    policy = contract.parse_contract(policy_blob.content)
+    manifest = _manifest(repository, head_sha, records)
+    base, base_error = _load_capture(base_path, "MISSING_BASELINE")
+    head, head_error = _load_capture(head_path, "HEAD_ONLY_CHARACTERIZATION_CLAIM")
+    blocks = [item for item in (base_error, head_error) if item]
+    if base is None and head is not None:
+        blocks.append("HEAD_ONLY_CHARACTERIZATION_CLAIM")
+    blocks.extend(_capture_digest_blocks(base, head, base_capture_sha256, head_capture_sha256))
+    expected_common = {
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "repository": repository_name,
+        "repository_id": repository_id,
+        "run_attempt": run_attempt,
+        "run_id": run_id,
+        "workflow_sha": workflow_sha,
+    }
+    base_blocks, base_rows = _verified_capture_rows(
+        base, "base", expected_common, base_sha, head_sha, repository, policy, manifest, records
+    )
+    head_blocks, head_rows = _verified_capture_rows(
+        head, "head", expected_common, head_sha, head_sha, repository, policy, manifest, records
+    )
+    blocks.extend((*base_blocks, *head_blocks))
+    blocks.extend(
+        _definition_blocks(repository, base_sha, head_sha, policy.language, manifest, records)
+    )
+    coverage_blocks, required, covered = _coverage_blocks(
+        repository, base_sha, head_sha, policy, manifest, records
+    )
+    blocks.extend(coverage_blocks)
+    if (
+        not base_artifact_id.isdecimal()
+        or not head_artifact_id.isdecimal()
+        or SHA256.fullmatch(base_artifact_digest) is None
+        or SHA256.fullmatch(base_capture_sha256) is None
+        or SHA256.fullmatch(head_artifact_digest) is None
+        or SHA256.fullmatch(head_capture_sha256) is None
+    ):
+        blocks.append("INVALID_ARTIFACT_IDENTITY")
+    compatibility_blocks, scenarios = _compatibility_evidence(manifest, base_rows, head_rows)
+    blocks.extend(compatibility_blocks)
+    return _verification_result(
+        identity,
+        manifest,
+        base,
+        head,
+        scenarios,
+        blocks,
+        required,
+        covered,
+        workflow_sha,
+        base_artifact_id,
+        base_artifact_digest,
+        head_artifact_id,
+        head_artifact_digest,
+    )
 
 
 def _write_json(path: Path, value: object) -> bytes:
@@ -624,8 +701,10 @@ def _parser() -> argparse.ArgumentParser:
     verify.add_argument("--head-evidence", required=True)
     verify.add_argument("--base-artifact-id", required=True)
     verify.add_argument("--base-artifact-digest", required=True)
+    verify.add_argument("--base-capture-sha256", required=True)
     verify.add_argument("--head-artifact-id", required=True)
     verify.add_argument("--head-artifact-digest", required=True)
+    verify.add_argument("--head-capture-sha256", required=True)
     verify.add_argument("--output", required=True)
     return parser
 
@@ -662,8 +741,10 @@ def main(argv: list[str] | None = None) -> int:
                 run_attempt=arguments.run_attempt,
                 base_artifact_id=arguments.base_artifact_id,
                 base_artifact_digest=arguments.base_artifact_digest,
+                base_capture_sha256=arguments.base_capture_sha256,
                 head_artifact_id=arguments.head_artifact_id,
                 head_artifact_digest=arguments.head_artifact_digest,
+                head_capture_sha256=arguments.head_capture_sha256,
             )
         _write_json(Path(arguments.output), result)
     except Exception as error:  # fail closed at isolated-job boundary

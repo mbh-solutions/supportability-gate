@@ -6,7 +6,8 @@
         "src/supportability_gate/cli.py",
         "src/supportability_gate/complexity_metrics.py",
         "src/supportability_gate/contract.py",
-        "src/supportability_gate/git_changes.py"
+        "src/supportability_gate/git_changes.py",
+        "src/supportability_gate/semantic_contract.py"
       ],
       "id": "gate-cli",
       "kind": "cli"

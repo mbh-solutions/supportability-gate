@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -7,6 +8,13 @@ from pathlib import Path
 import pytest
 
 from supportability_gate import characterization
+
+
+@pytest.fixture(autouse=True)
+def _hosted_runner(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("RUNNER_ENVIRONMENT", "github-hosted")
+
 
 PYTHON_CONTRACT = """\
 schema_version = "1.0"
@@ -209,8 +217,14 @@ def _verify(
         run_attempt="1",
         base_artifact_id="10",
         base_artifact_digest="a" * 64,
+        base_capture_sha256=(
+            hashlib.sha256(base_path.read_bytes()).hexdigest() if base_path.exists() else "0" * 64
+        ),
         head_artifact_id="11",
         head_artifact_digest="b" * 64,
+        head_capture_sha256=(
+            hashlib.sha256(head_path.read_bytes()).hexdigest() if head_path.exists() else "0" * 64
+        ),
     )
 
 
@@ -328,6 +342,56 @@ def test_wrong_driver_artifact_identity_blocks(tmp_path: Path) -> None:
     result = _verify(repository, base_sha, head_sha, *paths)
 
     assert "CHARACTERIZATION_DRIVER_IDENTITY_MISMATCH:existing" in result["policy_blocks"]
+
+
+def test_capture_digest_mismatch_blocks(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = characterization.verify_evidence(
+        repository,
+        base_sha,
+        head_sha,
+        *paths,
+        repository_name="example/fixture",
+        repository_id="123",
+        workflow_sha="f" * 40,
+        run_id="456",
+        run_attempt="1",
+        base_artifact_id="10",
+        base_artifact_digest="a" * 64,
+        base_capture_sha256="0" * 64,
+        head_artifact_id="11",
+        head_artifact_digest="b" * 64,
+        head_capture_sha256=hashlib.sha256(paths[1].read_bytes()).hexdigest(),
+    )
+
+    assert "BASE_CAPTURE_DIGEST_MISMATCH" in result["policy_blocks"]
+
+
+def test_capture_requires_github_hosted_runner(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("GITHUB_ACTIONS")
+
+    with pytest.raises(
+        characterization.CharacterizationError,
+        match="CHARACTERIZATION_REQUIRES_GITHUB_HOSTED_RUNNER",
+    ):
+        characterization.capture_evidence(
+            tmp_path,
+            tmp_path,
+            base_sha="a" * 40,
+            head_sha="b" * 40,
+            side="base",
+            repository="example/fixture",
+            repository_id="123",
+            workflow_sha="f" * 40,
+            run_id="456",
+            run_attempt="1",
+            job="characterize-base",
+        )
 
 
 @pytest.mark.parametrize("kind", sorted(characterization.KINDS))

@@ -14,6 +14,7 @@ jobs:
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      capture-sha256: ${{ steps.capture.outputs.sha256 }}
     steps:
       - name: Check out characterization definitions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -53,10 +54,12 @@ jobs:
         run: python -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
 
       - name: Capture exact base behavior twice
+        id: capture
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PYTHONPATH: ${{ github.workspace }}/gate/src
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
           python -P -m supportability_gate.characterization capture \
             --target-repository "$GITHUB_WORKSPACE/target" \
@@ -71,6 +74,7 @@ jobs:
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --job characterize-base \
             --output "$RUNNER_TEMP/base/characterization.json"
+          echo "sha256=$(sha256sum "$RUNNER_TEMP/base/characterization.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload authenticated base behavior
         id: upload
@@ -87,6 +91,7 @@ jobs:
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      capture-sha256: ${{ steps.capture.outputs.sha256 }}
     steps:
       - name: Check out characterization definitions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -126,10 +131,12 @@ jobs:
         run: python -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
 
       - name: Capture exact head behavior twice
+        id: capture
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PYTHONPATH: ${{ github.workspace }}/gate/src
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
           python -P -m supportability_gate.characterization capture \
             --target-repository "$GITHUB_WORKSPACE/target" \
@@ -144,6 +151,7 @@ jobs:
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --job characterize-head \
             --output "$RUNNER_TEMP/head/characterization.json"
+          echo "sha256=$(sha256sum "$RUNNER_TEMP/head/characterization.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload authenticated head behavior
         id: upload
@@ -202,9 +210,11 @@ jobs:
         env:
           BASE_ARTIFACT_DIGEST: ${{ needs.characterize-base.outputs.artifact-digest }}
           BASE_ARTIFACT_ID: ${{ needs.characterize-base.outputs.artifact-id }}
+          BASE_CAPTURE_SHA256: ${{ needs.characterize-base.outputs.capture-sha256 }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_ARTIFACT_DIGEST: ${{ needs.characterize-head.outputs.artifact-digest }}
           HEAD_ARTIFACT_ID: ${{ needs.characterize-head.outputs.artifact-id }}
+          HEAD_CAPTURE_SHA256: ${{ needs.characterize-head.outputs.capture-sha256 }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         working-directory: ${{ runner.temp }}
         run: |
@@ -222,8 +232,10 @@ jobs:
             --head-evidence "$RUNNER_TEMP/head/characterization.json" \
             --base-artifact-id "$BASE_ARTIFACT_ID" \
             --base-artifact-digest "$BASE_ARTIFACT_DIGEST" \
+            --base-capture-sha256 "$BASE_CAPTURE_SHA256" \
             --head-artifact-id "$HEAD_ARTIFACT_ID" \
             --head-artifact-digest "$HEAD_ARTIFACT_DIGEST" \
+            --head-capture-sha256 "$HEAD_CAPTURE_SHA256" \
             --output "$RUNNER_TEMP/evidence/characterization-result.json"
           status=$?
           cat "$RUNNER_TEMP/evidence/characterization-result.json"
