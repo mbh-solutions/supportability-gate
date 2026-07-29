@@ -20,6 +20,9 @@ def _verdict_summary(verdict: SemanticVerdict) -> str:
             f"owns: {item.owns} | does not own: {item.does_not_own}"
         )
     lines.append(f"dependency direction: {verdict.dependency_direction}")
+    lines.extend(
+        f"architecture citation: {citation}" for citation in verdict.architecture_citations
+    )
     lines.extend(f"finding: {finding}" for finding in verdict.findings)
     if not verdict.reviewed_paths:
         lines.append("No changed Python or frontend boundary.")
