@@ -105,6 +105,13 @@ def test_open_pull_truncation_blocks() -> None:
         app.open_pulls("mbh-solutions/supportability-gate", "token")
 
 
+def test_semantic_source_limit_accepts_m9_packet_but_remains_bounded() -> None:
+    app = GitHubApp(42, 7, b"unused")
+    app._validate_review_size([{"lines": [None] * 2_228}])
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app._validate_review_size([{"lines": [None] * 2_501}])
+
+
 def test_stale_pull_evidence_blocks_before_publication() -> None:
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
     current = {"base": {"sha": "c" * 40}, "head": {"sha": "b" * 40}}

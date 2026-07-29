@@ -7,7 +7,6 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from supportability_gate.semantic_contract import (
-    MODEL,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
     SHA_PATTERN,
@@ -292,10 +291,10 @@ def _validate_bindings(data: dict[str, Any], bindings: dict[str, object]) -> Non
         raise SemanticReviewError("EVIDENCE_BINDING_MISMATCH")
 
 
-def _response_data(response: object) -> dict[str, Any]:
+def _response_data(packet: EvidencePacket, response: object) -> dict[str, Any]:
     if not isinstance(response, dict):
         raise SemanticReviewError("MALFORMED_RESPONSE")
-    if response.get("model") != MODEL:
+    if response.get("model") != packet.model:
         raise SemanticReviewError("MODEL_DRIFT")
     try:
         data = json.loads(_output_text(response))
@@ -322,6 +321,8 @@ def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVe
         "rubric_version": RUBRIC_VERSION,
         "schema_version": SCHEMA_VERSION,
         "standard_sha256": STANDARD_SHA256,
+        "model": packet.model,
+        "reasoning_effort": packet.reasoning_effort,
     }
     _validate_bindings(data, bindings)
     verdict = data.get("verdict")
@@ -342,6 +343,8 @@ def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVe
         rubric_version=RUBRIC_VERSION,
         schema_version=SCHEMA_VERSION,
         standard_sha256=STANDARD_SHA256,
+        model=packet.model,
+        reasoning_effort=packet.reasoning_effort,
         reviewed_paths=reviewed_paths,
         boundaries=boundaries,
         dependency_direction=dependency_direction,
@@ -351,4 +354,4 @@ def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVe
 
 def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
     """Orchestrate response parsing and exact-binding verdict validation."""
-    return _trusted_verdict(packet, _response_data(response))
+    return _trusted_verdict(packet, _response_data(packet, response))

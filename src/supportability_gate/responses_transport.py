@@ -52,7 +52,7 @@ def _decoded_response(body: bytes) -> object:
 def request_response(
     packet: EvidencePacket,
     *,
-    timeout_seconds: float = 120.0,
+    timeout_seconds: float = 480.0,
     opener: Callable[..., Any] = LOCAL_OPENER,
 ) -> object:
     """Return one decoded response from the fixed localhost transport."""

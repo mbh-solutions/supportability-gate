@@ -1,15 +1,14 @@
 # Supportability Gate
 
-`supportability-gate` produces deterministic PASS or BLOCK evidence from immutable Git commits
-without importing or executing target repository code. Successor enforcement work is mapping every
-normative Supportability Standard clause before adding later clause-specific enforcement.
+`supportability-gate` produces deterministic PASS or BLOCK evidence from immutable Git commits.
+Static evaluation never imports target code; fixed stack-native quality commands run only in
+isolated GitHub-hosted jobs.
 
 ## Status
 
-- Completed successor scope: Supportability Standard Enforcement Milestones 1–4
-- Current authorized work: None; Enforcement Milestone 5 is not authorized
-- Completed capability: clause inventory, trusted semantic review, touched-function complexity,
-  and exact-head responsibility boundaries
+- Completed successor scope: Supportability Standard Enforcement Milestones 1–8
+- Current authorized work: Enforcement Milestone 9 — executed quality gates
+- Completed capability: clause inventory through authenticated incremental-refactor enforcement
 - Existing complexity adapter: `python.c901-touched.v1`; maximum complexity: `10`
 - Full Supportability Standard runtime: **incomplete**
 
@@ -31,6 +30,16 @@ python -m supportability_gate evaluate-complexity `
   --base-ref <full-commit-sha> `
   --head-ref <full-commit-sha> `
   --contract-path .supportability.toml `
+  --quality-evidence C:\absolute\quality-gates.json `
+  --quality-repository owner/repository `
+  --quality-repository-id <github-repository-id> `
+  --quality-run-id <github-actions-run-id> `
+  --quality-run-attempt <github-actions-run-attempt> `
+  --quality-job quality-profile `
+  --quality-artifact-id <github-artifact-id> `
+  --quality-artifact-digest <github-artifact-digest> `
+  --quality-capture-sha256 <quality-evidence-sha256> `
+  --workflow-sha <full-workflow-commit-sha> `
   --output-directory C:\absolute\evidence-directory
 ```
 

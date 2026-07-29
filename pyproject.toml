@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "build==1.5.0",
+    "coverage==7.15.2",
     "import-linter==2.13",
     "mypy==2.3.0",
     "pip-tools==7.6.0",
@@ -66,7 +67,8 @@ layers = [
     "supportability_gate.cli",
     "supportability_gate.reporting",
     "supportability_gate.modularity_policy",
-    "supportability_gate.architecture_policy | supportability_gate.gate_policy | supportability_gate.complexity_policy",
+    "supportability_gate.quality_runner",
+    "supportability_gate.quality_profile | supportability_gate.architecture_policy | supportability_gate.gate_policy | supportability_gate.complexity_policy",
     "supportability_gate.complexity_metrics",
     "supportability_gate.refactor_policy",
     "supportability_gate.function_changes",

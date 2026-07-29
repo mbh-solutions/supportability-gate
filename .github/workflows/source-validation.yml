@@ -46,6 +46,8 @@ jobs:
         run: lint-imports --no-cache
 
       - name: Pytest
+        env:
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: python -m pytest -q
 
       - name: Compileall

@@ -13,6 +13,11 @@ from supportability_gate.complexity_policy import FunctionDecision
 from supportability_gate.function_changes import ChangedFileAssessment
 from supportability_gate.git_changes import CommandRecord, RepositoryIdentity
 from supportability_gate.modularity_policy import ModularityResult
+from supportability_gate.quality_profile import (
+    QualityEvidence,
+    decision_payload,
+    provenance_payload,
+)
 from supportability_gate.review_evidence import ReviewEvidence
 
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
@@ -50,6 +55,7 @@ class EvaluationResult:
     language: str | None = None
     architecture: ArchitectureResult | None = None
     modularity: ModularityResult | None = None
+    quality_profile: QualityEvidence | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -187,6 +193,9 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "overall_result": result.overall_result,
         "policy_blocks": list(result.policy_blocks),
         "production_paths": list(result.production_paths),
+        "quality_profile": decision_payload(result.quality_profile)
+        if result.quality_profile
+        else None,
         "rename_bindings": renames,
         "repository_remote": identity["remote"],
         "review_evidence": result.review_evidence,
@@ -262,6 +271,14 @@ def write_reports(result: EvaluationResult, output_directory: Path) -> bytes:
         "utf-8"
     )
     (output_directory / "complexity-result.json").write_bytes(json_bytes)
+    if result.quality_profile:
+        provenance = (
+            json.dumps(
+                provenance_payload(result.quality_profile), indent=2, sort_keys=True
+            ).encode()
+            + b"\n"
+        )
+        (output_directory / "quality-provenance.json").write_bytes(provenance)
     authoritative = json.loads(json_bytes)
     (output_directory / "complexity-result.md").write_bytes(
         markdown_from_json(authoritative).encode("utf-8")

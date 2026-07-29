@@ -10,7 +10,6 @@ import pytest
 from supportability_gate.responses_transport import request_response
 from supportability_gate.semantic_cli import _verdict_summary
 from supportability_gate.semantic_contract import (
-    MODEL,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
     STANDARD_SHA256,
@@ -19,6 +18,12 @@ from supportability_gate.semantic_contract import (
     request_payload,
 )
 from supportability_gate.semantic_review import parse_response
+from tests.qualify_semantic_reviewer import (
+    _cases as qualification_cases,
+)
+from tests.qualify_semantic_reviewer import (
+    _reviewed_source as qualification_source,
+)
 
 PYTHON_PATH = "src/sample.py"
 PYTHON_SOURCE = "def parse_input(value: str) -> str:\n    return value.strip()\n"
@@ -104,9 +109,11 @@ def _response(
         "rubric_version": RUBRIC_VERSION,
         "schema_version": SCHEMA_VERSION,
         "standard_sha256": STANDARD_SHA256,
+        "model": packet.model,
+        "reasoning_effort": packet.reasoning_effort,
     }
     return {
-        "model": MODEL,
+        "model": packet.model,
         "status": "completed",
         "error": None,
         "output": [
@@ -378,6 +385,39 @@ def test_transport_failures_block(error: Exception, code: str) -> None:
         request_response(_packet(), opener=fail)
 
 
+def test_transport_uses_fixed_480_second_default() -> None:
+    packet = _packet()
+    observed: list[float] = []
+
+    def open_request(_request: object, *, timeout: float) -> _Reply:
+        observed.append(timeout)
+        return _Reply(_response(packet))
+
+    request_response(packet, opener=open_request)
+
+    assert observed == [480.0]
+
+
+def test_model_and_reasoning_effort_are_bound_into_packet_and_result() -> None:
+    packet = EvidencePacket(
+        "mbh-solutions/supportability-gate",
+        "a" * 40,
+        "b" * 40,
+        42,
+        {"diff": "+documentation", "reviewed_sources": []},
+        model="gpt-5.6-terra",
+        reasoning_effort="medium",
+    )
+    payload = request_payload(packet)
+
+    assert payload["model"] == "gpt-5.6-terra"
+    assert payload["reasoning"] == {"effort": "medium"}
+    assert b'"model":"gpt-5.6-terra"' in packet.canonical_bytes()
+    assert b'"reasoning_effort":"medium"' in packet.canonical_bytes()
+    verdict = parse_response(packet, _response(packet, reviewed_paths=[], boundaries=[]))
+    assert (verdict.model, verdict.reasoning_effort) == ("gpt-5.6-terra", "medium")
+
+
 @pytest.mark.parametrize(
     "injection",
     [
@@ -391,7 +431,8 @@ def test_prompt_injection_stays_untrusted_data(injection: str) -> None:
     payload = request_payload(_packet({"diff": injection}))
     assert payload["tools"] == []
     assert payload["tool_choice"] == "none"
-    assert payload["reasoning"] == {"effort": "low"}
+    assert payload["model"] == "gpt-5.6-sol"
+    assert payload["reasoning"] == {"effort": "medium"}
     assert injection in payload["input"]
     assert injection not in payload["instructions"]
     assert payload["text"]["format"]["strict"] is True
@@ -407,7 +448,34 @@ def test_incremental_strangler_rubric_is_narrow_and_bound() -> None:
     assert "candidate-provided responsibility declarations" in payload["instructions"]
     assert "one parser-bounded production target" in payload["instructions"]
     assert "Broad authorization never waives" in payload["instructions"]
+    assert (
+        "Deterministic verifier checks quality and API-read artifact facts"
+        in payload["instructions"]
+    )
+    assert "fresh head without a trusted verdict" not in payload["instructions"]
+    assert "BLOCK contradictory coverage observations" not in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()
+
+
+def test_qualification_matrix_assigns_only_semantic_judgments_to_model() -> None:
+    cases = qualification_cases()
+
+    assert tuple(case.name for case in cases) == (
+        "clean",
+        "security",
+        "feasibility",
+        "architecture",
+        "complexity_gaming",
+        "responsibility_boundaries",
+        "cohesive_input_boundary",
+        "clear_responsibility_extraction",
+    )
+    assert all(not case.extra_evidence for case in cases[1:])
+    extraction = next(case for case in cases if case.name == "clear_responsibility_extraction")
+    assert tuple(item["kind"] for item in qualification_source(extraction)["boundaries"]) == (
+        "function",
+        "function",
+    )
 
 
 @pytest.mark.parametrize(

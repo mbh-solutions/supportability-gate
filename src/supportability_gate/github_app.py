@@ -326,7 +326,7 @@ class GitHubApp:
         )
 
     def _validate_review_size(self, sources: list[dict[str, Any]]) -> None:
-        if sum(len(source["lines"]) for source in sources) > 2_000:
+        if sum(len(source["lines"]) for source in sources) > 2_500:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
 
     def _source_candidates(self, files: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:

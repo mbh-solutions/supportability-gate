@@ -19,6 +19,29 @@
       ],
       "id": "refactor-policy",
       "kind": "cli"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/responses_transport.py"
+      ],
+      "id": "semantic-transport",
+      "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/quality_profile.py",
+        "src/supportability_gate/reporting.py"
+      ],
+      "id": "m9-quality-profile",
+      "kind": "cli"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/quality_runner.py",
+        "src/supportability_gate/semantic_review.py"
+      ],
+      "id": "m9-reviewer-quality-boundary",
+      "kind": "regression"
     }
   ],
   "schema_version": "1.0"
