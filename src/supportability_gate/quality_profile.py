@@ -518,7 +518,7 @@ def load_evidence(path: Path) -> QualityEvidence:
     return _parse_evidence(data)
 
 
-def _authenticate_artifact_metadata(
+def _verify_artifact_metadata(
     path: Path,
     *,
     repository: str,
@@ -564,7 +564,7 @@ def _authenticate_artifact_metadata(
         )
 
 
-def authenticate_evidence(
+def verify_evidence_binding(
     path: Path,
     *,
     metadata_path: Path,
@@ -577,7 +577,7 @@ def authenticate_evidence(
     artifact_digest: str,
     capture_sha256: str,
 ) -> QualityEvidence:
-    """Bind one downloaded GitHub Actions artifact to trusted workflow metadata."""
+    """Bind one downloaded artifact to expected API-read workflow metadata."""
     try:
         content = path.read_bytes()
         evidence = _parse_evidence(json.loads(content))
@@ -606,7 +606,7 @@ def authenticate_evidence(
         or _sha256(content) != capture_sha256
     ):
         raise QualityProfileError("UNAUTHENTICATED_QUALITY_ARTIFACT", "artifact proof mismatch")
-    _authenticate_artifact_metadata(
+    _verify_artifact_metadata(
         metadata_path,
         repository=repository,
         repository_id=repository_id,

@@ -221,7 +221,7 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "blocking internal defect. Security means identities, secrets, evidence, and trust "
         "boundaries fail closed and target code cannot execute. Runtime and protected-merge proof "
         "is gathered separately and is not a prerequisite for this code verdict. Deterministic "
-        "verifier authenticates quality and artifact facts, replay eligibility, and head freshness; "
+        "verifier checks quality and API-read artifact facts, replay eligibility, and head freshness; "
         "treat supplied verified results as facts and do not independently revalidate them. "
         "For complexity anti-gaming, BLOCK only when reduced complexity is achieved by extracting "
         "vaguely named production helpers whose names do not express one concrete responsibility, "

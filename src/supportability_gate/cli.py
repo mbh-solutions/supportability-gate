@@ -419,7 +419,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             raise quality_profile.QualityProfileError(
                 "RELATIVE_QUALITY_EVIDENCE", "quality evidence path must be absolute"
             )
-        quality = quality_profile.authenticate_evidence(
+        quality = quality_profile.verify_evidence_binding(
             quality_path,
             metadata_path=Path(arguments.quality_artifact_metadata),
             repository=str(arguments.quality_repository),

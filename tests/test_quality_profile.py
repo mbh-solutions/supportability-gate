@@ -302,7 +302,7 @@ def test_quality_artifact_requires_external_github_binding(tmp_path: Path) -> No
         ),
         encoding="utf-8",
     )
-    authenticated = quality_profile.authenticate_evidence(
+    verified = quality_profile.verify_evidence_binding(
         path,
         metadata_path=metadata,
         repository="example/fixture",
@@ -314,14 +314,14 @@ def test_quality_artifact_requires_external_github_binding(tmp_path: Path) -> No
         artifact_digest="d" * 64,
         capture_sha256=hashlib.sha256(content).hexdigest(),
     )
-    assert authenticated.artifact_id == "789"
+    assert verified.artifact_id == "789"
 
 
 def test_self_declared_quality_artifact_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "quality-gates.json"
     quality_profile.write_evidence(_evidence(), path)
     with pytest.raises(quality_profile.QualityProfileError) as caught:
-        quality_profile.authenticate_evidence(
+        quality_profile.verify_evidence_binding(
             path,
             metadata_path=tmp_path / "missing-artifact.json",
             repository="example/fixture",

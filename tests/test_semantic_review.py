@@ -449,7 +449,8 @@ def test_incremental_strangler_rubric_is_narrow_and_bound() -> None:
     assert "one parser-bounded production target" in payload["instructions"]
     assert "Broad authorization never waives" in payload["instructions"]
     assert (
-        "Deterministic verifier authenticates quality and artifact facts" in payload["instructions"]
+        "Deterministic verifier checks quality and API-read artifact facts"
+        in payload["instructions"]
     )
     assert "fresh head without a trusted verdict" not in payload["instructions"]
     assert "BLOCK contradictory coverage observations" not in payload["instructions"]
