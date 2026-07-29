@@ -378,6 +378,19 @@ def test_transport_failures_block(error: Exception, code: str) -> None:
         request_response(_packet(), opener=fail)
 
 
+def test_transport_uses_fixed_480_second_default() -> None:
+    packet = _packet()
+    observed: list[float] = []
+
+    def open_request(_request: object, *, timeout: float) -> _Reply:
+        observed.append(timeout)
+        return _Reply(_response(packet))
+
+    request_response(packet, opener=open_request)
+
+    assert observed == [480.0]
+
+
 @pytest.mark.parametrize(
     "injection",
     [
