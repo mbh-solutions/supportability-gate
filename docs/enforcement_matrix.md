@@ -8,7 +8,7 @@ historical deterministic-gate delivery; they are not complete normative-clause c
 | Complete normative-clause inventory and traceability validator | 1 | IMPLEMENTED |
 | Trusted semantic judgment channel | 2 | IMPLEMENTED |
 | Python and TypeScript touched-function complexity and narrow anti-gaming | 3 | IMPLEMENTED |
-| Exact-head responsibility-boundary enforcement | 4 | IN_PROGRESS |
+| Exact-head responsibility-boundary enforcement | 4 | IMPLEMENTED |
 | Remaining principle-specific enforcement | 5–10 | NOT_IMPLEMENTED |
 | Full Python/frontend protected-merge qualification | 11 | NOT_IMPLEMENTED |
 

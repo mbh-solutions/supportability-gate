@@ -100,10 +100,35 @@ direct runtime proof.
     `semantic-review.v1`. The immutable standard SHA-256 remains
     `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
 - Enforcement Milestone 3 remaining work: None. Stop; Milestone 4 is not authorized.
-- Enforcement Milestone 4: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`; Stop confirmed
-  `Not reached`.
-- Enforcement Milestone 4 evidence: Pending direct implementation and runtime proof.
-- Enforcement Milestone 4 remaining work: Entire milestone.
+- Enforcement Milestone 4: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 4 evidence:
+  - Implementation head `49e77ca3a0fa37c1a598e012191d2670c8121544` (tree
+    `675838eb2029105d92a20ca2c539acfbfea8dcf5`) passed Python `3.12.13` exact-lock Ruff lint and
+    format, C901 maximum 10, strict mypy, both import contracts, 130 tests, compileall, wheel build,
+    fresh exact-lock wheel install, installed CLI help, immutable-standard tamper, exact-range
+    whitespace, and self-evaluation. The immutable standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Identical exact-head live evidence passed twice with SHA-256
+    `d46b714a2e2946a07865d2a6183ba5bcac4ea0514d286a95135efbe31cb61b48`; replay produced an
+    identical trusted verdict. Pull request #33 passed `Source Validation` check `90443322754` and
+    `Supportability Gate` check `90443322935` from App `15368`, plus semantic check `90443455003`
+    from App `4418989`, then normally squash-merged as
+    `32107ddadaca779561ca46810e52f4dfac768b79`.
+  - Protected Python PR #6 head `2747fbbe6e00704e87c0d3656228048546f3b89f` passed Gate check
+    `90444301533` and path-line semantic check `90444314910`, then normally merged as
+    `57447cda6d4dab7890755cbb402ff36de9a61b26`. Protected frontend PR #3 head
+    `fe2d686dfe6308109a8ae00ec0c7aa6a030174bb` passed Gate check `90444304272` and path-line
+    semantic check `90444314345`, then normally merged as
+    `ade2bddc4d47e266445e9fe698bcec6458c1f2aa`.
+  - Protected PRs #7–#11 respectively blocked mixed responsibilities, unsupported ownership,
+    vague boundaries, missing reviewed paths, and evidence outside the immutable head. Their
+    semantic checks were `90444652803`, `90444602945`, `90444607415`, `90444611931`, and
+    `90444616389`; every normal merge attempt exited 1 under base-branch policy, and each PR was
+    closed unmerged with its branch deleted.
+  - Active rulesets `19767613`, `19929500`, `19929504`, and `19929505` had zero bypass actors;
+    required contexts remained bound to Apps `15368` and `4418989`. All changed production paths
+    and recorded high-risk paths remained covered by the approved `src` gates.
+- Enforcement Milestone 4 remaining work: None. Stop; Milestone 5 is not authorized.
 - Enforcement Milestones 5–11: `NOT_STARTED`; not authorized.
 - Current directive: `docs/enforcement_milestone_4.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
@@ -317,7 +342,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: Enforcement Milestone 4
+Current authorized work: None — Enforcement Milestone 4 complete; stop
 Next milestone authorized: NO — Enforcement Milestones 5–11 remain Not started
 ```
 

@@ -6,9 +6,10 @@ normative Supportability Standard clause before adding later clause-specific enf
 
 ## Status
 
-- Completed successor scope: Supportability Standard Enforcement Milestones 1–3
-- Current authorized work: Enforcement Milestone 4
-- Completed capability: clause inventory, trusted semantic review, and touched-function complexity
+- Completed successor scope: Supportability Standard Enforcement Milestones 1–4
+- Current authorized work: None; Enforcement Milestone 5 is not authorized
+- Completed capability: clause inventory, trusted semantic review, touched-function complexity,
+  and exact-head responsibility boundaries
 - Existing complexity adapter: `python.c901-touched.v1`; maximum complexity: `10`
 - Full Supportability Standard runtime: **incomplete**
 
