@@ -128,9 +128,45 @@ direct runtime proof.
   - Active rulesets `19767613`, `19929500`, `19929504`, and `19929505` had zero bypass actors;
     required contexts remained bound to Apps `15368` and `4418989`. All changed production paths
     and recorded high-risk paths remained covered by the approved `src` gates.
-- Enforcement Milestone 4 remaining work: None. Stop; Milestone 5 is not authorized.
-- Enforcement Milestones 5–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_4.md`.
+- Enforcement Milestone 4 remaining work: None.
+- Enforcement Milestone 5: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 5 evidence:
+  - Implementation head `ab21f95886f20d3310fa9a122ee482992de72911` passed the complete Python
+    `3.12.13` exact-lock source proof, 142 tests, wheel install and CLI smoke, immutable-standard
+    tamper proof, exact-range whitespace proof, and byte-identical repeated self-evaluation with
+    SHA-256 `90edff500cbf44d08462b0fb0c318051a185da48d8bb1d2e4fb47615db31b5c9`.
+    Protected PR #35 passed Source Validation check `90452713354`, Supportability Gate check
+    `90452713987`, and semantic check `90452767492`, then normally squash-merged as
+    `ff8f25c5d46b35b39b4c6c55af35eb9ed5f5d7c9`.
+  - Structured source, line, and import-specifier citation binding was repaired at head
+    `9dcdd5a4da573981364d9418b67e15a1d8e87ed7`. Protected PR #36 passed Source Validation check
+    `90454135003`, Supportability Gate check `90454135042`, and semantic check `90454183813`,
+    then normally squash-merged as `56577d19fd9fe474406cc07cfa3957da5508f2c3`.
+  - Valid layered Python PR #12 at head `85de075d6cedfc0f8e17250da98f268484a35b4b` passed
+    Gate check `90454409556` and semantic check `90454423004`, then normally merged as
+    `4e73affda15d7604e40e7bbc3523fc3c551edf65`. Valid layered TypeScript PR #1 at head
+    `00637464f8d82d6521e4a9165bae4e46c4e485db` passed Gate check `90454677262` and semantic
+    check `90454688415`, then normally merged as `c48ba67f001456cbb64632316272876a32723b53`.
+  - Python cycle, inversion, and forbidden domain-to-infrastructure PR #13 failed Gate check
+    `90454930906` and semantic check `90455021184`. TypeScript cycle, inversion, and forbidden
+    domain-to-presentation PR #2 failed Gate check `90454998982` and semantic check `90455070684`.
+    Exact local base/head evaluation recorded each forbidden edge and cycle. Both normal merge
+    attempts exited 1 under base-branch policy; both PRs were closed unmerged and branches deleted.
+  - Declared-but-unexecuted TypeScript architecture PR #4 failed Gate check `90455414191`; exact
+    local base/head evaluation recorded `MISSING_REQUIRED_ADAPTER` and
+    `ARCHITECTURE_GATE_NOT_EXECUTED`. Incomplete production-coverage PR #1 failed Gate check
+    `90455973127`; exact local base/head evaluation recorded
+    `ARCHITECTURE_PRODUCTION_COVERAGE:src/application/useCase.ts`. Semantic checks passed for both;
+    both protected normal merge attempts exited 1, and both branches were deleted.
+  - Active source ruleset `19767613`, organization ruleset `19929500`, and proof-repository
+    rulesets `19929504`, `19929505`, `19936876`, and `19937786` had zero bypass actors. Required
+    contexts remained bound to Apps
+    `15368` and `4418989`; the organization workflow remained pinned to source commit
+    `56577d19fd9fe474406cc07cfa3957da5508f2c3`. The immutable standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement Milestone 5 remaining work: None. Stop; Milestone 6 is not authorized.
+- Enforcement Milestones 6–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_5.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -342,8 +378,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 4 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 5–11 remain Not started
+Current authorized work: None — Enforcement Milestone 5 complete; stop
+Next milestone authorized: NO — Enforcement Milestones 6–11 remain Not started
 ```
 
 ## Milestone transition rules
