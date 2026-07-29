@@ -270,8 +270,58 @@ direct runtime proof.
     `7767bb939d02dfb79aa3f0a28fb64c0f8081ad5f`. Immutable Standard SHA-256 remains
     `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
 - Enforcement Milestone 7 remaining work: None.
-- Enforcement Milestones 8–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_7.md`.
+- Enforcement Milestone 8: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 8 evidence:
+  - Implementation head `b62cf50ccc75d98ab735747cd5b31a329a9668db` passed Python `3.12.13`
+    exact-lock Ruff lint/format/C901, strict mypy over 21 source files, both Import Linter
+    contracts, 192 tests, compileall, wheel build, fresh exact-lock install, installed CLI help,
+    immutable-standard tamper, and exact-range whitespace proof. Wheel SHA-256:
+    `a6e11107c734ed3be80dae5e631afc08fef4bec04f8857f4a0af447a79bb16e1`.
+  - Protected PR #42 bound base `76cae68eb1559bdaa98e41acd98895e4f15d8b27`, exact head
+    `b62cf50ccc75d98ab735747cd5b31a329a9668db`, and authenticated owner comment
+    `5113379041`. Source Validation check `90484434408`, characterization checks
+    `90484434326` and `90484434392`, Gate check `90484491930`, and App-owned semantic check
+    `90484456418` passed. Refactor evidence SHA-256
+    `660fe85d7ad5210ef539bc228c734aa64ca0b575f54863dc18adc7a34114de85` passed with no
+    waived Standard clause. The PR normally squash-merged as
+    `957825c618e49ea96f2a23bcba975aa39031a6fc`.
+  - Python passing canary PR #21 bound base `a27e8a1eff88077994de887bb22bfa1c215dccd6`,
+    head `d3f569002ef5a61302ce7b37c18b003322809160`, one target, exact authorization comment
+    `5113409702`, compatible runnable behavior, Gate check `90485151220`, and semantic check
+    `90485499890`. Refactor evidence SHA-256
+    `9eda5aa968193c11463738da267e64e4faca5501aa8a2ff4663e22805a8d11bf` passed; the PR
+    normally merged as `a5f3539905557a50343a95251e33878cbe4a50b7`.
+  - TypeScript passing canary PR #8 bound base `2d7e54ec984a513fcd18bd53ca1db070f697556e`,
+    head `437bf0f1c0f954e9a7a4f7d5002f5152fe926e3b`, one target, exact authorization comment
+    `5113409858`, compatible runnable behavior, Gate check `90485186309`, and semantic check
+    `90485565100`. Refactor evidence SHA-256
+    `fee5313a6e26ebe62d95e88db72d475b03b44f6f6d3f68a85e78ac641193f248` passed; the PR
+    normally merged as `961570f78d244a5169457f3a0a6703ad2f3ed33f`.
+  - Python blocking canary PR #22, base `a5f3539905557a50343a95251e33878cbe4a50b7` and
+    head `e1f0bea11694a3f4c863e6b696066ca5052b40f6`, failed Gate check `90485819540` with
+    `MISSING_OWNER_AUTHORIZATION`; refactor evidence SHA-256
+    `1d9f253a77b29b4983b7e1158d291d53147022021819d8f10e263f9a2d22e120`. TypeScript
+    blocking canary PR #9, base `961570f78d244a5169457f3a0a6703ad2f3ed33f` and head
+    `34c553da18a352b03ffbfc8e253cbd2eab63251d`, failed Gate check `90485748685` with
+    `NON_RUNNABLE_LOGICAL_STEP` and exact characterization mismatch evidence; refactor evidence
+    SHA-256 `7b3fb596dbd088b460cb593e6437ed4ebf7d8fa9dbd835c2f151a65e9be297b3`.
+    Both normal merge attempts exited 1 under base policy; both PRs closed unmerged and branches
+    deleted.
+  - Focused acceptance tests directly block repo-wide cleanup, unrelated churn, multiple unbounded
+    targets, stale authorization identity or scope, invalid sequence, missing authorization, and
+    broad authorization attempting to waive another Standard clause. Exact target, scope,
+    predecessor, head, authorization-comment, characterization, and result identities remain
+    independently verifiable.
+  - Repeated merged-main self-evaluation was byte-identical at SHA-256
+    `3190d9f2fa62a5bb85adc005c458d40d56d794893f27cadac5f8f491915c678b`. Source ruleset
+    `19767613`, organization ruleset `19929500`, and proof rulesets `19929504` and `19936876`
+    remain active with zero bypass actors. Required checks remain bound to Apps `15368` and
+    `4418989`; organization workflow pin is exact implementation merge
+    `957825c618e49ea96f2a23bcba975aa39031a6fc`. Immutable Standard SHA-256 remains
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement Milestone 8 remaining work: None. Stop; Milestone 9 is not authorized.
+- Enforcement Milestones 9–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_8.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -483,8 +533,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 6 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 7–11 remain Not started
+Current authorized work: None — Enforcement Milestone 8 complete; stop
+Next milestone authorized: NO — Enforcement Milestones 9–11 remain Not started
 ```
 
 ## Milestone transition rules
