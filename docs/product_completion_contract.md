@@ -164,9 +164,60 @@ direct runtime proof.
     `15368` and `4418989`; the organization workflow remained pinned to source commit
     `56577d19fd9fe474406cc07cfa3957da5508f2c3`. The immutable standard SHA-256 remained
     `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
-- Enforcement Milestone 5 remaining work: None. Stop; Milestone 6 is not authorized.
-- Enforcement Milestones 6–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_5.md`.
+- Enforcement Milestone 5 remaining work: None.
+- Enforcement Milestone 6: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 6 evidence:
+  - Implementation head `5f9256689a64643ed3772d1fbc2f60dcd9fcbfd5` passed Python `3.12.13`
+    exact-lock Ruff lint/format/C901, strict mypy over 19 source files, both Import Linter
+    contracts, 157 tests, compileall, wheel build/fresh install/help, immutable-standard tamper,
+    exact-range whitespace, and repeated byte-identical self-evaluation with SHA-256
+    `dd7652f0a6bb4ad7fbe44fef3d6655329c4d28708501577b57ea683fb670445a`. Wheel SHA-256:
+    `3d94eebe7d8c8421326e42cbc4d4323975ab3dac10fb2042fb2a6d1e1ea4b499`.
+  - Protected PR #38 passed Source Validation run `30416098190`, job/check `90462845998`;
+    Supportability Gate run `30416098106`, job/check `90462845827`; and semantic check
+    `90463035902` with evidence
+    `a307963c648beaa2f8094603931584e4c85f10dca6adcc694c2424aad9051fc0`. It normally
+    squash-merged as `f9ac34cd8a2422c44d27ff37e3144a5abeb96051`.
+  - Cohesive responsibility-based Python PR #14, base
+    `4e73affda15d7604e40e7bbc3523fc3c551edf65`, head
+    `c0d1d0462d6ec7db05e8e93a70712bbcf97c9bd1`, passed Gate run `30416341665`, check
+    `90463580782`, and semantic check `90463713845`, then normally merged as
+    `50c7c988127c145c5386dfce352f72d230b1c11c`. Repeated exact-path evidence SHA-256:
+    `edc06a3c0461ab4257c305917c9ae9ae9ef825a4d7f99627a691c2773d67bb22`.
+  - Cohesive domain-based TypeScript PR #3, base
+    `c48ba67f001456cbb64632316272876a32723b53`, head
+    `4a588abf814d892c0a098d9639a21d54a42b57c6`, passed Gate run `30416354685`, check
+    `90463620157`, and semantic check `90463781524`, then normally merged as
+    `2cb94ea1a1b2db1a4fc9299d368c0bb3af52851f`. Repeated exact-path evidence SHA-256:
+    `720cc0dc8b6b2a765ae78e084716c8af46806cc8619d3d718a357140bc727dd4`.
+  - Python PR #15 head `27a480f37346fa5c75bfdec3e9bce659f620772c` blocked all five new
+    `utils`, `helpers`, `common`, `misc`, and `stuff` locations through Gate check `90463963361`
+    and semantic check `90464053419`; local evidence SHA-256
+    `7c6ea6b767dedaadac4ab8b5a4b6b91260ce1f61247007b6555420fd0b14c806`.
+  - Python PR #16 head `34c48b2587553b803736036b5d31f22708134c68` blocked an unjustified
+    parallel package through Gate check `90464200380` and semantic check `90464319514`; local
+    evidence SHA-256 `7b8d7da0c7771c32331046e152ea379b89676112985f86bff5b2c750caacce78`.
+  - TypeScript PR #2 head `64395f446096a1ca2968b3c9b050524c0f528caf` blocked a new production
+    location outside required architecture coverage through Gate check `90464427853` and semantic
+    check `90464527231`; local evidence SHA-256
+    `280692fd6eb9a5d54f83e152966a6cf81a56909d5b56ca63158f6732d852910b`.
+  - Python PR #17 head `0b60f9e4a5b1b5ca4abc2f9402f29d54be2322f5` passed deterministic Gate
+    check `90464664503` but semantic check `90464766967` source-cited mixed parsing, calculation,
+    persistence, and presentation and blocked weak cohesion. TypeScript PR #4 head
+    `06ebcae6636bf74e3d824ae4646008bc196daba0` blocked a five-edge excessive-coupling graph
+    through Gate check `90464999783` and semantic check `90465067701`.
+  - Every failing canary was rejected by a normal protected merge attempt, closed unmerged, and had
+    its remote branch deleted. Active rulesets `19767613`, `19929500`, `19929504`, `19929505`, and
+    `19937786` retained zero bypass actors; required checks remained bound to Apps `15368` and
+    `4418989`. Organization ruleset `19929500` pins the required workflow to merged source commit
+    `f9ac34cd8a2422c44d27ff37e3144a5abeb96051`.
+  - Exact-path ownership basis and justification, source-line ownership evidence, graph coupling
+    edges, every declared gate scope, executed architecture coverage, all changed production paths,
+    and recorded high-risk paths are present in deterministic evidence. No dependency, threshold,
+    exclusion, waiver, arbitrary command, or gate-scope weakening was added.
+- Enforcement Milestone 6 remaining work: None.
+- Enforcement Milestones 7–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_6.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -378,8 +429,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 5 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 6–11 remain Not started
+Current authorized work: None — Enforcement Milestone 6 complete; stop
+Next milestone authorized: NO — Enforcement Milestones 7–11 remain Not started
 ```
 
 ## Milestone transition rules
