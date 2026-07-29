@@ -183,8 +183,30 @@ class GitHubApp:
             str(base_sha),
             str(head_sha),
             self.app_id,
-            {"diff": review_diff, "pull_request": number, "reviewed_sources": reviewed_sources},
+            {
+                "diff": review_diff,
+                "pull_request": number,
+                "refactor_context": self._refactor_context(pull, files),
+                "reviewed_sources": reviewed_sources,
+            },
         )
+
+    def _refactor_context(
+        self, pull: dict[str, Any], files: tuple[dict[str, Any], ...]
+    ) -> dict[str, object]:
+        """Return authenticated author identity plus exact changed-file metadata."""
+        user = pull.get("user")
+        author = user if isinstance(user, dict) else {}
+        return {
+            "author_association": pull.get("author_association"),
+            "author_id": author.get("id"),
+            "author_login": author.get("login"),
+            "authorization": pull.get("body"),
+            "changed_files": [
+                {"path": item.get("filename"), "status": item.get("status")}
+                for item in sorted(files, key=lambda value: str(value.get("filename")))
+            ],
+        }
 
     def _comparison_evidence(
         self, repository: str, base_sha: str, head_sha: str, token: str

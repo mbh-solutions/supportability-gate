@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Milestones 1-6 remain enforced while risky changes require exact-base and exact-head characterization with compatible behavior."
-proof = "tests/test_characterization.py"
+intended_behavior = "Milestones 1-7 remain enforced while refactors require authenticated exact-head scope, parser-bounded targets, runnable behavior, and explicit strangler sequencing."
+proof = "tests/test_refactor_policy.py"
 
 [characterization]
-captured_behavior = "The pre-change 157-test suite and installed CLI behavior are the immutable base for Milestone 7."
-proof = "tests/test_characterization.py"
+captured_behavior = "The pre-change 177-test suite and existing Python and TypeScript characterization scenarios remain the immutable runnable base for Milestone 8."
+proof = "tests/test_refactor_policy.py"
 
 [separation_of_concerns]
-before = "Review text could claim characterization without authenticated base execution, exact artifact identity, replay, or post-change comparison."
-after = "The trusted organization workflow runs fixed Python or Node drivers twice in separate GitHub-hosted base and head jobs; characterization statically binds downloaded bytes to trusted job-output hashes and verifies identity, golden immutability, compatibility, and coverage without executing target code."
+before = "A refactor could supply nonempty review prose while changing unbounded targets, unrelated paths, or a non-runnable intermediate head."
+after = "One policy module binds GitHub-authenticated owner authorization to exact base, head, scope, parser-derived targets, characterization compatibility, and predecessor sequencing before existing gates run."
 
 [architecture]
-dependency_direction = "The organization workflow captures isolated behavior, then points to characterization for static verification; characterization depends only on immutable contract and Git evidence, and existing evaluator and semantic-review paths run after it passes."
+dependency_direction = "The organization workflow obtains authenticated behavior, then refactor_policy statically verifies exact Git scope and parser-derived boundaries using contract, function_changes, and git_changes; existing evaluator and semantic-review paths remain later independent gates."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -22,29 +22,36 @@ reviewed_paths = [
     "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
     "src/supportability_gate/reporting.py",
+    "src/supportability_gate/refactor_policy.py",
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/characterization.py"
-owns = "Static authentication, artifact identity, compatibility, golden immutability, replay, and coverage verification for captured characterization evidence."
-does_not_own = "Target execution, general quality-gate execution, semantic model transport, GitHub authentication, or check publication."
+path = "src/supportability_gate/refactor_policy.py"
+owns = "Authenticated owner authorization, exact diff focus, parser-derived target boundedness, characterization-backed runnability, and predecessor sequence verification."
+does_not_own = "Target execution, characterization capture, general quality-gate execution, semantic model transport, GitHub check publication, or waivers."
 
 [incremental_refactor]
-target = "Require one authenticated exact-base and exact-head characterization stage before the existing evaluator."
-completed_step = "Added one static verifier and one trusted hosted capture script with separate base and head jobs and raw-capture hashes, without target-supplied commands, new dependencies, contract changes, or later-milestone gate execution."
+target = "Require one authenticated, bounded, focused, runnable strangler step before the existing evaluator."
+completed_step = "Added one static policy module and one workflow invocation reusing exact Git, parser, and characterization evidence; no new dependency, command override, waiver, or Milestone 9 gate execution."
 
 [review_handoff]
-summary = "Review hosted-runner enforcement, exact checkout identity, isolated base/head execution, job-output capture hashes, immutable artifact handoff, fixed Python and Node commands, golden immutability, deterministic replay, compatibility, and changed/high-risk path coverage."
-remaining_risks = ["A missing or malformed manifest, driver, golden file, capture, or artifact identity intentionally fails the required workflow closed."]
+summary = "Review trusted owner identity, exact base/head authorization, exact changed-path scope, parser-derived target identity, broad-scope handling, characterization-backed runnability, sequence binding, deterministic evidence, and unchanged downstream gates."
+remaining_risks = ["Missing or malformed authorization, scope, target, predecessor, GitHub event, or characterization evidence intentionally fails the required workflow closed."]
 
 [human_review]
-naming = "Characterization names describe captures, manifests, golden outputs, behavior fingerprints, artifact identity, compatibility, and replay drift."
-cohesion = "One production module statically verifies Milestone 7 evidence; one trusted workflow script owns isolated hosted capture; existing evaluator and semantic modules remain unchanged."
-intended_behavior = "Existing enforcement remains; fixed Python and TypeScript characterization now blocks missing, stale, unauthenticated, changed, drifting, or incompatible evidence."
-reviewability = "Focused fixtures cover both supported profiles, existing and new scenarios, exact identity, all required blocks, coverage, and deterministic verification."
+naming = "Refactor-policy names directly describe authorization, bounded targets, diff focus, runnability, and strangler sequencing."
+cohesion = "One production module owns deterministic Milestone 8 verification; existing characterization, evaluator, reporting, semantic, and Git evidence retain their responsibilities."
+intended_behavior = "Existing enforcement remains; Python and TypeScript refactors now block missing, stale, broad, unfocused, unbounded, non-runnable, or invalidly sequenced evidence."
+reviewability = "Focused fixtures cover both supported profiles, narrow and broad authorization, all required blocks, exact identities, and deterministic verification."
+
+[[module_boundaries]]
+path = "src/supportability_gate/refactor_policy.py"
+owner_path = "src/supportability_gate/refactor_policy.py"
+basis = "responsibility"
+justification = "Owns deterministic Milestone 8 authorization, boundedness, focus, runnability, and sequence verification without executing target code."
 
 [[module_boundaries]]
 path = "src/supportability_gate/characterization.py"

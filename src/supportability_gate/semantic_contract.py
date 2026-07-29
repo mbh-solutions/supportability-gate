@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 MODEL = "gpt-5.6-sol"
-RUBRIC_VERSION = "domain-modularization.v1"
+RUBRIC_VERSION = "incremental-strangler.v1"
 SCHEMA_VERSION = "semantic-review.v1"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
@@ -209,6 +209,12 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "vaguely named production helpers whose names do not express one concrete responsibility, "
         "including numbered parts, generic helper/handler/processor names, misc/stuff, or equivalent "
         "obfuscation. Clear responsibility-named extraction passes this narrow rubric. "
+        "For incremental refactoring, require one parser-bounded production target, exact diff "
+        "scope, compatible runnable base/head behavior, and an immutable predecessor/head sequence. "
+        "BLOCK repo-wide cleanup, unrelated churn, multiple unbounded targets, or non-runnable "
+        "steps unless trusted owner metadata contains exact broad scope for this head. Broad "
+        "authorization never waives complexity, architecture, characterization, modularity, or "
+        "any other Supportability Standard clause. "
         "Each reviewed source supplies trusted parser-derived boundaries. Return exactly every "
         "supplied function, module, or frontend component boundary, copying its name, kind, and "
         "inclusive line span. State one clear owned "

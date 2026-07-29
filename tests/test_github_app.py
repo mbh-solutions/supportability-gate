@@ -177,8 +177,11 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     app = GitHubApp(42, 7, b"unused", opener=open_request)
     pull: dict[str, Any] = {
         "number": 3,
+        "author_association": "MEMBER",
         "base": {"sha": "a" * 40},
+        "body": "Supportability-Refactor-Authorization: {}",
         "head": {"sha": "b" * 40},
+        "user": {"id": 229662739, "login": "markheck-solutions"},
     }
     packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
     result = app.publish_check(packet, "token", "success", "PASS")
@@ -200,6 +203,13 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
             "path": "src/a.py",
         }
     ]
+    assert packet.evidence["refactor_context"] == {
+        "author_association": "MEMBER",
+        "author_id": 229662739,
+        "author_login": "markheck-solutions",
+        "authorization": "Supportability-Refactor-Authorization: {}",
+        "changed_files": [{"path": "src/a.py", "status": "modified"}],
+    }
 
 
 def test_frontend_component_boundary_uses_complete_parser_span() -> None:

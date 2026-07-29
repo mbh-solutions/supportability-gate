@@ -397,14 +397,16 @@ def test_prompt_injection_stays_untrusted_data(injection: str) -> None:
     assert payload["text"]["format"]["strict"] is True
 
 
-def test_complexity_anti_gaming_rubric_is_narrow_and_bound() -> None:
+def test_incremental_strangler_rubric_is_narrow_and_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "domain-modularization.v1"
+    assert RUBRIC_VERSION == "incremental-strangler.v1"
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
     assert "candidate-provided responsibility declarations" in payload["instructions"]
+    assert "one parser-bounded production target" in payload["instructions"]
+    assert "Broad authorization never waives" in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()
 
 
