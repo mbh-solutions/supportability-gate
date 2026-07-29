@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from supportability_gate.architecture_policy import ArchitectureResult
 from supportability_gate.complexity_metrics import RuffCommandRecord, RuffDiagnostic
 from supportability_gate.complexity_policy import FunctionDecision
 from supportability_gate.function_changes import ChangedFileAssessment
@@ -46,6 +47,7 @@ class EvaluationResult:
     ruff_commands: tuple[RuffCommandRecord, ...]
     review_evidence: ReviewEvidence | None = None
     language: str | None = None
+    architecture: ArchitectureResult | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -109,11 +111,52 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
     commands = [asdict(item) for item in result.git_commands]
     commands.extend(asdict(item) for item in result.ruff_commands)
     identity = _identity_payload(result.identity)
+    architecture = result.architecture
+    architecture_payload = (
+        {
+            "adapter": architecture.adapter,
+            "blocks": list(architecture.blocks),
+            "covered_paths": list(architecture.covered_paths),
+            "edges": [asdict(edge) for edge in architecture.edges],
+            "executed": architecture.executed,
+            "nodes": list(architecture.nodes),
+        }
+        if architecture
+        else None
+    )
+    changed_production = sorted(
+        {
+            path
+            for item in result.changed_files
+            for path, production in (
+                (item.change.old_path, item.base_production),
+                (item.change.new_path, item.head_production),
+            )
+            if path and production
+        }
+    )
+    graph_citations = (
+        [
+            f"{edge.source}:{edge.line}->{edge.target}"
+            for edge in architecture.edges
+            if edge.internal
+        ]
+        if architecture
+        else []
+    )
+    architecture_verdict = (
+        "BLOCK" if architecture and architecture.blocks else "PASS" if architecture else "MISSING"
+    )
     return {
         "base_contract_blob_sha": result.contract_blob_sha,
+        "architecture": architecture_payload,
         "base_sha": identity["base_sha"],
         "base_tree_sha": identity["base_tree_sha"],
         "changed_files": [_change_payload(item) for item in result.changed_files],
+        "dependency_direction_explanation": (
+            f"{architecture_verdict}: verified import graph {graph_citations}; "
+            f"changed production paths {changed_production}."
+        ),
         "commands": commands,
         "contract_path": result.contract_path,
         "contract_sha256": result.contract_sha256,

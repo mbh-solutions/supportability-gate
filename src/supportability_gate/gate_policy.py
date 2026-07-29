@@ -14,7 +14,10 @@ APPROVED_ADAPTERS = (
 )
 APPROVED_ADAPTERS_BY_LANGUAGE = {
     "python": APPROVED_ADAPTERS,
-    "typescript": ("typescript.c901-equivalent-touched.v1",),
+    "typescript": (
+        "typescript.c901-equivalent-touched.v1",
+        "typescript.import-boundaries.v1",
+    ),
 }
 MAXIMUM_COMPLEXITY = 10
 _SOURCE_SUFFIXES = (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx")

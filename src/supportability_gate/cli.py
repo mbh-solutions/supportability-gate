@@ -8,6 +8,7 @@ from pathlib import Path
 
 from supportability_gate import (
     __version__,
+    architecture_policy,
     complexity_metrics,
     complexity_policy,
     contract,
@@ -169,6 +170,21 @@ def _gate_coverage(policy: contract.Contract) -> tuple[tuple[str, tuple[str, ...
     return tuple((gate.adapter, gate.paths) for gate in policy.gates)
 
 
+def _architecture_sources(
+    repository: Path,
+    head_sha: str,
+    policy: contract.Contract,
+    records: list[git_changes.CommandRecord],
+) -> dict[str, bytes]:
+    suffixes = (".py", ".pyi") if policy.language == "python" else (".cts", ".mts", ".ts", ".tsx")
+    blobs = git_changes.list_regular_blobs(repository, head_sha, policy.production_paths, records)
+    return {
+        item.path: git_changes.read_regular_blob(repository, head_sha, item.path, records).content
+        for item in blobs
+        if item.path.endswith(suffixes)
+    }
+
+
 def _result(
     identity: git_changes.RepositoryIdentity,
     contract_path: str,
@@ -180,6 +196,7 @@ def _result(
     ruff_records: list[complexity_metrics.RuffCommandRecord],
     structured_review: review_evidence.ReviewEvidence | None,
     review_blocks: tuple[str, ...],
+    architecture: architecture_policy.ArchitectureResult,
 ) -> reporting.EvaluationResult:
     if any(
         contract_path in {item.change.old_path, item.change.new_path}
@@ -207,8 +224,13 @@ def _result(
             (),
             structured_review,
             policy.language,
+            architecture,
         )
-    policy_blocks = (*gate_policy.evaluate_contract(policy, analyzed.assessments), *review_blocks)
+    policy_blocks = (
+        *gate_policy.evaluate_contract(policy, analyzed.assessments),
+        *architecture.blocks,
+        *review_blocks,
+    )
     if policy_blocks:
         return reporting.EvaluationResult(
             identity,
@@ -229,6 +251,7 @@ def _result(
             (),
             structured_review,
             policy.language,
+            architecture,
         )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")
@@ -270,6 +293,7 @@ def _result(
         tuple(ruff_records),
         structured_review,
         policy.language,
+        architecture,
     )
 
 
@@ -325,6 +349,7 @@ def _technical_result(
         tuple(ruff_records),
         None,
         policy.language if policy else None,
+        None,
     )
 
 
@@ -386,6 +411,19 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             if contract_changed
             else _analyze_changes(repository, identity, policy, assessments, records)
         )
+        architecture_gate = next(
+            (
+                gate
+                for gate in policy.gates
+                if gate.adapter == architecture_policy.ARCHITECTURE_ADAPTERS[policy.language]
+            ),
+            None,
+        )
+        architecture = architecture_policy.evaluate_architecture(
+            policy,
+            _architecture_sources(repository, identity.head_sha, policy, records),
+            architecture_gate,
+        )
         return _result(
             identity,
             contract_path,
@@ -397,6 +435,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             ruff_records,
             structured_review,
             review_blocks,
+            architecture,
         )
     except Exception as error:  # fail closed at the CLI trust boundary
         return _technical_result(

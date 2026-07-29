@@ -19,7 +19,12 @@ from supportability_gate.semantic_contract import (
     result_schema,
 )
 
-SourceIndex = tuple[int, dict[int, str], frozenset[tuple[int, int, str, str]]]
+SourceIndex = tuple[
+    int,
+    dict[int, str],
+    frozenset[tuple[int, int, str, str]],
+    tuple[str, ...],
+]
 
 
 def _output_text(response: dict[str, Any]) -> str:
@@ -75,8 +80,24 @@ def _trusted_boundaries(value: object, line_count: int) -> frozenset[tuple[int, 
     return frozenset(boundaries)
 
 
+def _trusted_import_citations(path: str, value: object, line_count: int) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+    citations = [f"path:{path}"]
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"line", "specifier"}:
+            raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+        line, specifier = item["line"], item["specifier"]
+        if type(line) is not int or not 1 <= line <= line_count or not isinstance(specifier, str):
+            raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+        citations.append(f"import:{path}:{line}:{specifier}")
+    if len(citations) != len(set(citations)):
+        raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+    return tuple(citations)
+
+
 def _indexed_source(source: object) -> tuple[str, SourceIndex]:
-    keys = {"blob_sha", "boundaries", "line_count", "lines", "path"}
+    keys = {"blob_sha", "boundaries", "imports", "line_count", "lines", "path"}
     if not isinstance(source, dict) or set(source) != keys:
         raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
     path, blob_sha = source["path"], source["blob_sha"]
@@ -106,7 +127,12 @@ def _indexed_source(source: object) -> tuple[str, SourceIndex]:
         lines[number] = text
     if tuple(lines) != tuple(sorted(lines)):
         raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
-    return path, (line_count, lines, _trusted_boundaries(source["boundaries"], line_count))
+    return path, (
+        line_count,
+        lines,
+        _trusted_boundaries(source["boundaries"], line_count),
+        _trusted_import_citations(path, source["imports"], line_count),
+    )
 
 
 def _source_index(packet: EvidencePacket) -> dict[str, SourceIndex]:
@@ -132,7 +158,7 @@ def _boundary(item: object, sources: dict[str, SourceIndex]) -> BoundaryEvidence
     if path not in sources:
         raise SemanticReviewError("EVIDENCE_OUTSIDE_HEAD")
     start_line, end_line = item["start_line"], item["end_line"]
-    line_count, lines, trusted = sources[path]
+    line_count, lines, trusted, _ = sources[path]
     cited_numbers = range(start_line, end_line + 1)
     if not 1 <= start_line <= end_line <= line_count or any(
         number not in lines for number in cited_numbers
@@ -186,7 +212,7 @@ def _boundary_evidence(
         raise SemanticReviewError("MALFORMED_SCHEMA")
     expected_boundaries = {
         (path, start, end, kind, name)
-        for path, (_, _, trusted) in sources.items()
+        for path, (_, _, trusted, _) in sources.items()
         for start, end, kind, name in trusted
     }
     if identities != expected_boundaries:
@@ -195,6 +221,21 @@ def _boundary_evidence(
     if any(not finding.startswith(prefixes) for finding in findings):
         raise SemanticReviewError("UNSUPPORTED_FINDING")
     return expected_paths, boundaries
+
+
+def _architecture_evidence(
+    data: dict[str, Any], sources: dict[str, SourceIndex]
+) -> tuple[str, tuple[str, ...]]:
+    direction = data.get("dependency_direction")
+    citations = data.get("architecture_citations")
+    expected = tuple(citation for path in sources for citation in sources[path][3])
+    if not isinstance(direction, str) or not direction.strip():
+        raise SemanticReviewError("MISSING_DEPENDENCY_DIRECTION")
+    if not isinstance(citations, list) or any(not isinstance(item, str) for item in citations):
+        raise SemanticReviewError("MALFORMED_SCHEMA")
+    if tuple(citations) != expected or any(citation not in direction for citation in expected):
+        raise SemanticReviewError("UNVERIFIED_ARCHITECTURE_CITATION")
+    return direction, expected
 
 
 def _validate_bindings(data: dict[str, Any], bindings: dict[str, object]) -> None:
@@ -224,6 +265,9 @@ def _response_data(response: object) -> dict[str, Any]:
 def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVerdict:
     findings = _findings(data)
     reviewed_paths, boundaries = _boundary_evidence(packet, data, findings)
+    dependency_direction, architecture_citations = _architecture_evidence(
+        data, _source_index(packet)
+    )
     bindings = {
         "app_id": packet.app_id,
         "repository": packet.repository,
@@ -255,6 +299,8 @@ def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVe
         standard_sha256=STANDARD_SHA256,
         reviewed_paths=reviewed_paths,
         boundaries=boundaries,
+        dependency_direction=dependency_direction,
+        architecture_citations=architecture_citations,
     )
 
 

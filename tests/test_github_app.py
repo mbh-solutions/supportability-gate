@@ -191,6 +191,7 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
         {
             "blob_sha": source_sha,
             "boundaries": [{"end_line": 2, "kind": "function", "name": "safe", "start_line": 1}],
+            "imports": [],
             "line_count": 2,
             "lines": [
                 {"line": 1, "text": "def safe():"},

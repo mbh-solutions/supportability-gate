@@ -55,6 +55,15 @@ class GitBlob:
 
 
 @dataclass(frozen=True)
+class TreeBlob:
+    """One regular blob identity from an immutable Git tree."""
+
+    path: str
+    object_sha: str
+    mode: str
+
+
+@dataclass(frozen=True)
 class ChangedPath:
     """One normalized added, modified, renamed, or deleted identity."""
 
@@ -205,6 +214,28 @@ def read_regular_blob(
         raise GitError("SYMLINK_OR_NONFILE", f"path is not a regular file: {path}")
     content = run_git(repository, ("cat-file", "blob", f"{commit}:{path}"), records)
     return GitBlob(object_sha.lower(), mode, content)
+
+
+def list_regular_blobs(
+    repository: Path,
+    commit: str,
+    roots: tuple[str, ...],
+    records: list[CommandRecord],
+) -> tuple[TreeBlob, ...]:
+    """List regular blobs below fixed repository-relative roots."""
+    raw = run_git(repository, ("ls-tree", "-r", "-z", "--full-tree", commit, "--", *roots), records)
+    blobs: list[TreeBlob] = []
+    for entry in raw.rstrip(b"\0").split(b"\0") if raw else ():
+        header, separator, encoded_path = entry.partition(b"\t")
+        parts = header.decode("ascii").split()
+        if not separator or len(parts) != 3:
+            raise GitError("INVALID_TREE_ENTRY", "invalid recursive Git tree entry")
+        mode, object_type, object_sha = parts
+        if object_type == "blob" and mode in {"100644", "100755"}:
+            blobs.append(TreeBlob(encoded_path.decode("utf-8"), object_sha.lower(), mode))
+        elif object_type == "blob":
+            raise GitError("SYMLINK_OR_NONFILE", encoded_path.decode("utf-8"))
+    return tuple(sorted(blobs, key=lambda item: item.path))
 
 
 def changed_paths(
