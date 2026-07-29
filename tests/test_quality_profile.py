@@ -379,12 +379,28 @@ def _write_coverage_receipt(
     receipt_directory = os.environ.get("M9_COVERAGE_RECEIPT_DIRECTORY")
     if receipt_directory is None:
         return
+    command_claims = [
+        {
+            key: value
+            for key, value in asdict(command).items()
+            if key not in {"stderr_sha256", "stdout_sha256"}
+        }
+        for command in evidence.commands
+    ]
+    failed_claims = [
+        {
+            key: value
+            for key, value in asdict(command).items()
+            if key not in {"stderr_sha256", "stdout_sha256"}
+        }
+        for command in failed.commands
+    ]
     payload = {
         "changed_paths": list(evidence.changed_paths),
-        "commands": [asdict(command) for command in evidence.commands],
+        "commands": command_claims,
         "declared_untested_blocks": list(declared_untested_blocks),
         "failed_control": {
-            "commands": [asdict(command) for command in failed.commands],
+            "commands": failed_claims,
             "untested_areas": list(failed.untested_areas),
         },
         "high_risk_paths": list(evidence.high_risk_paths),
@@ -398,9 +414,34 @@ def _write_coverage_receipt(
         "untested_areas": list(evidence.untested_areas),
     }
     content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    output_hashes = {
+        "failed": [
+            {
+                "adapter": command.adapter,
+                "stderr_sha256": command.stderr_sha256,
+                "stdout_sha256": command.stdout_sha256,
+            }
+            for command in failed.commands
+        ],
+        "language": language,
+        "passing": [
+            {
+                "adapter": command.adapter,
+                "stderr_sha256": command.stderr_sha256,
+                "stdout_sha256": command.stdout_sha256,
+            }
+            for command in evidence.commands
+        ],
+        "schema_version": "m9-coverage-output-hashes.v1",
+    }
     destination = Path(receipt_directory)
     destination.mkdir(parents=True, exist_ok=True)
     (destination / f"{language}.json").write_text(content, encoding="utf-8", newline="\n")
+    (destination / f"{language}-output-hashes.json").write_text(
+        json.dumps(output_hashes, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def _assert_coverage_falsification(
