@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -9,15 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from supportability_gate import contract, git_changes, quality_profile
+from supportability_gate import contract, git_changes, quality_profile, quality_runner
 from supportability_gate.function_changes import ChangedFileAssessment
 
 BASE_SHA = "a" * 40
 HEAD_SHA = "b" * 40
 WORKFLOW_SHA = "c" * 40
 EMPTY_SHA = hashlib.sha256(b"").hexdigest()
-POLICY = contract.parse_contract(
-    b"""schema_version = "1.0"
+POLICY_TEXT = """schema_version = "1.0"
 language = "python"
 production_paths = ["src"]
 high_risk_paths = ["src/risk.py"]
@@ -46,7 +46,7 @@ paths = ["src"]
 adapter = "python.c901-touched.v1"
 maximum = 10
 """
-)
+POLICY = contract.parse_contract(POLICY_TEXT.encode())
 IDENTITY = git_changes.RepositoryIdentity(
     "github.com/example/fixture",
     BASE_SHA,
@@ -62,9 +62,12 @@ def _commands() -> tuple[quality_profile.GateResult, ...]:
         quality_profile.GateResult(
             adapter,
             arguments,
-            ("src",),
+            quality_profile.expected_proof_kind(adapter),
+            ("src/risk.py",),
+            (),
             True,
             0,
+            EMPTY_SHA,
             EMPTY_SHA,
             EMPTY_SHA,
         )
@@ -91,7 +94,6 @@ def _evidence(**changes: object) -> quality_profile.QualityEvidence:
         "run_id": "456",
         "runner_environment": "github-hosted",
         "schema_version": quality_profile.SCHEMA_VERSION,
-        "untested_areas": (),
         "workflow_sha": WORKFLOW_SHA,
         "job": "quality-profile",
         "artifact_id": "789",
@@ -120,8 +122,11 @@ def _assessment(
 def _blocks(
     evidence: quality_profile.QualityEvidence,
     assessments: tuple[ChangedFileAssessment, ...] = (),
+    production_files: tuple[str, ...] = ("src/risk.py",),
 ) -> tuple[str, ...]:
-    return quality_profile.evidence_blocks(evidence, POLICY, IDENTITY, assessments, WORKFLOW_SHA)
+    return quality_profile.evidence_blocks(
+        evidence, POLICY, IDENTITY, assessments, production_files, WORKFLOW_SHA
+    )
 
 
 def test_complete_fixed_python_profile_passes() -> None:
@@ -153,7 +158,7 @@ def test_untrusted_command_result_blocks(field: str, value: object, code: str) -
 
 def test_uncovered_changed_and_high_risk_paths_block() -> None:
     assessment = _assessment("src/changed.py", "src/changed.py", True, True)
-    commands = tuple(replace(item, covered_paths=("other",)) for item in _commands())
+    commands = tuple(replace(item, observed_paths=("other",)) for item in _commands())
     blocks = _blocks(
         _evidence(changed_paths=("src/changed.py",), commands=commands),
         (assessment,),
@@ -162,13 +167,89 @@ def test_uncovered_changed_and_high_risk_paths_block() -> None:
     assert "QUALITY_HIGH_RISK_FILE_COVERAGE:python.ruff-lint.v1:src/risk.py" in blocks
 
 
+def test_incomplete_production_manifest_blocks() -> None:
+    assert "QUALITY_PRODUCTION_MANIFEST_MISMATCH" in _blocks(
+        _evidence(), production_files=("src/other.py", "src/risk.py")
+    )
+
+
+def test_unexecuted_python_file_is_derived_as_untested() -> None:
+    """A passing pytest process cannot claim a source root as execution proof."""
+    pytest_result = quality_profile.GateResult(
+        adapter="python.pytest.v1",
+        arguments=dict(quality_profile.command_templates("python"))["python.pytest.v1"],
+        proof_kind="runtime-lines",
+        observed_paths=(),
+        zero_statement_paths=(),
+        executed=True,
+        exit_code=0,
+        stderr_sha256=EMPTY_SHA,
+        stdout_sha256=EMPTY_SHA,
+        raw_proof_sha256=EMPTY_SHA,
+    )
+    commands = tuple(
+        pytest_result if item.adapter == "python.pytest.v1" else item for item in _commands()
+    )
+
+    blocks = _blocks(_evidence(commands=commands))
+
+    assert "UNTESTED_AREA:src/risk.py" in blocks
+    assert "QUALITY_HIGH_RISK_FILE_COVERAGE:python.pytest.v1:src/risk.py" in blocks
+
+
+def test_python_coverage_observation_excludes_unexecuted_statements() -> None:
+    report = {
+        "files": {
+            "src/sample/covered.py": {"summary": {"num_statements": 2, "covered_lines": 1}},
+            "src/sample/empty.py": {"summary": {"num_statements": 0, "covered_lines": 0}},
+            "src/sample/unexecuted.py": {"summary": {"num_statements": 1, "covered_lines": 0}},
+        }
+    }
+
+    observed, zero_statement = quality_profile.python_coverage_observation(
+        report,
+        (
+            "src/sample/covered.py",
+            "src/sample/empty.py",
+            "src/sample/unexecuted.py",
+        ),
+    )
+
+    assert observed == ("src/sample/covered.py",)
+    assert zero_statement == ("src/sample/empty.py",)
+
+
+def test_typescript_lcov_observation_excludes_unexecuted_statements(tmp_path: Path) -> None:
+    report = """TN:
+SF:src/sample/covered.ts
+DA:1,1
+LF:1
+LH:1
+end_of_record
+TN:
+SF:src/sample/unexecuted.ts
+DA:1,0
+LF:1
+LH:0
+end_of_record
+"""
+
+    observed, zero_statement = quality_profile.typescript_lcov_observation(
+        report,
+        ("src/sample/covered.ts", "src/sample/unexecuted.ts"),
+        tmp_path,
+    )
+
+    assert observed == ("src/sample/covered.ts",)
+    assert zero_statement == ()
+
+
 @pytest.mark.parametrize(
     ("changes", "code"),
     [
         ({"exclusions": ("src/generated.py",)}, "QUALITY_EXCLUSION_ADDED:src/generated.py"),
         ({"maximum_complexity": 11}, "QUALITY_THRESHOLD_WEAKENING"),
         ({"production_paths": ("src/package",)}, "QUALITY_SCOPE_NARROWING"),
-        ({"untested_areas": ("src/risk.py",)}, "UNTESTED_AREA:src/risk.py"),
     ],
 )
 def test_anti_weakening_blocks(changes: dict[str, object], code: str) -> None:
@@ -187,12 +268,43 @@ def test_quality_evidence_is_byte_identical(tmp_path: Path) -> None:
     assert first == second
 
 
+def test_decision_payload_excludes_run_specific_provenance() -> None:
+    changed_command = replace(_commands()[0], stdout_sha256="1" * 64, raw_proof_sha256="2" * 64)
+    changed = _evidence(
+        run_id="999",
+        commands=(changed_command, *_commands()[1:]),
+        artifact_id="999",
+        artifact_digest="3" * 64,
+        capture_sha256="4" * 64,
+    )
+
+    assert quality_profile.decision_payload(_evidence()) == quality_profile.decision_payload(
+        changed
+    )
+
+
 def test_quality_artifact_requires_external_github_binding(tmp_path: Path) -> None:
     path = tmp_path / "quality-gates.json"
+    metadata = tmp_path / "artifact.json"
     raw = replace(_evidence(), artifact_id="", artifact_digest="", capture_sha256="")
     content = quality_profile.write_evidence(raw, path)
+    metadata.write_text(
+        json.dumps(
+            {
+                "id": 789,
+                "name": "quality-profile-456-1",
+                "expired": False,
+                "expires_at": "2026-08-29T00:00:00Z",
+                "digest": f"sha256:{'d' * 64}",
+                "url": "https://api.github.com/repos/example/fixture/actions/artifacts/789",
+                "workflow_run": {"id": 456, "repository_id": 123, "head_sha": HEAD_SHA},
+            }
+        ),
+        encoding="utf-8",
+    )
     authenticated = quality_profile.authenticate_evidence(
         path,
+        metadata_path=metadata,
         repository="example/fixture",
         repository_id="123",
         run_id="456",
@@ -211,6 +323,7 @@ def test_self_declared_quality_artifact_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(quality_profile.QualityProfileError) as caught:
         quality_profile.authenticate_evidence(
             path,
+            metadata_path=tmp_path / "missing-artifact.json",
             repository="example/fixture",
             repository_id="123",
             run_id="456",
@@ -271,7 +384,7 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
 
 def test_fixed_environment_imports_only_the_target_source(tmp_path: Path) -> None:
     repository = tmp_path / "target"
-    environment = quality_profile._fixed_environment(tmp_path / "output", repository)
+    environment = quality_runner.fixed_environment(tmp_path / "output", repository)
 
     assert environment["PYTHONPATH"] == str(repository / "src")
 
@@ -292,6 +405,105 @@ def _run_git(repository: Path, *arguments: str) -> str:
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="target quality commands are forbidden outside GitHub-hosted runners",
 )
+def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path) -> None:
+    repository = tmp_path / "python-target"
+    repository.mkdir()
+    _run_git(repository, "init", "--initial-branch=main")
+    _run_git(repository, "config", "user.name", "Fixture")
+    _run_git(repository, "config", "user.email", "fixture@example.invalid")
+    _run_git(repository, "remote", "add", "origin", "https://github.com/example/python.git")
+    (repository / ".supportability.toml").write_text(
+        POLICY_TEXT.replace("src/risk.py", "src/sample/unexecuted.py"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (repository / "pyproject.toml").write_text(
+        "[build-system]\nrequires = ['setuptools==83.0.0']\n"
+        "build-backend = 'setuptools.build_meta'\n\n"
+        "[project]\nname = 'quality-fixture'\nversion = '1.0.0'\n"
+        "requires-python = '>=3.12'\n\n"
+        "[tool.setuptools]\npackage-dir = {'' = 'src'}\n\n"
+        "[tool.setuptools.packages.find]\nwhere = ['src']\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    package = repository / "src" / "sample"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "covered.py").write_text(
+        "def score(value: int) -> int:\n    return value + 1\n", encoding="utf-8"
+    )
+    tests = repository / "tests"
+    tests.mkdir()
+    (tests / "test_covered.py").write_text(
+        "from sample.covered import score\n\n\ndef test_score() -> None:\n    assert score(1) == 2\n",
+        encoding="utf-8",
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    poison = "src/sample/unexecuted.py"
+    (repository / poison).write_text(
+        'raise RuntimeError("poison file executed")\n', encoding="utf-8"
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+    output = tmp_path / "evidence" / "quality-gates.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-P",
+            str(Path(__file__).with_name("hosted_quality_profile.py")),
+            "--repository",
+            str(repository.resolve()),
+            "--repository-name",
+            "example/python",
+            "--repository-id",
+            "123",
+            "--base-ref",
+            base_sha,
+            "--head-ref",
+            head_sha,
+            "--workflow-sha",
+            WORKFLOW_SHA,
+            "--run-id",
+            "456",
+            "--run-attempt",
+            "1",
+            "--output",
+            str(output.resolve()),
+        ],
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
+    evidence = replace(
+        quality_profile.load_evidence(output),
+        artifact_id="789",
+        artifact_digest="d" * 64,
+        capture_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
+    )
+    identity = git_changes.inspect_repository(repository, base_sha, head_sha, [])
+    policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
+    assessment = ChangedFileAssessment(
+        git_changes.ChangedPath("ADDED", None, poison), False, True, True, (1,)
+    )
+    blocks = quality_profile.evidence_blocks(
+        evidence, policy, identity, (assessment,), evidence.production_files, WORKFLOW_SHA
+    )
+    test_result = next(item for item in evidence.commands if item.adapter == "python.pytest.v1")
+
+    assert poison not in test_result.observed_paths
+    assert f"UNTESTED_AREA:{poison}" in blocks
+    assert f"QUALITY_CHANGED_FILE_COVERAGE:python.pytest.v1:{poison}" in blocks
+
+
+@pytest.mark.skipif(
+    os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="target quality commands are forbidden outside GitHub-hosted runners",
+)
 def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path: Path) -> None:
     repository = tmp_path / "typescript-target"
     repository.mkdir()
@@ -303,7 +515,7 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
         """schema_version = "1.0"
 language = "typescript"
 production_paths = ["src"]
-high_risk_paths = ["src/domain/model.ts"]
+high_risk_paths = ["src/domain/unexecuted.ts"]
 
 [[gates]]
 adapter = "typescript.c901-equivalent-touched.v1"
@@ -345,6 +557,10 @@ maximum = 10
         encoding="utf-8",
         newline="\n",
     )
+    poison = "src/domain/unexecuted.ts"
+    (repository / poison).write_text(
+        'throw new Error("poison file executed");\n', encoding="utf-8", newline="\n"
+    )
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", "head")
     head_sha = _run_git(repository, "rev-parse", "HEAD")
@@ -382,5 +598,37 @@ maximum = 10
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
     evidence = quality_profile.load_evidence(output)
 
-    assert evidence.untested_areas == ()
+    test_result = next(item for item in evidence.commands if item.adapter == "typescript.test.v1")
+    authenticated = replace(
+        evidence,
+        artifact_id="789",
+        artifact_digest="d" * 64,
+        capture_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
+    )
+    identity = git_changes.inspect_repository(repository, base_sha, head_sha, [])
+    policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
+    assessments = (
+        ChangedFileAssessment(
+            git_changes.ChangedPath("MODIFIED", "src/domain/model.ts", "src/domain/model.ts"),
+            True,
+            True,
+            True,
+            (2,),
+        ),
+        ChangedFileAssessment(
+            git_changes.ChangedPath("ADDED", None, poison), False, True, True, (1,)
+        ),
+    )
+    blocks = quality_profile.evidence_blocks(
+        authenticated,
+        policy,
+        identity,
+        assessments,
+        evidence.production_files,
+        WORKFLOW_SHA,
+    )
+
+    assert poison not in test_result.observed_paths
+    assert f"UNTESTED_AREA:{poison}" in blocks
+    assert f"QUALITY_CHANGED_FILE_COVERAGE:typescript.test.v1:{poison}" in blocks
     assert all(command.executed and command.exit_code == 0 for command in evidence.commands)

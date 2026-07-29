@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 MODEL = "gpt-5.6-sol"
+REASONING_EFFORT = "medium"
 RUBRIC_VERSION = "incremental-strangler.v1"
 SCHEMA_VERSION = "semantic-review.v1"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
@@ -33,6 +34,8 @@ class EvidencePacket:
     base_sha: str
     head_sha: str
     app_id: int
+    model: str
+    reasoning_effort: str
     _evidence_bytes: bytes
 
     def __init__(
@@ -42,11 +45,19 @@ class EvidencePacket:
         head_sha: str,
         app_id: int,
         evidence: dict[str, Any],
+        *,
+        model: str = MODEL,
+        reasoning_effort: str = REASONING_EFFORT,
     ) -> None:
         if not REPOSITORY_PATTERN.fullmatch(repository):
             raise SemanticReviewError("INVALID_REPOSITORY")
         if not SHA_PATTERN.fullmatch(base_sha) or not SHA_PATTERN.fullmatch(head_sha):
             raise SemanticReviewError("INVALID_SHA")
+        if model not in {"gpt-5.6-sol", "gpt-5.6-terra"} or reasoning_effort not in {
+            "low",
+            "medium",
+        }:
+            raise SemanticReviewError("INVALID_MODEL_CONFIGURATION")
         try:
             evidence_bytes = json.dumps(
                 evidence, ensure_ascii=False, separators=(",", ":"), sort_keys=True
@@ -57,6 +68,8 @@ class EvidencePacket:
         object.__setattr__(self, "base_sha", base_sha)
         object.__setattr__(self, "head_sha", head_sha)
         object.__setattr__(self, "app_id", app_id)
+        object.__setattr__(self, "model", model)
+        object.__setattr__(self, "reasoning_effort", reasoning_effort)
         object.__setattr__(self, "_evidence_bytes", evidence_bytes)
 
     @property
@@ -74,7 +87,8 @@ class EvidencePacket:
                 "app_id": self.app_id,
                 "evidence": self.evidence,
                 "head_sha": self.head_sha,
-                "model": MODEL,
+                "model": self.model,
+                "reasoning_effort": self.reasoning_effort,
                 "repository": self.repository,
                 "rubric_version": RUBRIC_VERSION,
                 "schema_version": SCHEMA_VERSION,
@@ -119,6 +133,8 @@ class SemanticVerdict:
     rubric_version: str
     schema_version: str
     standard_sha256: str
+    model: str
+    reasoning_effort: str
     reviewed_paths: tuple[str, ...]
     boundaries: tuple[BoundaryEvidence, ...]
     dependency_direction: str
@@ -185,6 +201,8 @@ def result_schema() -> dict[str, Any]:
         "rubric_version": {"type": "string"},
         "schema_version": {"type": "string"},
         "standard_sha256": {"type": "string"},
+        "model": {"type": "string"},
+        "reasoning_effort": {"type": "string"},
     }
     return {
         "type": "object",
@@ -202,10 +220,9 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "Feasibility means the shown code paths can perform their stated behavior without a "
         "blocking internal defect. Security means identities, secrets, evidence, and trust "
         "boundaries fail closed and target code cannot execute. Runtime and protected-merge proof "
-        "is gathered separately and is not a prerequisite for this code verdict. A fresh head "
-        "without a trusted verdict is the offline fail-closed case; a completed unchanged exact-"
-        "evidence verdict may be replayed. Strict up-to-date branch protection handles later base "
-        "movement, while the verifier rechecks base/head immediately before publication. "
+        "is gathered separately and is not a prerequisite for this code verdict. Deterministic "
+        "verifier authenticates quality and artifact facts, replay eligibility, and head freshness; "
+        "treat supplied verified results as facts and do not independently revalidate them. "
         "For complexity anti-gaming, BLOCK only when reduced complexity is achieved by extracting "
         "vaguely named production helpers whose names do not express one concrete responsibility, "
         "including numbered parts, generic helper/handler/processor names, misc/stuff, or equivalent "
@@ -258,9 +275,11 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "rubric_version": RUBRIC_VERSION,
         "schema_version": SCHEMA_VERSION,
         "standard_sha256": STANDARD_SHA256,
+        "model": packet.model,
+        "reasoning_effort": packet.reasoning_effort,
     }
     return {
-        "model": MODEL,
+        "model": packet.model,
         "instructions": instructions,
         "input": json.dumps(
             {"bindings": bindings, "untrusted_evidence": packet.evidence},
@@ -269,7 +288,7 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
             sort_keys=True,
         ),
         "store": False,
-        "reasoning": {"effort": "low"},
+        "reasoning": {"effort": packet.reasoning_effort},
         "tools": [],
         "tool_choice": "none",
         "text": {

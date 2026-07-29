@@ -4,20 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
-import shutil
-import sys
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from supportability_gate import contract, git_changes
 from supportability_gate.function_changes import ChangedFileAssessment
 
-SCHEMA_VERSION = "quality-gates.v1"
+SCHEMA_VERSION = "quality-gates.v2"
 TIMEOUT_SECONDS = 180
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
-_SOURCE_SUFFIXES = {
+SOURCE_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx"),
 }
@@ -29,8 +26,8 @@ _PYTHON_COMMANDS = (
             "-m",
             "ruff",
             "check",
-            "src",
-            "tests",
+            "$SOURCE_FILES",
+            "$TEST_FILES",
             "--select",
             "E4,E7,E9,F,I,UP",
             "--line-length",
@@ -49,8 +46,8 @@ _PYTHON_COMMANDS = (
             "ruff",
             "format",
             "--check",
-            "src",
-            "tests",
+            "$SOURCE_FILES",
+            "$TEST_FILES",
             "--line-length",
             "100",
             "--target-version",
@@ -66,7 +63,7 @@ _PYTHON_COMMANDS = (
             "-m",
             "ruff",
             "check",
-            "src",
+            "$SOURCE_FILES",
             "--select",
             "C901",
             "--config",
@@ -87,12 +84,25 @@ _PYTHON_COMMANDS = (
             "$OUTPUT/mypy.ini",
             "--cache-dir",
             "$OUTPUT/mypy-cache",
-            "src",
+            "$SOURCE_FILES",
         ),
     ),
     (
         "python.pytest.v1",
-        ("$PYTHON", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini"),
+        (
+            "$PYTHON",
+            "-m",
+            "coverage",
+            "run",
+            "--branch",
+            "--source=src",
+            "--data-file=$OUTPUT/.coverage",
+            "-m",
+            "pytest",
+            "-q",
+            "-c",
+            "$OUTPUT/pytest.ini",
+        ),
     ),
     (
         "python.build-wheel.v1",
@@ -138,8 +148,8 @@ _TYPESCRIPT_COMMANDS = (
             "--no-config-lookup",
             "--no-ignore",
             "--no-inline-config",
-            "src",
-            "tests",
+            "$SOURCE_FILES",
+            "$TEST_FILES",
         ),
     ),
     (
@@ -151,8 +161,8 @@ _TYPESCRIPT_COMMANDS = (
             "$TOOLS/prettier.json",
             "--ignore-path",
             "$TOOLS/prettier.ignore",
-            "src",
-            "tests",
+            "$SOURCE_FILES",
+            "$TEST_FILES",
         ),
     ),
     (
@@ -166,15 +176,28 @@ _TYPESCRIPT_COMMANDS = (
             "--no-inline-config",
             "--rule",
             "complexity: [error, 10]",
-            "src",
-            "tests",
+            "$SOURCE_FILES",
+            "$TEST_FILES",
         ),
     ),
     (
         "typescript.typecheck.v1",
         ("$TOOLS/node_modules/.bin/tsc", "--project", "$OUTPUT/tsconfig-check.json"),
     ),
-    ("typescript.test.v1", ("$NODE", "--test", "$TEST_FILES")),
+    (
+        "typescript.test.v1",
+        (
+            "$NODE",
+            "--test",
+            "--experimental-test-coverage",
+            "--test-coverage-include=src/**",
+            "--test-reporter=spec",
+            "--test-reporter=lcov",
+            "--test-reporter-destination=stdout",
+            "--test-reporter-destination=$OUTPUT/coverage.lcov",
+            "$TEST_FILES",
+        ),
+    ),
     (
         "typescript.build.v1",
         ("$TOOLS/node_modules/.bin/tsc", "--project", "$OUTPUT/tsconfig-build.json"),
@@ -193,6 +216,24 @@ _TYPESCRIPT_COMMANDS = (
     ),
 )
 
+_PROOF_KINDS = {
+    "python.ruff-lint.v1": "explicit-source",
+    "python.ruff-format.v1": "explicit-source",
+    "python.c901-touched.v1": "explicit-source",
+    "python.mypy-strict.v1": "config-source",
+    "python.pytest.v1": "runtime-lines",
+    "python.build-wheel.v1": "artifact-members",
+    "python.import-linter.v1": "parsed-source",
+    "typescript.tool-install.v1": "provisioning",
+    "typescript.eslint.v1": "explicit-source",
+    "typescript.prettier.v1": "explicit-source",
+    "typescript.c901-equivalent-touched.v1": "explicit-source",
+    "typescript.typecheck.v1": "config-source",
+    "typescript.test.v1": "runtime-lines",
+    "typescript.build.v1": "compiler-output",
+    "typescript.import-boundaries.v1": "parsed-source",
+}
+
 
 class QualityProfileError(ValueError):
     """Fail-closed quality-profile evidence error."""
@@ -208,11 +249,14 @@ class GateResult:
 
     adapter: str
     arguments: tuple[str, ...]
-    covered_paths: tuple[str, ...]
+    proof_kind: str
+    observed_paths: tuple[str, ...]
+    zero_statement_paths: tuple[str, ...]
     executed: bool
     exit_code: int
     stderr_sha256: str
     stdout_sha256: str
+    raw_proof_sha256: str
 
 
 @dataclass(frozen=True)
@@ -236,20 +280,11 @@ class QualityEvidence:
     run_id: str
     runner_environment: str
     schema_version: str
-    untested_areas: tuple[str, ...]
     workflow_sha: str
     job: str
     artifact_id: str
     artifact_digest: str
     capture_sha256: str
-
-
-@dataclass(frozen=True)
-class _CommandPlan:
-    adapter: str
-    actual: tuple[str, ...]
-    evidence: tuple[str, ...]
-    covered_paths: tuple[str, ...]
 
 
 def command_templates(language: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
@@ -266,6 +301,92 @@ def required_adapters(language: str) -> tuple[str, ...]:
     return tuple(adapter for adapter, _ in command_templates(language))
 
 
+def production_files(
+    repository: Path,
+    head_sha: str,
+    policy: contract.Contract,
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    """Recompute the exact quality source manifest from the immutable head tree."""
+    return tuple(
+        item.path
+        for item in git_changes.list_regular_blobs(
+            repository, head_sha, policy.production_paths, records
+        )
+        if item.path.endswith(SOURCE_SUFFIXES[policy.language])
+    )
+
+
+def expected_proof_kind(adapter: str) -> str:
+    """Return the fixed observation type for one approved adapter."""
+    try:
+        return _PROOF_KINDS[adapter]
+    except KeyError as error:
+        raise QualityProfileError("UNAPPROVED_QUALITY_COMMAND", adapter) from error
+
+
+def python_coverage_observation(
+    report: object, source_files: tuple[str, ...]
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return files with executed statements and files with no statements."""
+    if not isinstance(report, dict) or not isinstance(report.get("files"), dict):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "coverage files missing")
+    files = report["files"]
+    observed: list[str] = []
+    zero_statement: list[str] = []
+    for path in source_files:
+        item = files.get(path)
+        if item is None:
+            continue
+        if not isinstance(item, dict) or not isinstance(item.get("summary"), dict):
+            raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+        summary = item["summary"]
+        statements = summary.get("num_statements")
+        covered = summary.get("covered_lines")
+        if type(statements) is not int or type(covered) is not int:
+            raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+        if statements == 0:
+            zero_statement.append(path)
+        elif covered > 0:
+            observed.append(path)
+    return tuple(observed), tuple(zero_statement)
+
+
+def _lcov_path(value: str, repository: Path) -> str:
+    path = Path(value)
+    if path.is_absolute():
+        try:
+            path = path.resolve().relative_to(repository.resolve())
+        except ValueError as error:
+            raise QualityProfileError("MALFORMED_QUALITY_PROOF", value) from error
+    return path.as_posix()
+
+
+def typescript_lcov_observation(
+    report: str, source_files: tuple[str, ...], repository: Path
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return TypeScript files with executed lines and files with no executable lines."""
+    records: dict[str, tuple[int, int]] = {}
+    current: str | None = None
+    found = hits = None
+    for line in report.splitlines():
+        if line.startswith("SF:"):
+            current = _lcov_path(line[3:], repository)
+            found = hits = None
+        elif line.startswith("LF:"):
+            found = int(line[3:])
+        elif line.startswith("LH:"):
+            hits = int(line[3:])
+        elif line == "end_of_record":
+            if current is None or found is None or hits is None or current in records:
+                raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV record")
+            records[current] = (found, hits)
+            current = None
+    observed = tuple(path for path in source_files if records.get(path, (0, 0))[1] > 0)
+    zero_statement = tuple(path for path in source_files if records.get(path) == (0, 0))
+    return observed, zero_statement
+
+
 def _sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -280,29 +401,37 @@ def _gate_result(value: object) -> GateResult:
     if not isinstance(value, dict) or set(value) != {
         "adapter",
         "arguments",
-        "covered_paths",
+        "proof_kind",
+        "observed_paths",
+        "zero_statement_paths",
         "executed",
         "exit_code",
         "stderr_sha256",
         "stdout_sha256",
+        "raw_proof_sha256",
     }:
         raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid command result")
     if (
         not isinstance(value["adapter"], str)
+        or not isinstance(value["proof_kind"], str)
         or type(value["executed"]) is not bool
         or type(value["exit_code"]) is not int
         or not isinstance(value["stdout_sha256"], str)
         or not isinstance(value["stderr_sha256"], str)
+        or not isinstance(value["raw_proof_sha256"], str)
     ):
         raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid command result types")
     return GateResult(
         value["adapter"],
         _string_tuple(value["arguments"], "arguments"),
-        _string_tuple(value["covered_paths"], "covered_paths"),
+        value["proof_kind"],
+        _string_tuple(value["observed_paths"], "observed_paths"),
+        _string_tuple(value["zero_statement_paths"], "zero_statement_paths"),
         value["executed"],
         value["exit_code"],
         value["stderr_sha256"],
         value["stdout_sha256"],
+        value["raw_proof_sha256"],
     )
 
 
@@ -325,7 +454,6 @@ def _parse_evidence(data: object) -> QualityEvidence:
         "run_id",
         "runner_environment",
         "schema_version",
-        "untested_areas",
         "workflow_sha",
         "job",
         "artifact_id",
@@ -373,7 +501,6 @@ def _parse_evidence(data: object) -> QualityEvidence:
         data["run_id"],
         data["runner_environment"],
         data["schema_version"],
-        _string_tuple(data["untested_areas"], "untested_areas"),
         data["workflow_sha"],
         data["job"],
         data["artifact_id"],
@@ -391,9 +518,56 @@ def load_evidence(path: Path) -> QualityEvidence:
     return _parse_evidence(data)
 
 
+def _authenticate_artifact_metadata(
+    path: Path,
+    *,
+    repository: str,
+    repository_id: str,
+    run_id: str,
+    run_attempt: str,
+    artifact_id: str,
+    artifact_digest: str,
+    head_sha: str,
+) -> None:
+    try:
+        data = json.loads(path.read_bytes())
+    except (OSError, json.JSONDecodeError) as error:
+        raise QualityProfileError("UNAUTHENTICATED_QUALITY_ARTIFACT", str(error)) from error
+    workflow = data.get("workflow_run") if isinstance(data, dict) else None
+    digest = data.get("digest") if isinstance(data, dict) else None
+    if isinstance(digest, str) and digest.startswith("sha256:"):
+        digest = digest.removeprefix("sha256:")
+    expected = (
+        int(artifact_id),
+        f"quality-profile-{run_id}-{run_attempt}",
+        False,
+        artifact_digest,
+        f"/repos/{repository}/actions/artifacts/{artifact_id}",
+        int(run_id),
+        int(repository_id),
+        head_sha,
+    )
+    actual = (
+        data.get("id") if isinstance(data, dict) else None,
+        data.get("name") if isinstance(data, dict) else None,
+        data.get("expired") if isinstance(data, dict) else None,
+        digest,
+        str(data.get("url", "")).removeprefix("https://api.github.com"),
+        workflow.get("id") if isinstance(workflow, dict) else None,
+        workflow.get("repository_id") if isinstance(workflow, dict) else None,
+        workflow.get("head_sha") if isinstance(workflow, dict) else None,
+    )
+    expires_at = data.get("expires_at") if isinstance(data, dict) else None
+    if actual != expected or not isinstance(expires_at, str) or not expires_at:
+        raise QualityProfileError(
+            "QUALITY_ARTIFACT_BINDING_MISMATCH", "GitHub artifact metadata mismatch"
+        )
+
+
 def authenticate_evidence(
     path: Path,
     *,
+    metadata_path: Path,
     repository: str,
     repository_id: str,
     run_id: str,
@@ -432,6 +606,16 @@ def authenticate_evidence(
         or _sha256(content) != capture_sha256
     ):
         raise QualityProfileError("UNAUTHENTICATED_QUALITY_ARTIFACT", "artifact proof mismatch")
+    _authenticate_artifact_metadata(
+        metadata_path,
+        repository=repository,
+        repository_id=repository_id,
+        run_id=run_id,
+        run_attempt=run_attempt,
+        artifact_id=artifact_id,
+        artifact_digest=artifact_digest,
+        head_sha=evidence.head_sha,
+    )
     return replace(
         evidence,
         artifact_id=artifact_id,
@@ -520,7 +704,7 @@ def _verify_evidence_identity(
 
 
 def _covers(result: GateResult, path: str) -> bool:
-    return any(path == root or path.startswith(f"{root}/") for root in result.covered_paths)
+    return path in result.observed_paths or path in result.zero_statement_paths
 
 
 def _command_blocks(
@@ -544,19 +728,30 @@ def _command_blocks(
             continue
         if result.arguments != arguments:
             blocks.append(f"QUALITY_COMMAND_VECTOR_MISMATCH:{adapter}")
+        if result.proof_kind != expected_proof_kind(adapter):
+            blocks.append(f"QUALITY_PROOF_KIND_MISMATCH:{adapter}")
         if not result.executed:
             blocks.append(f"DECLARED_TOOL_NOT_EXECUTED:{adapter}")
         elif result.exit_code:
             blocks.append(f"QUALITY_GATE_FAILED:{adapter}")
+        if result.proof_kind != "provisioning":
+            blocks.extend(
+                f"QUALITY_CHANGED_FILE_COVERAGE:{adapter}:{path}"
+                for path in changed_paths
+                if not _covers(result, path)
+            )
+            blocks.extend(
+                f"QUALITY_HIGH_RISK_FILE_COVERAGE:{adapter}:{path}"
+                for path in policy.high_risk_paths
+                if not _covers(result, path)
+            )
+    test_adapter = "python.pytest.v1" if policy.language == "python" else "typescript.test.v1"
+    test_result = commands.get(test_adapter)
+    if test_result is not None:
         blocks.extend(
-            f"QUALITY_CHANGED_FILE_COVERAGE:{adapter}:{path}"
-            for path in changed_paths
-            if not _covers(result, path)
-        )
-        blocks.extend(
-            f"QUALITY_HIGH_RISK_FILE_COVERAGE:{adapter}:{path}"
-            for path in policy.high_risk_paths
-            if not _covers(result, path)
+            f"UNTESTED_AREA:{path}"
+            for path in sorted(set((*changed_paths, *policy.high_risk_paths)))
+            if not _covers(test_result, path)
         )
     return blocks
 
@@ -565,8 +760,11 @@ def _policy_blocks(
     evidence: QualityEvidence,
     policy: contract.Contract,
     assessments: tuple[ChangedFileAssessment, ...],
+    production_files: tuple[str, ...],
 ) -> list[str]:
     blocks: list[str] = []
+    if evidence.production_files != production_files:
+        blocks.append("QUALITY_PRODUCTION_MANIFEST_MISMATCH")
     changed_paths = _changed_production_paths(assessments)
     if evidence.production_paths != policy.production_paths:
         blocks.append("QUALITY_SCOPE_NARROWING")
@@ -575,7 +773,6 @@ def _policy_blocks(
     elif evidence.maximum_complexity != policy.maximum:
         blocks.append("QUALITY_THRESHOLD_MISMATCH")
     blocks.extend(f"QUALITY_EXCLUSION_ADDED:{path}" for path in evidence.exclusions)
-    blocks.extend(f"UNTESTED_AREA:{path}" for path in evidence.untested_areas)
     blocks.extend(
         f"PRODUCTION_PATH_MOVED_OUTSIDE_SCOPE:{path}" for path in _moved_outside_scope(assessments)
     )
@@ -583,14 +780,12 @@ def _policy_blocks(
     blocks.extend(
         f"QUALITY_CHANGED_FILE_NOT_ATTESTED:{path}"
         for path in head_paths
-        if path.endswith(_SOURCE_SUFFIXES[policy.language])
-        and path not in evidence.production_files
+        if path.endswith(SOURCE_SUFFIXES[policy.language]) and path not in evidence.production_files
     )
     blocks.extend(
         f"QUALITY_HIGH_RISK_FILE_NOT_ATTESTED:{path}"
         for path in policy.high_risk_paths
-        if path.endswith(_SOURCE_SUFFIXES[policy.language])
-        and path not in evidence.production_files
+        if path.endswith(SOURCE_SUFFIXES[policy.language]) and path not in evidence.production_files
     )
     if (
         evidence.changed_paths != changed_paths
@@ -605,201 +800,15 @@ def evidence_blocks(
     policy: contract.Contract,
     identity: git_changes.RepositoryIdentity,
     assessments: tuple[ChangedFileAssessment, ...],
+    production_files: tuple[str, ...],
     workflow_sha: str,
 ) -> tuple[str, ...]:
     """Bind exact attestation identity and return deterministic quality blocks."""
     _verify_evidence_identity(evidence, policy, identity, workflow_sha)
-    changed_paths = _changed_production_paths(assessments)
+    changed_paths = _changed_head_production_paths(assessments)
     blocks = _command_blocks(evidence, policy, changed_paths)
-    blocks.extend(_policy_blocks(evidence, policy, assessments))
+    blocks.extend(_policy_blocks(evidence, policy, assessments, production_files))
     return tuple(sorted(set(blocks)))
-
-
-def _fixed_environment(output: Path, repository: Path) -> dict[str, str]:
-    keys = ("HOME", "PATH", "SystemRoot", "WINDIR")
-    environment = {key: os.environ[key] for key in keys if key in os.environ}
-    environment.update(
-        {
-            "CI": "true",
-            "NO_COLOR": "1",
-            "PYTHONHASHSEED": "0",
-            "PYTHONPATH": str(repository / "src"),
-            "PYTHONPYCACHEPREFIX": str(output / "pycache"),
-        }
-    )
-    return environment
-
-
-def _replace_tokens(arguments: tuple[str, ...], values: dict[str, str]) -> tuple[str, ...]:
-    replaced: list[str] = []
-    for argument in arguments:
-        if argument == "$TEST_FILES":
-            replaced.extend(values[argument].split("\0") if values[argument] else ())
-        else:
-            value = argument
-            for token, replacement in values.items():
-                value = value.replace(token, replacement)
-            replaced.append(value)
-    return tuple(replaced)
-
-
-def _write_typescript_configs(tools: Path, output: Path, source_files: tuple[str, ...]) -> None:
-    tools.mkdir(parents=True, exist_ok=True)
-    output.mkdir(parents=True, exist_ok=True)
-    parser_url = (
-        tools / "node_modules" / "@typescript-eslint" / "parser" / "dist" / "index.js"
-    ).as_uri()
-    (tools / "eslint.config.mjs").write_text(
-        "import parser from " + json.dumps(parser_url) + ";\n"
-        "export default [{ files: ['**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'], "
-        "languageOptions: { parser, parserOptions: { ecmaVersion: 'latest', sourceType: 'module' } }, "
-        "rules: { 'no-constant-condition': 'error', 'no-debugger': 'error', "
-        "'no-duplicate-case': 'error', 'no-unreachable': 'error' } }];\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    (tools / "prettier.json").write_text("{}\n", encoding="utf-8", newline="\n")
-    (tools / "prettier.ignore").write_text("\n", encoding="utf-8", newline="\n")
-    cruiser = {
-        "forbidden": [
-            {"name": "no-circular", "severity": "error", "from": {}, "to": {"circular": True}},
-            {
-                "name": "domain-stays-inward",
-                "severity": "error",
-                "from": {"path": "^src/domain"},
-                "to": {"path": "^src/(application|infrastructure|presentation)"},
-            },
-            {
-                "name": "application-stays-inward",
-                "severity": "error",
-                "from": {"path": "^src/application"},
-                "to": {"path": "^src/(infrastructure|presentation)"},
-            },
-        ],
-        "options": {"doNotFollow": {"path": "node_modules"}},
-    }
-    (tools / "dependency-cruiser.json").write_text(
-        json.dumps(cruiser, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
-    )
-    check = {
-        "compilerOptions": {
-            "allowImportingTsExtensions": True,
-            "module": "NodeNext",
-            "moduleResolution": "NodeNext",
-            "noEmit": True,
-            "skipLibCheck": True,
-            "strict": True,
-            "target": "ES2022",
-        },
-        "files": list(source_files),
-    }
-    build = json.loads(json.dumps(check))
-    build["compilerOptions"].update(
-        {
-            "allowImportingTsExtensions": False,
-            "declaration": True,
-            "noEmit": False,
-            "outDir": str(output / "build"),
-        }
-    )
-    (output / "tsconfig-check.json").write_text(
-        json.dumps(check, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
-    )
-    (output / "tsconfig-build.json").write_text(
-        json.dumps(build, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
-    )
-
-
-def _write_python_configs(output: Path, source_files: tuple[str, ...]) -> None:
-    output.mkdir(parents=True, exist_ok=True)
-    (output / "mypy.ini").write_text(
-        "[mypy]\npython_version = 3.12\nstrict = True\nmypy_path = src\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    (output / "pytest.ini").write_text(
-        "[pytest]\ntestpaths = tests\npythonpath = src\naddopts = -p no:cacheprovider\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    roots = tuple(
-        sorted(
-            {
-                Path(path).parts[1]
-                for path in source_files
-                if len(Path(path).parts) > 2 and Path(path).name == "__init__.py"
-            }
-        )
-    )
-    packages = roots or ("missing_quality_root",)
-    indented = "\n".join(f"    {item}" for item in packages)
-    (output / "importlinter.ini").write_text(
-        "[importlinter]\nroot_packages =\n"
-        + indented
-        + "\n\n[importlinter:contract:quality-acyclic]\n"
-        + "name = Fixed quality profile has no sibling cycles\n"
-        + "type = acyclic_siblings\nancestors =\n"
-        + indented
-        + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-
-
-def _command_plans(
-    language: str,
-    repository: Path,
-    output: Path,
-    test_files: tuple[str, ...],
-    source_files: tuple[str, ...],
-) -> tuple[_CommandPlan, ...]:
-    tools = output / "quality-tools"
-    if language == "typescript":
-        _write_typescript_configs(
-            tools,
-            output,
-            tuple(str((repository / path).resolve()) for path in source_files),
-        )
-    else:
-        _write_python_configs(output, source_files)
-    lint_imports = shutil.which("lint-imports") or str(
-        Path(sys.executable).with_name("lint-imports")
-    )
-    values = {
-        "$LINT_IMPORTS": lint_imports,
-        "$NODE": shutil.which("node") or "node",
-        "$NPM": shutil.which("npm") or "npm",
-        "$OUTPUT": str(output),
-        "$PYTHON": sys.executable,
-        "$TEST_FILES": "\0".join(str((repository / path).resolve()) for path in test_files),
-        "$TOOLS": str(tools),
-    }
-    return tuple(
-        _CommandPlan(adapter, _replace_tokens(arguments, values), arguments, ("src",))
-        for adapter, arguments in command_templates(language)
-    )
-
-
-def _profile_files(
-    repository: Path,
-    head_sha: str,
-    policy: contract.Contract,
-    records: list[git_changes.CommandRecord],
-) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    production = git_changes.list_regular_blobs(
-        repository, head_sha, policy.production_paths, records
-    )
-    tests = git_changes.list_regular_blobs(repository, head_sha, ("tests",), records)
-    suffixes = _SOURCE_SUFFIXES[policy.language]
-    source_files = tuple(item.path for item in production if item.path.endswith(suffixes))
-    test_files = tuple(
-        item.path
-        for item in tests
-        if item.path.endswith(
-            (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts")
-        )
-    )
-    return source_files, test_files
 
 
 def write_evidence(evidence: QualityEvidence, output: Path) -> bytes:
@@ -808,3 +817,58 @@ def write_evidence(evidence: QualityEvidence, output: Path) -> bytes:
     payload = (json.dumps(asdict(evidence), indent=2, sort_keys=True) + "\n").encode()
     output.write_bytes(payload)
     return payload
+
+
+def decision_payload(evidence: QualityEvidence) -> dict[str, object]:
+    """Return only inputs and observations that define the deterministic decision."""
+    commands = [
+        {
+            "adapter": item.adapter,
+            "arguments": list(item.arguments),
+            "executed": item.executed,
+            "exit_code": item.exit_code,
+            "observed_paths": list(item.observed_paths),
+            "proof_kind": item.proof_kind,
+            "zero_statement_paths": list(item.zero_statement_paths),
+        }
+        for item in evidence.commands
+    ]
+    return {
+        "base_sha": evidence.base_sha,
+        "changed_paths": list(evidence.changed_paths),
+        "commands": commands,
+        "exclusions": list(evidence.exclusions),
+        "head_sha": evidence.head_sha,
+        "high_risk_paths": list(evidence.high_risk_paths),
+        "language": evidence.language,
+        "maximum_complexity": evidence.maximum_complexity,
+        "production_files": list(evidence.production_files),
+        "production_paths": list(evidence.production_paths),
+        "repository_remote": evidence.repository_remote,
+        "schema_version": evidence.schema_version,
+        "workflow_sha": evidence.workflow_sha,
+    }
+
+
+def provenance_payload(evidence: QualityEvidence) -> dict[str, object]:
+    """Return run-specific artifact and raw-proof identities."""
+    return {
+        "artifact_digest": evidence.artifact_digest,
+        "artifact_id": evidence.artifact_id,
+        "capture_sha256": evidence.capture_sha256,
+        "commands": [
+            {
+                "adapter": item.adapter,
+                "raw_proof_sha256": item.raw_proof_sha256,
+                "stderr_sha256": item.stderr_sha256,
+                "stdout_sha256": item.stdout_sha256,
+            }
+            for item in evidence.commands
+        ],
+        "job": evidence.job,
+        "repository": evidence.repository,
+        "repository_id": evidence.repository_id,
+        "run_attempt": evidence.run_attempt,
+        "run_id": evidence.run_id,
+        "runner_environment": evidence.runner_environment,
+    }

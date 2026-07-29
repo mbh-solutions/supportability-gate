@@ -57,6 +57,7 @@ def _parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--quality-job", required=True)
     evaluate.add_argument("--quality-artifact-id", required=True)
     evaluate.add_argument("--quality-artifact-digest", required=True)
+    evaluate.add_argument("--quality-artifact-metadata", required=True)
     evaluate.add_argument("--quality-capture-sha256", required=True)
     evaluate.add_argument("--workflow-sha", required=True)
     return parser
@@ -409,6 +410,10 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
         )
         assessments = _classify_changes(repository, identity, policy, changes, records)
+        architecture_sources = _architecture_sources(repository, identity.head_sha, policy, records)
+        quality_sources = quality_profile.production_files(
+            repository, identity.head_sha, policy, records
+        )
         quality_path = Path(arguments.quality_evidence)
         if not quality_path.is_absolute():
             raise quality_profile.QualityProfileError(
@@ -416,6 +421,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             )
         quality = quality_profile.authenticate_evidence(
             quality_path,
+            metadata_path=Path(arguments.quality_artifact_metadata),
             repository=str(arguments.quality_repository),
             repository_id=str(arguments.quality_repository_id),
             run_id=str(arguments.quality_run_id),
@@ -430,6 +436,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             policy,
             identity,
             assessments,
+            quality_sources,
             str(arguments.workflow_sha),
         )
         structured_review, review_blocks = _read_review_evidence(
@@ -466,7 +473,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
         )
         architecture = architecture_policy.evaluate_architecture(
             policy,
-            _architecture_sources(repository, identity.head_sha, policy, records),
+            architecture_sources,
             architecture_gate,
         )
         modularity = modularity_policy.evaluate_modularity(

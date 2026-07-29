@@ -267,9 +267,14 @@ def _evaluate(
             quality_profile.GateResult(
                 adapter,
                 arguments,
-                ("src",),
+                quality_profile.expected_proof_kind(adapter),
+                ()
+                if quality_profile.expected_proof_kind(adapter) == "provisioning"
+                else production_files,
+                (),
                 True,
                 0,
+                hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
             )
@@ -294,7 +299,6 @@ def _evaluate(
                 run_id="456",
                 runner_environment="github-hosted",
                 schema_version=quality_profile.SCHEMA_VERSION,
-                untested_areas=(),
                 workflow_sha=WORKFLOW_SHA,
                 job="quality-profile",
                 artifact_id="",
@@ -302,6 +306,24 @@ def _evaluate(
                 capture_sha256="",
             ),
             quality_path,
+        )
+        (quality_path.parent / "artifact.json").write_text(
+            json.dumps(
+                {
+                    "id": 789,
+                    "name": "quality-profile-456-1",
+                    "expired": False,
+                    "expires_at": "2026-08-29T00:00:00Z",
+                    "digest": f"sha256:{'d' * 64}",
+                    "url": "https://api.github.com/repos/example/fixture/actions/artifacts/789",
+                    "workflow_run": {
+                        "id": 456,
+                        "repository_id": 123,
+                        "head_sha": head_sha,
+                    },
+                }
+            ),
+            encoding="utf-8",
         )
     except Exception:
         quality_path.parent.mkdir(parents=True, exist_ok=True)
@@ -335,6 +357,8 @@ def _evaluate(
             "789",
             "--quality-artifact-digest",
             "d" * 64,
+            "--quality-artifact-metadata",
+            str((quality_path.parent / "artifact.json").resolve()),
             "--quality-capture-sha256",
             hashlib.sha256(quality_path.read_bytes()).hexdigest(),
             "--workflow-sha",
