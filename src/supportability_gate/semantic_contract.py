@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 MODEL = "gpt-5.6-sol"
-RUBRIC_VERSION = "dependency-direction.v1"
+RUBRIC_VERSION = "domain-modularization.v1"
 SCHEMA_VERSION = "semantic-review.v1"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
@@ -100,6 +100,8 @@ class BoundaryEvidence:
     name: str
     owns: str
     does_not_own: str
+    basis: str
+    evidence_lines: tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -140,6 +142,11 @@ def result_schema() -> dict[str, Any]:
                     "name": {"type": "string"},
                     "owns": {"type": "string"},
                     "does_not_own": {"type": "string"},
+                    "basis": {"type": "string", "enum": ["domain", "responsibility"]},
+                    "evidence_lines": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                    },
                 },
                 "required": [
                     "path",
@@ -149,6 +156,8 @@ def result_schema() -> dict[str, Any]:
                     "name",
                     "owns",
                     "does_not_own",
+                    "basis",
+                    "evidence_lines",
                 ],
                 "additionalProperties": False,
             },
@@ -203,7 +212,12 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "Each reviewed source supplies trusted parser-derived boundaries. Return exactly every "
         "supplied function, module, or frontend component boundary, copying its name, kind, and "
         "inclusive line span. State one clear owned "
-        "responsibility plus specific responsibilities it does not own. BLOCK boundaries that own "
+        "responsibility plus specific responsibilities it does not own. Classify each boundary as "
+        "domain-based or responsibility-based and cite exact source lines proving that claim. BLOCK "
+        "new utils, helpers, common, misc, stuff, vague shared locations, unjustified parallel "
+        "packages, weak cohesion, and unjustified or excessive coupling. BLOCK candidate new-location "
+        "claims that do not resolve to an exact changed source path and source-backed owner. "
+        "BLOCK boundaries that own "
         "distinct parsing, validation, business-rule, persistence, external-call, logging, or "
         "presentation concerns together. Do not count delegated calls or the parsing, validation, "
         "serialization, and error handling needed to implement one named input/output boundary as "

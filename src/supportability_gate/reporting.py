@@ -12,6 +12,7 @@ from supportability_gate.complexity_metrics import RuffCommandRecord, RuffDiagno
 from supportability_gate.complexity_policy import FunctionDecision
 from supportability_gate.function_changes import ChangedFileAssessment
 from supportability_gate.git_changes import CommandRecord, RepositoryIdentity
+from supportability_gate.modularity_policy import ModularityResult
 from supportability_gate.review_evidence import ReviewEvidence
 
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
@@ -48,6 +49,7 @@ class EvaluationResult:
     review_evidence: ReviewEvidence | None = None
     language: str | None = None
     architecture: ArchitectureResult | None = None
+    modularity: ModularityResult | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -147,6 +149,19 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
     architecture_verdict = (
         "BLOCK" if architecture and architecture.blocks else "PASS" if architecture else "MISSING"
     )
+    modularity = result.modularity
+    modularity_payload = (
+        {
+            "blocks": list(modularity.blocks),
+            "changed_paths": list(modularity.changed_paths),
+            "coupling_edges": [asdict(edge) for edge in modularity.coupling_edges],
+            "coverage": [asdict(item) for item in modularity.coverage],
+            "justifications": [asdict(item) for item in modularity.justifications],
+            "new_paths": list(modularity.new_paths),
+        }
+        if modularity
+        else None
+    )
     return {
         "base_contract_blob_sha": result.contract_blob_sha,
         "architecture": architecture_payload,
@@ -164,6 +179,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "head_tree_sha": identity["head_tree_sha"],
         "high_risk_paths": list(result.high_risk_paths),
         "language": result.language,
+        "modularity": modularity_payload,
         "gate_coverage": [
             {"adapter": adapter, "paths": list(paths)} for adapter, paths in result.gate_coverage
         ],

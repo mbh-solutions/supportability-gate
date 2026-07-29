@@ -30,6 +30,8 @@ PYTHON_BOUNDARY = {
     "name": "parse_input",
     "owns": "Parsing one input value.",
     "does_not_own": "Validation, persistence, logging, or presentation.",
+    "basis": "responsibility",
+    "evidence_lines": [1, 2],
 }
 
 
@@ -164,6 +166,8 @@ def test_focused_frontend_component_passes_with_line_evidence() -> None:
         "name": "SaveButton",
         "owns": "Rendering one save action.",
         "does_not_own": "Data loading, validation, state, domain rules, or client calls.",
+        "basis": "responsibility",
+        "evidence_lines": [1, 2, 3],
     }
     verdict = parse_response(
         packet,
@@ -233,6 +237,25 @@ def test_mixed_responsibilities_block_with_line_evidence(responsibilities: str) 
         ),
     )
     assert verdict.verdict == "BLOCK"
+
+
+def test_unjustified_or_excessive_coupling_blocks_with_source_evidence() -> None:
+    packet = _packet()
+    verdict = parse_response(
+        packet,
+        _response(packet, "BLOCK", [f"{PYTHON_PATH}:1-2 has unjustified excessive coupling."]),
+    )
+
+    assert verdict.verdict == "BLOCK"
+
+
+def test_ownership_claim_requires_source_lines() -> None:
+    packet = _packet()
+    boundary = copy.deepcopy(PYTHON_BOUNDARY)
+    boundary["evidence_lines"] = [3]
+
+    with pytest.raises(SemanticReviewError, match="UNSUPPORTED_OWNERSHIP_CLAIM"):
+        parse_response(packet, _response(packet, boundaries=[boundary]))
 
 
 @pytest.mark.parametrize("claim", ["unsupported ownership claim", "vague boundary claim"])
@@ -378,7 +401,7 @@ def test_complexity_anti_gaming_rubric_is_narrow_and_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "dependency-direction.v1"
+    assert RUBRIC_VERSION == "domain-modularization.v1"
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
     assert "candidate-provided responsibility declarations" in payload["instructions"]

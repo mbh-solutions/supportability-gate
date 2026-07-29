@@ -44,3 +44,9 @@ naming = "Architecture names describe import edges, fixed layers, coverage, dire
 cohesion = "One architecture_policy module owns static graph enforcement; existing CLI, reporting, GitHub, and semantic modules only integrate its evidence."
 intended_behavior = "Existing complexity and responsibility checks remain; architecture checks now execute for Python and TypeScript."
 reviewability = "Focused fixtures cover valid graphs, cycles, inversions, forbidden dependencies, execution, complete coverage, determinism, and semantic citation binding."
+
+[[module_boundaries]]
+path = "src/supportability_gate/modularity_policy.py"
+owner_path = "src/supportability_gate/modularity_policy.py"
+basis = "responsibility"
+justification = "Owns deterministic new-location justification, vague-location, coupling-edge, and complete-coverage evidence required by Enforcement Milestone 6."

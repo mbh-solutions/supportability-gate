@@ -20,6 +20,7 @@ _LIST_FIELDS = {
     "architecture": ("reviewed_paths",),
     "review_handoff": ("remaining_risks",),
 }
+_MODULE_BOUNDARY_FIELDS = {"basis", "justification", "owner_path", "path"}
 
 ReviewEvidence = dict[str, object]
 
@@ -63,6 +64,24 @@ def _validate_text_list(value: object, location: str) -> None:
         raise ReviewEvidenceError("INSUFFICIENT", location)
 
 
+def _validate_module_boundaries(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise ReviewEvidenceError("MALFORMED", "module_boundaries")
+    for index, item in enumerate(value):
+        location = f"module_boundaries[{index}]"
+        if not isinstance(item, dict):
+            raise ReviewEvidenceError("MALFORMED", location)
+        _require_keys(item, _MODULE_BOUNDARY_FIELDS, location)
+        for field in sorted(_MODULE_BOUNDARY_FIELDS):
+            _validate_text(item[field], f"{location}.{field}")
+        if item["basis"] not in {"domain", "responsibility"}:
+            raise ReviewEvidenceError("MALFORMED", f"{location}.basis")
+    paths = [item["path"] for item in value]
+    if len(paths) != len(set(paths)):
+        raise ReviewEvidenceError("MALFORMED", "module_boundaries.path")
+    return value
+
+
 def parse_review_evidence(content: bytes) -> ReviewEvidence:
     """Parse the only supported structured-review evidence schema."""
     try:
@@ -70,7 +89,13 @@ def parse_review_evidence(content: bytes) -> ReviewEvidence:
     except (UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
         raise ReviewEvidenceError("MALFORMED", "document") from error
     expected_sections = set(_TEXT_FIELDS) | set(_LIST_FIELDS)
-    _require_keys(data, {"schema_version", *expected_sections}, "review_evidence")
+    required = {"schema_version", *expected_sections}
+    missing = sorted(required - set(data))
+    unknown = sorted(set(data) - required - {"module_boundaries"})
+    if missing:
+        raise ReviewEvidenceError("MISSING", f"review_evidence.{missing[0]}")
+    if unknown:
+        raise ReviewEvidenceError("MALFORMED", f"review_evidence.{unknown[0]}")
     if data["schema_version"] != "1.0":
         raise ReviewEvidenceError("MALFORMED", "schema_version")
     for name in sorted(expected_sections):
@@ -82,6 +107,7 @@ def parse_review_evidence(content: bytes) -> ReviewEvidence:
             _validate_text(section[field], f"{name}.{field}")
         for field in list_fields:
             _validate_text_list(section[field], f"{name}.{field}")
+    data["module_boundaries"] = _validate_module_boundaries(data.get("module_boundaries", []))
     return data
 
 

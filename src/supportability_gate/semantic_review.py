@@ -145,13 +145,39 @@ def _source_index(packet: EvidencePacket) -> dict[str, SourceIndex]:
     return dict(sorted(indexed.items()))
 
 
+def _ownership_lines(
+    value: object, cited_numbers: range, source_lines: dict[int, str]
+) -> tuple[int, ...]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(
+            type(line) is not int or line not in cited_numbers or line not in source_lines
+            for line in value
+        )
+        or value != sorted(set(value))
+    ):
+        raise SemanticReviewError("UNSUPPORTED_OWNERSHIP_CLAIM")
+    return tuple(value)
+
+
 def _boundary(item: object, sources: dict[str, SourceIndex]) -> BoundaryEvidence:
-    keys = {"path", "start_line", "end_line", "kind", "name", "owns", "does_not_own"}
+    keys = {
+        "path",
+        "start_line",
+        "end_line",
+        "kind",
+        "name",
+        "owns",
+        "does_not_own",
+        "basis",
+        "evidence_lines",
+    }
     if not isinstance(item, dict) or set(item) != keys:
         raise SemanticReviewError("MALFORMED_SCHEMA")
     if type(item["start_line"]) is not int or type(item["end_line"]) is not int:
         raise SemanticReviewError("MALFORMED_SCHEMA")
-    text_keys = keys - {"start_line", "end_line"}
+    text_keys = keys - {"start_line", "end_line", "evidence_lines"}
     if any(not isinstance(item[key], str) or not item[key].strip() for key in text_keys):
         raise SemanticReviewError("MALFORMED_SCHEMA")
     path = item["path"]
@@ -165,7 +191,10 @@ def _boundary(item: object, sources: dict[str, SourceIndex]) -> BoundaryEvidence
     ):
         raise SemanticReviewError("EVIDENCE_OUTSIDE_HEAD")
     kind, name = item["kind"], item["name"]
-    if kind not in {"function", "module", "component"}:
+    if kind not in {"function", "module", "component"} or item["basis"] not in {
+        "domain",
+        "responsibility",
+    }:
         raise SemanticReviewError("MALFORMED_SCHEMA")
     if path.endswith(".py") and kind == "component":
         raise SemanticReviewError("MALFORMED_SCHEMA")
@@ -173,6 +202,7 @@ def _boundary(item: object, sources: dict[str, SourceIndex]) -> BoundaryEvidence
         raise SemanticReviewError("UNSUPPORTED_OWNERSHIP_CLAIM")
     if item["owns"] == item["does_not_own"]:
         raise SemanticReviewError("VAGUE_BOUNDARY")
+    evidence_lines = _ownership_lines(item["evidence_lines"], cited_numbers, lines)
     return BoundaryEvidence(
         path=path,
         start_line=start_line,
@@ -181,6 +211,8 @@ def _boundary(item: object, sources: dict[str, SourceIndex]) -> BoundaryEvidence
         name=name,
         owns=item["owns"],
         does_not_own=item["does_not_own"],
+        basis=item["basis"],
+        evidence_lines=evidence_lines,
     )
 
 
