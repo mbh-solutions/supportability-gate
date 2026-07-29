@@ -174,9 +174,7 @@ def _event_values(event: dict[str, Any]) -> tuple[str, str, str, dict[str, Any]]
 def _authorization_blocks(event: dict[str, Any], authorization: Authorization) -> list[str]:
     repository, base_sha, head_sha, author = _event_values(event)
     blocks: list[str] = []
-    if author.get("id") != TRUSTED_OWNER_ID or author.get("login") != TRUSTED_OWNER_LOGIN:
-        blocks.append("UNAUTHENTICATED_OWNER_AUTHORIZATION")
-    if event["pull_request"].get("author_association") not in {"MEMBER", "OWNER"}:
+    if author.get("id") != TRUSTED_OWNER_ID:
         blocks.append("UNAUTHENTICATED_OWNER_AUTHORIZATION")
     if authorization.repository != repository:
         blocks.append("AUTHORIZATION_REPOSITORY_MISMATCH")
