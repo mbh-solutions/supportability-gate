@@ -216,8 +216,62 @@ direct runtime proof.
     and recorded high-risk paths are present in deterministic evidence. No dependency, threshold,
     exclusion, waiver, arbitrary command, or gate-scope weakening was added.
 - Enforcement Milestone 6 remaining work: None.
-- Enforcement Milestones 7–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_6.md`.
+- Enforcement Milestone 7: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 7 evidence:
+  - Implementation head `5bad0bda0afa2aa568987be91a2aae6572a1efe9` passed Python `3.12.13`
+    exact-lock Ruff lint/format/C901, strict mypy over 20 source files, both Import Linter
+    contracts, 177 tests, compileall, wheel build, fresh exact-lock install, installed CLI help,
+    immutable-standard tamper, and exact-range whitespace proof. Wheel SHA-256:
+    `0e3e418d3bfa4d7022000708e471b3f3c93a868a99ad0a0601b8776dc8929ab7`.
+  - Protected PR #40 passed Source Validation run `30420113317`, job/check `90474993175`;
+    characterization run `30420113293`, base job/check `90474992970`, head job/check
+    `90474992906`, and Gate job/check `90475052628`; and App-owned semantic check
+    `90475103372`. It normally merged as `7767bb939d02dfb79aa3f0a28fb64c0f8081ad5f`.
+  - Source characterization bound exact base `87d552c58892ec1fa454a3f9669ab5c1fbca5a25`
+    and head `5bad0bda0afa2aa568987be91a2aae6572a1efe9`. Base artifact `8711587449`
+    digest `9f0cb9c6a5efa558ead9894548f3a7b78352b72cd5cbc3837bf4973e18747d72` and
+    head artifact `8711585196` digest
+    `3b5c137a4156b27dcc0a573b6473c99113abdb348bfa40ddecd26602901a3780`
+    produced compatible behavior fingerprint
+    `9e6a5ddec056fb6b354f8ce9a80cdd01a8f36052df695e1c41c66c6c42dbf23b`.
+    Repeated verification was byte-identical at SHA-256
+    `004dd8588fad4ba6b14934169518cb3b29aa7a678bc808534a8b6d3d068d7f58`.
+  - Python adoption PR #18 normally merged as `b3014e258e7563b21dd7840ed22d9f7d362bb132`;
+    TypeScript adoption PR #5 normally merged as
+    `49ece3a46981e2f0d4b98fc52d7c534a08e513a1`. Both passed isolated exact-base/head
+    capture, static verification, the existing evaluator, and App-owned semantic review.
+  - Python passing canary PR #19 bound base `b3014e258e7563b21dd7840ed22d9f7d362bb132`
+    and head `8443230bd87b1fb49c75fbb4ac7f8c7c0cf71359`; existing `service-scores` and
+    newly added `zero-score` both passed with fingerprint
+    `39990f62136fd37f8be4888c26facdf6efddd705bbe371cf20a600305a738218`, Gate check
+    `90476210089`, and semantic check `90476358971`, then normally merged as
+    `a27e8a1eff88077994de887bb22bfa1c215dccd6`.
+  - TypeScript passing canary PR #6 bound base `49ece3a46981e2f0d4b98fc52d7c534a08e513a1`
+    and head `03a59a0c3409b1dcdea23c9de6e7e0f3753b80cd`; existing `domain-score` and newly
+    added `zero-domain-score` both passed with fingerprint
+    `bacbb1c09f75ab47491428ba178c3c15a747bff69dba6543f9104cb4d20ec72f`, Gate
+    check `90476530073`, and semantic check `90476621746`, then normally merged as
+    `2d7e54ec984a513fcd18bd53ca1db070f697556e`.
+  - Python blocking canary PR #20, base `a27e8a1eff88077994de887bb22bfa1c215dccd6`
+    and head `bd4d82f4de9dadf7a33f68859e8d98571fc0f35f`, failed Gate check `90476826174`
+    with `CHANGED_GOLDEN_OUTPUT` and `GOLDEN_BEHAVIOR_MISMATCH`. TypeScript blocking
+    canary PR #7, base `2d7e54ec984a513fcd18bd53ca1db070f697556e` and head
+    `5d078227a176d18856643c19c4abd86b864085f7`, failed Gate check `90476864573` with
+    `GOLDEN_BEHAVIOR_MISMATCH` and `INCOMPATIBLE_POST_CHANGE_BEHAVIOR` for both scenarios.
+    Normal merge attempts exited 1 under base policy; both PRs closed unmerged and branches deleted.
+  - Focused acceptance tests directly block missing baseline, unauthenticated proof text,
+    head-only claims, stale artifacts, replay drift, wrong artifact identity, digest mismatch, and
+    uncovered high-risk paths. All six supported characterization kinds use the same authenticated
+    schema. Exact commit, driver, golden, command, result, fingerprint, compatibility, and coverage
+    identities remain independently verifiable.
+  - Source ruleset `19767613`, organization ruleset `19929500`, and proof rulesets `19929504`
+    and `19936876` remain active with zero bypass actors. Required checks remain bound to Apps
+    `15368` and `4418989`; organization workflow pin is exact merged source commit
+    `7767bb939d02dfb79aa3f0a28fb64c0f8081ad5f`. Immutable Standard SHA-256 remains
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement Milestone 7 remaining work: None.
+- Enforcement Milestones 8–11: `NOT_STARTED`; not authorized.
+- Current directive: `docs/enforcement_milestone_7.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
