@@ -16,6 +16,7 @@ from supportability_gate import (
     gate_policy,
     git_changes,
     modularity_policy,
+    quality_profile,
     reporting,
     review_evidence,
 )
@@ -48,6 +49,16 @@ def _parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--head-ref", required=True)
     evaluate.add_argument("--contract-path", required=True)
     evaluate.add_argument("--output-directory", required=True)
+    evaluate.add_argument("--quality-evidence", required=True)
+    evaluate.add_argument("--quality-repository", required=True)
+    evaluate.add_argument("--quality-repository-id", required=True)
+    evaluate.add_argument("--quality-run-id", required=True)
+    evaluate.add_argument("--quality-run-attempt", required=True)
+    evaluate.add_argument("--quality-job", required=True)
+    evaluate.add_argument("--quality-artifact-id", required=True)
+    evaluate.add_argument("--quality-artifact-digest", required=True)
+    evaluate.add_argument("--quality-capture-sha256", required=True)
+    evaluate.add_argument("--workflow-sha", required=True)
     return parser
 
 
@@ -199,6 +210,8 @@ def _result(
     review_blocks: tuple[str, ...],
     architecture: architecture_policy.ArchitectureResult,
     modularity: modularity_policy.ModularityResult,
+    quality: quality_profile.QualityEvidence,
+    quality_blocks: tuple[str, ...],
 ) -> reporting.EvaluationResult:
     if any(
         contract_path in {item.change.old_path, item.change.new_path}
@@ -227,12 +240,14 @@ def _result(
             structured_review,
             policy.language,
             architecture,
+            quality_profile=quality,
         )
     policy_blocks = (
         *gate_policy.evaluate_contract(policy, analyzed.assessments),
         *architecture.blocks,
         *modularity.blocks,
         *review_blocks,
+        *quality_blocks,
     )
     if policy_blocks:
         return reporting.EvaluationResult(
@@ -256,6 +271,7 @@ def _result(
             policy.language,
             architecture,
             modularity,
+            quality,
         )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")
@@ -299,6 +315,7 @@ def _result(
         policy.language,
         architecture,
         modularity,
+        quality,
     )
 
 
@@ -392,6 +409,29 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
         )
         assessments = _classify_changes(repository, identity, policy, changes, records)
+        quality_path = Path(arguments.quality_evidence)
+        if not quality_path.is_absolute():
+            raise quality_profile.QualityProfileError(
+                "RELATIVE_QUALITY_EVIDENCE", "quality evidence path must be absolute"
+            )
+        quality = quality_profile.authenticate_evidence(
+            quality_path,
+            repository=str(arguments.quality_repository),
+            repository_id=str(arguments.quality_repository_id),
+            run_id=str(arguments.quality_run_id),
+            run_attempt=str(arguments.quality_run_attempt),
+            job=str(arguments.quality_job),
+            artifact_id=str(arguments.quality_artifact_id),
+            artifact_digest=str(arguments.quality_artifact_digest),
+            capture_sha256=str(arguments.quality_capture_sha256),
+        )
+        quality_blocks = quality_profile.evidence_blocks(
+            quality,
+            policy,
+            identity,
+            assessments,
+            str(arguments.workflow_sha),
+        )
         structured_review, review_blocks = _read_review_evidence(
             repository,
             identity.head_sha,
@@ -448,6 +488,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             review_blocks,
             architecture,
             modularity,
+            quality,
+            quality_blocks,
         )
     except Exception as error:  # fail closed at the CLI trust boundary
         return _technical_result(

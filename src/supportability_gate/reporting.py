@@ -13,6 +13,7 @@ from supportability_gate.complexity_policy import FunctionDecision
 from supportability_gate.function_changes import ChangedFileAssessment
 from supportability_gate.git_changes import CommandRecord, RepositoryIdentity
 from supportability_gate.modularity_policy import ModularityResult
+from supportability_gate.quality_profile import QualityEvidence
 from supportability_gate.review_evidence import ReviewEvidence
 
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
@@ -50,6 +51,7 @@ class EvaluationResult:
     language: str | None = None
     architecture: ArchitectureResult | None = None
     modularity: ModularityResult | None = None
+    quality_profile: QualityEvidence | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -187,6 +189,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "overall_result": result.overall_result,
         "policy_blocks": list(result.policy_blocks),
         "production_paths": list(result.production_paths),
+        "quality_profile": asdict(result.quality_profile) if result.quality_profile else None,
         "rename_bindings": renames,
         "repository_remote": identity["remote"],
         "review_evidence": result.review_evidence,

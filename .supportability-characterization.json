@@ -19,6 +19,14 @@
       ],
       "id": "refactor-policy",
       "kind": "cli"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/quality_profile.py",
+        "src/supportability_gate/reporting.py"
+      ],
+      "id": "m9-quality-profile",
+      "kind": "cli"
     }
   ],
   "schema_version": "1.0"

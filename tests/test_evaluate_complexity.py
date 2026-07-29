@@ -11,9 +11,14 @@ from supportability_gate import (
     cli,
     complexity_metrics,
     complexity_policy,
+    contract,
     function_changes,
+    git_changes,
+    quality_profile,
     reporting,
 )
+
+WORKFLOW_SHA = "f" * 40
 
 CONTRACT = """\
 schema_version = "1.0"
@@ -226,6 +231,81 @@ def _typescript_repository(
 def _evaluate(
     repository: Path, base_sha: str, head_sha: str, output: Path
 ) -> tuple[int, dict[str, object]]:
+    quality_path = output.parent / f"{output.name}-quality.json"
+    try:
+        records: list[git_changes.CommandRecord] = []
+        identity = git_changes.inspect_repository(repository, base_sha, head_sha, records)
+        policy = contract.parse_contract(
+            git_changes.read_regular_blob(
+                repository, identity.base_sha, ".supportability.toml", records
+            ).content
+        )
+        changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
+        changed_paths = tuple(
+            sorted(
+                {
+                    path
+                    for change in changes
+                    for path in (change.old_path, change.new_path)
+                    if path and policy.is_production_path(path)
+                }
+            )
+        )
+        suffixes = (
+            (".py", ".pyi")
+            if policy.language == "python"
+            else (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx")
+        )
+        production_files = tuple(
+            item.path
+            for item in git_changes.list_regular_blobs(
+                repository, head_sha, policy.production_paths, records
+            )
+            if item.path.endswith(suffixes)
+        )
+        commands = tuple(
+            quality_profile.GateResult(
+                adapter,
+                arguments,
+                ("src",),
+                True,
+                0,
+                hashlib.sha256(b"").hexdigest(),
+                hashlib.sha256(b"").hexdigest(),
+            )
+            for adapter, arguments in quality_profile.command_templates(policy.language)
+        )
+        quality_profile.write_evidence(
+            quality_profile.QualityEvidence(
+                base_sha=base_sha,
+                changed_paths=changed_paths,
+                commands=commands,
+                exclusions=(),
+                head_sha=head_sha,
+                high_risk_paths=policy.high_risk_paths,
+                language=policy.language,
+                maximum_complexity=policy.maximum,
+                production_files=production_files,
+                production_paths=policy.production_paths,
+                repository="example/fixture",
+                repository_id="123",
+                repository_remote=identity.remote,
+                run_attempt="1",
+                run_id="456",
+                runner_environment="github-hosted",
+                schema_version=quality_profile.SCHEMA_VERSION,
+                untested_areas=(),
+                workflow_sha=WORKFLOW_SHA,
+                job="quality-profile",
+                artifact_id="",
+                artifact_digest="",
+                capture_sha256="",
+            ),
+            quality_path,
+        )
+    except Exception:
+        quality_path.parent.mkdir(parents=True, exist_ok=True)
+        quality_path.write_text("{}\n", encoding="utf-8")
     exit_code = cli.main(
         [
             "evaluate-complexity",
@@ -239,6 +319,26 @@ def _evaluate(
             ".supportability.toml",
             "--output-directory",
             str(output.resolve()),
+            "--quality-evidence",
+            str(quality_path.resolve()),
+            "--quality-repository",
+            "example/fixture",
+            "--quality-repository-id",
+            "123",
+            "--quality-run-id",
+            "456",
+            "--quality-run-attempt",
+            "1",
+            "--quality-job",
+            "quality-profile",
+            "--quality-artifact-id",
+            "789",
+            "--quality-artifact-digest",
+            "d" * 64,
+            "--quality-capture-sha256",
+            hashlib.sha256(quality_path.read_bytes()).hexdigest(),
+            "--workflow-sha",
+            WORKFLOW_SHA,
         ]
     )
     result = json.loads((output / "complexity-result.json").read_text(encoding="utf-8"))
