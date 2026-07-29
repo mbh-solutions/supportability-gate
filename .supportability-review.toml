@@ -10,7 +10,7 @@ proof = "tests/test_quality_profile.py"
 
 [separation_of_concerns]
 before = "Declared gate adapters proved configured coverage but did not prove every stack-native command actually executed successfully in an isolated hosted job."
-after = "The quality-runner module constructs fixed no-shell commands, a disposable hosted job executes them, and the quality-profile module verifies API-read artifact metadata and the resulting exact-head attestation before the existing evaluator can pass."
+after = "The quality-profile module defines the immutable approved command contract and verifies its exact-head attestation, the quality-runner module materializes fixed no-shell plans and tool configuration from that contract, and a disposable hosted job alone executes them."
 
 [architecture]
 dependency_direction = "The organization workflow captures behavior, runs the fixed hosted quality profile, then the existing CLI verifies its immutable attestation before complexity, architecture, modularity, reporting, and semantic-review paths complete."
@@ -32,12 +32,12 @@ reviewed_paths = [
 
 [responsibility_boundary]
 path = "src/supportability_gate/quality_profile.py"
-owns = "API-read artifact metadata verification, exact result attestation, immutable identity binding, coverage verification, and quality anti-weakening."
-does_not_own = "Target command execution, repository policy configuration, characterization capture, refactor authorization, semantic model transport, GitHub check publication, or waivers."
+owns = "The immutable approved quality-profile contract plus API-read artifact metadata, exact result, identity, coverage, and anti-weakening verification."
+does_not_own = "Concrete command-plan materialization, generated tool configuration, target execution, characterization capture, refactor authorization, semantic transport, check publication, or waivers."
 
 [incremental_refactor]
 target = "Require one complete fixed stack-native quality profile and exact attestation before the existing evaluator can pass."
-completed_step = "Added one disposable hosted execution job and one verification-only production responsibility reusing existing contract, Git identity, artifact, evaluator, reporting, and enforcement paths; no package, shell, waiver, exclusion, or repository command control."
+completed_step = "Added one immutable quality-profile contract and verifier, one concrete plan materializer, and one disposable hosted execution job; no shell, waiver, exclusion, or repository-controlled command path."
 
 [review_handoff]
 summary = "Review hosted-only execution, immutable command vectors, finite timeouts, captured result hashes, exact identity binding, complete changed/high-risk coverage, anti-weakening, deterministic evidence, and unchanged downstream gates."
@@ -45,7 +45,7 @@ remaining_risks = ["Missing, malformed, unexecuted, failed, uncovered, excluded,
 
 [human_review]
 naming = "Quality-profile names directly describe fixed commands, hosted execution, attestation identity, coverage, and anti-weakening."
-cohesion = "One production module constructs fixed Milestone 9 command vectors and one verifies API-read metadata and exact-bound evidence; the disposable hosted job owns target execution, while existing characterization, refactor, evaluator, reporting, semantic, and Git evidence retain their responsibilities."
+cohesion = "The quality-profile module owns approved policy specification and verification; the quality-runner module owns concrete plan and tool-config materialization; the disposable hosted job owns execution."
 intended_behavior = "Existing enforcement remains; Python and TypeScript quality claims now block every missing, failed, unexecuted, uncovered, excluded, weakened, narrowed, moved, malformed, stale, or non-hosted condition."
 reviewability = "Focused fixtures cover both fixed profiles, all required failure classes, exact identities and vectors, workstation refusal, and byte-identical evidence."
 
@@ -53,13 +53,13 @@ reviewability = "Focused fixtures cover both fixed profiles, all required failur
 path = "src/supportability_gate/quality_profile.py"
 owner_path = "src/supportability_gate/quality_profile.py"
 basis = "responsibility"
-justification = "Owns verification of API-read GitHub artifact metadata and exact attestation values without executing target code or adding repository-controlled commands, paths, environments, exclusions, waivers, or thresholds."
+justification = "Owns the immutable approved command contract and verification of API-read artifact metadata and exact attestation values, but not plan materialization, generated tool configuration, or target execution."
 
 [[module_boundaries]]
 path = "src/supportability_gate/quality_runner.py"
 owner_path = "src/supportability_gate/quality_runner.py"
 basis = "responsibility"
-justification = "Owns fixed Python and TypeScript command construction and immutable tool configuration while the disposable GitHub-hosted job alone executes target code."
+justification = "Owns materialization of concrete Python and TypeScript command plans and immutable tool configuration from the quality-profile contract while the disposable GitHub-hosted job alone executes target code."
 
 [[module_boundaries]]
 path = "src/supportability_gate/refactor_policy.py"

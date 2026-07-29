@@ -1,4 +1,4 @@
-"""Run and verify fixed GitHub-hosted stack-native quality profiles."""
+"""Define and verify fixed GitHub-hosted stack-native quality profiles."""
 
 from __future__ import annotations
 
