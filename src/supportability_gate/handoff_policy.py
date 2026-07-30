@@ -114,10 +114,13 @@ def _claims(
     return claims
 
 
-def _commands(value: object) -> dict[str, tuple[tuple[str, ...], int]]:
+def _commands(
+    value: object,
+) -> tuple[dict[str, tuple[tuple[str, ...], int]], frozenset[str]]:
     commands: dict[str, tuple[tuple[str, ...], int]] = {}
+    duplicates: set[str] = set()
     if not isinstance(value, list):
-        return commands
+        return commands, frozenset()
     for item in value:
         if not isinstance(item, dict):
             continue
@@ -132,17 +135,23 @@ def _commands(value: object) -> dict[str, tuple[tuple[str, ...], int]]:
             and all(isinstance(argument, str) for argument in arguments)
             and type(exit_code) is int
         ):
+            if adapter in commands:
+                duplicates.add(adapter)
             commands[adapter] = (tuple(arguments), exit_code)
-    return commands
+    return commands, frozenset(duplicates)
 
 
 def _command_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> list[str]:
     quality = authoritative.get("quality_profile")
-    observed = _commands(quality.get("commands") if isinstance(quality, dict) else None)
-    reported = _commands(report.get("validation_results"))
+    observed, observed_duplicates = _commands(
+        quality.get("commands") if isinstance(quality, dict) else None
+    )
+    reported, reported_duplicates = _commands(report.get("validation_results"))
     blocks = [
         f"INVENTED_VALIDATION_COMMAND:{adapter}" for adapter in reported if adapter not in observed
     ]
+    blocks.extend(f"DUPLICATE_VALIDATION_RESULT:{adapter}" for adapter in reported_duplicates)
+    blocks.extend(f"DUPLICATE_AUTHORITATIVE_COMMAND:{adapter}" for adapter in observed_duplicates)
     blocks.extend(
         f"CONTRADICTED_VALIDATION_RESULT:{adapter}"
         for adapter in reported.keys() & observed.keys()
@@ -184,7 +193,12 @@ def _risk_blocks(value: object) -> list[str]:
         return ["MALFORMED_COMPLETION_SECTION:remaining_risks"]
     normalized = {str(item).strip().lower().rstrip(".") for item in value}
     false_none = {"none", "no risk", "no risks", "no known risk", "no remaining risk"}
-    return ["FALSE_NO_REMAINING_RISK"] if normalized & false_none else []
+    false_pattern = re.compile(r"\b(?:no|none|zero)\b.*\brisks?\b")
+    return (
+        ["FALSE_NO_REMAINING_RISK"]
+        if normalized & false_none or any(false_pattern.search(item) for item in normalized)
+        else []
+    )
 
 
 def _result_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> list[str]:
@@ -197,7 +211,8 @@ def _result_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> lis
         blocks.append("CONTRADICTED_ARCHITECTURE_JUDGMENT")
     if report["gate_coverage"] != authoritative.get("gate_coverage"):
         blocks.append("CONTRADICTED_GATE_COVERAGE")
-    if sorted(report["simplified_functions"]) != _function_names(authoritative):
+    simplified = report["simplified_functions"]
+    if _text_list(simplified) and sorted(simplified) != _function_names(authoritative):
         blocks.append("CONTRADICTED_SIMPLIFIED_FUNCTIONS")
     return blocks
 
@@ -262,7 +277,8 @@ def evaluate_completion_report(
     claims: list[str] = []
     indexed: dict[str, tuple[str, ...]] = {}
     _claims(report.get("claims"), _source_lines(reviewed_sources), claims)
-    for item in report.get("claims", []):
+    raw_claims = report.get("claims")
+    for item in raw_claims if isinstance(raw_claims, list) else []:
         if isinstance(item, dict) and isinstance(item.get("id"), str):
             citations = item.get("citations")
             if isinstance(citations, list) and all(isinstance(value, str) for value in citations):

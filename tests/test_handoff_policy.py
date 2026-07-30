@@ -167,3 +167,26 @@ def test_false_no_remaining_risk_claim_blocks() -> None:
     report = _report()
     report["remaining_risks"] = ["No remaining risk."]
     assert "FALSE_NO_REMAINING_RISK" in _blocks(report)
+
+
+def test_equivalent_false_no_remaining_risks_claim_blocks() -> None:
+    report = _report()
+    report["remaining_risks"] = ["There are no remaining risks."]
+    assert "FALSE_NO_REMAINING_RISK" in _blocks(report)
+
+
+def test_duplicate_validation_result_blocks() -> None:
+    report = _report()
+    report["validation_results"].append(  # type: ignore[union-attr]
+        {"adapter": "python.ruff-lint.v1", "arguments": ["invented"], "exit_code": 0}
+    )
+    assert "DUPLICATE_VALIDATION_RESULT:python.ruff-lint.v1" in _blocks(report)
+
+
+def test_malformed_list_sections_return_blocks_instead_of_raising() -> None:
+    report = _report()
+    report["simplified_functions"] = 7
+    report["claims"] = 7
+    blocks = _blocks(report)
+    assert "MALFORMED_COMPLETION_SECTION:claims" in blocks
+    assert "MALFORMED_COMPLETION_SECTION:simplified_functions" in blocks

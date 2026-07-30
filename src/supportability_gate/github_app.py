@@ -41,6 +41,7 @@ REVIEWED_SUFFIXES = frozenset({".py", ".ts", ".tsx"})
 HUNK_PATTERN = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
 HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
+MAX_HANDOFF_BYTES = 5_000_000
 
 
 class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
@@ -309,7 +310,7 @@ class GitHubApp:
                 content = cast(bytes, result.read())
         except (urllib.error.URLError, TimeoutError) as error:
             raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
-        if not content or len(content) > 5_000_000:
+        if not content or len(content) > MAX_HANDOFF_BYTES:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
         return content
 
@@ -317,8 +318,15 @@ class GitHubApp:
         required = {"complexity-result.json", "quality-provenance.json"}
         try:
             with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
-                names = bundle.namelist()
-                if len(names) > 20 or not required <= set(names):
+                members = bundle.infolist()
+                names = [member.filename for member in members]
+                indexed = {member.filename: member for member in members}
+                if (
+                    len(names) > 20
+                    or len(names) != len(indexed)
+                    or not required <= set(names)
+                    or any(indexed[name].file_size > MAX_HANDOFF_BYTES for name in required)
+                ):
                     raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
                 values = {name: json.loads(bundle.read(name)) for name in required}
         except (zipfile.BadZipFile, KeyError, json.JSONDecodeError, UnicodeDecodeError) as error:

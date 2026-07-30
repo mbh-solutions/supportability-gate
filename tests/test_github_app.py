@@ -152,6 +152,16 @@ def test_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
         app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")
 
 
+def test_handoff_archive_rejects_large_expanded_member() -> None:
+    target = io.BytesIO()
+    with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("complexity-result.json", b"0" * 5_000_001)
+        bundle.writestr("quality-provenance.json", b"{}")
+    app = GitHubApp(42, 7, b"unused")
+    with pytest.raises(SemanticReviewError, match="HANDOFF_EVIDENCE_UNAVAILABLE"):
+        app._artifact_json(target.getvalue())
+
+
 def test_m10_report_is_bound_to_exact_head_blob() -> None:
     content = b'schema_version = "1.0"\n[completion_report]\noverall_result = "PASS"\n'
     blob_sha = _blob_sha(content)

@@ -68,14 +68,18 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-report-cross-check"
 text = "The handoff evaluator combines machine-resolvable report blocks with exact model claim reviews."
-citations = ["src/supportability_gate/handoff_policy.py:252-271"]
+citations = ["src/supportability_gate/handoff_policy.py:267-288"]
 
 [[completion_report.claims]]
 id = "claim-artifact-provenance"
 text = "The GitHub App verifies the attempt-one artifact digest and binds its run identity to the exact head."
-citations = ["src/supportability_gate/github_app.py:330-354"]
+citations = ["src/supportability_gate/github_app.py:338-362"]
 
 [[completion_report.claims]]
 id = "claim-response-binding"
 text = "The semantic parser binds returned model, terminal status, response hash, and parser result into the verdict."
-citations = ["src/supportability_gate/semantic_review.py:335-400"]
+citations = [
+    "src/supportability_gate/semantic_review.py:31-50",
+    "src/supportability_gate/semantic_review.py:318-332",
+    "src/supportability_gate/semantic_review.py:335-400",
+]
