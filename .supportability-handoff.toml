@@ -2,19 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "07152e27db44811165a816589d622fe04030ab32"
+base_sha = "5952be3b3b14d253ebfe3b7a43f362a06ea95b6e"
 overall_result = "PASS"
 responsibility_changes = [
-    "Anonymous TypeScript and TSX callbacks receive deterministic source-coordinate identities.",
+    "Semantic architecture citations are limited to imports in authenticated reviewed_sources evidence.",
 ]
 simplified_functions = [
-    "_TypeScriptFunctionCollector._name",
+    "request_payload",
 ]
 boundary_rationale = [
-    "All TypeScript-family function identities remain owned by the shared source collector.",
+    "The existing request builder remains the single owner of semantic-review instructions.",
 ]
 remaining_risks = [
-    "Moving an anonymous callback changes its coordinate identity and is reported as a remove/add pair.",
+    "Model output can still violate bindings, but the deterministic parser continues to fail closed.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -34,6 +34,6 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-anonymous-callback-identity"
-text = "Anonymous TypeScript-family callbacks use stable source-coordinate identities instead of failing extraction."
-citations = ["src/supportability_gate/function_changes.py:187-206"]
+id = "claim-reviewed-import-binding"
+text = "Semantic instructions define trusted imports exclusively as imports listed under reviewed_sources."
+citations = ["src/supportability_gate/semantic_contract.py:289-293"]

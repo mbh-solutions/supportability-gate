@@ -662,6 +662,9 @@ def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
         in payload["instructions"]
     )
     assert "plausible but unsupported prose" in payload["instructions"]
+    assert (
+        "Trusted imports are only imports listed under reviewed_sources" in payload["instructions"]
+    )
     assert "fresh head without a trusted verdict" not in payload["instructions"]
     assert "BLOCK contradictory coverage observations" not in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()
