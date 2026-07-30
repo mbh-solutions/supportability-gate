@@ -2,19 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "7a2227b6c464cb602f6a8ca18b7d9a1e0f649142"
+base_sha = "18f84a8cd4cce880d1f467825623161350edcb0e"
 overall_result = "PASS"
 responsibility_changes = [
-    "Documentation-only changes retain the required semantic check without requiring a production completion report.",
+    "Documentation-only reviews bypass completion-report preflight while retaining the required semantic check.",
 ]
 simplified_functions = [
-    "GitHubApp.m10_evidence_packet",
+    "_review",
 ]
 boundary_rationale = [
-    "GitHubApp packet orchestration distinguishes production evidence from documentation-only evidence before handoff retrieval.",
+    "Semantic review runs completion preflight whenever reviewed production sources are present.",
 ]
 remaining_risks = [
-    "Production changes still require a current completion report and authenticated attempt-one artifact before semantic review.",
+    "Production changes still run completion preflight and require a current report plus authenticated attempt-one artifact.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -34,6 +34,6 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-doc-only-compatibility"
-text = "M10 packet construction skips handoff artifact retrieval when no production sources changed."
-citations = ["src/supportability_gate/github_app.py:231-249"]
+id = "claim-nonproduction-preflight"
+text = "Semantic review skips completion preflight only when no reviewed production source is present."
+citations = ["src/supportability_gate/semantic_cli.py:51-79"]

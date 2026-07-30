@@ -261,6 +261,72 @@ def test_m10_deterministic_contradiction_blocks_even_if_model_claims_pass() -> N
     assert "CONTRADICTED_COMPLETION_RESULT" in verdict.findings
 
 
+def test_nonproduction_review_skips_completion_preflight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _packet({"pull_request": 3, "reviewed_sources": []})
+
+    class App:
+        published: list[object] = []
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def publish_check(self, *args: object) -> None:
+            self.published.append(args)
+
+    app = App()
+    monkeypatch.setattr(
+        semantic_cli,
+        "request_response",
+        lambda *args: _response(packet, reviewed_paths=[], boundaries=[]),
+    )
+
+    assert semantic_cli._review(  # type: ignore[arg-type]
+        app, "mbh-solutions/supportability-gate", "token", {}
+    )
+    assert app.published[0][2] == "success"
+
+
+def test_production_review_missing_completion_evidence_blocks_before_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _packet({"pull_request": 3})
+
+    class App:
+        published: list[object] = []
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def publish_check(self, *args: object) -> None:
+            self.published.append(args)
+
+    app = App()
+    monkeypatch.setattr(
+        semantic_cli,
+        "request_response",
+        lambda *args: pytest.fail("missing production evidence must block before model transport"),
+    )
+
+    assert not semantic_cli._review(  # type: ignore[arg-type]
+        app, "mbh-solutions/supportability-gate", "token", {}
+    )
+    assert "MALFORMED_COMPLETION_REPORT" in app.published[0][3]
+
+
 def test_technical_model_failure_publishes_no_semantic_check(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
