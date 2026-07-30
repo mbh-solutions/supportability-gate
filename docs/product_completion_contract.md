@@ -319,9 +319,38 @@ direct runtime proof.
     `4418989`; organization workflow pin is exact implementation merge
     `957825c618e49ea96f2a23bcba975aa39031a6fc`. Immutable Standard SHA-256 remains
     `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
-- Enforcement Milestone 8 remaining work: None. Stop; Milestone 9 is not authorized.
-- Enforcement Milestones 9–11: `NOT_STARTED`; not authorized.
-- Current directive: `docs/enforcement_milestone_8.md`.
+- Enforcement Milestone 8 remaining work: None.
+- Enforcement Milestone 9: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 9 evidence:
+  - Protected implementation PR #44 passed exact-head Source Validation, base/head
+    characterization, Quality Profile, Supportability Gate, and App-owned semantic review, then
+    normally merged as `97466b28593c01ab26e8c9cab81f861048d4b94e`.
+  - Reviewer qualification receipt SHA-256
+    `3963dc864422c236b4c9612c7e913182486213d856e9b50a0b399ab2bb80df55` recorded exact
+    `gpt-5.6-sol` medium at 16/16 and exact `gpt-5.6-terra` medium at 13/16. Semantic check
+    `90737274343`, produced by App `4418989`, passed with evidence SHA-256
+    `67c7826291b2e7734716f9436871d96debb4aef7d532816f2c8367286df3aa46`.
+  - Python passing canary PR #23 normally merged as
+    `1f87b813e5db4d6bc1a4f28d6ba3dce0440c2f9f`; TypeScript passing canary PR #10 normally
+    merged as `c12e77be35bfcf93e8ece9506a5c42abc0ac7b86`. Exact-model semantic checks
+    `90738810832` and `90739157188` passed.
+  - Protected Python and TypeScript unexecuted-file canaries blocked with exact changed-file
+    coverage and `UNTESTED_AREA` evidence. Failed-test, threshold-weakening, exclusion,
+    gate-scope-narrowing, and moved-outside-scope canaries also blocked. Every normal merge attempt
+    was rejected; every failing PR closed unmerged and its branch was deleted.
+  - Issue #24 comment `5124695629`, body SHA-256
+    `2dc4a47bf882b41d796f099902b1379cfcb3800e625b419e6661a28e091be17c`, records exact
+    commits, runs, jobs, Apps, artifact IDs and digests, observations, exclusions, thresholds,
+    untested files, model results, and merge-rejection evidence.
+  - Organization ruleset `19929500` is active with zero bypass actors and pins the required
+    workflow to exact merge `97466b28593c01ab26e8c9cab81f861048d4b94e`. Deployed wheel SHA-256 is
+    `93458e8edc78f8c549233b9905123f0a2e04a6dce0b267213b63f72770a30818`; scheduled
+    semantic review remains enabled with fixed one-minute interval and ten-minute limit.
+  - Python `3.12.13` exact-lock proof passed with 218 tests and 2 skips. Immutable Standard
+    SHA-256 remains `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement Milestone 9 remaining work: None. Stop; Milestone 10 is not authorized.
+- Enforcement Milestones 10–11: `NOT_STARTED`; not authorized.
+- Last completed directive: `docs/enforcement_milestone_9.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -533,8 +562,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 8 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 9–11 remain Not started
+Current authorized work: None — Enforcement Milestone 9 complete; stop
+Next milestone authorized: NO — Enforcement Milestones 10–11 remain Not started
 ```
 
 ## Milestone transition rules
