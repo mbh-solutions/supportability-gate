@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from supportability_gate.github_app import GitHubApp
+from supportability_gate.handoff_policy import deterministic_completion_blocks
 from supportability_gate.responses_transport import request_response
 from supportability_gate.semantic_contract import SemanticReviewError, SemanticVerdict
 from supportability_gate.semantic_review import parse_response
@@ -25,6 +26,14 @@ def _verdict_summary(verdict: SemanticVerdict) -> str:
         f"architecture citation: {citation}" for citation in verdict.architecture_citations
     )
     lines.extend(f"finding: {finding}" for finding in verdict.findings)
+    lines.extend(
+        (
+            f"model: {verdict.returned_model} ({verdict.reasoning_effort})",
+            f"response SHA-256: {verdict.response_sha256}",
+            f"terminal status: {verdict.terminal_status}",
+            f"parser result: {verdict.parser_result}",
+        )
+    )
     if not verdict.reviewed_paths:
         lines.append("No changed Python or frontend boundary.")
     return "\n".join(lines)
@@ -40,24 +49,29 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
-    packet = app.evidence_packet(repository, pull, token)
+    packet = app.m10_evidence_packet(repository, pull, token)
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
-    check_id = app.start_check(packet, token)
-    try:
-        verdict = parse_response(packet, request_response(packet))
-        pull_number = packet.evidence["pull_request"]
-        if not isinstance(pull_number, int):
-            raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-        app.assert_current(packet, pull_number, token)
-    except SemanticReviewError as error:
-        app.complete_check(packet, token, check_id, "failure", f"TECHNICAL_FAILURE: {error.code}")
+    evidence = packet.evidence
+    preflight = deterministic_completion_blocks(
+        evidence.get("completion_report"),
+        evidence.get("authoritative_result"),
+        evidence.get("reviewed_sources"),
+    )
+    pull_number = evidence.get("pull_request")
+    if not isinstance(pull_number, int):
+        raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+    app.assert_current(packet, pull_number, token)
+    if preflight:
+        app.publish_check(packet, token, "failure", "BLOCK\n" + "\n".join(preflight))
         return False
+    verdict = parse_response(packet, request_response(packet))
+    app.assert_current(packet, pull_number, token)
     if verdict.verdict == "PASS":
-        app.complete_check(packet, token, check_id, "success", _verdict_summary(verdict))
+        app.publish_check(packet, token, "success", _verdict_summary(verdict))
         return True
-    app.complete_check(packet, token, check_id, "failure", _verdict_summary(verdict))
+    app.publish_check(packet, token, "failure", _verdict_summary(verdict))
     return False
 
 
