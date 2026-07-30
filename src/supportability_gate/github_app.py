@@ -371,7 +371,7 @@ class GitHubApp:
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
         content = self._blob_content(repository, blob_sha, token).encode()
         try:
-            report = {**parse_completion_report(content), "head_sha": head_sha}
+            report = parse_completion_report(content)
             parser_result = "PASS"
         except CompletionReportError as error:
             report = None
@@ -382,6 +382,7 @@ class GitHubApp:
                 "blob_sha": blob_sha,
                 "parser_result": parser_result,
                 "path": HANDOFF_REPORT_PATH,
+                "resolved_head_sha": head_sha,
                 "sha256": hashlib.sha256(content).hexdigest(),
             },
         }

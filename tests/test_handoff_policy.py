@@ -9,6 +9,7 @@ from supportability_gate.handoff_policy import (
 )
 
 HEAD = "b" * 40
+BASE = "a" * 40
 PATH = "src/sample.py"
 
 
@@ -17,6 +18,7 @@ def _authoritative() -> dict[str, object]:
         "architecture": {"blocks": [], "executed": True},
         "functions": [{"head": {"qualified_name": "parse_input"}}],
         "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [PATH]}],
+        "base_sha": BASE,
         "head_sha": HEAD,
         "overall_result": "PASS",
         "quality_profile": {
@@ -45,7 +47,7 @@ def _report() -> dict[str, object]:
             }
         ],
         "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [PATH]}],
-        "head_sha": HEAD,
+        "base_sha": BASE,
         "overall_result": "PASS",
         "remaining_risks": ["Semantic review can still reject an unsupported claim."],
         "responsibility_changes": ["Input parsing is isolated from validation."],
@@ -121,7 +123,7 @@ def test_invented_command_blocks() -> None:
 
 def test_stale_sha_blocks() -> None:
     report = _report()
-    report["head_sha"] = "a" * 40
+    report["base_sha"] = "c" * 40
     assert "STALE_COMPLETION_REPORT_SHA" in _blocks(report)
 
 

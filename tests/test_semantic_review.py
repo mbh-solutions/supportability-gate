@@ -153,6 +153,7 @@ def _m10_packet(claim: str = "parse_input strips surrounding whitespace.") -> Ev
     }
     evidence["authoritative_result"] = {
         "architecture": {"blocks": [], "executed": True},
+        "base_sha": "a" * 40,
         "functions": [{"head": {"qualified_name": "parse_input"}}],
         "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [PYTHON_PATH]}],
         "head_sha": "b" * 40,
@@ -174,7 +175,7 @@ def _m10_packet(claim: str = "parse_input strips surrounding whitespace.") -> Ev
         "boundary_rationale": ["Parsing remains one focused responsibility."],
         "claims": [{"citations": [f"{PYTHON_PATH}:1-2"], "id": "claim-1", "text": claim}],
         "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [PYTHON_PATH]}],
-        "head_sha": "b" * 40,
+        "base_sha": "a" * 40,
         "overall_result": "PASS",
         "remaining_risks": ["Semantic review can reject unsupported prose."],
         "responsibility_changes": ["Parsing is isolated from validation."],

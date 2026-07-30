@@ -2,6 +2,7 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
+base_sha = "468238fe456262c663125c7ec92af4b1e4ee2d98"
 overall_result = "PASS"
 responsibility_changes = [
     "Completion-report truth is now separated from the existing M9 quality runner and M3 structured review parser.",

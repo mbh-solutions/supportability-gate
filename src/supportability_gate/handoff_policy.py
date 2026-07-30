@@ -12,7 +12,7 @@ _REQUIRED = {
     "boundary_rationale",
     "claims",
     "gate_coverage",
-    "head_sha",
+    "base_sha",
     "overall_result",
     "remaining_risks",
     "responsibility_changes",
@@ -203,7 +203,7 @@ def _risk_blocks(value: object) -> list[str]:
 
 def _result_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> list[str]:
     blocks: list[str] = []
-    if report["head_sha"] != authoritative.get("head_sha"):
+    if report["base_sha"] != authoritative.get("base_sha"):
         blocks.append("STALE_COMPLETION_REPORT_SHA")
     if report["overall_result"] != authoritative.get("overall_result"):
         blocks.append("CONTRADICTED_COMPLETION_RESULT")

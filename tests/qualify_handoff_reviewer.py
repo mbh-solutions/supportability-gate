@@ -61,7 +61,7 @@ def _cases() -> tuple[Case, ...]:
         {"adapter": "python.magic.v1", "arguments": ["magic"], "exit_code": 0}
     ]
     stale = _evidence()
-    stale["authoritative_result"]["head_sha"] = "c" * 40
+    stale["completion_report"]["base_sha"] = "c" * 40
     unresolved = _evidence()
     unresolved["completion_report"]["claims"][0]["citations"] = ["src/missing.py:9-10"]
     contradicted = _evidence()

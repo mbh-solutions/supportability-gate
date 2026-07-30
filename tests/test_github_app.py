@@ -174,11 +174,12 @@ def test_m10_report_is_bound_to_exact_head_blob() -> None:
     app = GitHubApp(42, 7, b"unused", opener=open_request)
     evidence = app._completion_report("mbh-solutions/supportability-gate", "b" * 40, "token")
 
-    assert evidence["completion_report"] == {"head_sha": "b" * 40, "overall_result": "PASS"}
+    assert evidence["completion_report"] == {"overall_result": "PASS"}
     assert evidence["completion_report_provenance"] == {
         "blob_sha": blob_sha,
         "parser_result": "PASS",
         "path": ".supportability-handoff.toml",
+        "resolved_head_sha": "b" * 40,
         "sha256": hashlib.sha256(content).hexdigest(),
     }
 
