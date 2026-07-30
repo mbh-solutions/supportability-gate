@@ -77,4 +77,4 @@ citations = ["src/supportability_gate/github_app.py:330-354"]
 [[completion_report.claims]]
 id = "claim-response-binding"
 text = "The semantic parser binds returned model, terminal status, response hash, and parser result into the verdict."
-citations = ["src/supportability_gate/semantic_review.py:333-398"]
+citations = ["src/supportability_gate/semantic_review.py:335-400"]
