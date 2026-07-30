@@ -398,8 +398,34 @@ direct runtime proof.
     `97466b28593c01ab26e8c9cab81f861048d4b94e`. Immutable Standard SHA-256 remains
     `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
 - Enforcement Milestone 10 remaining work: None. Stop; Milestone 11 is not authorized.
-- Enforcement Milestone 11: `NOT_STARTED`; not authorized.
-- Last completed directive: `docs/enforcement_milestone_10.md`.
+- Enforcement Milestone 11: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 11 evidence:
+  - Issue #26 evidence comment `5132482654`, body SHA-256
+    `3ffb260add255a77724dc1b4a6d3f1d2f0690f4e44eb270a363a184ff3c61319`, records the
+    22-row failure-domain matrix, all 218 clause mappings, exact rulesets, workflow/check/App
+    identities, model/rubric/schema/parser bindings, protected canaries, artifact digests, source
+    proof, runtime deployment, cleanup boundary, and exclusions.
+  - Clean Python PR #1 and frontend PR #1 passed both required checks, became merge-eligible, and
+    normally merged as `e13e5c6958501a287ff83d91e29aa951c42f3888` and
+    `bd65591bc88dd73ba3d0d77dc6301be7821c7a23`. Required defect and technical-failure
+    canaries remained visible, normal merge was rejected, and each was closed unmerged.
+  - Focused parser and reviewed-import binding repairs normally merged through protected source
+    PRs #53-#55. Clause-traceability PR #56 proved `DUPLICATE_CLAUSE_ID` blocks Source Validation
+    and protected merge.
+  - The 218-row inventory has 218 unique IDs, 218 explicit applicability records, 218 enforcement
+    owners, and 218 evidence requirements. Its IDs equal the pre-implementation ten-class mapping
+    exactly; no clause is missing or duplicated.
+  - Exact merged source `a58f5aab47a9bdaa2db29bdcb1defa070e98be00` passed Ruff
+    lint/format/C901, strict mypy, both Import Linter contracts, 243 tests with 2 skips, compileall,
+    immutable-hash tamper proof, diff validation, wheel build, fresh Python `3.12.13` exact-lock
+    install, and installed CLI help. Final proof wheel SHA-256:
+    `fa94379b122b9629741b7bc3795e820a6b9cf3e93f493077273dbc0814f880a1`.
+  - Production runtime Python `3.12.12` contains the protected merged repair; deployed wheel
+    SHA-256 `ab25632d12f6b24d505e74d3766cc5329b575b1589894442751f4e9f7337742d`.
+    Rulesets remained active with zero bypass; required Apps remained `15368` and `4418989`; the
+    organization workflow pin remained `97466b28593c01ab26e8c9cab81f861048d4b94e`.
+- Enforcement Milestone 11 remaining work: None. Stop; no work is authorized after Milestone 11.
+- Last completed authority: owner-authorized Enforcement Milestone 11 issue #26.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -609,10 +635,10 @@ workflow, check-run, ruleset, or GitHub state supports them.
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
-Full Supportability Standard enforcement deployable to target repositories: NO
-Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 10 complete; stop
-Next milestone authorized: NO — Enforcement Milestone 11 remains Not started
+Full Supportability Standard enforcement deployable to target repositories: YES
+Full Supportability Standard runtime: YES
+Current authorized work: None — Enforcement Milestone 11 complete; stop
+Next milestone authorized: NO — no work is authorized after Enforcement Milestone 11
 ```
 
 ## Milestone transition rules
