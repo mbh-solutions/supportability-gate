@@ -515,14 +515,14 @@ def test_typescript_tsx_arrow_function_is_bound(tmp_path: Path) -> None:
     assert result["functions"][0]["ending_complexity"] == 2
 
 
-def test_typescript_ambiguous_callback_fails_closed(tmp_path: Path) -> None:
+def test_typescript_anonymous_callback_gets_stable_identity(tmp_path: Path) -> None:
     source = "export const values = [1].map((value) => value + 1);\n"
     repository, base_sha, head_sha = _typescript_repository(tmp_path, None, source)
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
-    assert exit_code == 2
-    assert result["technical_errors"][0]["code"] == "AMBIGUOUS_FUNCTION_IDENTITY"
+    assert exit_code == 0
+    assert result["touched_qualified_functions"] == ["anonymous@1:31"]
 
 
 def test_typescript_profile_mismatch_blocks_instead_of_skipping(tmp_path: Path) -> None:
