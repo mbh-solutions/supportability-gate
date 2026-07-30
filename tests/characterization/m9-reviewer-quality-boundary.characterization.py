@@ -31,6 +31,7 @@ def _semantic_verdict() -> str:
         "boundaries": [],
         "dependency_direction": "No source dependencies.",
         "architecture_citations": [],
+        "claim_reviews": [],
         "app_id": packet.app_id,
         "repository": packet.repository,
         "base_sha": packet.base_sha,
