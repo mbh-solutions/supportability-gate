@@ -36,4 +36,4 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-doc-only-compatibility"
 text = "M10 packet construction skips handoff artifact retrieval when no production sources changed."
-citations = ["src/supportability_gate/github_app.py:231-251"]
+citations = ["src/supportability_gate/github_app.py:231-249"]
