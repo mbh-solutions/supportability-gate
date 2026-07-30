@@ -36,4 +36,4 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-anonymous-callback-identity"
 text = "Anonymous TypeScript-family callbacks use stable source-coordinate identities instead of failing extraction."
-citations = ["src/supportability_gate/function_changes.py:187-206", "tests/test_evaluate_complexity.py:518-525"]
+citations = ["src/supportability_gate/function_changes.py:187-206"]
