@@ -25,6 +25,7 @@ simplified_functions = [
     "_function_names",
     "_review",
     "_review_blocks",
+    "_response_data",
     "_result_blocks",
     "_risk_blocks",
     "_source_lines",
