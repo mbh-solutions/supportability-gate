@@ -68,7 +68,7 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-report-cross-check"
 text = "The handoff evaluator combines machine-resolvable report blocks with exact model claim reviews."
-citations = ["src/supportability_gate/handoff_policy.py:267-288"]
+citations = ["src/supportability_gate/handoff_policy.py:267-287"]
 
 [[completion_report.claims]]
 id = "claim-artifact-provenance"
