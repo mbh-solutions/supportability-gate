@@ -54,10 +54,14 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
     if replay is not None:
         return replay
     evidence = packet.evidence
-    preflight = deterministic_completion_blocks(
-        evidence.get("completion_report"),
-        evidence.get("authoritative_result"),
-        evidence.get("reviewed_sources"),
+    preflight = (
+        deterministic_completion_blocks(
+            evidence.get("completion_report"),
+            evidence.get("authoritative_result"),
+            evidence.get("reviewed_sources"),
+        )
+        if evidence.get("reviewed_sources")
+        else ()
     )
     pull_number = evidence.get("pull_request")
     if not isinstance(pull_number, int):
