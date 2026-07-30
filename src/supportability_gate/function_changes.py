@@ -199,10 +199,7 @@ class _TypeScriptFunctionCollector:
         ):
             name = parent.child_by_field_name("name") or parent.child_by_field_name("key")
         if name is None:
-            raise PythonSourceError(
-                "AMBIGUOUS_FUNCTION_IDENTITY",
-                f"unnamed TypeScript function: {self.path}:{node.start_point.row + 1}",
-            )
+            return f"anonymous@{node.start_point.row + 1}:{node.start_point.column + 1}"
         value = _typescript_text(name, self.content)
         if not value:
             raise PythonSourceError("AMBIGUOUS_FUNCTION_IDENTITY", self.path)
