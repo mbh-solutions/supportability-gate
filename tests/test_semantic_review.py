@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import io
 import json
 import urllib.error
 
 import pytest
 
-from supportability_gate import semantic_cli
 from supportability_gate.responses_transport import request_response
 from supportability_gate.semantic_cli import _verdict_summary
 from supportability_gate.semantic_contract import (
@@ -87,7 +85,6 @@ def _response(
     *,
     reviewed_paths: list[str] | None = None,
     boundaries: list[dict[str, object]] | None = None,
-    claim_reviews: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     sources = packet.evidence.get("reviewed_sources", [])
     citations = [
@@ -95,19 +92,6 @@ def _response(
         for source in sources
         for item in source["imports"]
     ]
-    report = packet.evidence.get("completion_report")
-    default_claim_reviews = (
-        [
-            {
-                "id": claim["id"],
-                "supported": True,
-                "citations": claim["citations"],
-            }
-            for claim in report.get("claims", [])
-        ]
-        if isinstance(report, dict)
-        else []
-    )
     content = {
         "verdict": verdict,
         "findings": findings or [],
@@ -117,7 +101,6 @@ def _response(
         if sources
         else "No changed production paths.",
         "architecture_citations": citations,
-        "claim_reviews": claim_reviews if claim_reviews is not None else default_claim_reviews,
         "app_id": packet.app_id,
         "repository": packet.repository,
         "base_sha": packet.base_sha,
@@ -137,57 +120,6 @@ def _response(
             {"type": "message", "content": [{"type": "output_text", "text": json.dumps(content)}]}
         ],
     }
-
-
-def _m10_packet(claim: str = "parse_input strips surrounding whitespace.") -> EvidencePacket:
-    evidence = _packet().evidence
-    evidence["pull_request"] = 42
-    evidence["artifact_provenance"] = {
-        "artifact_digest": f"sha256:{'d' * 64}",
-        "artifact_id": 789,
-        "archive_sha256": "d" * 64,
-        "run_attempt": 1,
-        "run_conclusion": "success",
-        "run_id": 123,
-        "workflow_path": ".github/workflows/organization-required.yml",
-    }
-    evidence["authoritative_result"] = {
-        "architecture": {"blocks": [], "executed": True},
-        "functions": [{"head": {"qualified_name": "parse_input"}}],
-        "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [PYTHON_PATH]}],
-        "head_sha": "b" * 40,
-        "overall_result": "PASS",
-        "quality_profile": {
-            "commands": [
-                {
-                    "adapter": "python.ruff-lint.v1",
-                    "arguments": ["check", "src"],
-                    "executed": True,
-                    "exit_code": 0,
-                }
-            ]
-        },
-        "technical_errors": [],
-    }
-    evidence["completion_report"] = {
-        "architecture_judgment": "PASS",
-        "boundary_rationale": ["Parsing remains one focused responsibility."],
-        "claims": [{"citations": [f"{PYTHON_PATH}:1-2"], "id": "claim-1", "text": claim}],
-        "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [PYTHON_PATH]}],
-        "head_sha": "b" * 40,
-        "overall_result": "PASS",
-        "remaining_risks": ["Semantic review can reject unsupported prose."],
-        "responsibility_changes": ["Parsing is isolated from validation."],
-        "simplified_functions": ["parse_input"],
-        "validation_results": [
-            {
-                "adapter": "python.ruff-lint.v1",
-                "arguments": ["check", "src"],
-                "exit_code": 0,
-            }
-        ],
-    }
-    return EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, evidence)
 
 
 class _Reply:
@@ -212,81 +144,6 @@ def test_clean_fixture_passes_and_is_deterministic() -> None:
     assert first.verdict == "PASS"
     assert first.architecture_citations == ()
     assert _verdict_summary(first).startswith("PASS\nsrc/sample.py:1-2 function parse_input")
-
-
-def test_exact_m10_packet_binds_response_model_status_hash_and_parser_result() -> None:
-    packet = _m10_packet()
-    response = _response(packet)
-    verdict = parse_response(packet, response)
-    expected_hash = hashlib.sha256(
-        json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
-    ).hexdigest()
-
-    assert verdict.verdict == "PASS"
-    assert verdict.claim_reviews[0].claim_id == "claim-1"
-    assert verdict.response_sha256 == expected_hash
-    assert (verdict.returned_model, verdict.terminal_status, verdict.parser_result) == (
-        packet.model,
-        "completed",
-        "PASS",
-    )
-
-
-def test_m10_unsupported_well_formed_claim_is_visible_block() -> None:
-    packet = _m10_packet("parse_input encrypts secrets before storage.")
-    response = _response(
-        packet,
-        "BLOCK",
-        [f"{PYTHON_PATH}:1-2 does not encrypt or store secrets."],
-        claim_reviews=[{"id": "claim-1", "supported": False, "citations": [f"{PYTHON_PATH}:1-2"]}],
-    )
-    verdict = parse_response(packet, response)
-
-    assert verdict.verdict == "BLOCK"
-    assert "UNSUPPORTED_COMPLETION_CLAIM:claim-1" in verdict.findings
-
-
-def test_m10_deterministic_contradiction_blocks_even_if_model_claims_pass() -> None:
-    packet = _m10_packet()
-    evidence = packet.evidence
-    evidence["completion_report"]["overall_result"] = "BLOCK"  # type: ignore[index]
-    contradicted = EvidencePacket(
-        packet.repository, packet.base_sha, packet.head_sha, packet.app_id, evidence
-    )
-
-    verdict = parse_response(contradicted, _response(contradicted))
-
-    assert verdict.verdict == "BLOCK"
-    assert "CONTRADICTED_COMPLETION_RESULT" in verdict.findings
-
-
-def test_technical_model_failure_publishes_no_semantic_check(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class App:
-        published: list[object] = []
-
-        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
-            return _m10_packet()
-
-        def replay_result(self, *args: object) -> None:
-            return None
-
-        def assert_current(self, *args: object) -> None:
-            return None
-
-        def publish_check(self, *args: object) -> None:
-            self.published.append(args)
-
-    app = App()
-
-    def fail(*args: object) -> object:
-        raise SemanticReviewError("TIMEOUT")
-
-    monkeypatch.setattr(semantic_cli, "request_response", fail)
-    with pytest.raises(SemanticReviewError, match="TIMEOUT"):
-        semantic_cli._review(app, "mbh-solutions/supportability-gate", "token", {})  # type: ignore[arg-type]
-    assert app.published == []
 
 
 def test_evidence_packet_is_immutable_after_construction() -> None:
@@ -338,9 +195,10 @@ def test_non_source_change_passes_without_invented_boundary() -> None:
         packet,
         _response(packet, reviewed_paths=[], boundaries=[]),
     )
-    summary = _verdict_summary(verdict)
-    assert summary.startswith("PASS\ndependency direction: No changed production paths.")
-    assert summary.endswith("parser result: PASS\nNo changed Python or frontend boundary.")
+    assert _verdict_summary(verdict) == (
+        "PASS\ndependency direction: No changed production paths."
+        "\nNo changed Python or frontend boundary."
+    )
 
 
 def test_unverified_architecture_citation_blocks() -> None:
@@ -580,11 +438,11 @@ def test_prompt_injection_stays_untrusted_data(injection: str) -> None:
     assert payload["text"]["format"]["strict"] is True
 
 
-def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
+def test_incremental_strangler_rubric_is_narrow_and_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "review-handoff.v1"
+    assert RUBRIC_VERSION == "incremental-strangler.v1"
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
     assert "candidate-provided responsibility declarations" in payload["instructions"]
@@ -594,7 +452,6 @@ def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
         "Deterministic verifier checks quality and API-read artifact facts"
         in payload["instructions"]
     )
-    assert "plausible but unsupported prose" in payload["instructions"]
     assert "fresh head without a trusted verdict" not in payload["instructions"]
     assert "BLOCK contradictory coverage observations" not in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()

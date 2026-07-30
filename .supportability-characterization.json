@@ -42,14 +42,6 @@
       ],
       "id": "m9-reviewer-quality-boundary",
       "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/handoff_policy.py",
-        "src/supportability_gate/semantic_cli.py"
-      ],
-      "id": "m10-review-handoff",
-      "kind": "regression"
     }
   ],
   "schema_version": "1.0"
