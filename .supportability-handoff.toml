@@ -68,7 +68,7 @@ gate_coverage = [
 
 [[completion_report.claims]]
 id = "claim-report-cross-check"
-text = "The handoff evaluator combines machine-resolvable report blocks with exact model claim reviews."
+text = "The handoff evaluator executes target repository code before validating completion claims."
 citations = ["src/supportability_gate/handoff_policy.py:273-293"]
 
 [[completion_report.claims]]
