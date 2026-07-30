@@ -135,6 +135,27 @@ def test_m10_packet_binds_fresh_full_run_artifact_and_report() -> None:
     }
 
 
+def test_m10_packet_skips_completion_report_for_nonproduction_diff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = EvidencePacket(
+        "mbh-solutions/supportability-gate",
+        "a" * 40,
+        "b" * 40,
+        42,
+        {"pull_request": 3, "reviewed_sources": []},
+    )
+    app = GitHubApp(42, 7, b"unused")
+    monkeypatch.setattr(app, "evidence_packet", lambda *args: packet)
+    monkeypatch.setattr(
+        app,
+        "_handoff_evidence",
+        lambda *args: pytest.fail("nonproduction diff must not require a handoff artifact"),
+    )
+
+    assert app.m10_evidence_packet("mbh-solutions/supportability-gate", {}, "token") is packet
+
+
 def test_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
     run = {
         "conclusion": "failure",
