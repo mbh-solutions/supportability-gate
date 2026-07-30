@@ -5,12 +5,14 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import io
 import json
 import re
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, cast
@@ -21,6 +23,11 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from supportability_gate.architecture_policy import source_imports
 from supportability_gate.contract import ContractError, parse_contract
 from supportability_gate.function_changes import PythonSourceError, responsibility_spans
+from supportability_gate.handoff_policy import (
+    HANDOFF_REPORT_PATH,
+    CompletionReportError,
+    parse_completion_report,
+)
 from supportability_gate.semantic_contract import (
     SHA_PATTERN,
     TRUSTED_OWNER_ID,
@@ -33,6 +40,30 @@ CHECK_NAME = "Supportability Semantic Review"
 REVIEWED_SUFFIXES = frozenset({".py", ".ts", ".tsx"})
 HUNK_PATTERN = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
+HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
+MAX_HANDOFF_BYTES = 5_000_000
+
+
+class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow HTTPS artifact redirects without leaking the GitHub bearer token."""
+
+    def redirect_request(
+        self,
+        request: urllib.request.Request,
+        file_pointer: Any,
+        code: int,
+        message: str,
+        headers: Any,
+        new_url: str,
+    ) -> urllib.request.Request | None:
+        if urllib.parse.urlparse(new_url).scheme != "https":
+            raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE")
+        redirected = super().redirect_request(
+            request, file_pointer, code, message, headers, new_url
+        )
+        if redirected is not None:
+            redirected.remove_header("Authorization")
+        return redirected
 
 
 def _encoded(value: bytes) -> str:
@@ -196,6 +227,165 @@ class GitHubApp:
                 "reviewed_sources": reviewed_sources,
             },
         )
+
+    def m10_evidence_packet(
+        self, repository: str, pull: dict[str, Any], token: str
+    ) -> EvidencePacket:
+        """Add authenticated M10 report and workflow evidence to one exact-head packet."""
+        packet = self.evidence_packet(repository, pull, token)
+        evidence = packet.evidence
+        evidence.update(self._handoff_evidence(repository, packet.head_sha, token))
+        evidence.update(self._completion_report(repository, packet.head_sha, token))
+        return EvidencePacket(
+            packet.repository,
+            packet.base_sha,
+            packet.head_sha,
+            packet.app_id,
+            evidence,
+            model=packet.model,
+            reasoning_effort=packet.reasoning_effort,
+        )
+
+    def _handoff_run(self, repository: str, head_sha: str, token: str) -> dict[str, Any]:
+        result = self._request(
+            "GET",
+            f"/repos/{repository}/actions/runs?head_sha={head_sha}&per_page=100",
+            token,
+        )
+        rows = result.get("workflow_runs") if isinstance(result, dict) else None
+        if not isinstance(rows, list) or len(rows) >= 100:
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        runs = [
+            row
+            for row in rows
+            if isinstance(row, dict)
+            and row.get("path") == HANDOFF_WORKFLOW_PATH
+            and row.get("head_sha") == head_sha
+            and row.get("event") == "pull_request"
+            and row.get("status") == "completed"
+            and row.get("run_attempt") == 1
+        ]
+        if len(runs) != 1 or not isinstance(runs[0].get("id"), int):
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        return runs[0]
+
+    def _handoff_artifact(self, repository: str, run: dict[str, Any], token: str) -> dict[str, Any]:
+        run_id, run_attempt = run["id"], run["run_attempt"]
+        result = self._request(
+            "GET", f"/repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100", token
+        )
+        rows = result.get("artifacts") if isinstance(result, dict) else None
+        expected = f"supportability-evidence-{run_id}-{run_attempt}"
+        if not isinstance(rows, list) or len(rows) >= 100:
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        artifacts = [
+            row
+            for row in rows
+            if isinstance(row, dict) and row.get("name") == expected and not row.get("expired")
+        ]
+        if len(artifacts) != 1 or not isinstance(artifacts[0].get("id"), int):
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        digest = artifacts[0].get("digest")
+        if not isinstance(digest, str) or re.fullmatch(r"sha256:[0-9a-f]{64}", digest) is None:
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        return artifacts[0]
+
+    def _artifact_bytes(self, repository: str, artifact_id: int, token: str) -> bytes:
+        request = urllib.request.Request(
+            f"{API}/repos/{repository}/actions/artifacts/{artifact_id}/zip",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "User-Agent": "supportability-gate-semantic-review",
+            },
+        )
+        opener = (
+            urllib.request.build_opener(_NoAuthRedirect()).open
+            if self.opener is urllib.request.urlopen
+            else self.opener
+        )
+        try:
+            with opener(request, timeout=30) as result:
+                content = cast(bytes, result.read())
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE") from error
+        if not content or len(content) > MAX_HANDOFF_BYTES:
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        return content
+
+    def _artifact_json(self, archive: bytes) -> dict[str, dict[str, Any]]:
+        required = {"complexity-result.json", "quality-provenance.json"}
+        try:
+            with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+                members = bundle.infolist()
+                names = [member.filename for member in members]
+                indexed = {member.filename: member for member in members}
+                if (
+                    len(names) > 20
+                    or len(names) != len(indexed)
+                    or not required <= set(names)
+                    or any(indexed[name].file_size > MAX_HANDOFF_BYTES for name in required)
+                ):
+                    raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+                values = {name: json.loads(bundle.read(name)) for name in required}
+        except (zipfile.BadZipFile, KeyError, json.JSONDecodeError, UnicodeDecodeError) as error:
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE") from error
+        if any(not isinstance(value, dict) for value in values.values()):
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        return values
+
+    def _handoff_evidence(self, repository: str, head_sha: str, token: str) -> dict[str, object]:
+        run = self._handoff_run(repository, head_sha, token)
+        artifact = self._handoff_artifact(repository, run, token)
+        archive = self._artifact_bytes(repository, artifact["id"], token)
+        archive_sha256 = hashlib.sha256(archive).hexdigest()
+        if artifact["digest"] != f"sha256:{archive_sha256}":
+            raise SemanticReviewError("HANDOFF_ARTIFACT_DIGEST_MISMATCH")
+        files = self._artifact_json(archive)
+        result, provenance = files["complexity-result.json"], files["quality-provenance.json"]
+        if result.get("head_sha") != head_sha or provenance.get("run_id") != str(run["id"]):
+            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+        if provenance.get("run_attempt") != str(run["run_attempt"]):
+            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+        return {
+            "artifact_provenance": {
+                "artifact_digest": artifact["digest"],
+                "artifact_id": artifact["id"],
+                "archive_sha256": archive_sha256,
+                "run_attempt": run["run_attempt"],
+                "run_conclusion": run.get("conclusion"),
+                "run_id": run["id"],
+                "workflow_path": HANDOFF_WORKFLOW_PATH,
+            },
+            "authoritative_result": result,
+        }
+
+    def _completion_report(self, repository: str, head_sha: str, token: str) -> dict[str, object]:
+        path = (
+            f"/repos/{repository}/contents/{HANDOFF_REPORT_PATH}?ref={urllib.parse.quote(head_sha)}"
+        )
+        result = self._request("GET", path, token)
+        blob_sha = result.get("sha") if isinstance(result, dict) else None
+        if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        content = self._blob_content(repository, blob_sha, token).encode()
+        try:
+            report = parse_completion_report(content)
+            parser_result = "PASS"
+        except CompletionReportError as error:
+            report = None
+            parser_result = str(error)
+        return {
+            "completion_report": report,
+            "completion_report_provenance": {
+                "blob_sha": blob_sha,
+                "parser_result": parser_result,
+                "path": HANDOFF_REPORT_PATH,
+                "resolved_head_sha": head_sha,
+                "sha256": hashlib.sha256(content).hexdigest(),
+            },
+        }
 
     def _refactor_context(
         self,

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import urllib.error
+import zipfile
 from typing import Any
 
 import pytest
@@ -47,6 +49,11 @@ class _RawReply(_Reply):
         return str(self.payload).encode()
 
 
+class _BytesReply(_Reply):
+    def read(self) -> bytes:
+        return self.payload  # type: ignore[return-value]
+
+
 def _private_key() -> bytes:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     return key.private_bytes(
@@ -71,6 +78,109 @@ def _blob_payload(content: bytes) -> dict[str, str]:
         "content": base64.b64encode(content).decode(),
         "encoding": "base64",
         "sha": _blob_sha(content),
+    }
+
+
+def _handoff_archive(head_sha: str, run_id: int = 123) -> bytes:
+    target = io.BytesIO()
+    result = {
+        "head_sha": head_sha,
+    }
+    provenance = {"run_attempt": "1", "run_id": str(run_id)}
+    with zipfile.ZipFile(target, "w") as bundle:
+        bundle.writestr("complexity-result.json", json.dumps(result))
+        bundle.writestr("quality-provenance.json", json.dumps(provenance))
+    return target.getvalue()
+
+
+def test_m10_packet_binds_fresh_full_run_artifact_and_report() -> None:
+    head_sha = "b" * 40
+    archive = _handoff_archive(head_sha)
+    archive_sha256 = hashlib.sha256(archive).hexdigest()
+    run = {
+        "conclusion": "success",
+        "event": "pull_request",
+        "head_sha": head_sha,
+        "id": 123,
+        "path": ".github/workflows/organization-required.yml",
+        "run_attempt": 1,
+        "status": "completed",
+    }
+    artifact = {
+        "digest": f"sha256:{archive_sha256}",
+        "expired": False,
+        "id": 789,
+        "name": "supportability-evidence-123-1",
+    }
+
+    def open_request(request: object, *args: object, **kwargs: object) -> _Reply:
+        url = request.full_url  # type: ignore[attr-defined]
+        if url.endswith("/zip"):
+            return _BytesReply(archive)
+        if "/actions/runs?" in url:
+            return _Reply({"workflow_runs": [run]})
+        return _Reply({"artifacts": [artifact]})
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    evidence = app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+
+    assert evidence["artifact_provenance"] == {
+        "artifact_digest": f"sha256:{archive_sha256}",
+        "artifact_id": 789,
+        "archive_sha256": archive_sha256,
+        "run_attempt": 1,
+        "run_conclusion": "success",
+        "run_id": 123,
+        "workflow_path": ".github/workflows/organization-required.yml",
+    }
+
+
+def test_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
+    run = {
+        "conclusion": "failure",
+        "event": "pull_request",
+        "head_sha": "b" * 40,
+        "id": 123,
+        "path": ".github/workflows/organization-required.yml",
+        "run_attempt": 2,
+        "status": "completed",
+    }
+    app = GitHubApp(
+        42, 7, b"unused", opener=lambda *args, **kwargs: _Reply({"workflow_runs": [run]})
+    )
+    with pytest.raises(SemanticReviewError, match="HANDOFF_EVIDENCE_UNAVAILABLE"):
+        app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")
+
+
+def test_handoff_archive_rejects_large_expanded_member() -> None:
+    target = io.BytesIO()
+    with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("complexity-result.json", b"0" * 5_000_001)
+        bundle.writestr("quality-provenance.json", b"{}")
+    app = GitHubApp(42, 7, b"unused")
+    with pytest.raises(SemanticReviewError, match="HANDOFF_EVIDENCE_UNAVAILABLE"):
+        app._artifact_json(target.getvalue())
+
+
+def test_m10_report_is_bound_to_exact_head_blob() -> None:
+    content = b'schema_version = "1.0"\n[completion_report]\noverall_result = "PASS"\n'
+    blob_sha = _blob_sha(content)
+
+    def open_request(request: object, *args: object, **kwargs: object) -> _Reply:
+        if "/contents/" in request.full_url:  # type: ignore[attr-defined]
+            return _Reply({"sha": blob_sha})
+        return _Reply(_blob_payload(content))
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    evidence = app._completion_report("mbh-solutions/supportability-gate", "b" * 40, "token")
+
+    assert evidence["completion_report"] == {"overall_result": "PASS"}
+    assert evidence["completion_report_provenance"] == {
+        "blob_sha": blob_sha,
+        "parser_result": "PASS",
+        "path": ".supportability-handoff.toml",
+        "resolved_head_sha": "b" * 40,
+        "sha256": hashlib.sha256(content).hexdigest(),
     }
 
 

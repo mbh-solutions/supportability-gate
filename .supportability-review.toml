@@ -78,3 +78,9 @@ path = "src/supportability_gate/modularity_policy.py"
 owner_path = "src/supportability_gate/modularity_policy.py"
 basis = "responsibility"
 justification = "Owns deterministic new-location justification, vague-location, coupling-edge, and complete-coverage evidence required by Enforcement Milestone 6."
+
+[[module_boundaries]]
+path = "src/supportability_gate/handoff_policy.py"
+owner_path = "src/supportability_gate/handoff_policy.py"
+basis = "responsibility"
+justification = "Owns completion-report parsing and exact evidence cross-checking without GitHub transport, target execution, or semantic model judgment."

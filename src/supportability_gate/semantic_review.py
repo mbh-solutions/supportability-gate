@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import PurePosixPath
 from typing import Any
 
+from supportability_gate.handoff_policy import ClaimReview, evaluate_completion_report
 from supportability_gate.semantic_contract import (
     RUBRIC_VERSION,
     SCHEMA_VERSION,
@@ -282,6 +284,28 @@ def _architecture_evidence(
     return direction, expected
 
 
+def _claim_reviews(value: object) -> tuple[ClaimReview, ...]:
+    if not isinstance(value, list):
+        raise SemanticReviewError("MALFORMED_SCHEMA")
+    reviews: list[ClaimReview] = []
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"citations", "id", "supported"}:
+            raise SemanticReviewError("MALFORMED_SCHEMA")
+        claim_id, supported, citations = item["id"], item["supported"], item["citations"]
+        if (
+            not isinstance(claim_id, str)
+            or not claim_id.strip()
+            or type(supported) is not bool
+            or not isinstance(citations, list)
+            or any(not isinstance(citation, str) for citation in citations)
+        ):
+            raise SemanticReviewError("MALFORMED_SCHEMA")
+        reviews.append(ClaimReview(claim_id, supported, tuple(citations)))
+    if len({item.claim_id for item in reviews}) != len(reviews):
+        raise SemanticReviewError("MALFORMED_SCHEMA")
+    return tuple(reviews)
+
+
 def _validate_bindings(data: dict[str, Any], bindings: dict[str, object]) -> None:
     if type(data.get("app_id")) is not int:
         raise SemanticReviewError("MALFORMED_SCHEMA")
@@ -300,13 +324,17 @@ def _response_data(packet: EvidencePacket, response: object) -> dict[str, Any]:
         data = json.loads(_output_text(response))
     except json.JSONDecodeError as error:
         raise SemanticReviewError("MALFORMED_SCHEMA") from error
+    if isinstance(data, dict) and "completion_report" not in packet.evidence:
+        data.setdefault("claim_reviews", [])
     expected = set(result_schema()["properties"])
     if not isinstance(data, dict) or set(data) != expected:
         raise SemanticReviewError("MALFORMED_SCHEMA")
     return data
 
 
-def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVerdict:
+def _trusted_verdict(
+    packet: EvidencePacket, data: dict[str, Any], response: dict[str, Any]
+) -> SemanticVerdict:
     findings = _findings(data)
     reviewed_paths, boundaries = _boundary_evidence(packet, data, findings)
     dependency_direction, architecture_citations = _architecture_evidence(
@@ -332,9 +360,24 @@ def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVe
         raise SemanticReviewError("MALFORMED_SCHEMA")
     if (verdict == "PASS") != (not findings):
         raise SemanticReviewError("CONFLICTING_VERDICT")
+    claim_reviews = _claim_reviews(data.get("claim_reviews"))
+    evidence = packet.evidence
+    report_blocks: tuple[str, ...] = ()
+    if "completion_report" in evidence or "authoritative_result" in evidence:
+        report_blocks = evaluate_completion_report(
+            evidence.get("completion_report"),
+            evidence.get("authoritative_result"),
+            evidence.get("reviewed_sources"),
+            claim_reviews,
+        )
+    final_findings = (*findings, *report_blocks)
+    final_verdict = "BLOCK" if final_findings else "PASS"
+    response_sha256 = hashlib.sha256(
+        json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
     return SemanticVerdict(
-        verdict=verdict,
-        findings=findings,
+        verdict=final_verdict,
+        findings=final_findings,
         app_id=packet.app_id,
         repository=packet.repository,
         base_sha=packet.base_sha,
@@ -349,9 +392,17 @@ def _trusted_verdict(packet: EvidencePacket, data: dict[str, Any]) -> SemanticVe
         boundaries=boundaries,
         dependency_direction=dependency_direction,
         architecture_citations=architecture_citations,
+        claim_reviews=claim_reviews,
+        response_sha256=response_sha256,
+        returned_model=packet.model,
+        terminal_status="completed",
+        parser_result=final_verdict,
     )
 
 
 def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
     """Orchestrate response parsing and exact-binding verdict validation."""
-    return _trusted_verdict(packet, _response_data(packet, response))
+    data = _response_data(packet, response)
+    if not isinstance(response, dict):
+        raise SemanticReviewError("MALFORMED_RESPONSE")
+    return _trusted_verdict(packet, data, response)
