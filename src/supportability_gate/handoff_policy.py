@@ -12,13 +12,13 @@ _REQUIRED = {
     "boundary_rationale",
     "claims",
     "gate_coverage",
-    "base_sha",
     "overall_result",
     "remaining_risks",
     "responsibility_changes",
     "simplified_functions",
     "validation_results",
 }
+_SHA_FIELDS = {"base_sha", "head_sha"}
 _CITATION = re.compile(r"(.+):(\d+)-(\d+)\Z")
 HANDOFF_REPORT_PATH = ".supportability-handoff.toml"
 
@@ -203,7 +203,8 @@ def _risk_blocks(value: object) -> list[str]:
 
 def _result_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> list[str]:
     blocks: list[str] = []
-    if report["base_sha"] != authoritative.get("base_sha"):
+    sha_field = next(iter(set(report) & _SHA_FIELDS))
+    if report[sha_field] != authoritative.get(sha_field):
         blocks.append("STALE_COMPLETION_REPORT_SHA")
     if report["overall_result"] != authoritative.get("overall_result"):
         blocks.append("CONTRADICTED_COMPLETION_RESULT")
@@ -250,7 +251,12 @@ def deterministic_completion_blocks(
     missing = sorted(_REQUIRED - set(report))
     if missing:
         return (f"MISSING_COMPLETION_SECTION:{missing[0]}",)
-    unknown = sorted(set(report) - _REQUIRED)
+    sha_fields = set(report) & _SHA_FIELDS
+    if not sha_fields:
+        return ("MISSING_COMPLETION_SECTION:base_sha",)
+    if len(sha_fields) != 1:
+        return ("MALFORMED_COMPLETION_SECTION:sha",)
+    unknown = sorted(set(report) - _REQUIRED - sha_fields)
     if unknown:
         return (f"MALFORMED_COMPLETION_SECTION:{unknown[0]}",)
     blocks: list[str] = []

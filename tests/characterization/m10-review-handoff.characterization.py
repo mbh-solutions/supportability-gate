@@ -23,7 +23,7 @@ def _behavior() -> dict[str, list[str]]:
             }
         ],
         "gate_coverage": [{"adapter": "python.ruff-lint.v1", "paths": [path]}],
-        "base_sha": "a" * 40,
+        "head_sha": "b" * 40,
         "overall_result": "PASS",
         "remaining_risks": ["Semantic review can reject unsupported prose."],
         "responsibility_changes": ["Parsing is isolated from validation."],
@@ -36,7 +36,6 @@ def _behavior() -> dict[str, list[str]]:
         "architecture": {"blocks": [], "executed": True},
         "functions": [{"head": {"qualified_name": "parse_input"}}],
         "gate_coverage": report["gate_coverage"],
-        "base_sha": "a" * 40,
         "head_sha": "b" * 40,
         "overall_result": "PASS",
         "quality_profile": {
