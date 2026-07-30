@@ -349,8 +349,57 @@ direct runtime proof.
   - Python `3.12.13` exact-lock proof passed with 218 tests and 2 skips. Immutable Standard
     SHA-256 remains `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
 - Enforcement Milestone 9 remaining work: None. Stop; Milestone 10 is not authorized.
-- Enforcement Milestones 10–11: `NOT_STARTED`; not authorized.
-- Last completed directive: `docs/enforcement_milestone_9.md`.
+- Enforcement Milestone 10: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Enforcement Milestone 10 evidence:
+  - Protected characterization baseline PR #47 normally merged as
+    `468238fe456262c663125c7ec92af4b1e4ee2d98`. Protected implementation PR #48 passed
+    Source Validation run `30509126774`, organization run `30509126731`, Gate check
+    `90765287060`, and App-owned semantic check `90765729087`, then normally merged without
+    bypass as `7a2227b6c464cb602f6a8ca18b7d9a1e0f649142`.
+  - Passing packet SHA-256 `7002d4be4e9928971bb627b633140c9fb385bad0e10afc1ba4eef85c1660fd07`
+    bound attempt-one artifact `8746432084`, digest
+    `21d9a37706035366c30a128c70283159b3de774008fdfe7d6a046185c0cee66b`, exact report
+    blob, `gpt-5.6-sol` medium, response SHA-256
+    `81d1fa937ce5aba97696bbbefad494536dd7566473eefb5e9e0837744ac526dd`, and parser
+    result `PASS`.
+  - Exact updated-packet qualification passed 18/18: `gpt-5.6-sol` medium 9/9 and
+    `gpt-5.6-terra` medium 9/9. Receipt SHA-256:
+    `90ecd26f6f47602cdc4eaa89a3ed8034c42bfeaa1f76c41396c26e00cfb2efce`.
+  - Protected blocking canary PR #49 passed machine workflow run `30509547419` but semantic
+    check `90766958884` failed substantively with `UNSUPPORTED_COMPLETION_CLAIM`; protected
+    merge state was `BLOCKED`. It closed unmerged and its branch was deleted.
+  - Focused compatibility PR #50 made documentation-only packets omit stale production reports;
+    attempt-one organization run `30510204574`, Source Validation run `30510204577`, Gate check
+    `90768534063`, and App semantic check passed. It normally merged without bypass as
+    `18f84a8cd4cce880d1f467825623161350edcb0e`.
+  - Ledger PR #51 exposed the remaining full-path failure with visible semantic check
+    `90769515008`. Protected repair PR #52 added paired non-production-pass and
+    missing-production-evidence-block fixtures. Final attempt-one organization run `30511247118`,
+    Source Validation run `30511247077`, Gate check `90771727503`, and semantic check
+    `90771869141` passed; PR #52 normally merged without bypass as
+    `a0822b15d80b87c10b33c08b6a75d91423694967`.
+  - Exact final-merge Python `3.12.13` proof passed Ruff lint/format/C901, strict mypy, both Import
+    Linter contracts, 243 tests with 2 skips, compileall, fresh exact-lock wheel install, installed
+    CLI help, immutable-standard tamper, and exact-range whitespace validation. Production runtime
+    Python is `3.12.12`; deployed wheel SHA-256 is
+    `e2411e5fe87cddaf63690c4cd2c121f0c41da8ad9ab077f28e64b619386df677`.
+  - Issue #25 evidence comment `5125863711`, body SHA-256
+    `da236d0b6223c28fa7556f9cbe019d955e9b157f732e0c2f1d5951dc045ac5ff`, records
+    exact authorization, failure domains, runs, checks, Apps, models, packet/response hashes,
+    artifacts, runtime, rulesets, workflow pin, canaries, source proof, and exclusions.
+    Supplemental issue comment `5125941141`, body SHA-256
+    `f579c7de6f6a3f362b451fe7d10aa149cc5e402ceb890f4eafc2d09c0db57e9b`, records the focused
+    compatibility merge, final merged-source proof, and deployed runtime read-back.
+    Final closure-repair comment `5126087509`, body SHA-256
+    `f8b76354c8f023c3c792bc88087d334b7156a9343eac3a4bc17bf5bb219314bf`, records PR #52's
+    visible failure evidence, protected PASS, exact final source proof, and runtime wheel.
+  - Rulesets `19767613` and `19929500` remain active with zero bypass actors; required Apps remain
+    `15368` and `4418989`; the proven M9 organization workflow pin remains
+    `97466b28593c01ab26e8c9cab81f861048d4b94e`. Immutable Standard SHA-256 remains
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement Milestone 10 remaining work: None. Stop; Milestone 11 is not authorized.
+- Enforcement Milestone 11: `NOT_STARTED`; not authorized.
+- Last completed directive: `docs/enforcement_milestone_10.md`.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
 ## Historical delivery ledger
@@ -562,8 +611,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: NO
 Full Supportability Standard runtime: NO
-Current authorized work: None — Enforcement Milestone 9 complete; stop
-Next milestone authorized: NO — Enforcement Milestones 10–11 remain Not started
+Current authorized work: None — Enforcement Milestone 10 complete; stop
+Next milestone authorized: NO — Enforcement Milestone 11 remains Not started
 ```
 
 ## Milestone transition rules
