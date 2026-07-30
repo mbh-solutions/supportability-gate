@@ -2,52 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "468238fe456262c663125c7ec92af4b1e4ee2d98"
+base_sha = "7a2227b6c464cb602f6a8ca18b7d9a1e0f649142"
 overall_result = "PASS"
 responsibility_changes = [
-    "Completion-report truth is now separated from the existing M9 quality runner and M3 structured review parser.",
-    "The GitHub App binds exact-head report bytes to the existing authenticated M9 workflow artifact before semantic review.",
+    "Documentation-only changes retain the required semantic check without requiring a production completion report.",
 ]
 simplified_functions = [
-    "GitHubApp._artifact_bytes",
-    "GitHubApp._artifact_json",
-    "GitHubApp._completion_report",
-    "GitHubApp._handoff_artifact",
-    "GitHubApp._handoff_evidence",
-    "GitHubApp._handoff_run",
     "GitHubApp.m10_evidence_packet",
-    "_NoAuthRedirect.redirect_request",
-    "_architecture_result",
-    "_citation_resolves",
-    "_claim_reviews",
-    "_claims",
-    "_command_blocks",
-    "_commands",
-    "_function_names",
-    "_review",
-    "_review_blocks",
-    "_response_data",
-    "_result_blocks",
-    "_risk_blocks",
-    "_source_lines",
-    "_text_list",
-    "_trusted_verdict",
-    "_verdict_summary",
-    "deterministic_completion_blocks",
-    "evaluate_completion_report",
-    "parse_completion_report",
-    "parse_response",
-    "request_payload",
-    "result_schema",
 ]
 boundary_rationale = [
-    "handoff_policy owns report parsing and evidence cross-checking without GitHub transport or target execution.",
-    "GitHubApp owns authenticated GitHub run, artifact, and exact-head report retrieval without semantic judgment.",
-    "semantic_review owns strict model-response parsing and final bound verdict construction.",
+    "GitHubApp packet orchestration distinguishes production evidence from documentation-only evidence before handoff retrieval.",
 ]
 remaining_risks = [
-    "Model or localhost transport unavailability intentionally leaves the required semantic check absent, so merge remains blocked until a fresh full request succeeds.",
-    "A substantive report defect intentionally remains visible as a failing required semantic check and must be repaired on a fresh head.",
+    "Production changes still require a current completion report and authenticated attempt-one artifact before semantic review.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -67,20 +34,6 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-report-cross-check"
-text = "The handoff evaluator combines machine-resolvable report blocks with exact model claim reviews."
-citations = ["src/supportability_gate/handoff_policy.py:273-293"]
-
-[[completion_report.claims]]
-id = "claim-artifact-provenance"
-text = "The GitHub App verifies the attempt-one artifact digest and binds its run identity to the exact head."
-citations = ["src/supportability_gate/github_app.py:338-362"]
-
-[[completion_report.claims]]
-id = "claim-response-binding"
-text = "The semantic parser binds returned model, terminal status, response hash, and parser result into the verdict."
-citations = [
-    "src/supportability_gate/semantic_review.py:31-50",
-    "src/supportability_gate/semantic_review.py:318-332",
-    "src/supportability_gate/semantic_review.py:335-400",
-]
+id = "claim-doc-only-compatibility"
+text = "M10 packet construction skips handoff artifact retrieval when no production sources changed."
+citations = ["src/supportability_gate/github_app.py:231-251"]

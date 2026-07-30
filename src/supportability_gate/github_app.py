@@ -234,6 +234,8 @@ class GitHubApp:
         """Add authenticated M10 report and workflow evidence to one exact-head packet."""
         packet = self.evidence_packet(repository, pull, token)
         evidence = packet.evidence
+        if not evidence.get("reviewed_sources"):
+            return packet
         evidence.update(self._handoff_evidence(repository, packet.head_sha, token))
         evidence.update(self._completion_report(repository, packet.head_sha, token))
         return EvidencePacket(
