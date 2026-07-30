@@ -3228,7 +3228,7 @@
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
-      "clause_id": "SS-0703",
+      "clause_id": "SS-0018",
       "source_line": 703,
       "statement": "If the answer is mostly no, the AI did not clean the repo. It rearranged the mess.",
       "applicability": {
