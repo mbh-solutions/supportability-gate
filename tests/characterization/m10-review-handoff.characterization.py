@@ -5,6 +5,7 @@ import json
 
 
 def _behavior() -> dict[str, list[str]]:
+    """Define M10 truth-check behavior before production implementation."""
     if importlib.util.find_spec("supportability_gate.handoff_policy") is None:
         return {"clean": [], "unsupported": ["UNSUPPORTED_COMPLETION_CLAIM:claim-1"]}
 
