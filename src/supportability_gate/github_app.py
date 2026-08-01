@@ -26,6 +26,7 @@ from supportability_gate.function_changes import PythonSourceError, responsibili
 from supportability_gate.handoff_policy import (
     HANDOFF_REPORT_PATH,
     CompletionReportError,
+    completion_citations,
     parse_completion_report,
 )
 from supportability_gate.semantic_contract import (
@@ -237,10 +238,21 @@ class GitHubApp:
         """Add authenticated M10 report and workflow evidence to one exact-head packet."""
         packet = self.evidence_packet(repository, pull, token)
         evidence = packet.evidence
-        if not evidence.get("reviewed_sources"):
+        if not evidence.get("reviewed_sources") and not evidence.get("deleted_sources"):
             return packet
         evidence.update(self._handoff_evidence(repository, packet.head_sha, token))
         evidence.update(self._completion_report(repository, packet.head_sha, token))
+        context = evidence.get("refactor_context")
+        changed_files = context.get("changed_files") if isinstance(context, dict) else None
+        evidence["completion_sources"] = self._completion_sources(
+            repository,
+            packet.head_sha,
+            evidence.get("completion_report"),
+            evidence.get("reviewed_sources"),
+            evidence.get("deleted_sources"),
+            changed_files,
+            token,
+        )
         return EvidencePacket(
             packet.repository,
             packet.base_sha,
@@ -390,6 +402,90 @@ class GitHubApp:
                 "resolved_head_sha": head_sha,
                 "sha256": hashlib.sha256(content).hexdigest(),
             },
+        }
+
+    def _completion_sources(
+        self,
+        repository: str,
+        head_sha: str,
+        report: object,
+        reviewed_sources: object,
+        deleted_sources: object,
+        changed_files: object,
+        token: str,
+    ) -> list[dict[str, Any]]:
+        """Bind report citations without expanding semantic review boundaries."""
+        if not all(
+            isinstance(value, list) for value in (reviewed_sources, deleted_sources, changed_files)
+        ):
+            raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+        reviewed = cast(list[dict[str, Any]], reviewed_sources)
+        deleted = cast(list[dict[str, Any]], deleted_sources)
+        changed = cast(list[dict[str, Any]], changed_files)
+        sources = [
+            {key: source[key] for key in ("blob_sha", "line_count", "lines", "path")}
+            for source in reviewed
+        ]
+        reviewed_paths = {source["path"] for source in reviewed}
+        changed_paths = {
+            item.get("path")
+            for item in changed
+            if isinstance(item, dict) and item.get("status") != "removed"
+        }
+        deleted_paths = {
+            source.get("path")
+            for source in deleted
+            if isinstance(source, dict)
+            and isinstance(source.get("path"), str)
+            and any(source["path"].lower().endswith(ext) for ext in REVIEWED_SUFFIXES)
+        }
+        allowed = (changed_paths & deleted_paths) - reviewed_paths
+        requested: dict[str, list[tuple[int, int]]] = {}
+        for path, start, end in completion_citations(report):
+            if path in allowed and end - start < 2_500:
+                requested.setdefault(path, []).append((start, end))
+        used = sum(len(source["lines"]) for source in sources)
+        for path, ranges in sorted(requested.items()):
+            source = self._completion_source(repository, head_sha, path, ranges, token)
+            if source is not None and used + len(source["lines"]) <= 2_500:
+                sources.append(source)
+                used += len(source["lines"])
+        return sources
+
+    def _completion_source(
+        self,
+        repository: str,
+        head_sha: str,
+        path: str,
+        ranges: list[tuple[int, int]],
+        token: str,
+    ) -> dict[str, Any] | None:
+        result = self._request(
+            "GET",
+            f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
+            f"?ref={urllib.parse.quote(head_sha)}",
+            token,
+        )
+        blob_sha = result.get("sha") if isinstance(result, dict) else None
+        if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        content = self._blob_content(repository, blob_sha, token)
+        lines = content.splitlines()
+        selected = sorted(
+            {
+                number
+                for start, end in ranges
+                if 1 <= start <= end <= len(lines)
+                for number in range(start, end + 1)
+            }
+        )
+        if not selected:
+            return None
+        return {
+            "blob_sha": blob_sha,
+            "line_count": len(lines),
+            "lines": [{"line": number, "text": lines[number - 1]} for number in selected],
+            "path": path,
         }
 
     def _refactor_context(

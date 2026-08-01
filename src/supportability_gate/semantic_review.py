@@ -367,7 +367,7 @@ def _trusted_verdict(
         report_blocks = evaluate_completion_report(
             evidence.get("completion_report"),
             evidence.get("authoritative_result"),
-            evidence.get("reviewed_sources"),
+            evidence.get("completion_sources"),
             claim_reviews,
         )
     final_findings = (*findings, *report_blocks)

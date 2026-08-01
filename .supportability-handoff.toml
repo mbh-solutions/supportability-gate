@@ -2,27 +2,29 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "841086357261752f815bd6da8cc340ac7307c0e7"
+base_sha = "7397306581026e1e83d20186d49a31c5b2c59461"
 overall_result = "PASS"
 responsibility_changes = [
-    "Semantic evidence now separates exact-head review boundaries from deleted responsibilities identified on the immutable base blob.",
-    "Deletion-only surviving files no longer fabricate a whole-module head boundary; mixed changes retain both head review and base deletion evidence.",
+    "Completion-report citations now use a dedicated exact-head completion_sources channel while semantic ownership remains bound to reviewed_sources.",
+    "Deletion-only surviving production paths can contribute only cited retained head lines when deterministic base deletion evidence and exact changed-path status both authorize the path.",
 ]
 simplified_functions = [
-    "responsibility_spans",
-    "GitHubApp._changed_lines",
-    "GitHubApp._reviewed_source",
-    "GitHubApp._source_boundaries",
-    "GitHubApp._source_evidence",
-    "GitHubApp.evidence_packet",
+    "GitHubApp._completion_source",
+    "GitHubApp._completion_sources",
+    "GitHubApp.m10_evidence_packet",
+    "_review",
+    "_trusted_verdict",
+    "completion_citations",
+    "deterministic_completion_blocks",
+    "evaluate_completion_report",
     "request_payload",
 ]
 boundary_rationale = [
-    "The GitHub adapter remains the sole owner of authenticated base and head blob evidence.",
-    "The semantic verifier still accepts findings and citations only from exact-head reviewed_sources.",
+    "The GitHub adapter remains the sole owner of authenticated changed-path and exact-head blob acquisition.",
+    "Completion citation resolution is separate from semantic ownership, import, boundary, and reviewed-path evidence.",
 ]
 remaining_risks = [
-    "Malformed patches, blob identities, and unparseable source remain fail-closed.",
+    "Malformed, removed, non-source, untouched, oversized, or out-of-range citation targets remain unresolved or technically fail-closed.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -42,11 +44,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-deletion-only-boundaries"
-text = "Deletion-only surviving source files emit no fabricated exact-head boundary and retain parser-derived base-blob identities."
-citations = ["src/supportability_gate/github_app.py:493-542", "src/supportability_gate/function_changes.py:263-290"]
+id = "claim-deletion-only-completion-source"
+text = "Deletion-only surviving production paths contribute only cited exact-head lines after changed-path, source-suffix, base-deletion-identity, blob-hash, range, and size checks."
+citations = ["src/supportability_gate/github_app.py:407-489"]
 
 [[completion_report.claims]]
-id = "claim-mixed-change-review"
-text = "Mixed changes retain exact-head review boundaries while separately identifying removed base responsibilities."
-citations = ["src/supportability_gate/github_app.py:503-542"]
+id = "claim-separate-evidence-channels"
+text = "Completion claims resolve against completion_sources while ownership, imports, boundaries, and reviewed paths remain bound to reviewed_sources."
+citations = ["src/supportability_gate/handoff_policy.py:259-309", "src/supportability_gate/semantic_contract.py:280-300", "src/supportability_gate/semantic_review.py:366-375"]
