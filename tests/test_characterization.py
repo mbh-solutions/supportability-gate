@@ -134,6 +134,7 @@ def _repository(
     add_scenario: bool = False,
     changed_source: bool = False,
     changed_golden: bool = False,
+    deleted_source: bool = False,
     uncovered_high_risk: bool = False,
 ) -> tuple[Path, Path, str, str]:
     repository = tmp_path / "repository"
@@ -156,10 +157,25 @@ def _repository(
     if uncovered_high_risk:
         _write(repository / "src/risk.py", "risk\n")
     scenarios = [_scenario("existing", source_path)]
+    if deleted_source:
+        _write(repository / "src/retained.py", "retained\n")
+        scenarios[0]["covers"] = [source_path, "src/retained.py"]
+        scenarios.append(_scenario("retained", "src/retained.py"))
     _write(repository / characterization.MANIFEST_PATH, _manifest(scenarios))
     _add_scenario_files(repository, "existing", source_path, language, "base\n")
+    if deleted_source:
+        _add_scenario_files(repository, "retained", "src/retained.py", language, "retained\n")
     base_sha = _commit(repository, "base")
     _write(repository / "docs/note.md", "head\n")
+    if deleted_source:
+        (repository / source_path).unlink()
+        extension = "py" if language == "python" else "mjs"
+        (repository / f"tests/characterization/existing.characterization.{extension}").unlink()
+        (repository / "tests/characterization/existing.golden.json").unlink()
+        _write(
+            repository / characterization.MANIFEST_PATH,
+            _manifest([_scenario("retained", "src/retained.py")]),
+        )
     if changed_source:
         _write(repository / source_path, "head\n")
     if changed_golden:
@@ -266,6 +282,18 @@ def test_existing_characterization_passes_with_exact_identity(
     assert result["coverage"]["required_paths"] == [
         "src/sample.py" if language == "python" else "src/sample.ts"
     ]
+
+
+def test_deleted_source_uses_retained_characterization_only(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path, deleted_source=True)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert result["coverage"]["required_paths"] == []
+    assert [item["id"] for item in result["scenarios"]] == ["retained"]
 
 
 def test_new_scenario_runs_against_same_base_and_head(tmp_path: Path) -> None:
