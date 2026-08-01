@@ -276,19 +276,32 @@ def _target_identities(
     targets: list[str] = []
     unbounded: list[str] = []
     for change in changes:
-        path = change.new_path
+        path = change.new_path or change.old_path
         if path is None or not policy.is_production_path(path):
-            if change.old_path and policy.is_production_path(change.old_path):
-                unbounded.append(change.old_path)
             continue
         if not _profile_source(path, policy.language):
             unbounded.append(path)
             continue
-        lines = git_changes.changed_head_lines(
-            repository, identity.base_sha, identity.head_sha, path, records
+        deleted = change.new_path is None
+        commit = identity.base_sha if deleted else identity.head_sha
+        blob = git_changes.read_regular_blob(repository, commit, path, records)
+        lines = (
+            tuple(range(1, len(blob.content.splitlines()) + 1))
+            if deleted
+            else git_changes.changed_head_lines(
+                repository, identity.base_sha, identity.head_sha, path, records
+            )
         )
-        blob = git_changes.read_regular_blob(repository, identity.head_sha, path, records)
-        spans = function_changes.responsibility_spans(path, blob.content, set(lines))
+        if not lines:
+            unbounded.append(path)
+            continue
+        try:
+            spans = function_changes.responsibility_spans(path, blob.content, set(lines))
+        except function_changes.PythonSourceError:
+            if not deleted:
+                raise
+            unbounded.append(path)
+            continue
         targets.extend(
             f"{path}::{item.kind}:{item.name}:{item.start_line}-{item.end_line}" for item in spans
         )
@@ -395,7 +408,15 @@ def verify_refactor(
             blocks.extend(_focus_blocks(authorization, actual_scope, targets, unbounded, policy))
         except RefactorPolicyError as error:
             blocks.append(error.code)
-    production_paths = tuple(sorted({item.split("::", 1)[0] for item in targets}))
+    production_paths = tuple(
+        sorted(
+            {
+                change.new_path
+                for change in changes
+                if change.new_path and policy.is_production_path(change.new_path)
+            }
+        )
+    )
     blocks.extend(
         _characterization_blocks(
             characterization, repository_name, base_sha, head_sha, production_paths

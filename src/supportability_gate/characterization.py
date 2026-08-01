@@ -189,6 +189,7 @@ def _definition_blocks(
     head_sha: str,
     language: str,
     head: Manifest,
+    deleted_paths: set[str],
     records: list[git_changes.CommandRecord],
 ) -> list[str]:
     try:
@@ -200,8 +201,13 @@ def _definition_blocks(
     blocks: list[str] = []
     base_by_id = {item.id: item for item in base.scenarios}
     head_by_id = {item.id: item for item in head.scenarios}
+    head_covered = {path for item in head.scenarios for path in item.covers}
     for identifier in sorted(set(base_by_id) - set(head_by_id)):
-        blocks.append(f"REMOVED_CHARACTERIZATION_SCENARIO:{identifier}")
+        if any(
+            path not in deleted_paths and path not in head_covered
+            for path in base_by_id[identifier].covers
+        ):
+            blocks.append(f"REMOVED_CHARACTERIZATION_SCENARIO:{identifier}")
     for identifier in sorted(set(base_by_id) & set(head_by_id)):
         if base_by_id[identifier] != head_by_id[identifier]:
             blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{identifier}")
@@ -287,21 +293,17 @@ def _artifact_identity_blocks(
 
 
 def _coverage_blocks(
-    repository: Path,
-    base_sha: str,
-    head_sha: str,
     policy: contract.Contract,
     manifest: Manifest,
-    records: list[git_changes.CommandRecord],
+    changes: tuple[git_changes.ChangedPath, ...],
+    deleted_paths: set[str],
 ) -> tuple[list[str], list[str], list[str]]:
-    changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
     changed = {
-        path
+        item.new_path
         for item in changes
-        for path in (item.old_path, item.new_path)
-        if path and policy.is_production_path(path)
+        if item.new_path and policy.is_production_path(item.new_path)
     }
-    required = sorted(changed | set(policy.high_risk_paths))
+    required = sorted(changed | (set(policy.high_risk_paths) - deleted_paths))
     covered = sorted({path for item in manifest.scenarios for path in item.covers})
     blocks = [
         f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered
@@ -440,6 +442,12 @@ def verify_evidence(
         repository, base_sha, ".supportability.toml", records
     )
     policy = contract.parse_contract(policy_blob.content)
+    changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
+    deleted_paths = {
+        item.old_path
+        for item in changes
+        if item.old_path and item.new_path is None and policy.is_production_path(item.old_path)
+    }
     manifest = _manifest(repository, head_sha, records)
     base, base_error = _load_capture(base_path, "MISSING_BASELINE")
     head, head_error = _load_capture(head_path, "HEAD_ONLY_CHARACTERIZATION_CLAIM")
@@ -464,11 +472,17 @@ def verify_evidence(
     )
     blocks.extend((*base_blocks, *head_blocks))
     blocks.extend(
-        _definition_blocks(repository, base_sha, head_sha, policy.language, manifest, records)
+        _definition_blocks(
+            repository,
+            base_sha,
+            head_sha,
+            policy.language,
+            manifest,
+            deleted_paths,
+            records,
+        )
     )
-    coverage_blocks, required, covered = _coverage_blocks(
-        repository, base_sha, head_sha, policy, manifest, records
-    )
+    coverage_blocks, required, covered = _coverage_blocks(policy, manifest, changes, deleted_paths)
     blocks.extend(coverage_blocks)
     if (
         not base_artifact_id.isdecimal()

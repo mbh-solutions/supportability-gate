@@ -293,6 +293,111 @@ def test_missing_owner_authorization_blocks(tmp_path: Path) -> None:
     assert result["policy_blocks"] == ["MISSING_OWNER_AUTHORIZATION"]
 
 
+def test_exact_authorized_python_deletion_uses_base_responsibilities(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    (repository / "src/sample.py").unlink()
+    head_sha = _commit(repository, "delete")
+    path = "src/sample.py"
+    target = f"{path}::function:calculate:1-2"
+    event = _event(
+        base_sha,
+        head_sha,
+        _authorization(base_sha, head_sha, [path], [target]),
+    )
+
+    first = _verify(repository, event, _characterization(base_sha, head_sha, []))
+    second = _verify(repository, event, _characterization(base_sha, head_sha, []))
+
+    assert first == second
+    assert first["overall_result"] == "PASS"
+    assert first["targets"] == [target]
+    assert first["unbounded_paths"] == []
+
+
+def test_existing_addition_enforcement_is_unchanged(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    path = "src/added.py"
+    _write(repository / path, "def normalize(value: int) -> int:\n    return value + 1\n")
+    head_sha = _commit(repository, "add")
+    target = f"{path}::function:normalize:1-2"
+    event = _event(
+        base_sha,
+        head_sha,
+        _authorization(base_sha, head_sha, [path], [target]),
+    )
+
+    result = _verify(repository, event, _characterization(base_sha, head_sha, [path]))
+
+    assert result["overall_result"] == "PASS"
+    assert result["targets"] == [target]
+
+
+@pytest.mark.parametrize(
+    ("defect", "code"),
+    [
+        ("missing", "MISSING_OWNER_AUTHORIZATION"),
+        ("head", "STALE_OWNER_AUTHORIZATION"),
+        ("scope", "UNFOCUSED_DIFF_SCOPE"),
+        ("target", "UNVERIFIABLE_BOUNDED_TARGET"),
+        ("sequence", "INVALID_STRANGLER_SEQUENCE"),
+    ],
+)
+def test_python_deletion_authorization_remains_exact(
+    tmp_path: Path, defect: str, code: str
+) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    (repository / "src/sample.py").unlink()
+    head_sha = _commit(repository, "delete")
+    path = "src/sample.py"
+    target = f"{path}::function:calculate:1-2"
+    body = None
+    if defect != "missing":
+        body = _authorization(
+            base_sha,
+            "f" * 40 if defect == "head" else head_sha,
+            ["docs/outside.md"] if defect == "scope" else [path],
+            [f"{path}::function:wrong:1-2"] if defect == "target" else [target],
+            predecessor_sha="e" * 40 if defect == "sequence" else base_sha,
+        )
+
+    result = _verify(
+        repository,
+        _event(base_sha, head_sha, body),
+        _characterization(base_sha, head_sha, []),
+    )
+
+    assert code in result["policy_blocks"]
+
+
+@pytest.mark.parametrize(
+    ("path", "content"),
+    [("src/data.bin", "data\n"), ("src/broken.py", "def broken(:\n")],
+)
+def test_unbounded_deleted_production_files_fail_closed(
+    tmp_path: Path, path: str, content: str
+) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    _write(repository / path, content)
+    base_sha = _commit(repository, "unbounded base")
+    (repository / path).unlink()
+    head_sha = _commit(repository, "delete unbounded")
+    event = _event(
+        base_sha,
+        head_sha,
+        _authorization(base_sha, head_sha, [path], [f"{path}::module:{path}:1-1"]),
+    )
+
+    result = _verify(repository, event, _characterization(base_sha, head_sha, []))
+
+    assert result["overall_result"] == "BLOCK"
+    assert result["unbounded_paths"] == [path]
+    assert "UNVERIFIABLE_BOUNDED_TARGET" in result["policy_blocks"]
+
+
 def test_non_production_change_is_not_a_refactor(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
