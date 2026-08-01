@@ -2,25 +2,27 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "1271a041452a28e005daadb6ce8a442eb607561d"
+base_sha = "841086357261752f815bd6da8cc340ac7307c0e7"
 overall_result = "PASS"
 responsibility_changes = [
-    "Refactor target discovery now owns deterministic base-blob identities for deleted source files.",
-    "Characterization verification now distinguishes deleted paths from retained paths that still require runnable coverage.",
+    "Semantic evidence now separates exact-head review boundaries from deleted responsibilities identified on the immutable base blob.",
+    "Deletion-only surviving files no longer fabricate a whole-module head boundary; mixed changes retain both head review and base deletion evidence.",
 ]
 simplified_functions = [
-    "_target_identities",
-    "verify_refactor",
-    "_definition_blocks",
-    "_coverage_blocks",
-    "verify_evidence",
+    "responsibility_spans",
+    "GitHubApp._changed_lines",
+    "GitHubApp._reviewed_source",
+    "GitHubApp._source_boundaries",
+    "GitHubApp._source_evidence",
+    "GitHubApp.evidence_packet",
+    "request_payload",
 ]
 boundary_rationale = [
-    "Existing refactor authorization remains the sole owner of exact repository, commit, sequence, scope, and target approval.",
-    "Existing characterization verification remains the sole owner of retained-behavior proof.",
+    "The GitHub adapter remains the sole owner of authenticated base and head blob evidence.",
+    "The semantic verifier still accepts findings and citations only from exact-head reviewed_sources.",
 ]
 remaining_risks = [
-    "Deleted non-source, empty, or unparseable production files intentionally remain fail-closed as unbounded targets.",
+    "Malformed patches, blob identities, and unparseable source remain fail-closed.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -40,11 +42,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-deleted-base-identities"
-text = "Deleted source responsibilities are parsed from the immutable base blob; empty or unparseable deletions remain unbounded."
-citations = ["src/supportability_gate/refactor_policy.py:278-308"]
+id = "claim-deletion-only-boundaries"
+text = "Deletion-only surviving source files emit no fabricated exact-head boundary and retain parser-derived base-blob identities."
+citations = ["src/supportability_gate/github_app.py:493-542", "src/supportability_gate/function_changes.py:263-290"]
 
 [[completion_report.claims]]
-id = "claim-retained-characterization"
-text = "A removed characterization scenario is accepted only when every covered path was deleted or remains covered by a surviving scenario."
-citations = ["src/supportability_gate/characterization.py:201-210"]
+id = "claim-mixed-change-review"
+text = "Mixed changes retain exact-head review boundaries while separately identifying removed base responsibilities."
+citations = ["src/supportability_gate/github_app.py:503-542"]

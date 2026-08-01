@@ -38,7 +38,7 @@ from supportability_gate.semantic_contract import (
 API = "https://api.github.com"
 CHECK_NAME = "Supportability Semantic Review"
 REVIEWED_SUFFIXES = frozenset({".py", ".ts", ".tsx"})
-HUNK_PATTERN = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+HUNK_PATTERN = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
 HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
 MAX_HANDOFF_BYTES = 5_000_000
@@ -212,7 +212,9 @@ class GitHubApp:
         if not isinstance(number, int):
             raise SemanticReviewError("MALFORMED_PULL_REQUEST")
         _, files = self._comparison_evidence(repository, str(base_sha), str(head_sha), token)
-        reviewed_sources = self._reviewed_sources(repository, str(base_sha), files, token)
+        reviewed_sources, deleted_sources = self._source_evidence(
+            repository, str(base_sha), files, token
+        )
         review_diff = self._review_diff(files)
         comments = self.issue_comments(repository, number, token)
         return EvidencePacket(
@@ -222,6 +224,7 @@ class GitHubApp:
             self.app_id,
             {
                 "diff": review_diff,
+                "deleted_sources": deleted_sources,
                 "pull_request": number,
                 "refactor_context": self._refactor_context(pull, files, comments),
                 "reviewed_sources": reviewed_sources,
@@ -487,23 +490,56 @@ class GitHubApp:
         ):
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
 
-    def _reviewed_sources(
+    def _source_evidence(
         self,
         repository: str,
         base_sha: str,
         files: tuple[dict[str, Any], ...],
         token: str,
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         candidates = self._source_candidates(files)
         if not candidates:
-            return []
+            return [], []
         production_paths = self._production_paths(repository, base_sha, token)
+        production = self._production_candidates(candidates, production_paths)
         sources = [
-            self._reviewed_source(repository, item, token)
-            for item in self._production_candidates(candidates, production_paths)
+            source
+            for item in production
+            if (source := self._reviewed_source(repository, item, token)) is not None
         ]
+        deleted = []
+        for item in production:
+            patch = item.get("patch")
+            if not isinstance(patch, str) or not patch:
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+            if not self._changed_lines(patch, "-"):
+                continue
+            path = item.get("previous_filename", item["filename"])
+            if not isinstance(path, str):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            result = self._request(
+                "GET",
+                f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
+                f"?ref={urllib.parse.quote(base_sha)}",
+                token,
+            )
+            blob_sha = result.get("sha") if isinstance(result, dict) else None
+            if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            content = self._blob_content(repository, blob_sha, token)
+            boundaries = self._source_boundaries(path, content, patch, "-")
+            if not boundaries:
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+            deleted.append(
+                {
+                    "blob_sha": blob_sha,
+                    "boundaries": boundaries,
+                    "line_count": len(content.splitlines()),
+                    "path": path,
+                }
+            )
         self._validate_review_size(sources)
-        return sources
+        return sources, deleted
 
     def _production_candidates(
         self, candidates: tuple[dict[str, Any], ...], production_paths: tuple[str, ...]
@@ -531,7 +567,9 @@ class GitHubApp:
                 candidates.append(item)
         return tuple(sorted(candidates, key=lambda item: str(item["filename"])))
 
-    def _reviewed_source(self, repository: str, item: dict[str, Any], token: str) -> dict[str, Any]:
+    def _reviewed_source(
+        self, repository: str, item: dict[str, Any], token: str
+    ) -> dict[str, Any] | None:
         path, blob_sha, patch = item["filename"], item.get("sha"), item.get("patch")
         if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
@@ -539,6 +577,8 @@ class GitHubApp:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         content = self._blob_content(repository, blob_sha, token)
         boundaries = self._source_boundaries(path, content, patch)
+        if not boundaries:
+            return None
         return {
             "boundaries": boundaries,
             "blob_sha": blob_sha,
@@ -551,9 +591,12 @@ class GitHubApp:
             "path": path,
         }
 
-    def _source_boundaries(self, path: str, content: str, patch: str) -> list[SourceBoundary]:
+    def _source_boundaries(
+        self, path: str, content: str, patch: str, side: str = "+"
+    ) -> list[SourceBoundary]:
+        changed_lines = self._changed_lines(patch, side)
         try:
-            spans = responsibility_spans(path, content.encode(), self._changed_lines(patch))
+            spans = responsibility_spans(path, content.encode(), changed_lines)
         except PythonSourceError as error:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
         boundaries: list[SourceBoundary] = [
@@ -565,22 +608,22 @@ class GitHubApp:
             }
             for span in spans
         ]
-        if not boundaries:
-            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return boundaries
 
-    def _changed_lines(self, patch: str) -> set[int]:
+    def _changed_lines(self, patch: str, side: str = "+") -> set[int]:
         changed: set[int] = set()
-        head_line: int | None = None
+        line_number: int | None = None
+        group = 3 if side == "+" else 1
+        opposite = "-" if side == "+" else "+"
         for line in patch.splitlines():
             match = HUNK_PATTERN.match(line)
             if match:
-                head_line = int(match.group(1))
-            elif head_line is not None and line.startswith("+"):
-                changed.add(head_line)
-                head_line += 1
-            elif head_line is not None and not line.startswith("-"):
-                head_line += 1
+                line_number = int(match.group(group))
+            elif line_number is not None:
+                if line.startswith(side):
+                    changed.add(line_number)
+                if not line.startswith(opposite) and not line.startswith("\\"):
+                    line_number += 1
         return changed
 
     def _source_excerpt(
