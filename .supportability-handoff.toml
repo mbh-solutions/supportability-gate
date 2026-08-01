@@ -10,10 +10,13 @@ responsibility_changes = [
 ]
 simplified_functions = [
     "responsibility_spans",
-    "_source_evidence",
-    "_reviewed_source",
-    "_deleted_source",
-    "_changed_lines",
+    "GitHubApp._changed_lines",
+    "GitHubApp._deleted_source",
+    "GitHubApp._reviewed_source",
+    "GitHubApp._source_boundaries",
+    "GitHubApp._source_evidence",
+    "GitHubApp.evidence_packet",
+    "request_payload",
 ]
 boundary_rationale = [
     "The GitHub adapter remains the sole owner of authenticated base and head blob evidence.",
@@ -47,4 +50,4 @@ citations = ["src/supportability_gate/github_app.py:493-623", "src/supportabilit
 [[completion_report.claims]]
 id = "claim-mixed-change-review"
 text = "Mixed changes retain exact-head review boundaries while separately identifying removed base responsibilities."
-citations = ["src/supportability_gate/github_app.py:503-516", "tests/test_github_app.py:433-479"]
+citations = ["src/supportability_gate/github_app.py:503-516", "src/supportability_gate/github_app.py:568-601"]
