@@ -156,6 +156,40 @@ def test_m10_packet_skips_completion_report_for_nonproduction_diff(
     assert app.m10_evidence_packet("mbh-solutions/supportability-gate", {}, "token") is packet
 
 
+def test_m10_packet_collects_completion_evidence_for_deletion_only_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = EvidencePacket(
+        "mbh-solutions/supportability-gate",
+        "a" * 40,
+        "b" * 40,
+        42,
+        {
+            "deleted_sources": [{"path": "src/a.py"}],
+            "pull_request": 3,
+            "refactor_context": {"changed_files": [{"path": "src/a.py", "status": "modified"}]},
+            "reviewed_sources": [],
+        },
+    )
+    app = GitHubApp(42, 7, b"unused")
+    monkeypatch.setattr(app, "evidence_packet", lambda *args: packet)
+    monkeypatch.setattr(app, "_handoff_evidence", lambda *args: {"authoritative_result": {}})
+    monkeypatch.setattr(
+        app,
+        "_completion_report",
+        lambda *args: {"completion_report": {"claims": []}},
+    )
+    monkeypatch.setattr(
+        app,
+        "_completion_sources",
+        lambda *args: [{"path": "src/a.py", "lines": []}],
+    )
+
+    result = app.m10_evidence_packet("mbh-solutions/supportability-gate", {}, "token")
+
+    assert result.evidence["completion_sources"] == [{"lines": [], "path": "src/a.py"}]
+
+
 def test_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
     run = {
         "conclusion": "failure",
@@ -430,6 +464,116 @@ def test_deletion_only_surviving_source_uses_base_identity_without_head_boundary
     ]
 
 
+def test_deletion_only_completion_citation_uses_exact_head_lines_without_boundary() -> None:
+    head = b"def keep():\n    return 1\n"
+    head_blob = _blob_sha(head)
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/contents/src/a.py?ref=" in request.full_url:
+            return _Reply({"sha": head_blob})
+        return _Reply(_blob_payload(head))
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    sources = app._completion_sources(
+        "mbh-solutions/supportability-gate",
+        "b" * 40,
+        {
+            "claims": [
+                {
+                    "citations": ["src/a.py:1-2"],
+                    "id": "retained-behavior",
+                    "text": "keep still returns one.",
+                }
+            ]
+        },
+        [],
+        [{"blob_sha": "a" * 40, "boundaries": [], "path": "src/a.py"}],
+        [{"path": "src/a.py", "status": "modified"}],
+        "token",
+    )
+
+    assert sources == [
+        {
+            "blob_sha": head_blob,
+            "line_count": 2,
+            "lines": [
+                {"line": 1, "text": "def keep():"},
+                {"line": 2, "text": "    return 1"},
+            ],
+            "path": "src/a.py",
+        }
+    ]
+
+
+def test_completion_sources_reject_unbounded_paths_and_ranges() -> None:
+    report = {
+        "claims": [{"citations": ["src/a.py:1-2"], "id": "claim", "text": "retained behavior"}]
+    }
+    no_request = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: pytest.fail("unbounded citation must not be fetched"),
+    )
+    cases = (
+        (report, [], [{"path": "src/a.py", "status": "modified"}]),
+        (report, [{"path": "src/a.py"}], [{"path": "src/a.py", "status": "removed"}]),
+        (
+            {"claims": [{"citations": ["src/a.txt:1-2"], "id": "claim", "text": "text"}]},
+            [{"path": "src/a.txt"}],
+            [{"path": "src/a.txt", "status": "modified"}],
+        ),
+        (
+            {"claims": [{"citations": ["src/a.py:1-2501"], "id": "claim", "text": "too large"}]},
+            [{"path": "src/a.py"}],
+            [{"path": "src/a.py", "status": "modified"}],
+        ),
+        (
+            {"claims": [{"citations": ["not-a-citation"], "id": "claim", "text": "bad"}]},
+            [{"path": "src/a.py"}],
+            [{"path": "src/a.py", "status": "modified"}],
+        ),
+    )
+    for candidate, deleted, changed in cases:
+        assert (
+            no_request._completion_sources(
+                "mbh-solutions/supportability-gate",
+                "b" * 40,
+                candidate,
+                [],
+                deleted,
+                changed,
+                "token",
+            )
+            == []
+        )
+
+    head = b"def keep():\n    return 1\n"
+    head_blob = _blob_sha(head)
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda request, **kwargs: (
+            _Reply({"sha": head_blob})
+            if "/contents/" in request.full_url
+            else _Reply(_blob_payload(head))
+        ),
+    )
+    assert (
+        app._completion_sources(
+            "mbh-solutions/supportability-gate",
+            "b" * 40,
+            {"claims": [{"citations": ["src/a.py:9-10"], "id": "claim", "text": "bad"}]},
+            [],
+            [{"path": "src/a.py"}],
+            [{"path": "src/a.py", "status": "modified"}],
+            "token",
+        )
+        == []
+    )
+
+
 def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibilities() -> None:
     base = b"def keep():\n    return 1\n\ndef obsolete():\n    return 2\n"
     head = b"def keep():\n    return 3\n"
@@ -474,6 +618,25 @@ def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibi
         {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1},
         {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
         {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
+    ]
+    assert app._completion_sources(
+        "mbh-solutions/supportability-gate",
+        "b" * 40,
+        {"claims": [{"citations": ["src/a.py:1-2"], "id": "claim", "text": "keep returns three"}]},
+        packet.evidence["reviewed_sources"],
+        packet.evidence["deleted_sources"],
+        [{"path": "src/a.py", "status": "modified"}],
+        "token",
+    ) == [
+        {
+            "blob_sha": head_blob,
+            "line_count": 2,
+            "lines": [
+                {"line": 1, "text": "def keep():"},
+                {"line": 2, "text": "    return 3"},
+            ],
+            "path": "src/a.py",
+        }
     ]
 
 

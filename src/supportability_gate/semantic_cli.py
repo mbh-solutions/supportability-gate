@@ -58,9 +58,12 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         deterministic_completion_blocks(
             evidence.get("completion_report"),
             evidence.get("authoritative_result"),
-            evidence.get("reviewed_sources"),
+            evidence.get("completion_sources"),
         )
-        if evidence.get("reviewed_sources")
+        if any(
+            evidence.get(key)
+            for key in ("completion_sources", "reviewed_sources", "deleted_sources")
+        )
         else ()
     )
     pull_number = evidence.get("pull_request")

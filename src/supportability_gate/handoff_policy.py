@@ -77,6 +77,22 @@ def _source_lines(sources: object) -> dict[str, frozenset[int]]:
     return indexed
 
 
+def completion_citations(report: object) -> tuple[tuple[str, int, int], ...]:
+    """Return well-formed completion claim citations in deterministic order."""
+    if not isinstance(report, dict) or not isinstance(report.get("claims"), list):
+        return ()
+    citations: set[tuple[str, int, int]] = set()
+    for claim in report["claims"]:
+        values = claim.get("citations") if isinstance(claim, dict) else None
+        for citation in values if isinstance(values, list) else []:
+            match = _CITATION.fullmatch(citation) if isinstance(citation, str) else None
+            if match is not None:
+                path, start, end = match.groups()
+                if int(start) <= int(end):
+                    citations.add((path, int(start), int(end)))
+    return tuple(sorted(citations))
+
+
 def _citation_resolves(citation: object, sources: dict[str, frozenset[int]]) -> bool:
     if not isinstance(citation, str) or (match := _CITATION.fullmatch(citation)) is None:
         return False
@@ -243,7 +259,7 @@ def _review_blocks(
 def deterministic_completion_blocks(
     report: object,
     authoritative: object,
-    reviewed_sources: object,
+    completion_sources: object,
 ) -> tuple[str, ...]:
     """Return machine-resolvable M10 completion-report blocks."""
     if not isinstance(report, dict) or not isinstance(authoritative, dict):
@@ -266,23 +282,23 @@ def deterministic_completion_blocks(
     blocks.extend(_result_blocks(report, authoritative))
     blocks.extend(_risk_blocks(report["remaining_risks"]))
     blocks.extend(_command_blocks(report, authoritative))
-    _claims(report["claims"], _source_lines(reviewed_sources), blocks)
+    _claims(report["claims"], _source_lines(completion_sources), blocks)
     return tuple(sorted(set(blocks)))
 
 
 def evaluate_completion_report(
     report: object,
     authoritative: object,
-    reviewed_sources: object,
+    completion_sources: object,
     claim_reviews: tuple[ClaimReview, ...],
 ) -> tuple[str, ...]:
     """Return deterministic and model-backed M10 report blocks."""
-    blocks = list(deterministic_completion_blocks(report, authoritative, reviewed_sources))
+    blocks = list(deterministic_completion_blocks(report, authoritative, completion_sources))
     if not isinstance(report, dict):
         return tuple(blocks)
     claims: list[str] = []
     indexed: dict[str, tuple[str, ...]] = {}
-    _claims(report.get("claims"), _source_lines(reviewed_sources), claims)
+    _claims(report.get("claims"), _source_lines(completion_sources), claims)
     raw_claims = report.get("claims")
     for item in raw_claims if isinstance(raw_claims, list) else []:
         if isinstance(item, dict) and isinstance(item.get("id"), str):

@@ -71,6 +71,7 @@ def _packet(evidence: dict[str, object] | None = None) -> EvidencePacket:
     }
     if evidence:
         payload.update(evidence)
+    payload.setdefault("completion_sources", payload["reviewed_sources"])
     return EvidencePacket(
         "mbh-solutions/supportability-gate",
         "a" * 40,
@@ -231,6 +232,25 @@ def test_exact_m10_packet_binds_response_model_status_hash_and_parser_result() -
         "completed",
         "PASS",
     )
+
+
+def test_deletion_only_completion_source_does_not_create_reviewed_path() -> None:
+    packet = _m10_packet("Retained parsing behavior remains source-backed.")
+    evidence = packet.evidence
+    evidence["reviewed_sources"] = []
+    packet = EvidencePacket(
+        packet.repository,
+        packet.base_sha,
+        packet.head_sha,
+        packet.app_id,
+        evidence,
+    )
+
+    verdict = parse_response(packet, _response(packet, reviewed_paths=[], boundaries=[]))
+
+    assert verdict.verdict == "PASS"
+    assert verdict.reviewed_paths == ()
+    assert verdict.boundaries == ()
 
 
 def test_m10_unsupported_well_formed_claim_is_visible_block() -> None:
@@ -665,6 +685,7 @@ def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
     assert (
         "Trusted imports are only imports listed under reviewed_sources" in payload["instructions"]
     )
+    assert "completion_sources binds completion-report citations only" in payload["instructions"]
     assert "fresh head without a trusted verdict" not in payload["instructions"]
     assert "BLOCK contradictory coverage observations" not in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()
