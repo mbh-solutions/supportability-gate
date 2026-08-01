@@ -289,10 +289,12 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "and certainty; otherwise BLOCK or UNCERTAIN. Copy "
         "every binding exactly. Trusted imports are only imports listed under reviewed_sources; "
         "copy each into architecture_citations and return an empty list when none are listed. "
-        "reviewed_paths binds every changed production path. Explain the "
+        "reviewed_paths binds every changed production path with added or modified head "
+        "responsibilities. deleted_sources binds removed responsibilities to exact base blobs; "
+        "never fabricate head boundaries or findings from those base-only identities. Explain the "
         "resulting dependency direction."
-        " Removed files have no exact-head boundary and are intentionally absent from reviewed_sources; "
-        "do not block solely because a removed path is absent."
+        " Removed files and deletion-only surviving files have no exact-head boundary and are "
+        "intentionally absent from reviewed_sources; do not block solely because such a path is absent."
     )
     bindings = {
         "app_id": packet.app_id,

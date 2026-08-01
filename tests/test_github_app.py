@@ -381,6 +381,102 @@ def test_frontend_component_boundary_uses_complete_parser_span() -> None:
     assert [item["line"] for item in app._source_excerpt(source, boundaries)] == [1, 2, 3, 4]
 
 
+def test_deletion_only_surviving_source_uses_base_identity_without_head_boundary() -> None:
+    base = b"def keep():\n    return 1\n\ndef obsolete():\n    return 2\n"
+    head = b"def keep():\n    return 1\n"
+    base_blob, head_blob, contract_blob = map(_blob_sha, (base, head, CONTRACT))
+    patch = "@@ -1,5 +1,2 @@\n def keep():\n     return 1\n-\n-def obsolete():\n-    return 2"
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/issues/3/comments" in request.full_url:
+            return _Reply([])
+        if "/contents/.supportability.toml" in request.full_url:
+            return _Reply({"sha": contract_blob})
+        if "/contents/src/a.py?ref=" in request.full_url:
+            return _Reply({"sha": base_blob})
+        for content in (CONTRACT, base, head):
+            if request.full_url.endswith(f"/git/blobs/{_blob_sha(content)}"):
+                return _Reply(_blob_payload(content))
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply(f"diff --git a/src/a.py b/src/a.py\n{patch}")
+        return _Reply(
+            {
+                "files": [
+                    {
+                        "filename": "src/a.py",
+                        "patch": patch,
+                        "sha": head_blob,
+                        "status": "modified",
+                    }
+                ]
+            }
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+
+    assert packet.evidence["reviewed_sources"] == []
+    assert packet.evidence["deleted_sources"] == [
+        {
+            "blob_sha": base_blob,
+            "boundaries": [
+                {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
+                {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
+            ],
+            "line_count": 5,
+            "path": "src/a.py",
+        }
+    ]
+
+
+def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibilities() -> None:
+    base = b"def keep():\n    return 1\n\ndef obsolete():\n    return 2\n"
+    head = b"def keep():\n    return 3\n"
+    base_blob, head_blob, contract_blob = map(_blob_sha, (base, head, CONTRACT))
+    patch = "@@ -1,5 +1,2 @@\n def keep():\n-    return 1\n-\n-def obsolete():\n-    return 2\n+    return 3"
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        if "/issues/3/comments" in request.full_url:
+            return _Reply([])
+        if "/contents/.supportability.toml" in request.full_url:
+            return _Reply({"sha": contract_blob})
+        if "/contents/src/a.py?ref=" in request.full_url:
+            return _Reply({"sha": base_blob})
+        for content in (CONTRACT, base, head):
+            if request.full_url.endswith(f"/git/blobs/{_blob_sha(content)}"):
+                return _Reply(_blob_payload(content))
+        if request.get_header("Accept") == "application/vnd.github.v3.diff":
+            return _RawReply(f"diff --git a/src/a.py b/src/a.py\n{patch}")
+        return _Reply(
+            {
+                "files": [
+                    {
+                        "filename": "src/a.py",
+                        "patch": patch,
+                        "sha": head_blob,
+                        "status": "modified",
+                    }
+                ]
+            }
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
+
+    assert packet.evidence["reviewed_sources"][0]["boundaries"] == [
+        {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1}
+    ]
+    deleted = packet.evidence["deleted_sources"][0]
+    assert deleted["blob_sha"] == base_blob
+    assert deleted["boundaries"] == [
+        {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1},
+        {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
+        {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
+    ]
+
+
 @pytest.mark.parametrize(
     "diff",
     [
