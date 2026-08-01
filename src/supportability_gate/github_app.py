@@ -507,11 +507,37 @@ class GitHubApp:
             for item in production
             if (source := self._reviewed_source(repository, item, token)) is not None
         ]
-        deleted = [
-            source
-            for item in production
-            if (source := self._deleted_source(repository, base_sha, item, token)) is not None
-        ]
+        deleted = []
+        for item in production:
+            patch = item.get("patch")
+            if not isinstance(patch, str) or not patch:
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+            if not self._changed_lines(patch, "-"):
+                continue
+            path = item.get("previous_filename", item["filename"])
+            if not isinstance(path, str):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            result = self._request(
+                "GET",
+                f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
+                f"?ref={urllib.parse.quote(base_sha)}",
+                token,
+            )
+            blob_sha = result.get("sha") if isinstance(result, dict) else None
+            if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            content = self._blob_content(repository, blob_sha, token)
+            boundaries = self._source_boundaries(path, content, patch, "-")
+            if not boundaries:
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+            deleted.append(
+                {
+                    "blob_sha": blob_sha,
+                    "boundaries": boundaries,
+                    "line_count": len(content.splitlines()),
+                    "path": path,
+                }
+            )
         self._validate_review_size(sources)
         return sources, deleted
 
@@ -562,41 +588,6 @@ class GitHubApp:
             ],
             "line_count": len(content.splitlines()),
             "lines": self._source_excerpt(content, boundaries),
-            "path": path,
-        }
-
-    def _deleted_source(
-        self,
-        repository: str,
-        base_sha: str,
-        item: dict[str, Any],
-        token: str,
-    ) -> dict[str, Any] | None:
-        patch = item.get("patch")
-        if not isinstance(patch, str) or not patch:
-            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-        if not self._changed_lines(patch, "-"):
-            return None
-        path = item.get("previous_filename", item["filename"])
-        if not isinstance(path, str):
-            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-        result = self._request(
-            "GET",
-            f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
-            f"?ref={urllib.parse.quote(base_sha)}",
-            token,
-        )
-        blob_sha = result.get("sha") if isinstance(result, dict) else None
-        if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
-            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-        content = self._blob_content(repository, blob_sha, token)
-        boundaries = self._source_boundaries(path, content, patch, "-")
-        if not boundaries:
-            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-        return {
-            "blob_sha": blob_sha,
-            "boundaries": boundaries,
-            "line_count": len(content.splitlines()),
             "path": path,
         }
 

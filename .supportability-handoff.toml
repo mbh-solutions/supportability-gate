@@ -11,7 +11,6 @@ responsibility_changes = [
 simplified_functions = [
     "responsibility_spans",
     "GitHubApp._changed_lines",
-    "GitHubApp._deleted_source",
     "GitHubApp._reviewed_source",
     "GitHubApp._source_boundaries",
     "GitHubApp._source_evidence",
@@ -45,9 +44,9 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-deletion-only-boundaries"
 text = "Deletion-only surviving source files emit no fabricated exact-head boundary and retain parser-derived base-blob identities."
-citations = ["src/supportability_gate/github_app.py:493-623", "src/supportability_gate/function_changes.py:263-290"]
+citations = ["src/supportability_gate/github_app.py:493-542", "src/supportability_gate/function_changes.py:263-290"]
 
 [[completion_report.claims]]
 id = "claim-mixed-change-review"
 text = "Mixed changes retain exact-head review boundaries while separately identifying removed base responsibilities."
-citations = ["src/supportability_gate/github_app.py:503-516", "src/supportability_gate/github_app.py:568-601"]
+citations = ["src/supportability_gate/github_app.py:503-542"]
