@@ -665,9 +665,9 @@ workflow, check-run, ruleset, or GitHub state supports them.
   - Concurrency fix commit `beafd8bd8f0fae51ebd4f29778f9c3db7249b8d1` confines model evaluation
     and verdict completion to scheduled reconciliation; webhook workers only invalidate current
     state, so they cannot share a pending check as competing evaluators.
-  - Exclusive-owner fix commit `10b0a668bdea25b7d85883708be95f4a4130b3fb` gives each scheduled
-    evaluator a unique candidate check; only the lowest check ID evaluates, while later candidates
-    retire neutral and return non-green for retry.
+  - Serialization fix commit `811bda388473051f6eb754cf77a5e5b317ce4e40` holds one OS advisory
+    lock across scheduled full reconciliation; a concurrent process fails non-green before evidence,
+    model, or check mutation, and the lock releases automatically when its process exits.
   - Direct focused tests prove same-head invalidation, state change during evaluation, duplicate and
     out-of-order delivery, missed-delivery reconciliation, authentication and malformed-event
     failure, GitHub outage, publication failure, immediate base/head/current-state binding, and a
