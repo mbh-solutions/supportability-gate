@@ -631,14 +631,37 @@ workflow, check-run, ruleset, or GitHub state supports them.
     Dependency Graph workflow ID `311554933` remained active and independent.
 - Remaining work: None. All five frozen milestones are complete; stop and await owner authorization.
 
+## Critical maintenance — Project #6
+
+- S01 Review-state evidence contract: `COMPLETE` upon protected merge of PR #70; Evidence
+  `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #66 under Project #6; parent #65 remains tracking-only.
+- Completion evidence:
+  - Implementation commit `9a0816d08dc034b91eb6b6912351442464874916` on protected PR #70
+    retrieves every review, review thread, inline review comment, and retained top-level pull-request
+    comment with complete REST and GraphQL pagination. Authenticated actor and GitHub App identity,
+    commit, timestamps, body SHA-256, resolution, outdated, and location state bind into canonical
+    `EvidencePacket` bytes.
+  - Exact authenticated TWMN PR #52 snapshot at head
+    `e805c68850c7a669e9b385cb6dbfe41ca11f94a5` contained 4 reviews, 5 threads, 6 inline
+    comments, and 10 top-level comments. Two unresolved threads produced deterministic pre-model
+    BLOCK; normalized packet SHA-256 was
+    `a0dc6cda651fbd0b8585c4de8a5588103ca48802699416478704e53d601e0e75`.
+  - Targeted review-state, GitHub App, and semantic-review suite passed: 91 tests. Pagination beyond
+    100, malformed/incomplete pages, API failure, conflicting identity, App-text spoofing,
+    add/edit/delete/resolve/reopen digest changes, byte determinism, and exact-evidence replay are
+    directly covered.
+- Remaining work: None for S01 after protected PR #70 merge and Project #6 closure readback. S02
+  through S04 remain separately gated and unauthorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: None — Enforcement Milestone 11 complete; stop
-Next milestone authorized: NO — no work is authorized after Enforcement Milestone 11
+Current authorized work: Project #6 S01 only — complete upon protected PR #70 merge; stop
+Next milestone authorized: NO — S02 is not authorized
 ```
 
 ## Milestone transition rules
