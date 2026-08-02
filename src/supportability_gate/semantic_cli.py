@@ -7,8 +7,8 @@ from pathlib import Path
 
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.handoff_policy import deterministic_completion_blocks
-from supportability_gate.review_events import ReviewEvent, parse_review_event
 from supportability_gate.responses_transport import request_response
+from supportability_gate.review_events import ReviewEvent, parse_review_event
 from supportability_gate.semantic_contract import (
     EvidencePacket,
     SemanticReviewError,
