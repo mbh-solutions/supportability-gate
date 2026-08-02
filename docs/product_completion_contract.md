@@ -660,8 +660,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 - Completion evidence:
   - Implementation commit `d388f54872f70321ee950fcfad7a6c65c3f93bbe` authenticates supported
     review-state deliveries, re-fetches current pull-request state, reuses exact-digest pending
-    checks, makes new evidence non-green before model work, and double-reads base, head, and review
-    state before digest-bound completion.
+    checks, makes new evidence non-green without event-path model work, and double-reads base, head,
+    and review state before scheduled digest-bound completion.
   - Direct focused tests prove same-head invalidation, state change during evaluation, duplicate and
     out-of-order delivery, missed-delivery reconciliation, authentication and malformed-event
     failure, GitHub outage, publication failure, immediate base/head/current-state binding, and a

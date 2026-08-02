@@ -7,7 +7,7 @@ overall_result = "PASS"
 responsibility_changes = [
     "review_events authenticates supported review-state deliveries and reduces each payload to repository, pull-request, and delivery identity.",
     "GitHubApp reuses exact-digest pending checks and semantic_cli makes the required result pending before fresh model evaluation.",
-    "Event-driven and scheduled reconciliation both re-fetch current GitHub state, reject stale replay, and re-read base, head, and review state immediately before completion.",
+    "Event processing only invalidates changed current state; scheduled reconciliation alone evaluates, then re-reads base, head, and review state immediately before completion.",
 ]
 simplified_functions = [
     "GitHubApp._check_runs",
@@ -55,7 +55,7 @@ citations = ["src/supportability_gate/review_events.py:29-74"]
 
 [[completion_report.claims]]
 id = "claim-idempotent-current-state-reconciliation"
-text = "Event processing discards mutable event state, fetches the current pull request, and uses the same evaluator as scheduled full reconciliation; exact completed or pending digest bindings make duplicate and out-of-order delivery harmless."
+text = "Event processing discards mutable event state, fetches current evidence, reuses an exact completed verdict or leaves the digest pending, and never calls the model; scheduled full reconciliation alone evaluates pending state, so duplicate and out-of-order deliveries cannot create competing model verdicts."
 citations = ["src/supportability_gate/github_app.py:181-187", "src/supportability_gate/github_app.py:207-239", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:157-186"]
 
 [[completion_report.claims]]

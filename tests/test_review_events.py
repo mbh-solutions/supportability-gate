@@ -122,6 +122,7 @@ def test_duplicate_and_out_of_order_events_reconcile_current_state() -> None:
     class App:
         pulls = 0
         replays = 0
+        pending = 0
 
         def pull(self, *args: object) -> dict[str, object]:
             self.pulls += 1
@@ -137,12 +138,44 @@ def test_duplicate_and_out_of_order_events_reconcile_current_state() -> None:
             self.replays += 1
             return True
 
+        def start_check(self, *args: object) -> int:
+            self.pending += 1
+            return 99
+
     app = App()
     older = ReviewEvent(packet.repository, 67, "older")
     duplicate = ReviewEvent(packet.repository, 67, "duplicate")
     assert semantic_cli.process_review_event(app, "token", duplicate)  # type: ignore[arg-type]
     assert semantic_cli.process_review_event(app, "token", older)  # type: ignore[arg-type]
-    assert (app.pulls, app.replays) == (2, 2)
+    assert (app.pulls, app.replays, app.pending) == (2, 2, 0)
+
+
+def test_new_event_invalidates_without_concurrent_model_evaluation() -> None:
+    packet = _packet("new-event")
+
+    class App:
+        pending: list[str] = []
+
+        def pull(self, *args: object) -> dict[str, object]:
+            return {"number": 67}
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def start_check(self, captured: EvidencePacket, *args: object) -> int:
+            self.pending.append(captured.sha256)
+            return 99
+
+    app = App()
+    event = ReviewEvent(packet.repository, 67, "new")
+    assert not semantic_cli.process_review_event(app, "token", event)  # type: ignore[arg-type]
+    assert app.pending == [packet.sha256]
 
 
 def test_same_head_change_becomes_pending_before_fresh_evaluation(
