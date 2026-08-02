@@ -675,7 +675,35 @@ workflow, check-run, ruleset, or GitHub state supports them.
   - Production runtime, scheduled-task configuration, GitHub App configuration, rulesets, TWMN,
     issue #65, and S03/S04 remain unchanged; S04 retains atomic production cutover ownership.
 - Remaining work: None for S02 after protected merge and Project #6 closure readback. Stop; S03 is
-  not authorized.
+  separately gated.
+- S03 Protected stale-green proof: `COMPLETE` upon protected merge of the pull request closing
+  issue #68; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized corrected issue #68 under Project #6; parent #65 and S04 remain
+  untouched.
+- Completion evidence:
+  - Fresh private non-production repository `mbh-solutions/supportability-s03-proof-20260802`
+    (repository ID `1319911879`) is separate from Supportability Gate and TWMN and is retained
+    through S04. Proof-only rulesets `20224623` and `20224624` have zero bypass actors, native
+    required review-conversation resolution, exact required checks, semantic App ID `4418989`, and
+    workflow pin `0c4c2419d6da486a97acb8e73cac5e91430d2c7b`.
+  - PR #1 proved an earlier exact-head semantic success became unmergeable after an unresolved
+    same-head P1 finding. Signed create, edit, delete, resolve, and reopen events, missed-event
+    reconciliation, duplicate and out-of-order redelivery, and a state change during active
+    evaluation all remained fail-closed under rejected normal merge attempts. After clean state and
+    five exact-head required successes, PR #1 normally merged as
+    `d66f55e94f929849d8e777cbadbe32eaab20a06a`.
+  - PR #4 proved GitHub Actions review submit/edit and owner dismissal, signed delivery with
+    immediate HTTP 202 plus background reconciliation, new-head invalidation, GitHub API failure as
+    `TECHNICAL_FAILURE`, and fresh exact-head recovery. It normally merged only after all five
+    required checks succeeded as `375321bf0eafb4bccd8bc73d175d692e64de0ede`.
+  - Pagination returned pages of 100 and 1 comments; the installed protected runtime normalized all
+    101 into deterministic review-state packet SHA-256
+    `f978c437fba9323ff1d4fff3aeb929a0cbd4da39fb4dd3af37cc35fa337244d0`.
+  - The proof-only runtime and scheduled task remain installed and enabled. Production repositories,
+    installed production runtime, production scheduled task, production rulesets, and S04 were not
+    changed.
+- Remaining work: None for S03 after protected merge and Project #6 closure readback. Retain the
+  proof repository; stop. S04 is not authorized.
 
 ## Product status
 
@@ -683,8 +711,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #6 S02 only — complete upon protected merge and #67 closure; stop
-Next milestone authorized: NO — S03 is not authorized
+Current authorized work: Project #6 S03 only — complete upon protected merge and #68 closure; stop
+Next milestone authorized: NO — S04 is not authorized
 ```
 
 ## Milestone transition rules
