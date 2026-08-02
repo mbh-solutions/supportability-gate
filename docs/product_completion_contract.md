@@ -653,7 +653,23 @@ workflow, check-run, ruleset, or GitHub state supports them.
     add/edit/delete/resolve/reopen digest changes, byte determinism, and exact-evidence replay are
     directly covered.
 - Remaining work: None for S01 after protected PR #70 merge and Project #6 closure readback. S02
-  through S04 remain separately gated and unauthorized.
+  through S04 remain separately gated.
+- S02 Invalidation and stable evaluation: `COMPLETE` upon protected merge of the pull request
+  closing issue #67; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #67 under Project #6; parent #65 and S03/S04 remain untouched.
+- Completion evidence:
+  - Implementation commit `d388f54872f70321ee950fcfad7a6c65c3f93bbe` authenticates supported
+    review-state deliveries, re-fetches current pull-request state, reuses exact-digest pending
+    checks, makes new evidence non-green before model work, and double-reads base, head, and review
+    state before digest-bound completion.
+  - Direct focused tests prove same-head invalidation, state change during evaluation, duplicate and
+    out-of-order delivery, missed-delivery reconciliation, authentication and malformed-event
+    failure, GitHub outage, publication failure, immediate base/head/current-state binding, and a
+    fresh digest-bound verdict.
+  - Production runtime, scheduled-task configuration, GitHub App configuration, rulesets, TWMN,
+    issue #65, and S03/S04 remain unchanged; S04 retains atomic production cutover ownership.
+- Remaining work: None for S02 after protected merge and Project #6 closure readback. Stop; S03 is
+  not authorized.
 
 ## Product status
 
@@ -661,8 +677,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #6 S01 only — complete upon protected PR #70 merge; stop
-Next milestone authorized: NO — S02 is not authorized
+Current authorized work: Project #6 S02 only — complete upon protected merge and #67 closure; stop
+Next milestone authorized: NO — S03 is not authorized
 ```
 
 ## Milestone transition rules

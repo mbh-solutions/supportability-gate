@@ -2,45 +2,33 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "0c4c2419d6da486a97acb8e73cac5e91430d2c7b"
+base_sha = "dfc034d070977fcead8742dbe5a05a919a9de825"
 overall_result = "PASS"
 responsibility_changes = [
-    "GitHubApp now acquires every authenticated review, review thread, inline comment, and top-level comment page before evidence assembly.",
-    "review_state owns byte-stable normalization and identity cross-checks; semantic_cli owns deterministic unresolved-thread blocking before replay or model review.",
-    "GitHubApp re-fetches commit and normalized review state before replay or publication and rejects any changed snapshot as stale evidence.",
+    "review_events authenticates supported review-state deliveries and reduces each payload to repository, pull-request, and delivery identity.",
+    "GitHubApp reuses exact-digest pending checks and semantic_cli makes the required result pending before fresh model evaluation.",
+    "Event-driven and scheduled reconciliation both re-fetch current GitHub state, reject stale replay, and re-read base, head, and review state immediately before completion.",
 ]
 simplified_functions = [
-    "GitHubApp._graphql_connection",
-    "GitHubApp._rest_pages",
-    "GitHubApp._review_state",
-    "GitHubApp._review_threads",
-    "GitHubApp._thread_comments",
-    "GitHubApp.assert_current",
-    "GitHubApp.evidence_packet",
-    "GitHubApp.issue_comments",
-    "_actor",
-    "_app",
-    "_body_sha256",
-    "_indexed",
-    "_inline_comment",
-    "_integer",
-    "_malformed",
-    "_optional_integer",
-    "_optional_text",
+    "GitHubApp._check_runs",
+    "GitHubApp.pull",
+    "GitHubApp.replay_result",
+    "GitHubApp.start_check",
+    "_authenticated",
+    "_complete_current_check",
+    "_payload",
     "_review",
-    "_review",
-    "_text",
-    "_threads",
-    "_top_comment",
-    "normalize_review_state",
-    "unresolved_review_blocks",
+    "handle_review_event",
+    "parse_review_event",
+    "process_review_event",
+    "reconcile_open_pulls",
 ]
 boundary_rationale = [
-    "github_app remains the authenticated GitHub transport and pagination boundary.",
-    "review_state owns normalization only; semantic_cli owns orchestration policy including unresolved-thread blocking.",
+    "review_events owns webhook authentication and strict delivery identity only.",
+    "github_app owns authenticated current-state and check-run transport; semantic_cli owns event and scheduled evaluation orchestration.",
 ]
 remaining_risks = [
-    "GitHub response schema changes fail closed as malformed or incomplete review state until adapter support is updated.",
+    "S02 ships protected source capability only; S04 owns production runtime, App event configuration, and ruleset cutover.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -60,16 +48,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-complete-authenticated-review-acquisition"
-text = "Authenticated REST and GraphQL pagination acquires all reviews, review threads including nested comments, inline comments, and top-level comments before normalization."
-citations = ["src/supportability_gate/github_app.py:546-654"]
+id = "claim-authenticated-review-event-boundary"
+text = "Supported review, review-comment, and review-thread deliveries require a valid HMAC SHA-256 signature and strict repository, pull-request, action, and delivery identity."
+citations = ["src/supportability_gate/review_events.py:29-74"]
 
 [[completion_report.claims]]
-id = "claim-normalized-unresolved-thread-block"
-text = "Review state is identity-cross-checked and byte-stably normalized, then every unresolved review thread blocks before replay or model review."
-citations = ["src/supportability_gate/review_state.py:195-222", "src/supportability_gate/semantic_cli.py:51-78"]
+id = "claim-idempotent-current-state-reconciliation"
+text = "Event processing discards mutable event state, fetches the current pull request, and uses the same evaluator as scheduled full reconciliation; exact completed or pending digest bindings make duplicate and out-of-order delivery harmless."
+citations = ["src/supportability_gate/github_app.py:181-187", "src/supportability_gate/github_app.py:207-239", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:157-186"]
 
 [[completion_report.claims]]
-id = "claim-review-state-currentness"
-text = "Commit and normalized review state are re-fetched and compared before replay or final check publication, and any change invalidates the captured evidence."
-citations = ["src/supportability_gate/github_app.py:181-198", "src/supportability_gate/semantic_cli.py:75-100"]
+id = "claim-stable-evaluation-publication"
+text = "A fresh digest becomes pending before model transport, and base, head, and normalized review state are re-read immediately before the same digest-bound check can complete success or failure."
+citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/semantic_cli.py:73-154"]
