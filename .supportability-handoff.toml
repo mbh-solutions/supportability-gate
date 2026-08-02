@@ -19,6 +19,7 @@ simplified_functions = [
     "_payload",
     "_review",
     "handle_review_event",
+    "main",
     "parse_review_event",
     "process_review_event",
     "reconcile_open_pulls",
