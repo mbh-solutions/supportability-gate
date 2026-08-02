@@ -719,9 +719,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
     changed.
 - Remaining work: None for S03 after protected merge and Project #6 closure readback. Retain the
   proof repository; stop. S04 is not authorized.
-- S04 Atomic production cutover and closure: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`;
-  Stop confirmed `No` after owner-authorized defect repair reopened issues #69 and #65 on
-  2026-08-02.
+- S04 Atomic production cutover and closure: `COMPLETE`; Evidence `Complete`; Scope `On scope`;
+  Stop confirmed `Yes` after protected closure of owner-authorized defect repair issues #69 and #65.
 - Authority: owner-authorized issue #69 under Project #6. Owner corrected the permanent production
   architecture in issues #65 and #69 to GitHub-native required conversation resolution, complete
   paginated semantic evidence, and one-minute scheduled full reconciliation. Production webhook
@@ -733,18 +732,23 @@ workflow, check-run, ruleset, or GitHub state supports them.
     attempt `2`, but the installed reviewer rejects every attempt greater than one before it can
     publish the deterministic thread block. Prior S04 completion therefore does not establish the
     terminal capability for this state.
-  - Protected source head `9ebf26921ff2f8fc4d558899c60763db52f76d29` passed the final Python
-    `3.12.13` exact-lock proof once: Ruff lint and format, C901 at maximum 10, strict mypy, both
-    import contracts, 284 pytest tests with 2 skips, compileall, immutable-standard tamper test,
-    exact-range whitespace validation, wheel build, fresh exact-lock install, and installed CLI
-    help. Wheel SHA-256 is
-    `c5dc173074f40391121cff97e048078ad916615406b7ba7a935e89482439bfbf`; immutable standard
-    SHA-256 remains `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
-  - Production runtime `runtime-s04-9ebf269` uses Python `3.12.13`; installed
-    `semantic_cli.py` SHA-256 `55a9430af96d85ba5b11ba6282037ac5c897f612b1b5387079ec7f95bfd7eb35`
-    equals protected source. Both production tasks use this runtime, remain enabled at one-minute
-    cadence with `IgnoreNew` and ten-minute limits, and retain the same repository, App, installation,
-    and private-key arguments.
+  - Repair PR #75 protected exact head `d6d1cfbb7f8a254162ee482f300cb8dac2d4c7b6` and normally
+    squash-merged as `cd2e67cf806e4df265d85ac6f0dffd7c5d5e95fa`. Source Validation run
+    `30761166747`/check `91531818657`, organization-required run `30761166664`/Gate check
+    `91531926087`, and semantic App `4418989` check `91532089388` succeeded. Authoritative artifact
+    `8837505017` has digest
+    `sha256:717799ca65a090a1f41b1d7e61edbf7ed2d82675eca47c14b93a40f6cf6ebb18`.
+  - The repair publishes sorted unresolved-thread failures before handoff, replay, or model
+    transport; enriches the already-captured clean packet; and selects the newest completed
+    exact-head workflow attempt before requiring successful exact attempt-bound artifact, digest,
+    head, run ID, and provenance.
+  - Protected merge `cd2e67cf806e4df265d85ac6f0dffd7c5d5e95fa` produced wheel SHA-256
+    `656caa42f95df0bd2cb973fc640f18eb28395aff8e5ed60422b2f8e87212ceb6`. Production runtime
+    `runtime-s04-cd2e67c` uses Python `3.12.10`, the exact lock, and that wheel. Tasks
+    `Supportability Semantic Review` and `Supportability Semantic Review - TWMN` use this runtime,
+    remain enabled at one-minute cadence with `IgnoreNew` and ten-minute limits, and retain their
+    exact repository, App, installation, and private-key arguments. Rollback runtime
+    `runtime-s04-9ebf269` remains retained through closure proof.
   - Supportability Gate repository ruleset `19767613` and TWMN organization ruleset `19913103`
     now require native review-conversation resolution and have zero bypass actors. Existing strict
     required checks remain bound to GitHub Actions App `15368` and semantic App `4418989`; TWMN
@@ -752,6 +756,18 @@ workflow, check-run, ruleset, or GitHub state supports them.
     `.github/workflows/organization-required.yml`, pinned SHA
     `0c4c2419d6da486a97acb8e73cac5e91430d2c7b`. App `4418989` retains actions/contents/
     pull-request read and checks write permissions with `events=[]` and `hook=null`.
+  - TWMN PR #54 remained on exact head
+    `3db4a6550e50c7bcd4a2bdf78fc41a26e585543d`. New scheduled runtime failure check
+    `91532539746` from App `4418989`, evidence SHA-256
+    `d715c12d858999d44c23814fe1a82a38a5d4eb9c0e5e1874c88b07ab4e66cb7c`, named all three
+    unresolved threads: `PRRT_kwDOTUxMsc6VzBXQ`, `PRRT_kwDOTUxMsc6VzJLF`, and
+    `PRRT_kwDOTUxMsc6VzJLG`.
+  - Read-only runtime authentication accepted successful workflow run `30758110802` attempt `2`,
+    artifact `8836604532`, exact head, and archive/digest
+    `sha256:521bfe4163e39658c7308195321d28842d96c6efcdad27d3b2d0839747726894`.
+    Native conversation resolution and strict required checks read back active with zero bypass
+    actors. One normal non-admin squash merge attempt exited `1`; GitHub reported that base policy
+    prohibited the merge, PR #54 remained `OPEN`/`BLOCKED`, and auto-merge remained unset.
   - TWMN PR #52 reproduced stale green on unchanged head
     `e805c68850c7a669e9b385cb6dbfe41ca11f94a5`: two current unresolved threads
     `PRRT_kwDOTUxMsc6VtT-J` and `PRRT_kwDOTUxMsc6VtT-L` coexisted with earlier successful semantic
@@ -774,17 +790,16 @@ workflow, check-run, ruleset, or GitHub state supports them.
     Generated build caches and package metadata were removed. Protected proof repository
     `mbh-solutions/supportability-s03-proof-20260802` was retained through the original S04 closure
     and later deleted under the owner-confirmed disposition already completed outside this repair.
-- Remaining work: protected source repair, exact-wheel deployment, required semantic failure naming
-  all three PR #54 threads, authenticated attempt-two artifact readback, rejected normal merge,
-  closure evidence, and Project #6 readback. No successor work is authorized.
+- Remaining work: None after protected ledger merge, issue #69/#65 closure, and Project #6 field
+  readback. Stop; no successor work is authorized.
 
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
-Full Supportability Standard runtime: NO — S04 defect repair is in progress
-Current authorized work: Project #6 S04 defect repair under reopened issue #69; stop after #69/#65 closure
+Full Supportability Standard runtime: YES
+Current authorized work: NONE — Project #6 is complete; stop
 Next milestone authorized: NO — Project #6 ends with S04
 ```
 
