@@ -835,6 +835,8 @@ def test_pending_check_is_completed_with_same_evidence_binding() -> None:
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
+        if request.method == "GET":
+            return _Reply({"check_runs": [], "total_count": 0})
         return _Reply(
             {
                 "app": {"id": 42},
@@ -848,8 +850,31 @@ def test_pending_check_is_completed_with_same_evidence_binding() -> None:
     check_id = app.start_check(packet, "token")
     result = app.complete_check(packet, "token", check_id, "success", "PASS")
     assert result["id"] == 99
-    assert json.loads(requests[0].data)["status"] == "in_progress"
-    assert requests[1].method == "PATCH"
+    assert json.loads(requests[1].data)["status"] == "in_progress"
+    assert requests[2].method == "PATCH"
+
+
+def test_existing_pending_check_is_reused_idempotently() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    runs = {
+        "check_runs": [
+            {
+                "app": {"id": 42},
+                "external_id": packet.sha256,
+                "id": 99,
+                "status": "in_progress",
+            },
+            {
+                "app": {"id": 42},
+                "external_id": packet.sha256,
+                "id": 100,
+                "status": "in_progress",
+            },
+        ],
+        "total_count": 2,
+    }
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(runs))
+    assert app.start_check(packet, "token") == 100
 
 
 def test_github_outage_leaves_no_check() -> None:

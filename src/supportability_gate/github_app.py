@@ -178,6 +178,13 @@ class GitHubApp:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return tuple(result)
 
+    def pull(self, repository: str, pull_number: int, token: str) -> dict[str, Any]:
+        """Return current authenticated pull-request metadata for event reconciliation."""
+        result = self._request("GET", f"/repos/{repository}/pulls/{pull_number}", token)
+        if not isinstance(result, dict) or result.get("number") != pull_number:
+            raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+        return result
+
     def assert_current(self, packet: EvidencePacket, pull_number: int, token: str) -> None:
         """Reject evidence if pull-request commits or review state changed."""
         pull = self._request("GET", f"/repos/{packet.repository}/pulls/{pull_number}", token)
@@ -197,8 +204,7 @@ class GitHubApp:
         if current != packet.evidence.get("review_state"):
             raise SemanticReviewError("STALE_EVIDENCE")
 
-    def replay_result(self, packet: EvidencePacket, token: str) -> bool | None:
-        """Reuse one trusted exact-evidence App verdict instead of recalling the model."""
+    def _check_runs(self, packet: EvidencePacket, token: str) -> tuple[dict[str, Any], ...]:
         result = self._request(
             "GET",
             f"/repos/{packet.repository}/commits/{packet.head_sha}/check-runs"
@@ -211,11 +217,16 @@ class GitHubApp:
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
         if total >= 100:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        if any(not isinstance(run, dict) for run in runs):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        return tuple(runs)
+
+    def replay_result(self, packet: EvidencePacket, token: str) -> bool | None:
+        """Reuse one trusted exact-evidence App verdict instead of recalling the model."""
         conclusions = {
             run.get("conclusion")
-            for run in runs
-            if isinstance(run, dict)
-            and run.get("external_id") == packet.sha256
+            for run in self._check_runs(packet, token)
+            if run.get("external_id") == packet.sha256
             and isinstance(run.get("app"), dict)
             and run["app"].get("id") == self.app_id
             and run.get("status") == "completed"
@@ -935,6 +946,18 @@ class GitHubApp:
 
     def start_check(self, packet: EvidencePacket, token: str) -> int:
         """Publish a pending exact-evidence check before model transport begins."""
+        pending = [
+            run.get("id")
+            for run in self._check_runs(packet, token)
+            if run.get("external_id") == packet.sha256
+            and isinstance(run.get("app"), dict)
+            and run["app"].get("id") == self.app_id
+            and run.get("status") == "in_progress"
+        ]
+        if any(not isinstance(check_id, int) for check_id in pending):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        if pending:
+            return max(cast(list[int], pending))
         result = self._request(
             "POST",
             f"/repos/{packet.repository}/check-runs",
@@ -955,6 +978,7 @@ class GitHubApp:
         if (
             not isinstance(check_id, int)
             or result.get("head_sha") != packet.head_sha
+            or result.get("external_id") != packet.sha256
             or not isinstance(app, dict)
             or app.get("id") != self.app_id
         ):

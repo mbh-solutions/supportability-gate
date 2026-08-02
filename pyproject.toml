@@ -82,7 +82,7 @@ type = "layers"
 layers = [
     "supportability_gate.semantic_cli",
     "supportability_gate.github_app | supportability_gate.responses_transport",
-    "supportability_gate.review_state",
+    "supportability_gate.review_events | supportability_gate.review_state",
     "supportability_gate.architecture_policy",
     "supportability_gate.semantic_review | supportability_gate.function_changes",
     "supportability_gate.semantic_contract | supportability_gate.contract",
