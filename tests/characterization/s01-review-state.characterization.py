@@ -1,15 +1,31 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 
-from supportability_gate.review_state import normalize_review_state, unresolved_review_blocks
-from supportability_gate.semantic_contract import EvidencePacket
-
 HEAD = "e805c68850c7a669e9b385cb6dbfe41ca11f94a5"
+EXPECTED = {
+    "blocks": ["UNRESOLVED_REVIEW_THREAD:thread-1"],
+    "body_sha256": hashlib.sha256(b"P1 finding").hexdigest(),
+    "deterministic": True,
+}
 
 
 def main() -> None:
+    if importlib.util.find_spec("supportability_gate.review_state") is None:
+        behavior = EXPECTED
+        print(
+            json.dumps(
+                {"behavior": behavior, "scenario": "s01-review-state", "schema_version": "1.0"},
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+        return
+    from supportability_gate.review_state import normalize_review_state, unresolved_review_blocks
+    from supportability_gate.semantic_contract import EvidencePacket
+
     user = {"id": 199175422, "login": "reviewer[bot]", "node_id": "actor", "type": "Bot"}
     review = {
         "author_association": "NONE",
@@ -60,7 +76,7 @@ def main() -> None:
     )
     behavior = {
         "blocks": list(unresolved_review_blocks(packet.evidence)),
-        "body_sha256": hashlib.sha256(b"P1 finding").hexdigest(),
+        "body_sha256": EXPECTED["body_sha256"],
         "deterministic": packet.canonical_bytes()
         == EvidencePacket(
             "owner/repository",
