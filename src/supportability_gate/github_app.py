@@ -29,6 +29,7 @@ from supportability_gate.handoff_policy import (
     completion_citations,
     parse_completion_report,
 )
+from supportability_gate.review_state import normalize_review_state
 from supportability_gate.semantic_contract import (
     SHA_PATTERN,
     TRUSTED_OWNER_ID,
@@ -43,6 +44,21 @@ HUNK_PATTERN = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
 HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
 MAX_HANDOFF_BYTES = 5_000_000
+REVIEW_THREADS_QUERY = """
+query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+  repository(owner:$owner,name:$name){pullRequest(number:$number){
+    reviewThreads(first:100,after:$cursor){nodes{
+      id isResolved isOutdated comments(first:100){nodes{id databaseId}
+      pageInfo{hasNextPage endCursor}}
+    }pageInfo{hasNextPage endCursor}}
+  }}
+}
+"""
+THREAD_COMMENTS_QUERY = """
+query($thread:ID!,$cursor:String){node(id:$thread){... on PullRequestReviewThread{
+  comments(first:100,after:$cursor){nodes{id databaseId}pageInfo{hasNextPage endCursor}}
+}}}
+"""
 
 
 class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
@@ -218,6 +234,7 @@ class GitHubApp:
         )
         review_diff = self._review_diff(files)
         comments = self.issue_comments(repository, number, token)
+        review_state = self._review_state(repository, number, comments, token)
         return EvidencePacket(
             repository,
             str(base_sha),
@@ -228,6 +245,7 @@ class GitHubApp:
                 "deleted_sources": deleted_sources,
                 "pull_request": number,
                 "refactor_context": self._refactor_context(pull, files, comments),
+                "review_state": review_state,
                 "reviewed_sources": reviewed_sources,
             },
         )
@@ -521,16 +539,111 @@ class GitHubApp:
         self, repository: str, pull_number: int, token: str
     ) -> tuple[dict[str, Any], ...]:
         """Return authenticated issue comments used for owner authorization."""
-        result = self._request(
-            "GET", f"/repos/{repository}/issues/{pull_number}/comments?per_page=100", token
+        return self._rest_pages(
+            f"/repos/{repository}/issues/{pull_number}/comments?per_page=100", token
         )
-        if (
-            not isinstance(result, list)
-            or len(result) >= 100
-            or any(not isinstance(item, dict) for item in result)
-        ):
-            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-        return tuple(result)
+
+    def _rest_pages(self, path: str, token: str) -> tuple[dict[str, Any], ...]:
+        rows: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            result = self._request("GET", f"{path}&page={page}", token)
+            if not isinstance(result, list) or any(not isinstance(item, dict) for item in result):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            rows.extend(result)
+            if len(result) < 100:
+                return tuple(rows)
+            page += 1
+
+    def _graphql_connection(
+        self, result: Any, keys: tuple[str, ...]
+    ) -> tuple[list[dict[str, Any]], bool, str | None]:
+        if not isinstance(result, dict) or result.get("errors"):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        value: Any = result
+        for key in keys:
+            value = value.get(key) if isinstance(value, dict) else None
+        if not isinstance(value, dict):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        nodes, page_info = value.get("nodes"), value.get("pageInfo")
+        if not isinstance(nodes, list) or any(not isinstance(node, dict) for node in nodes):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        if not isinstance(page_info, dict) or not isinstance(page_info.get("hasNextPage"), bool):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        cursor = page_info.get("endCursor")
+        if page_info["hasNextPage"] and (not isinstance(cursor, str) or not cursor):
+            raise SemanticReviewError("INCOMPLETE_REVIEW_STATE")
+        if cursor is not None and not isinstance(cursor, str):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        return nodes, page_info["hasNextPage"], cursor
+
+    def _thread_comments(
+        self,
+        thread: dict[str, Any],
+        token: str,
+    ) -> list[dict[str, Any]]:
+        nodes, has_next, cursor = self._graphql_connection(thread, ("comments",))
+        while has_next:
+            result = self._request(
+                "POST",
+                "/graphql",
+                token,
+                {
+                    "query": THREAD_COMMENTS_QUERY,
+                    "variables": {"thread": thread["id"], "cursor": cursor},
+                },
+            )
+            page, has_next, cursor = self._graphql_connection(result, ("data", "node", "comments"))
+            nodes.extend(page)
+        return nodes
+
+    def _review_threads(
+        self, repository: str, pull_number: int, token: str
+    ) -> tuple[dict[str, Any], ...]:
+        owner, name = repository.split("/", 1)
+        cursor: str | None = None
+        threads: list[dict[str, Any]] = []
+        while True:
+            result = self._request(
+                "POST",
+                "/graphql",
+                token,
+                {
+                    "query": REVIEW_THREADS_QUERY,
+                    "variables": {
+                        "owner": owner,
+                        "name": name,
+                        "number": pull_number,
+                        "cursor": cursor,
+                    },
+                },
+            )
+            page, has_next, cursor = self._graphql_connection(
+                result, ("data", "repository", "pullRequest", "reviewThreads")
+            )
+            for thread in page:
+                thread = dict(thread)
+                thread["comments"] = self._thread_comments(thread, token)
+                threads.append(thread)
+            if not has_next:
+                return tuple(threads)
+
+    def _review_state(
+        self,
+        repository: str,
+        pull_number: int,
+        top_comments: tuple[dict[str, Any], ...],
+        token: str,
+    ) -> dict[str, object]:
+        reviews = self._rest_pages(
+            f"/repos/{repository}/pulls/{pull_number}/reviews?per_page=100", token
+        )
+        inline = self._rest_pages(
+            f"/repos/{repository}/pulls/{pull_number}/comments?per_page=100", token
+        )
+        return normalize_review_state(
+            reviews, self._review_threads(repository, pull_number, token), inline, top_comments
+        )
 
     def _comparison_evidence(
         self, repository: str, base_sha: str, head_sha: str, token: str

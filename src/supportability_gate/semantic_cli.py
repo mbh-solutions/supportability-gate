@@ -8,6 +8,7 @@ from pathlib import Path
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.handoff_policy import deterministic_completion_blocks
 from supportability_gate.responses_transport import request_response
+from supportability_gate.review_state import unresolved_review_blocks
 from supportability_gate.semantic_contract import SemanticReviewError, SemanticVerdict
 from supportability_gate.semantic_review import parse_response
 
@@ -50,10 +51,18 @@ def _parser() -> argparse.ArgumentParser:
 
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
     packet = app.m10_evidence_packet(repository, pull, token)
+    evidence = packet.evidence
+    review_blocks = unresolved_review_blocks(evidence)
+    pull_number = evidence.get("pull_request")
+    if not isinstance(pull_number, int):
+        raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+    app.assert_current(packet, pull_number, token)
+    if review_blocks:
+        app.publish_check(packet, token, "failure", "BLOCK\n" + "\n".join(review_blocks))
+        return False
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
-    evidence = packet.evidence
     preflight = (
         deterministic_completion_blocks(
             evidence.get("completion_report"),
@@ -66,10 +75,6 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         )
         else ()
     )
-    pull_number = evidence.get("pull_request")
-    if not isinstance(pull_number, int):
-        raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-    app.assert_current(packet, pull_number, token)
     if preflight:
         app.publish_check(packet, token, "failure", "BLOCK\n" + "\n".join(preflight))
         return False

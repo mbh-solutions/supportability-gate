@@ -30,6 +30,21 @@ maximum = 10
 """
 
 
+@pytest.fixture(autouse=True)
+def _existing_packet_tests_use_empty_review_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        GitHubApp,
+        "_review_state",
+        lambda *args: {
+            "inline_comments": [],
+            "reviews": [],
+            "schema_version": "review-state.v1",
+            "threads": [],
+            "top_level_comments": [],
+        },
+    )
+
+
 class _Reply:
     def __init__(self, payload: object) -> None:
         self.payload = payload
