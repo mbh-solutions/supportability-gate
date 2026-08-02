@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from typing import BinaryIO
 
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.handoff_policy import deterministic_completion_blocks
@@ -83,6 +87,51 @@ def _complete_current_check(
     app.complete_check(packet, token, check_id, conclusion, summary)
 
 
+def _lock(handle: BinaryIO) -> None:
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(  # type: ignore[attr-defined]
+                handle.fileno(),
+                fcntl.LOCK_EX | fcntl.LOCK_NB,  # type: ignore[attr-defined]
+            )
+    except OSError as error:
+        raise SemanticReviewError("EVALUATION_IN_PROGRESS") from error
+
+
+def _unlock(handle: BinaryIO) -> None:
+    if os.name == "nt":
+        import msvcrt
+
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
+
+
+@contextmanager
+def _evaluation_lock(path: Path) -> Iterator[None]:
+    """Give one scheduled process exclusive model and verdict ownership."""
+    with path.open("a+b") as handle:
+        _lock(handle)
+        try:
+            yield
+        finally:
+            _unlock(handle)
+
+
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
     packet = app.m10_evidence_packet(repository, pull, token)
     evidence = packet.evidence
@@ -92,9 +141,7 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         raise SemanticReviewError("MALFORMED_PULL_REQUEST")
     app.assert_current(packet, pull_number, token)
     if review_blocks:
-        check_id = app.claim_check(packet, token)
-        if check_id is None:
-            return False
+        check_id = app.start_check(packet, token)
         _complete_current_check(
             app,
             packet,
@@ -108,23 +155,7 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
-    check_id = app.claim_check(packet, token)
-    if check_id is None:
-        return False
-    replay = app.replay_result(packet, token)
-    if replay is not None:
-        _complete_current_check(
-            app,
-            packet,
-            pull_number,
-            token,
-            check_id,
-            "success" if replay else "failure",
-            "PASS\nExact evidence verdict replayed."
-            if replay
-            else "BLOCK\nExact evidence verdict replayed.",
-        )
-        return replay
+    check_id = app.start_check(packet, token)
     preflight = (
         deterministic_completion_blocks(
             evidence.get("completion_report"),
@@ -219,7 +250,9 @@ def main(argv: list[str] | None = None) -> int:
         private_key = arguments.private_key.read_bytes()
         app = GitHubApp(arguments.app_id, arguments.installation_id, private_key)
         token = app.installation_token()
-        results = reconcile_open_pulls(app, arguments.repository, token)
+        lock_path = arguments.private_key.with_name("semantic-review.lock")
+        with _evaluation_lock(lock_path):
+            results = reconcile_open_pulls(app, arguments.repository, token)
     except (OSError, SemanticReviewError):
         print("TECHNICAL_FAILURE")
         return 2

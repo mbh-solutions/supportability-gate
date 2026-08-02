@@ -6,20 +6,21 @@ base_sha = "dfc034d070977fcead8742dbe5a05a919a9de825"
 overall_result = "PASS"
 responsibility_changes = [
     "review_events authenticates supported review-state deliveries and reduces each payload to repository, pull-request, and delivery identity.",
-    "GitHubApp reuses exact-digest invalidation checks and creates uniquely owned evaluator candidates.",
-    "Event processing only invalidates changed current state; the oldest scheduled evaluator candidate alone evaluates, then re-reads base, head, and review state immediately before completion.",
+    "GitHubApp reuses exact-digest pending checks; event processing never evaluates the model.",
+    "The scheduled CLI holds one cross-process advisory lock across full reconciliation, then re-reads base, head, and review state immediately before completion.",
 ]
 simplified_functions = [
     "GitHubApp._check_runs",
-    "GitHubApp.claim_check",
-    "GitHubApp.complete_check",
     "GitHubApp.pull",
     "GitHubApp.replay_result",
     "GitHubApp.start_check",
     "_authenticated",
     "_complete_current_check",
+    "_evaluation_lock",
+    "_lock",
     "_payload",
     "_review",
+    "_unlock",
     "handle_review_event",
     "main",
     "parse_review_event",
@@ -28,7 +29,7 @@ simplified_functions = [
 ]
 boundary_rationale = [
     "review_events owns webhook authentication and strict delivery identity only.",
-    "github_app owns authenticated current-state and check-run transport; semantic_cli owns event and scheduled evaluation orchestration.",
+    "github_app owns authenticated current-state and check-run transport; semantic_cli owns event orchestration and cross-process serialization of scheduled evaluation.",
 ]
 remaining_risks = [
     "S02 ships protected source capability only; S04 owns production runtime, App event configuration, and ruleset cutover.",
@@ -57,10 +58,10 @@ citations = ["src/supportability_gate/review_events.py:29-74"]
 
 [[completion_report.claims]]
 id = "claim-idempotent-current-state-reconciliation"
-text = "Event processing discards mutable event state, reuses an exact completed verdict or invalidation check, and never calls the model. Each scheduled evaluator creates a unique candidate; only the lowest check ID may evaluate, while later candidates retire neutral and return non-green for retry, so no pending check has competing model or PATCH owners."
-citations = ["src/supportability_gate/github_app.py:182-188", "src/supportability_gate/github_app.py:208-239", "src/supportability_gate/github_app.py:948-1053", "src/supportability_gate/semantic_cli.py:86-172", "src/supportability_gate/semantic_cli.py:175-184"]
+text = "Event processing discards mutable event state, reuses an exact completed verdict or pending invalidation check, and never calls the model. The scheduled CLI holds a nonblocking cross-process advisory lock across full reconciliation; contention fails non-green before evidence, model, or check mutation, so one process owns model and PATCH work."
+citations = ["src/supportability_gate/github_app.py:181-187", "src/supportability_gate/github_app.py:207-238", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:90-132", "src/supportability_gate/semantic_cli.py:135-215", "src/supportability_gate/semantic_cli.py:246-260"]
 
 [[completion_report.claims]]
 id = "claim-stable-evaluation-publication"
 text = "A fresh digest becomes pending before model transport, and base, head, and normalized review state are re-read immediately before the same digest-bound check can complete success or failure."
-citations = ["src/supportability_gate/github_app.py:189-205", "src/supportability_gate/github_app.py:1055-1090", "src/supportability_gate/semantic_cli.py:73-172"]
+citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/github_app.py:988-1023", "src/supportability_gate/semantic_cli.py:77-203"]

@@ -12,7 +12,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -986,72 +985,6 @@ class GitHubApp:
             raise SemanticReviewError("CHECK_APP_IDENTITY_MISMATCH")
         return check_id
 
-    def claim_check(self, packet: EvidencePacket, token: str) -> int | None:
-        """Create one evaluator candidate; only the oldest candidate owns evaluation."""
-        external_id = f"{packet.sha256}:evaluator:{uuid.uuid4().hex}"
-        result = self._request(
-            "POST",
-            f"/repos/{packet.repository}/check-runs",
-            token,
-            {
-                "name": CHECK_NAME,
-                "head_sha": packet.head_sha,
-                "external_id": external_id,
-                "status": "in_progress",
-                "output": {
-                    "title": CHECK_NAME,
-                    "summary": f"Evidence SHA-256: `{packet.sha256}`",
-                },
-            },
-        )
-        app = result.get("app") if isinstance(result, dict) else None
-        check_id = result.get("id") if isinstance(result, dict) else None
-        if (
-            not isinstance(check_id, int)
-            or result.get("head_sha") != packet.head_sha
-            or result.get("external_id") != external_id
-            or not isinstance(app, dict)
-            or app.get("id") != self.app_id
-        ):
-            raise SemanticReviewError("CHECK_APP_IDENTITY_MISMATCH")
-        candidates = [
-            run.get("id")
-            for run in self._check_runs(packet, token)
-            if isinstance(run.get("external_id"), str)
-            and run["external_id"].startswith(f"{packet.sha256}:evaluator:")
-            and isinstance(run.get("app"), dict)
-            and run["app"].get("id") == self.app_id
-            and run.get("status") == "in_progress"
-        ]
-        if any(not isinstance(candidate, int) for candidate in candidates):
-            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-        if candidates and check_id == min(cast(list[int], candidates)):
-            return check_id
-        retired = self._request(
-            "PATCH",
-            f"/repos/{packet.repository}/check-runs/{check_id}",
-            token,
-            {
-                "status": "completed",
-                "conclusion": "neutral",
-                "output": {
-                    "title": CHECK_NAME,
-                    "summary": "Another evaluator owns this evidence; retry scheduled.",
-                },
-            },
-        )
-        retired_app = retired.get("app") if isinstance(retired, dict) else None
-        if (
-            not isinstance(retired, dict)
-            or retired.get("id") != check_id
-            or retired.get("head_sha") != packet.head_sha
-            or retired.get("external_id") != external_id
-            or not isinstance(retired_app, dict)
-            or retired_app.get("id") != self.app_id
-        ):
-            raise SemanticReviewError("CHECK_APP_IDENTITY_MISMATCH")
-        return None
-
     def complete_check(
         self,
         packet: EvidencePacket,
@@ -1068,7 +1001,6 @@ class GitHubApp:
             {
                 "status": "completed",
                 "conclusion": conclusion,
-                "external_id": packet.sha256,
                 "output": {
                     "title": CHECK_NAME,
                     "summary": (

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+from pathlib import Path
 
 import pytest
 
@@ -178,6 +179,14 @@ def test_new_event_invalidates_without_concurrent_model_evaluation() -> None:
     assert app.pending == [packet.sha256]
 
 
+def test_only_one_scheduled_evaluator_can_hold_the_runtime_lock(tmp_path: Path) -> None:
+    lock = tmp_path / "semantic-review.lock"
+    with semantic_cli._evaluation_lock(lock):
+        with pytest.raises(SemanticReviewError, match="EVALUATION_IN_PROGRESS"):
+            with semantic_cli._evaluation_lock(lock):
+                pytest.fail("concurrent evaluator acquired the runtime lock")
+
+
 def test_same_head_change_becomes_pending_before_fresh_evaluation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -197,7 +206,7 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
             self.calls.append("replay")
             return None
 
-        def claim_check(self, *args: object) -> int:
+        def start_check(self, *args: object) -> int:
             self.calls.append("pending")
             return 99
 
@@ -213,7 +222,7 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
 
     with pytest.raises(SemanticReviewError, match="MODEL_TIMEOUT"):
         semantic_cli._review(app, packet.repository, "token", {})  # type: ignore[arg-type]
-    assert app.calls == ["read", "current", "replay", "pending", "replay"]
+    assert app.calls == ["read", "current", "replay", "pending"]
 
 
 def test_state_change_during_evaluation_never_completes_success(
@@ -236,7 +245,7 @@ def test_state_change_during_evaluation_never_completes_success(
         def replay_result(self, *args: object) -> None:
             return None
 
-        def claim_check(self, *args: object) -> int:
+        def start_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:
@@ -268,7 +277,7 @@ def test_publication_failure_cannot_return_green(monkeypatch: pytest.MonkeyPatch
         def replay_result(self, *args: object) -> None:
             return None
 
-        def claim_check(self, *args: object) -> int:
+        def start_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:
@@ -317,7 +326,7 @@ def test_missed_event_is_recovered_with_fresh_digest_bound_verdict(
             assert packet.sha256 != old.sha256
             return None
 
-        def claim_check(self, packet: EvidencePacket, *args: object) -> int:
+        def start_check(self, packet: EvidencePacket, *args: object) -> int:
             assert packet.sha256 == fresh.sha256
             return 99
 
