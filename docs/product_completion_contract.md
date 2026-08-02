@@ -719,6 +719,56 @@ workflow, check-run, ruleset, or GitHub state supports them.
     changed.
 - Remaining work: None for S03 after protected merge and Project #6 closure readback. Retain the
   proof repository; stop. S04 is not authorized.
+- S04 Atomic production cutover and closure: `COMPLETE` upon protected merge of the pull request
+  closing issues #69 and #65; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #69 under Project #6. Owner corrected the permanent production
+  architecture in issues #65 and #69 to GitHub-native required conversation resolution, complete
+  paginated semantic evidence, and one-minute scheduled full reconciliation. Production webhook
+  hosting and GitHub App event subscriptions are not required.
+- Completion evidence:
+  - Protected source head `9ebf26921ff2f8fc4d558899c60763db52f76d29` passed the final Python
+    `3.12.13` exact-lock proof once: Ruff lint and format, C901 at maximum 10, strict mypy, both
+    import contracts, 284 pytest tests with 2 skips, compileall, immutable-standard tamper test,
+    exact-range whitespace validation, wheel build, fresh exact-lock install, and installed CLI
+    help. Wheel SHA-256 is
+    `c5dc173074f40391121cff97e048078ad916615406b7ba7a935e89482439bfbf`; immutable standard
+    SHA-256 remains `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Production runtime `runtime-s04-9ebf269` uses Python `3.12.13`; installed
+    `semantic_cli.py` SHA-256 `55a9430af96d85ba5b11ba6282037ac5c897f612b1b5387079ec7f95bfd7eb35`
+    equals protected source. Both production tasks use this runtime, remain enabled at one-minute
+    cadence with `IgnoreNew` and ten-minute limits, and retain the same repository, App, installation,
+    and private-key arguments.
+  - Supportability Gate repository ruleset `19767613` and TWMN organization ruleset `19913103`
+    now require native review-conversation resolution and have zero bypass actors. Existing strict
+    required checks remain bound to GitHub Actions App `15368` and semantic App `4418989`; TWMN
+    workflow source remains repository `1312412529`, path
+    `.github/workflows/organization-required.yml`, pinned SHA
+    `0c4c2419d6da486a97acb8e73cac5e91430d2c7b`. App `4418989` retains actions/contents/
+    pull-request read and checks write permissions with `events=[]` and `hook=null`.
+  - TWMN PR #52 reproduced stale green on unchanged head
+    `e805c68850c7a669e9b385cb6dbfe41ca11f94a5`: two current unresolved threads
+    `PRRT_kwDOTUxMsc6VtT-J` and `PRRT_kwDOTUxMsc6VtT-L` coexisted with earlier successful semantic
+    checks. Native protection immediately reported `BLOCKED`; normal squash merge returned HTTP 405
+    with `A conversation must be resolved`. Scheduled reconciliation then published failure check
+    `91512048205`, evidence SHA-256
+    `c1558727cf2c7c0c96e32a259bf76eee56977e6fa92a37252f331e45831c26fc`, naming both threads.
+  - Fresh clean-control head `92926aa28b858e6f05466bf79727af6ff497b24b` addressed both findings,
+    retained all five review threads with zero unresolved, and passed attempt-1 workflow run
+    `30754010863`: Characterize Head `91512927491`, Characterize Base `91512927538`, Quality
+    Profile `91512927537`, and Supportability Gate `91512982243`. Semantic check `91513121754`
+    passed with evidence SHA-256
+    `cb3a89861f7afb405d6b5915983767dca09f2fb24175a567471f4ee5764c95f4` and response SHA-256
+    `8aa1f94370419e855660e37aeaa35feb566f2607b36ab88add5b7855e535ab27`. GitHub reported
+    `CLEAN`; normal protected squash merge succeeded as
+    `781fb24a37d1a0c6ff03a8d217acd98f82acfab8`.
+  - Proof-only webhook `660203958`, scheduled task, listener process, and proof runtime were removed
+    with absence readback. Merged S03 local branches and merged TWMN proof branch were removed;
+    TWMN is clean on `main == origin/main == 781fb24a37d1a0c6ff03a8d217acd98f82acfab8`.
+    Generated build caches and package metadata were removed. Retained protected proof repository
+    `mbh-solutions/supportability-s03-proof-20260802` remains available through S04 closure exactly
+    as issue #68 requires.
+- Remaining work: None after protected closure merge, Project #6 field readback, final rollback-artifact
+  cleanup, and retained proof-repository disposition. Stop; no successor work is authorized.
 
 ## Product status
 
@@ -726,8 +776,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #6 S03 only — complete upon protected merge and #68 closure; stop
-Next milestone authorized: NO — S04 is not authorized
+Current authorized work: Project #6 S04 only — complete upon protected merge and #69/#65 closure; stop
+Next milestone authorized: NO — Project #6 ends with S04
 ```
 
 ## Milestone transition rules
