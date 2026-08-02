@@ -685,20 +685,33 @@ workflow, check-run, ruleset, or GitHub state supports them.
     (repository ID `1319911879`) is separate from Supportability Gate and TWMN and is retained
     through S04. Proof-only rulesets `20224623` and `20224624` have zero bypass actors, native
     required review-conversation resolution, exact required checks, semantic App ID `4418989`, and
-    workflow pin `0c4c2419d6da486a97acb8e73cac5e91430d2c7b`.
+    workflow pin `0c4c2419d6da486a97acb8e73cac5e91430d2c7b`. HMAC event delivery is
+    repository webhook `660203958`.
   - PR #1 proved an earlier exact-head semantic success became unmergeable after an unresolved
-    same-head P1 finding. Signed create, edit, delete, resolve, and reopen events, missed-event
-    reconciliation, duplicate and out-of-order redelivery, and a state change during active
-    evaluation all remained fail-closed under rejected normal merge attempts. After clean state and
-    five exact-head required successes, PR #1 normally merged as
+    same-head P1 finding. Exact-head success check `91468965075` became scheduled failure check
+    `91469109917`; event-during-evaluation checks were `91469525949` and `91469590215`. Signed
+    duplicate and older redeliveries are GUIDs `f5e2c020-8e42-11f1-852c-b397688b0fa8` and
+    `ddbc58d0-8e42-11f1-9fb2-b7f557168d90`; the active-evaluation reopen is
+    `452b3a90-8e43-11f1-8c37-9335837f88a5`. Create, edit, delete, resolve, reopen, missed-event,
+    duplicate, out-of-order, and active-evaluation states all remained fail-closed under the normal
+    merge rejections indexed in issue comment `5156377828`. After clean state and five exact-head
+    required successes, PR #1 normally merged as
     `d66f55e94f929849d8e777cbadbe32eaab20a06a`.
   - PR #4 proved GitHub Actions review submit/edit and owner dismissal, signed delivery with
-    immediate HTTP 202 plus background reconciliation, new-head invalidation, GitHub API failure as
-    `TECHNICAL_FAILURE`, and fresh exact-head recovery. It normally merged only after all five
-    required checks succeeded as `375321bf0eafb4bccd8bc73d175d692e64de0ede`.
+    workflow runs `30738209448` and `30738226691`. Dismissal GUID
+    `5dcefd50-8e45-11f1-8a41-e7e3eab477b1` returned HTTP 202 before successful background
+    reconciliation. Fresh head `35831314e98d934a1ceb1419af938fa9b501ae3c` had zero semantic
+    checks; invalid installation ID `1` returned `TECHNICAL_FAILURE`/exit 2 and normal merge was
+    rejected. Fresh recovery check `91471452529` then succeeded, and PR #4 normally merged as
+    `375321bf0eafb4bccd8bc73d175d692e64de0ede`.
   - Pagination returned pages of 100 and 1 comments; the installed protected runtime normalized all
     101 into deterministic review-state packet SHA-256
     `f978c437fba9323ff1d4fff3aeb929a0cbd4da39fb4dd3af37cc35fa337244d0`.
+  - The retained signed-delivery log is
+    `C:\Users\mheck\AppData\Local\Temp\supportability-s03-proof\deliveries.jsonl`, 29 records,
+    SHA-256 `1114965c02a2e91587988fdb2a8fac92c005214f1954fdd7968c20f8d8d45e9a`.
+    Issue comment `5156377828` is the durable proof index for rejected normal merges and exact App,
+    check, workflow, event, packet, base, head, and response identities.
   - The proof-only runtime and scheduled task remain installed and enabled. Production repositories,
     installed production runtime, production scheduled task, production rulesets, and S04 were not
     changed.
