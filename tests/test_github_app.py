@@ -248,7 +248,17 @@ def test_newest_successful_full_rerun_attempt_is_accepted() -> None:
 
 
 def test_failed_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
-    run = {
+    older = {
+        "conclusion": "success",
+        "event": "pull_request",
+        "head_sha": "b" * 40,
+        "id": 122,
+        "path": ".github/workflows/organization-required.yml",
+        "run_attempt": 1,
+        "status": "completed",
+        "updated_at": "2026-08-02T16:00:00Z",
+    }
+    failed = {
         "conclusion": "failure",
         "event": "pull_request",
         "head_sha": "b" * 40,
@@ -259,7 +269,10 @@ def test_failed_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
         "updated_at": "2026-08-02T17:00:00Z",
     }
     app = GitHubApp(
-        42, 7, b"unused", opener=lambda *args, **kwargs: _Reply({"workflow_runs": [run]})
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply({"workflow_runs": [older, failed]}),
     )
     with pytest.raises(SemanticReviewError, match="HANDOFF_EVIDENCE_UNAVAILABLE"):
         app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")

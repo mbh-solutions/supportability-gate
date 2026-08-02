@@ -322,11 +322,13 @@ class GitHubApp:
             and row.get("head_sha") == head_sha
             and row.get("event") == "pull_request"
             and row.get("status") == "completed"
-            and row.get("conclusion") == "success"
         ]
         if not runs:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        return max(runs, key=self._handoff_run_order)
+        run = max(runs, key=self._handoff_run_order)
+        if run.get("conclusion") != "success":
+            raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
+        return run
 
     @staticmethod
     def _handoff_run_order(run: dict[str, Any]) -> tuple[datetime, int]:

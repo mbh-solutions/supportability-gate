@@ -27,13 +27,19 @@ def _signature(body: bytes, secret: bytes = b"secret") -> str:
     return "sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest()
 
 
-def _packet(state: str = "current") -> EvidencePacket:
+def _packet(state: str = "current", *, unresolved: bool = False) -> EvidencePacket:
     return EvidencePacket(
         "mbh-solutions/supportability-gate",
         "a" * 40,
         "b" * 40,
         42,
-        {"pull_request": 67, "review_state": {"threads": [], "state": state}},
+        {
+            "pull_request": 67,
+            "review_state": {
+                "threads": ([{"id": "thread-1", "is_resolved": False}] if unresolved else []),
+                "state": state,
+            },
+        },
     )
 
 
@@ -132,6 +138,9 @@ def test_duplicate_and_out_of_order_events_reconcile_current_state() -> None:
         def evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
 
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
         def assert_current(self, *args: object) -> None:
             return None
 
@@ -152,7 +161,7 @@ def test_duplicate_and_out_of_order_events_reconcile_current_state() -> None:
 
 
 def test_new_event_invalidates_without_concurrent_model_evaluation() -> None:
-    packet = _packet("new-event")
+    packet = _packet("new-event", unresolved=True)
 
     class App:
         pending: list[str] = []
@@ -162,6 +171,9 @@ def test_new_event_invalidates_without_concurrent_model_evaluation() -> None:
 
         def evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            pytest.fail("unresolved event must invalidate before handoff evidence")
 
         def assert_current(self, *args: object) -> None:
             return None

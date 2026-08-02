@@ -210,6 +210,9 @@ def process_review_event(app: GitHubApp, token: str, event: ReviewEvent) -> bool
     pull = app.pull(event.repository, event.pull_number, token)
     packet = app.evidence_packet(event.repository, pull, token)
     app.assert_current(packet, event.pull_number, token)
+    if not unresolved_review_blocks(packet.evidence):
+        packet = app.m10_evidence_packet(event.repository, pull, token, packet)
+        app.assert_current(packet, event.pull_number, token)
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
