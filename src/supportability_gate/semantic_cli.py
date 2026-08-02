@@ -132,7 +132,7 @@ def _evaluation_lock(path: Path) -> Iterator[None]:
 
 
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
-    packet = app.m10_evidence_packet(repository, pull, token)
+    packet = app.evidence_packet(repository, pull, token)
     evidence = packet.evidence
     review_blocks = unresolved_review_blocks(evidence)
     pull_number = evidence.get("pull_request")
@@ -151,6 +151,9 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
             "BLOCK\n" + "\n".join(review_blocks),
         )
         return False
+    packet = app.m10_evidence_packet(repository, pull, token, packet)
+    evidence = packet.evidence
+    app.assert_current(packet, pull_number, token)
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
@@ -205,8 +208,11 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
 def process_review_event(app: GitHubApp, token: str, event: ReviewEvent) -> bool:
     """Invalidate changed current state; scheduled reconciliation alone evaluates it."""
     pull = app.pull(event.repository, event.pull_number, token)
-    packet = app.m10_evidence_packet(event.repository, pull, token)
+    packet = app.evidence_packet(event.repository, pull, token)
     app.assert_current(packet, event.pull_number, token)
+    if not unresolved_review_blocks(packet.evidence):
+        packet = app.m10_evidence_packet(event.repository, pull, token, packet)
+        app.assert_current(packet, event.pull_number, token)
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay

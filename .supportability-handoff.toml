@@ -2,37 +2,26 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "dfc034d070977fcead8742dbe5a05a919a9de825"
+base_sha = "97b0b9dcb54083e057deb75007f6bfb8d6e10604"
 overall_result = "PASS"
 responsibility_changes = [
-    "review_events authenticates supported review-state deliveries and reduces each payload to repository, pull-request, and delivery identity.",
-    "GitHubApp reuses exact-digest pending checks; event processing never evaluates the model.",
-    "The scheduled CLI holds one cross-process advisory lock across full reconciliation, then re-reads base, head, and review state immediately before completion.",
+    "semantic_cli publishes unresolved review-thread failures before handoff, replay, or model transport and enriches only clean packets with M10 evidence.",
+    "GitHubApp selects the newest completed exact-head workflow attempt and trusts it only when its result, artifact, digest, head, run ID, attempt, and provenance agree.",
+    "Clean review events preserve full-packet replay binding while unresolved review events invalidate from review evidence without acquiring handoff evidence.",
 ]
 simplified_functions = [
-    "GitHubApp._check_runs",
-    "GitHubApp.pull",
-    "GitHubApp.replay_result",
-    "GitHubApp.start_check",
-    "_authenticated",
-    "_complete_current_check",
-    "_evaluation_lock",
-    "_lock",
-    "_payload",
+    "GitHubApp._handoff_run",
+    "GitHubApp._handoff_run_order",
+    "GitHubApp.m10_evidence_packet",
     "_review",
-    "_unlock",
-    "handle_review_event",
-    "main",
-    "parse_review_event",
     "process_review_event",
-    "reconcile_open_pulls",
 ]
 boundary_rationale = [
-    "review_events owns webhook authentication and strict delivery identity only.",
-    "github_app owns authenticated current-state and check-run transport; semantic_cli owns event orchestration and cross-process serialization of scheduled evaluation.",
+    "github_app owns authenticated workflow-attempt selection, artifact acquisition, and exact provenance binding.",
+    "semantic_cli owns deterministic unresolved-thread blocking, event invalidation, replay, and model orchestration.",
 ]
 remaining_risks = [
-    "S02 ships protected source capability only; S04 owns production runtime, App event configuration, and ruleset cutover.",
+    "GitHub transport, model transport, or publication failure intentionally leaves required semantic enforcement non-green.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -52,16 +41,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-authenticated-review-event-boundary"
-text = "Supported review, review-comment, and review-thread deliveries require a valid HMAC SHA-256 signature and strict repository, pull-request, action, and delivery identity."
-citations = ["src/supportability_gate/review_events.py:29-74"]
+id = "claim-unresolved-review-threads-block-first"
+text = "Unresolved review threads publish deterministic failures before handoff evidence, replay, or model transport."
+citations = ["src/supportability_gate/semantic_cli.py:134-160"]
 
 [[completion_report.claims]]
-id = "claim-idempotent-current-state-reconciliation"
-text = "Event processing discards mutable event state, reuses an exact completed verdict or pending invalidation check, and never calls the model. The scheduled CLI holds a nonblocking cross-process advisory lock across full reconciliation; contention fails non-green before evidence, model, or check mutation, so one process owns model and PATCH work."
-citations = ["src/supportability_gate/github_app.py:181-187", "src/supportability_gate/github_app.py:207-238", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:90-132", "src/supportability_gate/semantic_cli.py:135-215", "src/supportability_gate/semantic_cli.py:246-259"]
+id = "claim-newest-exact-attempt-provenance"
+text = "The newest completed exact-head workflow attempt must be successful before its exact attempt-bound artifact and provenance can be trusted."
+citations = ["src/supportability_gate/github_app.py:308-354"]
 
 [[completion_report.claims]]
-id = "claim-stable-evaluation-publication"
-text = "A fresh digest becomes pending before model transport, and base, head, and normalized review state are re-read immediately before the same digest-bound check can complete success or failure."
-citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:77-203"]
+id = "claim-event-packet-binding"
+text = "Clean review events enrich the captured packet for exact completed-result replay, while unresolved review events invalidate directly from review evidence without handoff acquisition."
+citations = ["src/supportability_gate/semantic_cli.py:208-220"]
