@@ -92,7 +92,9 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         raise SemanticReviewError("MALFORMED_PULL_REQUEST")
     app.assert_current(packet, pull_number, token)
     if review_blocks:
-        check_id = app.start_check(packet, token)
+        check_id = app.claim_check(packet, token)
+        if check_id is None:
+            return False
         _complete_current_check(
             app,
             packet,
@@ -106,7 +108,23 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
-    check_id = app.start_check(packet, token)
+    check_id = app.claim_check(packet, token)
+    if check_id is None:
+        return False
+    replay = app.replay_result(packet, token)
+    if replay is not None:
+        _complete_current_check(
+            app,
+            packet,
+            pull_number,
+            token,
+            check_id,
+            "success" if replay else "failure",
+            "PASS\nExact evidence verdict replayed."
+            if replay
+            else "BLOCK\nExact evidence verdict replayed.",
+        )
+        return replay
     preflight = (
         deterministic_completion_blocks(
             evidence.get("completion_report"),

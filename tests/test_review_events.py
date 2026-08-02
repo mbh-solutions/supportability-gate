@@ -197,7 +197,7 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
             self.calls.append("replay")
             return None
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             self.calls.append("pending")
             return 99
 
@@ -213,7 +213,7 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
 
     with pytest.raises(SemanticReviewError, match="MODEL_TIMEOUT"):
         semantic_cli._review(app, packet.repository, "token", {})  # type: ignore[arg-type]
-    assert app.calls == ["read", "current", "replay", "pending"]
+    assert app.calls == ["read", "current", "replay", "pending", "replay"]
 
 
 def test_state_change_during_evaluation_never_completes_success(
@@ -236,7 +236,7 @@ def test_state_change_during_evaluation_never_completes_success(
         def replay_result(self, *args: object) -> None:
             return None
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:
@@ -268,7 +268,7 @@ def test_publication_failure_cannot_return_green(monkeypatch: pytest.MonkeyPatch
         def replay_result(self, *args: object) -> None:
             return None
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:
@@ -317,7 +317,7 @@ def test_missed_event_is_recovered_with_fresh_digest_bound_verdict(
             assert packet.sha256 != old.sha256
             return None
 
-        def start_check(self, packet: EvidencePacket, *args: object) -> int:
+        def claim_check(self, packet: EvidencePacket, *args: object) -> int:
             assert packet.sha256 == fresh.sha256
             return 99
 

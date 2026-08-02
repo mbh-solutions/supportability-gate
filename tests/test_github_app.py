@@ -877,6 +877,58 @@ def test_existing_pending_check_is_reused_idempotently() -> None:
     assert app.start_check(packet, "token") == 100
 
 
+def test_concurrent_evaluator_does_not_share_pending_check() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    requests: list[Any] = []
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        if request.method == "POST":
+            external_id = json.loads(request.data)["external_id"]
+            return _Reply(
+                {
+                    "app": {"id": 42},
+                    "external_id": external_id,
+                    "head_sha": packet.head_sha,
+                    "id": 100,
+                }
+            )
+        if request.method == "PATCH":
+            assert json.loads(request.data)["conclusion"] == "neutral"
+            return _Reply(
+                {
+                    "app": {"id": 42},
+                    "external_id": json.loads(requests[0].data)["external_id"],
+                    "head_sha": packet.head_sha,
+                    "id": 100,
+                }
+            )
+        current_external_id = json.loads(requests[0].data)["external_id"]
+        return _Reply(
+            {
+                "check_runs": [
+                    {
+                        "app": {"id": 42},
+                        "external_id": f"{packet.sha256}:evaluator:first",
+                        "id": 99,
+                        "status": "in_progress",
+                    },
+                    {
+                        "app": {"id": 42},
+                        "external_id": current_external_id,
+                        "id": 100,
+                        "status": "in_progress",
+                    },
+                ],
+                "total_count": 2,
+            }
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    assert app.claim_check(packet, "token") is None
+    assert [request.method for request in requests] == ["POST", "GET", "PATCH"]
+
+
 def test_github_outage_leaves_no_check() -> None:
     calls = 0
 

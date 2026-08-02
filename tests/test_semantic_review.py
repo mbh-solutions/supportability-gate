@@ -299,7 +299,7 @@ def test_nonproduction_review_skips_completion_preflight(
         def assert_current(self, *args: object) -> None:
             return None
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:
@@ -335,7 +335,7 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
         def assert_current(self, *args: object) -> None:
             return None
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:
@@ -370,7 +370,7 @@ def test_technical_model_failure_publishes_no_semantic_check(
         def assert_current(self, *args: object) -> None:
             return None
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             self.started += 1
             return 99
 

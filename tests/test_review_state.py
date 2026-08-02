@@ -123,7 +123,7 @@ def test_pr52_omission_is_bound_and_blocks_before_model(monkeypatch: pytest.Monk
         def replay_result(self, *args: object) -> bool:
             pytest.fail("unresolved state must block before replay")
 
-        def start_check(self, *args: object) -> int:
+        def claim_check(self, *args: object) -> int:
             return 99
 
         def complete_check(self, *args: object) -> None:

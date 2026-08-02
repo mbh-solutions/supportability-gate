@@ -6,11 +6,12 @@ base_sha = "dfc034d070977fcead8742dbe5a05a919a9de825"
 overall_result = "PASS"
 responsibility_changes = [
     "review_events authenticates supported review-state deliveries and reduces each payload to repository, pull-request, and delivery identity.",
-    "GitHubApp reuses exact-digest pending checks and semantic_cli makes the required result pending before fresh model evaluation.",
-    "Event processing only invalidates changed current state; scheduled reconciliation alone evaluates, then re-reads base, head, and review state immediately before completion.",
+    "GitHubApp reuses exact-digest invalidation checks and creates uniquely owned evaluator candidates.",
+    "Event processing only invalidates changed current state; the oldest scheduled evaluator candidate alone evaluates, then re-reads base, head, and review state immediately before completion.",
 ]
 simplified_functions = [
     "GitHubApp._check_runs",
+    "GitHubApp.claim_check",
     "GitHubApp.pull",
     "GitHubApp.replay_result",
     "GitHubApp.start_check",
@@ -55,10 +56,10 @@ citations = ["src/supportability_gate/review_events.py:29-74"]
 
 [[completion_report.claims]]
 id = "claim-idempotent-current-state-reconciliation"
-text = "Event processing discards mutable event state, fetches current evidence, reuses an exact completed verdict or leaves the digest pending, and never calls the model; scheduled full reconciliation alone evaluates pending state, so duplicate and out-of-order deliveries cannot create competing model verdicts."
-citations = ["src/supportability_gate/github_app.py:181-187", "src/supportability_gate/github_app.py:207-239", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:157-186"]
+text = "Event processing discards mutable event state, reuses an exact completed verdict or invalidation check, and never calls the model. Each scheduled evaluator creates a unique candidate; only the lowest check ID may evaluate, while later candidates retire neutral and return non-green for retry, so no pending check has competing model or PATCH owners."
+citations = ["src/supportability_gate/github_app.py:181-187", "src/supportability_gate/github_app.py:207-239", "src/supportability_gate/github_app.py:948-1053", "src/supportability_gate/semantic_cli.py:86-172", "src/supportability_gate/semantic_cli.py:175-184"]
 
 [[completion_report.claims]]
 id = "claim-stable-evaluation-publication"
 text = "A fresh digest becomes pending before model transport, and base, head, and normalized review state are re-read immediately before the same digest-bound check can complete success or failure."
-citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/semantic_cli.py:73-154"]
+citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/github_app.py:1055-1092", "src/supportability_gate/semantic_cli.py:73-172"]
