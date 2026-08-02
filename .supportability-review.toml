@@ -54,7 +54,7 @@ reviewability = "Focused fixtures cover both fixed profiles, all required failur
 path = "src/supportability_gate/review_state.py"
 owner_path = "src/supportability_gate/review_state.py"
 basis = "responsibility"
-justification = "Owns normalization and cross-checking of authenticated GitHub review snapshots plus deterministic unresolved-thread blocks, but not API transport, model evaluation, check publication, or event invalidation."
+justification = "Owns normalization and cross-checking of authenticated GitHub review snapshots, but not API transport, unresolved-thread policy, model evaluation, check publication, or event invalidation."
 
 [[module_boundaries]]
 path = "src/supportability_gate/quality_profile.py"

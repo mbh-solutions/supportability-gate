@@ -6,7 +6,7 @@ base_sha = "0c4c2419d6da486a97acb8e73cac5e91430d2c7b"
 overall_result = "PASS"
 responsibility_changes = [
     "GitHubApp now acquires every authenticated review, review thread, inline comment, and top-level comment page before evidence assembly.",
-    "review_state owns byte-stable normalization, identity cross-checks, and deterministic unresolved-thread blocking before replay or model review.",
+    "review_state owns byte-stable normalization and identity cross-checks; semantic_cli owns deterministic unresolved-thread blocking before replay or model review.",
 ]
 simplified_functions = [
     "GitHubApp._graphql_connection",
@@ -35,7 +35,7 @@ simplified_functions = [
 ]
 boundary_rationale = [
     "github_app remains the authenticated GitHub transport and pagination boundary.",
-    "review_state is the single normalization and unresolved-thread policy boundary consumed by semantic_cli.",
+    "review_state owns normalization only; semantic_cli owns orchestration policy including unresolved-thread blocking.",
 ]
 remaining_risks = [
     "GitHub response schema changes fail closed as malformed or incomplete review state until adapter support is updated.",
@@ -65,4 +65,4 @@ citations = ["src/supportability_gate/github_app.py:538-646"]
 [[completion_report.claims]]
 id = "claim-normalized-unresolved-thread-block"
 text = "Review state is identity-cross-checked and byte-stably normalized, then every unresolved review thread blocks before replay or model review."
-citations = ["src/supportability_gate/review_state.py:195-239", "src/supportability_gate/semantic_cli.py:52-62"]
+citations = ["src/supportability_gate/review_state.py:195-222", "src/supportability_gate/semantic_cli.py:51-78"]

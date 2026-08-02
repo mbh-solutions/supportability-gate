@@ -8,7 +8,6 @@ from pathlib import Path
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.handoff_policy import deterministic_completion_blocks
 from supportability_gate.responses_transport import request_response
-from supportability_gate.review_state import unresolved_review_blocks
 from supportability_gate.semantic_contract import SemanticReviewError, SemanticVerdict
 from supportability_gate.semantic_review import parse_response
 
@@ -47,6 +46,23 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--installation-id", required=True, type=int)
     parser.add_argument("--private-key", required=True, type=Path)
     return parser
+
+
+def unresolved_review_blocks(evidence: dict[str, object]) -> tuple[str, ...]:
+    """Return deterministic blocks for current unresolved GitHub threads."""
+    state = evidence.get("review_state")
+    threads = state.get("threads") if isinstance(state, dict) else None
+    if not isinstance(threads, list):
+        raise SemanticReviewError("MALFORMED_REVIEW_STATE")
+    blocks: list[str] = []
+    for thread in threads:
+        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
+            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
+        if not isinstance(thread.get("is_resolved"), bool):
+            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
+        if not thread["is_resolved"]:
+            blocks.append(f"UNRESOLVED_REVIEW_THREAD:{thread['id']}")
+    return tuple(sorted(blocks))
 
 
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:

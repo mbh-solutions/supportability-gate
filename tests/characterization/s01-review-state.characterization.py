@@ -23,7 +23,8 @@ def main() -> None:
             )
         )
         return
-    from supportability_gate.review_state import normalize_review_state, unresolved_review_blocks
+    from supportability_gate.review_state import normalize_review_state
+    from supportability_gate.semantic_cli import unresolved_review_blocks
     from supportability_gate.semantic_contract import EvidencePacket
 
     user = {"id": 199175422, "login": "reviewer[bot]", "node_id": "actor", "type": "Bot"}
