@@ -662,6 +662,9 @@ workflow, check-run, ruleset, or GitHub state supports them.
     review-state deliveries, re-fetches current pull-request state, reuses exact-digest pending
     checks, makes new evidence non-green without event-path model work, and double-reads base, head,
     and review state before scheduled digest-bound completion.
+  - Concurrency fix commit `beafd8bd8f0fae51ebd4f29778f9c3db7249b8d1` confines model evaluation
+    and verdict completion to scheduled reconciliation; webhook workers only invalidate current
+    state, so they cannot share a pending check as competing evaluators.
   - Direct focused tests prove same-head invalidation, state change during evaluation, duplicate and
     out-of-order delivery, missed-delivery reconciliation, authentication and malformed-event
     failure, GitHub outage, publication failure, immediate base/head/current-state binding, and a
