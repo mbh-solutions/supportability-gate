@@ -7,6 +7,7 @@ overall_result = "PASS"
 responsibility_changes = [
     "GitHubApp now acquires every authenticated review, review thread, inline comment, and top-level comment page before evidence assembly.",
     "review_state owns byte-stable normalization and identity cross-checks; semantic_cli owns deterministic unresolved-thread blocking before replay or model review.",
+    "GitHubApp re-fetches commit and normalized review state before replay or publication and rejects any changed snapshot as stale evidence.",
 ]
 simplified_functions = [
     "GitHubApp._graphql_connection",
@@ -14,6 +15,7 @@ simplified_functions = [
     "GitHubApp._review_state",
     "GitHubApp._review_threads",
     "GitHubApp._thread_comments",
+    "GitHubApp.assert_current",
     "GitHubApp.evidence_packet",
     "GitHubApp.issue_comments",
     "_actor",
@@ -60,9 +62,14 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-complete-authenticated-review-acquisition"
 text = "Authenticated REST and GraphQL pagination acquires all reviews, review threads including nested comments, inline comments, and top-level comments before normalization."
-citations = ["src/supportability_gate/github_app.py:538-646"]
+citations = ["src/supportability_gate/github_app.py:546-654"]
 
 [[completion_report.claims]]
 id = "claim-normalized-unresolved-thread-block"
 text = "Review state is identity-cross-checked and byte-stably normalized, then every unresolved review thread blocks before replay or model review."
 citations = ["src/supportability_gate/review_state.py:195-222", "src/supportability_gate/semantic_cli.py:51-78"]
+
+[[completion_report.claims]]
+id = "claim-review-state-currentness"
+text = "Commit and normalized review state are re-fetched and compared before replay or final check publication, and any change invalidates the captured evidence."
+citations = ["src/supportability_gate/github_app.py:181-198", "src/supportability_gate/semantic_cli.py:75-100"]

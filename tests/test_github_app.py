@@ -300,6 +300,29 @@ def test_stale_pull_evidence_blocks_before_publication() -> None:
         app.assert_current(packet, 3, "token")
 
 
+def test_stale_review_state_blocks_before_publication(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = {
+        "inline_comments": [],
+        "reviews": [],
+        "schema_version": "review-state.v1",
+        "threads": [],
+        "top_level_comments": [],
+    }
+    packet = EvidencePacket(
+        "mbh-solutions/supportability-gate",
+        "a" * 40,
+        "b" * 40,
+        42,
+        {"review_state": captured},
+    )
+    current = {"base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
+    monkeypatch.setattr(app, "issue_comments", lambda *args: ())
+    monkeypatch.setattr(app, "_review_state", lambda *args: {**captured, "threads": [{}]})
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.assert_current(packet, 3, "token")
+
+
 def test_exact_evidence_replay_reuses_app_result() -> None:
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
     runs = {

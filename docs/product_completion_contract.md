@@ -641,7 +641,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
     retrieves every review, review thread, inline review comment, and retained top-level pull-request
     comment with complete REST and GraphQL pagination. Authenticated actor and GitHub App identity,
     commit, timestamps, body SHA-256, resolution, outdated, and location state bind into canonical
-    `EvidencePacket` bytes.
+    `EvidencePacket` bytes. Commit and normalized review state are re-fetched and compared before
+    replay or publication, so a review-state change invalidates the captured packet.
   - Exact authenticated TWMN PR #52 snapshot at head
     `e805c68850c7a669e9b385cb6dbfe41ca11f94a5` contained 4 reviews, 5 threads, 6 inline
     comments, and 10 top-level comments. Two unresolved threads produced deterministic pre-model

@@ -179,7 +179,7 @@ class GitHubApp:
         return tuple(result)
 
     def assert_current(self, packet: EvidencePacket, pull_number: int, token: str) -> None:
-        """Reject evidence if the pull request moved before publication."""
+        """Reject evidence if pull-request commits or review state changed."""
         pull = self._request("GET", f"/repos/{packet.repository}/pulls/{pull_number}", token)
         try:
             base_sha = pull["base"]["sha"]
@@ -187,6 +187,14 @@ class GitHubApp:
         except (KeyError, TypeError) as error:
             raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
         if base_sha != packet.base_sha or head_sha != packet.head_sha:
+            raise SemanticReviewError("STALE_EVIDENCE")
+        current = self._review_state(
+            packet.repository,
+            pull_number,
+            self.issue_comments(packet.repository, pull_number, token),
+            token,
+        )
+        if current != packet.evidence.get("review_state"):
             raise SemanticReviewError("STALE_EVIDENCE")
 
     def replay_result(self, packet: EvidencePacket, token: str) -> bool | None:
