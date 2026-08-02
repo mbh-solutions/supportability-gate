@@ -97,13 +97,12 @@ def _lock(handle: BinaryIO) -> None:
                 handle.write(b"\0")
                 handle.flush()
             handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            getattr(msvcrt, "locking")(handle.fileno(), getattr(msvcrt, "LK_NBLCK"), 1)
         else:
             import fcntl
 
-            fcntl.flock(  # type: ignore[attr-defined]
-                handle.fileno(),
-                fcntl.LOCK_EX | fcntl.LOCK_NB,  # type: ignore[attr-defined]
+            getattr(fcntl, "flock")(
+                handle.fileno(), getattr(fcntl, "LOCK_EX") | getattr(fcntl, "LOCK_NB")
             )
     except OSError as error:
         raise SemanticReviewError("EVALUATION_IN_PROGRESS") from error
@@ -114,11 +113,11 @@ def _unlock(handle: BinaryIO) -> None:
         import msvcrt
 
         handle.seek(0)
-        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        getattr(msvcrt, "locking")(handle.fileno(), getattr(msvcrt, "LK_UNLCK"), 1)
     else:
         import fcntl
 
-        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
+        getattr(fcntl, "flock")(handle.fileno(), getattr(fcntl, "LOCK_UN"))
 
 
 @contextmanager
