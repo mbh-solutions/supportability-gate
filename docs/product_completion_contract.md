@@ -707,11 +707,13 @@ workflow, check-run, ruleset, or GitHub state supports them.
   - Pagination returned pages of 100 and 1 comments; the installed protected runtime normalized all
     101 into deterministic review-state packet SHA-256
     `f978c437fba9323ff1d4fff3aeb929a0cbd4da39fb4dd3af37cc35fa337244d0`.
-  - The retained signed-delivery log is
-    `C:\Users\mheck\AppData\Local\Temp\supportability-s03-proof\deliveries.jsonl`, 29 records,
-    SHA-256 `1114965c02a2e91587988fdb2a8fac92c005214f1954fdd7968c20f8d8d45e9a`.
-    Issue comment `5156377828` is the durable proof index for rejected normal merges and exact App,
-    check, workflow, event, packet, base, head, and response identities.
+  - Protected proof PR #5 durably retained the signed-delivery log at commit
+    `41400e1711f83a7b247239d4bfc08530bb24ab9e`, path
+    `evidence/s03-webhook-deliveries.jsonl`, Git blob
+    `ed2b43ef46cc9b4d0c0a7edb3a93879eab76c93c`: 29 records, 8271 bytes, content SHA-256
+    `1114965c02a2e91587988fdb2a8fac92c005214f1954fdd7968c20f8d8d45e9a`. Issue comment
+    `5156377828` is the durable proof index for rejected normal merges and exact App, check,
+    workflow, event, packet, base, head, and response identities.
   - The proof-only runtime and scheduled task remain installed and enabled. Production repositories,
     installed production runtime, production scheduled task, production rulesets, and S04 were not
     changed.
