@@ -61,6 +61,7 @@ def _actor(item: dict[str, Any]) -> dict[str, object]:
         "type": actor_type,
     }
 
+
 def _app(item: dict[str, Any]) -> dict[str, object] | None:
     app = item.get("performed_via_github_app")
     if app is None:
