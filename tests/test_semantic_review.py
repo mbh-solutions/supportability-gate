@@ -299,7 +299,10 @@ def test_nonproduction_review_skips_completion_preflight(
         def assert_current(self, *args: object) -> None:
             return None
 
-        def publish_check(self, *args: object) -> None:
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
             self.published.append(args)
 
     app = App()
@@ -312,7 +315,7 @@ def test_nonproduction_review_skips_completion_preflight(
     assert semantic_cli._review(  # type: ignore[arg-type]
         app, "mbh-solutions/supportability-gate", "token", {}
     )
-    assert app.published[0][2] == "success"
+    assert app.published[0][3] == "success"
 
 
 def test_production_review_missing_completion_evidence_blocks_before_model(
@@ -332,7 +335,10 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
         def assert_current(self, *args: object) -> None:
             return None
 
-        def publish_check(self, *args: object) -> None:
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
             self.published.append(args)
 
     app = App()
@@ -345,14 +351,15 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
     assert not semantic_cli._review(  # type: ignore[arg-type]
         app, "mbh-solutions/supportability-gate", "token", {}
     )
-    assert "MALFORMED_COMPLETION_REPORT" in app.published[0][3]
+    assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
 def test_technical_model_failure_publishes_no_semantic_check(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class App:
-        published: list[object] = []
+        completed: list[object] = []
+        started = 0
 
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return _m10_packet()
@@ -363,8 +370,12 @@ def test_technical_model_failure_publishes_no_semantic_check(
         def assert_current(self, *args: object) -> None:
             return None
 
-        def publish_check(self, *args: object) -> None:
-            self.published.append(args)
+        def start_check(self, *args: object) -> int:
+            self.started += 1
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
 
     app = App()
 
@@ -374,7 +385,8 @@ def test_technical_model_failure_publishes_no_semantic_check(
     monkeypatch.setattr(semantic_cli, "request_response", fail)
     with pytest.raises(SemanticReviewError, match="TIMEOUT"):
         semantic_cli._review(app, "mbh-solutions/supportability-gate", "token", {})  # type: ignore[arg-type]
-    assert app.published == []
+    assert app.started == 1
+    assert app.completed == []
 
 
 def test_evidence_packet_is_immutable_after_construction() -> None:

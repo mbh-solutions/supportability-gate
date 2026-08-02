@@ -58,6 +58,13 @@
       ],
       "id": "s01-review-state",
       "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/review_events.py"
+      ],
+      "id": "s02-review-events",
+      "kind": "regression"
     }
   ],
   "schema_version": "1.0"

@@ -123,7 +123,10 @@ def test_pr52_omission_is_bound_and_blocks_before_model(monkeypatch: pytest.Monk
         def replay_result(self, *args: object) -> bool:
             pytest.fail("unresolved state must block before replay")
 
-        def publish_check(self, *args: object) -> None:
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
             self.published.append(args)
 
     app = App()
@@ -131,7 +134,7 @@ def test_pr52_omission_is_bound_and_blocks_before_model(monkeypatch: pytest.Monk
         semantic_cli, "request_response", lambda *args: pytest.fail("model transport called")
     )
     assert not semantic_cli._review(app, "mbh-solutions/twmn", "token", {})  # type: ignore[arg-type]
-    assert "UNRESOLVED_REVIEW_THREAD:PRRT_kwDOTUxMsc6VtT-J" in str(app.published[0][3])
+    assert "UNRESOLVED_REVIEW_THREAD:PRRT_kwDOTUxMsc6VtT-J" in str(app.published[0][4])
 
 
 def test_review_state_changes_digest_and_unchanged_state_is_deterministic() -> None:

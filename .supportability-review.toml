@@ -25,6 +25,7 @@ reviewed_paths = [
     "src/supportability_gate/quality_runner.py",
     "src/supportability_gate/reporting.py",
     "src/supportability_gate/refactor_policy.py",
+    "src/supportability_gate/review_events.py",
     "src/supportability_gate/review_state.py",
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
@@ -49,6 +50,12 @@ naming = "Quality-profile names directly describe fixed commands, hosted executi
 cohesion = "The quality-profile module owns approved policy specification and verification; the quality-runner module owns concrete plan and tool-config materialization; the disposable hosted job owns execution."
 intended_behavior = "Existing enforcement remains; Python and TypeScript quality claims now block every missing, failed, unexecuted, uncovered, excluded, weakened, narrowed, moved, malformed, stale, or non-hosted condition."
 reviewability = "Focused fixtures cover both fixed profiles, all required failure classes, exact identities and vectors, workstation refusal, and byte-identical evidence."
+
+[[module_boundaries]]
+path = "src/supportability_gate/review_events.py"
+owner_path = "src/supportability_gate/review_events.py"
+basis = "responsibility"
+justification = "Owns HMAC authentication and strict identity normalization for supported GitHub review-state deliveries, but not GitHub API transport, current-state acquisition, semantic evaluation, reconciliation scheduling, or check publication."
 
 [[module_boundaries]]
 path = "src/supportability_gate/review_state.py"
