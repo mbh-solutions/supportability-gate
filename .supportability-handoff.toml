@@ -64,4 +64,4 @@ citations = ["src/supportability_gate/github_app.py:181-187", "src/supportabilit
 [[completion_report.claims]]
 id = "claim-stable-evaluation-publication"
 text = "A fresh digest becomes pending before model transport, and base, head, and normalized review state are re-read immediately before the same digest-bound check can complete success or failure."
-citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/github_app.py:988-1022", "src/supportability_gate/semantic_cli.py:77-203"]
+citations = ["src/supportability_gate/github_app.py:188-204", "src/supportability_gate/github_app.py:947-986", "src/supportability_gate/semantic_cli.py:77-203"]
