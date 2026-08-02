@@ -61,7 +61,6 @@ def _actor(item: dict[str, Any]) -> dict[str, object]:
         "type": actor_type,
     }
 
-
 def _app(item: dict[str, Any]) -> dict[str, object] | None:
     app = item.get("performed_via_github_app")
     if app is None:
@@ -220,4 +219,3 @@ def normalize_review_state(
         "threads": _threads(raw_threads, inline_index),
         "top_level_comments": sorted(normalized_top, key=lambda row: cast(int, row["id"])),
     }
-
