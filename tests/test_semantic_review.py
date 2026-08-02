@@ -67,6 +67,7 @@ def _reviewed_source(path: str, content: str, blob_sha: str) -> dict[str, object
 def _packet(evidence: dict[str, object] | None = None) -> EvidencePacket:
     payload: dict[str, object] = {
         "diff": "+def parse_input(value: str) -> str:",
+        "review_state": {"threads": []},
         "reviewed_sources": [_reviewed_source(PYTHON_PATH, PYTHON_SOURCE, "c" * 40)],
     }
     if evidence:

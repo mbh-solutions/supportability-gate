@@ -48,12 +48,37 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def unresolved_review_blocks(evidence: dict[str, object]) -> tuple[str, ...]:
+    """Return deterministic blocks for current unresolved GitHub threads."""
+    state = evidence.get("review_state")
+    threads = state.get("threads") if isinstance(state, dict) else None
+    if not isinstance(threads, list):
+        raise SemanticReviewError("MALFORMED_REVIEW_STATE")
+    blocks: list[str] = []
+    for thread in threads:
+        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
+            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
+        if not isinstance(thread.get("is_resolved"), bool):
+            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
+        if not thread["is_resolved"]:
+            blocks.append(f"UNRESOLVED_REVIEW_THREAD:{thread['id']}")
+    return tuple(sorted(blocks))
+
+
 def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
     packet = app.m10_evidence_packet(repository, pull, token)
+    evidence = packet.evidence
+    review_blocks = unresolved_review_blocks(evidence)
+    pull_number = evidence.get("pull_request")
+    if not isinstance(pull_number, int):
+        raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+    app.assert_current(packet, pull_number, token)
+    if review_blocks:
+        app.publish_check(packet, token, "failure", "BLOCK\n" + "\n".join(review_blocks))
+        return False
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
-    evidence = packet.evidence
     preflight = (
         deterministic_completion_blocks(
             evidence.get("completion_report"),
@@ -66,10 +91,6 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
         )
         else ()
     )
-    pull_number = evidence.get("pull_request")
-    if not isinstance(pull_number, int):
-        raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-    app.assert_current(packet, pull_number, token)
     if preflight:
         app.publish_check(packet, token, "failure", "BLOCK\n" + "\n".join(preflight))
         return False

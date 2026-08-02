@@ -2,29 +2,45 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "7397306581026e1e83d20186d49a31c5b2c59461"
+base_sha = "0c4c2419d6da486a97acb8e73cac5e91430d2c7b"
 overall_result = "PASS"
 responsibility_changes = [
-    "Completion-report citations now use a dedicated exact-head completion_sources channel while semantic ownership remains bound to reviewed_sources.",
-    "Deletion-only surviving production paths can contribute only cited retained head lines when deterministic base deletion evidence and exact changed-path status both authorize the path.",
+    "GitHubApp now acquires every authenticated review, review thread, inline comment, and top-level comment page before evidence assembly.",
+    "review_state owns byte-stable normalization and identity cross-checks; semantic_cli owns deterministic unresolved-thread blocking before replay or model review.",
+    "GitHubApp re-fetches commit and normalized review state before replay or publication and rejects any changed snapshot as stale evidence.",
 ]
 simplified_functions = [
-    "GitHubApp._completion_source",
-    "GitHubApp._completion_sources",
-    "GitHubApp.m10_evidence_packet",
+    "GitHubApp._graphql_connection",
+    "GitHubApp._rest_pages",
+    "GitHubApp._review_state",
+    "GitHubApp._review_threads",
+    "GitHubApp._thread_comments",
+    "GitHubApp.assert_current",
+    "GitHubApp.evidence_packet",
+    "GitHubApp.issue_comments",
+    "_actor",
+    "_app",
+    "_body_sha256",
+    "_indexed",
+    "_inline_comment",
+    "_integer",
+    "_malformed",
+    "_optional_integer",
+    "_optional_text",
     "_review",
-    "_trusted_verdict",
-    "completion_citations",
-    "deterministic_completion_blocks",
-    "evaluate_completion_report",
-    "request_payload",
+    "_review",
+    "_text",
+    "_threads",
+    "_top_comment",
+    "normalize_review_state",
+    "unresolved_review_blocks",
 ]
 boundary_rationale = [
-    "The GitHub adapter remains the sole owner of authenticated changed-path and exact-head blob acquisition.",
-    "Completion citation resolution is separate from semantic ownership, import, boundary, and reviewed-path evidence.",
+    "github_app remains the authenticated GitHub transport and pagination boundary.",
+    "review_state owns normalization only; semantic_cli owns orchestration policy including unresolved-thread blocking.",
 ]
 remaining_risks = [
-    "Malformed, removed, non-source, untouched, oversized, or out-of-range citation targets remain unresolved or technically fail-closed.",
+    "GitHub response schema changes fail closed as malformed or incomplete review state until adapter support is updated.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -44,11 +60,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-deletion-only-completion-source"
-text = "Deletion-only surviving production paths contribute only cited exact-head lines after changed-path, source-suffix, base-deletion-identity, blob-hash, range, and size checks."
-citations = ["src/supportability_gate/github_app.py:407-489"]
+id = "claim-complete-authenticated-review-acquisition"
+text = "Authenticated REST and GraphQL pagination acquires all reviews, review threads including nested comments, inline comments, and top-level comments before normalization."
+citations = ["src/supportability_gate/github_app.py:546-654"]
 
 [[completion_report.claims]]
-id = "claim-separate-evidence-channels"
-text = "Completion claims resolve against completion_sources while ownership, imports, boundaries, and reviewed paths remain bound to reviewed_sources."
-citations = ["src/supportability_gate/handoff_policy.py:259-309", "src/supportability_gate/semantic_contract.py:280-300", "src/supportability_gate/semantic_review.py:366-375"]
+id = "claim-normalized-unresolved-thread-block"
+text = "Review state is identity-cross-checked and byte-stably normalized, then every unresolved review thread blocks before replay or model review."
+citations = ["src/supportability_gate/review_state.py:195-222", "src/supportability_gate/semantic_cli.py:51-78"]
+
+[[completion_report.claims]]
+id = "claim-review-state-currentness"
+text = "Commit and normalized review state are re-fetched and compared before replay or final check publication, and any change invalidates the captured evidence."
+citations = ["src/supportability_gate/github_app.py:181-198", "src/supportability_gate/semantic_cli.py:75-100"]
