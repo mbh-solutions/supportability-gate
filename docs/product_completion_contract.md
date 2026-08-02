@@ -719,13 +719,20 @@ workflow, check-run, ruleset, or GitHub state supports them.
     changed.
 - Remaining work: None for S03 after protected merge and Project #6 closure readback. Retain the
   proof repository; stop. S04 is not authorized.
-- S04 Atomic production cutover and closure: `COMPLETE` upon protected merge of the pull request
-  closing issues #69 and #65; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- S04 Atomic production cutover and closure: `IN_PROGRESS`; Evidence `Missing`; Scope `On scope`;
+  Stop confirmed `No` after owner-authorized defect repair reopened issues #69 and #65 on
+  2026-08-02.
 - Authority: owner-authorized issue #69 under Project #6. Owner corrected the permanent production
   architecture in issues #65 and #69 to GitHub-native required conversation resolution, complete
   paginated semantic evidence, and one-minute scheduled full reconciliation. Production webhook
   hosting and GitHub App event subscriptions are not required.
 - Completion evidence:
+  - Reopened defect evidence: TWMN PR #54 exact head
+    `3db4a6550e50c7bcd4a2bdf78fc41a26e585543d` has three current unresolved review threads while
+    the required semantic check is absent. Workflow run `30758110802` completed successfully on
+    attempt `2`, but the installed reviewer rejects every attempt greater than one before it can
+    publish the deterministic thread block. Prior S04 completion therefore does not establish the
+    terminal capability for this state.
   - Protected source head `9ebf26921ff2f8fc4d558899c60763db52f76d29` passed the final Python
     `3.12.13` exact-lock proof once: Ruff lint and format, C901 at maximum 10, strict mypy, both
     import contracts, 284 pytest tests with 2 skips, compileall, immutable-standard tamper test,
@@ -764,19 +771,20 @@ workflow, check-run, ruleset, or GitHub state supports them.
   - Proof-only webhook `660203958`, scheduled task, listener process, and proof runtime were removed
     with absence readback. Merged S03 local branches and merged TWMN proof branch were removed;
     TWMN is clean on `main == origin/main == 781fb24a37d1a0c6ff03a8d217acd98f82acfab8`.
-    Generated build caches and package metadata were removed. Retained protected proof repository
-    `mbh-solutions/supportability-s03-proof-20260802` remains available through S04 closure exactly
-    as issue #68 requires.
-- Remaining work: None after protected closure merge, Project #6 field readback, final rollback-artifact
-  cleanup, and retained proof-repository disposition. Stop; no successor work is authorized.
+    Generated build caches and package metadata were removed. Protected proof repository
+    `mbh-solutions/supportability-s03-proof-20260802` was retained through the original S04 closure
+    and later deleted under the owner-confirmed disposition already completed outside this repair.
+- Remaining work: protected source repair, exact-wheel deployment, required semantic failure naming
+  all three PR #54 threads, authenticated attempt-two artifact readback, rejected normal merge,
+  closure evidence, and Project #6 readback. No successor work is authorized.
 
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
-Full Supportability Standard runtime: YES
-Current authorized work: Project #6 S04 only — complete upon protected merge and #69/#65 closure; stop
+Full Supportability Standard runtime: NO — S04 defect repair is in progress
+Current authorized work: Project #6 S04 defect repair under reopened issue #69; stop after #69/#65 closure
 Next milestone authorized: NO — Project #6 ends with S04
 ```
 

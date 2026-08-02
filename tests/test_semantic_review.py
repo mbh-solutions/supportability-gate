@@ -290,6 +290,9 @@ def test_nonproduction_review_skips_completion_preflight(
     class App:
         published: list[object] = []
 
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
 
@@ -326,6 +329,9 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
     class App:
         published: list[object] = []
 
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
 
@@ -360,6 +366,9 @@ def test_technical_model_failure_publishes_no_semantic_check(
     class App:
         completed: list[object] = []
         started = 0
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return _m10_packet()
 
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return _m10_packet()

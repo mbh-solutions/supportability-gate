@@ -15,6 +15,7 @@ import urllib.request
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, cast
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -270,10 +271,14 @@ class GitHubApp:
         )
 
     def m10_evidence_packet(
-        self, repository: str, pull: dict[str, Any], token: str
+        self,
+        repository: str,
+        pull: dict[str, Any],
+        token: str,
+        packet: EvidencePacket | None = None,
     ) -> EvidencePacket:
         """Add authenticated M10 report and workflow evidence to one exact-head packet."""
-        packet = self.evidence_packet(repository, pull, token)
+        packet = packet or self.evidence_packet(repository, pull, token)
         evidence = packet.evidence
         if not evidence.get("reviewed_sources") and not evidence.get("deleted_sources"):
             return packet
@@ -317,11 +322,34 @@ class GitHubApp:
             and row.get("head_sha") == head_sha
             and row.get("event") == "pull_request"
             and row.get("status") == "completed"
-            and row.get("run_attempt") == 1
+            and row.get("conclusion") == "success"
         ]
-        if len(runs) != 1 or not isinstance(runs[0].get("id"), int):
+        if not runs:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        return runs[0]
+        return max(runs, key=self._handoff_run_order)
+
+    @staticmethod
+    def _handoff_run_order(run: dict[str, Any]) -> tuple[datetime, int]:
+        """Validate and order successful exact-head workflow attempts."""
+        updated_at, run_id, run_attempt = (
+            run.get("updated_at"),
+            run.get("id"),
+            run.get("run_attempt"),
+        )
+        if (
+            not isinstance(updated_at, str)
+            or re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", updated_at) is None
+            or type(run_id) is not int
+            or run_id < 1
+            or type(run_attempt) is not int
+            or run_attempt < 1
+        ):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        try:
+            updated = datetime.fromisoformat(updated_at[:-1] + "+00:00")
+        except ValueError as error:
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE") from error
+        return updated, run_id
 
     def _handoff_artifact(self, repository: str, run: dict[str, Any], token: str) -> dict[str, Any]:
         run_id, run_attempt = run["id"], run["run_attempt"]

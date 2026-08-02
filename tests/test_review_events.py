@@ -129,7 +129,7 @@ def test_duplicate_and_out_of_order_events_reconcile_current_state() -> None:
             self.pulls += 1
             return {"number": 67}
 
-        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+        def evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
 
         def assert_current(self, *args: object) -> None:
@@ -160,7 +160,7 @@ def test_new_event_invalidates_without_concurrent_model_evaluation() -> None:
         def pull(self, *args: object) -> dict[str, object]:
             return {"number": 67}
 
-        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+        def evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
 
         def assert_current(self, *args: object) -> None:
@@ -195,8 +195,13 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
     class App:
         calls: list[str] = []
 
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            self.calls.append("review")
+            return packet
+
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
-            self.calls.append("read")
+            self.calls.append("handoff")
+            assert args[3] is packet
             return packet
 
         def assert_current(self, *args: object) -> None:
@@ -222,7 +227,7 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
 
     with pytest.raises(SemanticReviewError, match="MODEL_TIMEOUT"):
         semantic_cli._review(app, packet.repository, "token", {})  # type: ignore[arg-type]
-    assert app.calls == ["read", "current", "replay", "pending"]
+    assert app.calls == ["review", "current", "handoff", "current", "replay", "pending"]
 
 
 def test_state_change_during_evaluation_never_completes_success(
@@ -233,6 +238,9 @@ def test_state_change_during_evaluation_never_completes_success(
     class App:
         current_reads = 0
         completed = False
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
 
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
@@ -268,6 +276,9 @@ def test_publication_failure_cannot_return_green(monkeypatch: pytest.MonkeyPatch
     packet = _packet("fresh")
 
     class App:
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
 
@@ -315,6 +326,9 @@ def test_missed_event_is_recovered_with_fresh_digest_bound_verdict(
 
         def open_pulls(self, *args: object) -> tuple[dict[str, object], ...]:
             return ({"number": 67},)
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return fresh
 
         def m10_evidence_packet(self, *args: object) -> EvidencePacket:
             return fresh

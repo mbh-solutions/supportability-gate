@@ -114,8 +114,11 @@ def test_pr52_omission_is_bound_and_blocks_before_model(monkeypatch: pytest.Monk
     class App:
         published: list[tuple[object, ...]] = []
 
-        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+        def evidence_packet(self, *args: object) -> EvidencePacket:
             return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            pytest.fail("unresolved state must block before handoff evidence")
 
         def assert_current(self, *args: object) -> None:
             return None
