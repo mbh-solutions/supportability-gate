@@ -12,6 +12,7 @@ responsibility_changes = [
 simplified_functions = [
     "GitHubApp._check_runs",
     "GitHubApp.claim_check",
+    "GitHubApp.complete_check",
     "GitHubApp.pull",
     "GitHubApp.replay_result",
     "GitHubApp.start_check",
