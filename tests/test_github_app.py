@@ -12,7 +12,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from supportability_gate.github_app import CHECK_NAME, GitHubApp, app_jwt
+from supportability_gate.github_app import CHECK_NAME, REVIEWED_SUFFIXES, GitHubApp, app_jwt
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 
 CONTRACT = b"""schema_version = "1.0"
@@ -564,11 +564,49 @@ def test_frontend_component_boundary_uses_complete_parser_span() -> None:
     assert [item["line"] for item in app._source_excerpt(source, boundaries)] == [1, 2, 3, 4]
 
 
-def test_deletion_only_surviving_source_uses_base_identity_without_head_boundary() -> None:
-    base = b"def keep():\n    return 1\n\ndef obsolete():\n    return 2\n"
+def test_supported_source_boundaries_include_stubs_decorators_and_react_classes() -> None:
+    app = GitHubApp(42, 7, b"unused")
+    candidates = app._source_candidates(
+        tuple(
+            {"filename": f"src/sample{suffix}", "status": "modified"}
+            for suffix in (*sorted(REVIEWED_SUFFIXES), ".js", ".jsx")
+        )
+    )
+    assert {item["filename"].rsplit("sample", 1)[1] for item in candidates} == set(
+        REVIEWED_SUFFIXES
+    )
+
+    decorated = "@route('/x')\ndef handle():\n    return 1\n"
+    assert app._source_boundaries(
+        "src/routes.pyi", decorated, "@@ -0,0 +1 @@\n+@route('/x')"
+    ) == [{"end_line": 3, "kind": "function", "name": "handle", "start_line": 1}]
+
+    frontend = (
+        "class Panel extends React.PureComponent<Props> {\n"
+        "  render() { return <div />; }\n}\n"
+        "class Plain {\n  method() {}\n}\n"
+    )
+    assert app._source_boundaries(
+        "src/panel.tsx",
+        frontend,
+        "@@ -2 +2 @@\n-  render() { return null; }\n"
+        "+  render() { return <div />; }\n"
+        "@@ -5 +5 @@\n-  old() {}\n+  method() {}",
+    ) == [
+        {"end_line": 3, "kind": "component", "name": "Panel", "start_line": 1},
+        {"end_line": 2, "kind": "function", "name": "Panel.render", "start_line": 2},
+        {"end_line": 5, "kind": "function", "name": "Plain.method", "start_line": 5},
+    ]
+
+
+def test_deletion_only_change_maps_surviving_head_and_removed_base_responsibilities() -> None:
+    base = b"def keep():\n    removed = 1\n    return 1\n\ndef obsolete():\n    return 2\n"
     head = b"def keep():\n    return 1\n"
     base_blob, head_blob, contract_blob = map(_blob_sha, (base, head, CONTRACT))
-    patch = "@@ -1,5 +1,2 @@\n def keep():\n     return 1\n-\n-def obsolete():\n-    return 2"
+    patch = (
+        "@@ -1,6 +1,2 @@\n def keep():\n-    removed = 1\n"
+        "     return 1\n-\n-def obsolete():\n-    return 2"
+    )
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         if "/issues/3/comments" in request.full_url:
@@ -599,15 +637,29 @@ def test_deletion_only_surviving_source_uses_base_identity_without_head_boundary
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
 
-    assert packet.evidence["reviewed_sources"] == []
+    assert packet.evidence["reviewed_sources"] == [
+        {
+            "blob_sha": head_blob,
+            "boundaries": [
+                {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1}
+            ],
+            "imports": [],
+            "line_count": 2,
+            "lines": [
+                {"line": 1, "text": "def keep():"},
+                {"line": 2, "text": "    return 1"},
+            ],
+            "path": "src/a.py",
+        }
+    ]
     assert packet.evidence["deleted_sources"] == [
         {
             "blob_sha": base_blob,
             "boundaries": [
-                {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
-                {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
+                {"end_line": 6, "kind": "function", "name": "obsolete", "start_line": 5},
+                {"end_line": 4, "kind": "module", "name": "src/a.py", "start_line": 4},
             ],
-            "line_count": 5,
+            "line_count": 6,
             "path": "src/a.py",
         }
     ]
@@ -764,7 +816,6 @@ def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibi
     deleted = packet.evidence["deleted_sources"][0]
     assert deleted["blob_sha"] == base_blob
     assert deleted["boundaries"] == [
-        {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1},
         {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
         {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
     ]

@@ -2,20 +2,32 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "aaa7a602819d3a987de722f5a11d517f94af14ef"
+base_sha = "0b5c647317eebe196eaa287e4a755e4356ec4737"
 overall_result = "PASS"
 responsibility_changes = [
-    "clause_inventory enforces exact Standard-line profile scope and milestone-owned evidence and blocking-test authority.",
-    "normative_clause_inventory assigns repeated principle rows to their real milestone owners.",
+    "function_changes owns parser-derived Python, stub, TypeScript, and React-class responsibility identity across base and head.",
+    "github_app owns authenticated source acquisition while delegating responsibility mapping to function_changes.",
 ]
 simplified_functions = [
-    "_verify_coverage",
+    "GitHubApp._boundaries",
+    "GitHubApp._responsibility_spans",
+    "GitHubApp._reviewed_source",
+    "GitHubApp._source_boundaries",
+    "GitHubApp._source_evidence",
+    "GitHubApp._source_record",
+    "_FunctionCollector._visit_function",
+    "_TypeScriptFunctionCollector.__init__",
+    "_TypeScriptFunctionCollector._react_component",
+    "_TypeScriptFunctionCollector.visit",
+    "changed_responsibility_spans",
+    "parse_typescript_file",
+    "responsibility_spans",
 ]
 boundary_rationale = [
-    "clause_inventory owns deterministic completeness and authority validation for the immutable Standard inventory.",
+    "function_changes parses source identity without importing target code; github_app binds those spans to authenticated GitHub blobs.",
 ]
 remaining_risks = [
-    "Inventory loading validates blocking-test ownership references but does not execute those referenced tests.",
+    "Responsibility identity uses exact qualified names; a deliberate rename remains a removed base responsibility plus a new head responsibility.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -35,11 +47,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-profile-authority"
-text = "Every inventory row is bound to frontend-only, Python-only, or both profiles by its immutable Standard source line."
-citations = ["src/supportability_gate/clause_inventory.py:12-21", "src/supportability_gate/clause_inventory.py:410-415"]
+id = "claim-source-identity"
+text = "Semantic source review accepts exactly Python, stub, CTS, MTS, TS, and TSX suffixes and maps deletion-touched surviving responsibilities to head spans while retaining removed responsibilities on base."
+citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-824", "src/supportability_gate/function_changes.py:346-375"]
 
 [[completion_report.claims]]
-id = "claim-milestone-authority"
-text = "Repeated principle clauses and their evidence and blocking-test references are bound to the milestone that enforces them."
-citations = ["src/supportability_gate/clause_inventory.py:22-77", "src/supportability_gate/clause_inventory.py:411-432"]
+id = "claim-parser-boundaries"
+text = "Python spans begin at the earliest decorator and supported React component classes receive aggregate component spans while their methods remain separately reviewable."
+citations = ["src/supportability_gate/function_changes.py:121-136", "src/supportability_gate/function_changes.py:184-255", "src/supportability_gate/function_changes.py:304-343"]

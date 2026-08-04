@@ -23,7 +23,12 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from supportability_gate.architecture_policy import source_imports
 from supportability_gate.contract import ContractError, parse_contract
-from supportability_gate.function_changes import PythonSourceError, responsibility_spans
+from supportability_gate.function_changes import (
+    PythonSourceError,
+    ResponsibilitySpan,
+    changed_responsibility_spans,
+    responsibility_spans,
+)
 from supportability_gate.handoff_policy import (
     HANDOFF_REPORT_PATH,
     CompletionReportError,
@@ -40,7 +45,7 @@ from supportability_gate.semantic_contract import (
 
 API = "https://api.github.com"
 CHECK_NAME = "Supportability Semantic Review"
-REVIEWED_SUFFIXES = frozenset({".py", ".ts", ".tsx"})
+REVIEWED_SUFFIXES = frozenset({".py", ".pyi", ".cts", ".mts", ".ts", ".tsx"})
 HUNK_PATTERN = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
 HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
@@ -760,11 +765,11 @@ class GitHubApp:
             return [], []
         production_paths = self._production_paths(repository, base_sha, token)
         production = self._production_candidates(candidates, production_paths)
-        sources = [
-            source
+        sources_by_path = {
+            source["path"]: source
             for item in production
             if (source := self._reviewed_source(repository, item, token)) is not None
-        ]
+        }
         deleted = []
         for item in production:
             patch = item.get("patch")
@@ -785,17 +790,36 @@ class GitHubApp:
             if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
                 raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
             content = self._blob_content(repository, blob_sha, token)
-            boundaries = self._source_boundaries(path, content, patch, "-")
-            if not boundaries:
+            head_path, head_blob_sha = item["filename"], item.get("sha")
+            if not isinstance(head_blob_sha, str) or not SHA_PATTERN.fullmatch(head_blob_sha):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            head_content = self._blob_content(repository, head_blob_sha, token)
+            try:
+                surviving, removed = changed_responsibility_spans(
+                    head_path,
+                    content.encode(),
+                    head_content.encode(),
+                    self._changed_lines(patch, "-"),
+                    self._changed_lines(patch),
+                )
+            except PythonSourceError as error:
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
+            if not surviving and not removed:
                 raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-            deleted.append(
-                {
-                    "blob_sha": blob_sha,
-                    "boundaries": boundaries,
-                    "line_count": len(content.splitlines()),
-                    "path": path,
-                }
-            )
+            if surviving:
+                sources_by_path[head_path] = self._source_record(
+                    head_path, head_blob_sha, head_content, surviving
+                )
+            if removed:
+                deleted.append(
+                    {
+                        "blob_sha": blob_sha,
+                        "boundaries": self._boundaries(removed),
+                        "line_count": len(content.splitlines()),
+                        "path": path,
+                    }
+                )
+        sources = [sources_by_path[path] for path in sorted(sources_by_path)]
         self._validate_review_size(sources)
         return sources, deleted
 
@@ -834,9 +858,19 @@ class GitHubApp:
         if not isinstance(patch, str) or not patch:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         content = self._blob_content(repository, blob_sha, token)
-        boundaries = self._source_boundaries(path, content, patch)
-        if not boundaries:
+        spans = self._responsibility_spans(path, content, patch)
+        if not spans:
             return None
+        return self._source_record(path, blob_sha, content, spans)
+
+    def _source_record(
+        self,
+        path: str,
+        blob_sha: str,
+        content: str,
+        spans: tuple[ResponsibilitySpan, ...],
+    ) -> dict[str, Any]:
+        boundaries = self._boundaries(spans)
         return {
             "boundaries": boundaries,
             "blob_sha": blob_sha,
@@ -849,15 +883,16 @@ class GitHubApp:
             "path": path,
         }
 
-    def _source_boundaries(
+    def _responsibility_spans(
         self, path: str, content: str, patch: str, side: str = "+"
-    ) -> list[SourceBoundary]:
-        changed_lines = self._changed_lines(patch, side)
+    ) -> tuple[ResponsibilitySpan, ...]:
         try:
-            spans = responsibility_spans(path, content.encode(), changed_lines)
+            return responsibility_spans(path, content.encode(), self._changed_lines(patch, side))
         except PythonSourceError as error:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
-        boundaries: list[SourceBoundary] = [
+
+    def _boundaries(self, spans: tuple[ResponsibilitySpan, ...]) -> list[SourceBoundary]:
+        return [
             {
                 "end_line": span.end_line,
                 "kind": span.kind,
@@ -866,7 +901,11 @@ class GitHubApp:
             }
             for span in spans
         ]
-        return boundaries
+
+    def _source_boundaries(
+        self, path: str, content: str, patch: str, side: str = "+"
+    ) -> list[SourceBoundary]:
+        return self._boundaries(self._responsibility_spans(path, content, patch, side))
 
     def _changed_lines(self, patch: str, side: str = "+") -> set[int]:
         changed: set[int] = set()
