@@ -393,7 +393,7 @@ def _target_identities(
         targets.extend(
             f"{path}::{item.kind}:{item.name}:{item.start_line}-{item.end_line}" for item in spans
         )
-    return tuple(sorted(targets)), tuple(sorted(unbounded))
+    return tuple(sorted(set(targets))), tuple(sorted(unbounded))
 
 
 def _proof_path(path: str) -> bool:

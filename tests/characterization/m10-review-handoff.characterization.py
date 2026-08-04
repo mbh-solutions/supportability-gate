@@ -45,9 +45,6 @@ def _behavior() -> dict[str, list[str]]:
                     "arguments": ["check", "src"],
                     "executed": True,
                     "exit_code": 0,
-                    "observed_paths": [path],
-                    "proof_kind": "explicit-source",
-                    "zero_statement_paths": [],
                 }
             ]
         },

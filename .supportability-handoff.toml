@@ -8,6 +8,7 @@ responsibility_changes = [
     "quality_profile and quality_runner isolate trusted Python module tools from target-controlled import paths while retaining generated source-discovery configuration.",
     "GitHubApp binds the authenticated handoff artifact to the packet's current base and head SHAs.",
     "handoff_policy validates report and authoritative command rows independently and preserves authenticated failures as deterministic blocks.",
+    "refactor_policy collapses duplicate spans to their single bounded target identity.",
 ]
 simplified_functions = [
     "GitHubApp._handoff_evidence",
@@ -15,6 +16,7 @@ simplified_functions = [
     "_command_blocks",
     "_commands",
     "_result_blocks",
+    "_target_identities",
     "fixed_environment",
 ]
 boundary_rationale = [
@@ -54,3 +56,8 @@ citations = ["src/supportability_gate/github_app.py:278-303", "src/supportabilit
 id = "claim-fail-closed-handoff-results"
 text = "Report and authoritative command rows use separate strict shapes and failure codes, while authoritative non-PASS, unexecuted, and nonzero results always produce deterministic blocks."
 citations = ["src/supportability_gate/handoff_policy.py:21-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:266-274"]
+
+[[completion_report.claims]]
+id = "claim-unique-refactor-targets"
+text = "Repeated spans for the same changed responsibility collapse to one exact authorization target."
+citations = ["src/supportability_gate/refactor_policy.py:367-396"]
