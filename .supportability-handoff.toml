@@ -2,22 +2,26 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "0df70d249ce2930663758cd9626e5c6d091103c9"
+base_sha = "b97a9d6436180e403bbdc99227e8e066fc5af456"
 overall_result = "PASS"
 responsibility_changes = [
-    "semantic_review bounds returned ownership evidence by the exact parser-derived boundary set and still requires exact identity equality.",
-    "semantic_cli completes deterministic invalid completed responses visibly while leaving transport and retryable model states uncompleted.",
+    "semantic_contract binds the exact semantic instruction hash into the existing canonical evidence-packet identity.",
+    "github_app publishes the bound instruction hash beside the existing evidence hash without changing response or verdict contracts.",
 ]
 simplified_functions = [
-    "_boundary_evidence",
-    "_review",
+    "EvidencePacket.canonical_bytes",
+    "EvidencePacket.instruction_sha256",
+    "GitHubApp.complete_check",
+    "GitHubApp.publish_check",
+    "GitHubApp.start_check",
+    "request_payload",
 ]
 boundary_rationale = [
-    "semantic_review owns exact response validation against trusted parser-derived boundaries.",
-    "semantic_cli owns scheduled model orchestration and terminal check lifecycle.",
+    "semantic_contract owns instruction bytes and canonical evidence identity.",
+    "github_app owns semantic check publication and displays both bound hashes.",
 ]
 remaining_risks = [
-    "GitHub transport, model transport, or publication failure intentionally leaves required semantic enforcement non-green.",
+    "The active reviewer runtime remains on the pre-fix packet identity until the authorized interim cutover after merge.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -37,11 +41,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-exact-boundary-cardinality"
-text = "Returned boundary cardinality is bounded by the exact trusted boundary set before exact identity equality is required."
-citations = ["src/supportability_gate/semantic_review.py:229-255"]
+id = "claim-instruction-packet-binding"
+text = "The exact instruction hash is included in canonical evidence bytes and therefore changes the existing packet SHA and replay external ID."
+citations = ["src/supportability_gate/semantic_contract.py:89-92", "src/supportability_gate/semantic_contract.py:109-111", "src/supportability_gate/semantic_contract.py:303-303"]
 
 [[completion_report.claims]]
-id = "claim-terminal-invalid-response"
-text = "Deterministic invalid completed responses finish the current check, while incomplete, refused, or model-drift responses remain retryable."
-citations = ["src/supportability_gate/semantic_cli.py:184-199"]
+id = "claim-visible-instruction-hash"
+text = "Semantic check summaries publish the instruction hash beside the evidence hash."
+citations = ["src/supportability_gate/github_app.py:962-966", "src/supportability_gate/github_app.py:1000-1006", "src/supportability_gate/github_app.py:1039-1043"]

@@ -962,6 +962,7 @@ class GitHubApp:
                     "title": CHECK_NAME,
                     "summary": (
                         f"{summary}\n\nEvidence SHA-256: `{packet.sha256}`\n"
+                        f"Instruction SHA-256: `{packet.instruction_sha256}`\n"
                         f"Base: `{packet.base_sha}`\nHead: `{packet.head_sha}`"
                     ),
                 },
@@ -999,7 +1000,10 @@ class GitHubApp:
                 "status": "in_progress",
                 "output": {
                     "title": CHECK_NAME,
-                    "summary": f"Evidence SHA-256: `{packet.sha256}`",
+                    "summary": (
+                        f"Evidence SHA-256: `{packet.sha256}`\n"
+                        f"Instruction SHA-256: `{packet.instruction_sha256}`"
+                    ),
                 },
             },
         )
@@ -1035,6 +1039,7 @@ class GitHubApp:
                     "title": CHECK_NAME,
                     "summary": (
                         f"{summary}\n\nEvidence SHA-256: `{packet.sha256}`\n"
+                        f"Instruction SHA-256: `{packet.instruction_sha256}`\n"
                         f"Base: `{packet.base_sha}`\nHead: `{packet.head_sha}`"
                     ),
                 },
