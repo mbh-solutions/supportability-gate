@@ -6,6 +6,7 @@ import argparse
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from supportability_gate import characterization, contract, git_changes
@@ -57,23 +58,27 @@ def _run_driver(
     definition: Path,
     scenario: characterization.Scenario,
     language: str,
+    content: bytes,
 ) -> dict[str, object]:
     relative_driver, _ = characterization._scenario_paths(scenario, language)
-    arguments, recorded = _command(language, relative_driver, definition / relative_driver)
-    try:
-        completed = subprocess.run(
-            arguments,
-            cwd=target,
-            env=_safe_environment(target, definition),
-            check=False,
-            capture_output=True,
-            timeout=EXECUTION_TIMEOUT_SECONDS,
-        )
-        stdout, stderr, exit_code = completed.stdout, completed.stderr, completed.returncode
-    except subprocess.TimeoutExpired as error:
-        stdout, stderr, exit_code = error.stdout or b"", error.stderr or b"", -1
-    except OSError as error:
-        stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
+    with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
+        materialized = Path(temporary) / Path(relative_driver).name
+        materialized.write_bytes(content)
+        arguments, recorded = _command(language, relative_driver, materialized)
+        try:
+            completed = subprocess.run(
+                arguments,
+                cwd=target,
+                env=_safe_environment(target, definition),
+                check=False,
+                capture_output=True,
+                timeout=EXECUTION_TIMEOUT_SECONDS,
+            )
+            stdout, stderr, exit_code = completed.stdout, completed.stderr, completed.returncode
+        except subprocess.TimeoutExpired as error:
+            stdout, stderr, exit_code = error.stdout or b"", error.stderr or b"", -1
+        except OSError as error:
+            stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
     behavior, error_code = _behavior(stdout, scenario.id) if exit_code == 0 else (None, None)
     return {
         "behavior": behavior,
@@ -102,8 +107,8 @@ def _scenario_capture(
     driver = git_changes.read_regular_blob(definition, definition_sha, driver_path, records)
     golden = git_changes.read_regular_blob(definition, definition_sha, golden_path, records)
     golden_behavior = characterization._read_json_bytes(golden.content, "MALFORMED_GOLDEN_OUTPUT")
-    first = _run_driver(target, definition, scenario, language)
-    second = _run_driver(target, definition, scenario, language)
+    first = _run_driver(target, definition, scenario, language, driver.content)
+    second = _run_driver(target, definition, scenario, language, driver.content)
     return {
         "behavior": first["behavior"],
         "behavior_sha256": first["behavior_sha256"],
