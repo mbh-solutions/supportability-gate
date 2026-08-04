@@ -130,7 +130,7 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         newline="\n",
     )
     (output / "pytest.ini").write_text(
-        f"[pytest]\ntestpaths = tests\npythonpath = {repository / 'src'} {repository}\n"
+        f"[pytest]\ntestpaths = tests\npythonpath =\n    {repository / 'src'}\n    {repository}\n"
         "addopts = -p no:cacheprovider\n",
         encoding="utf-8",
         newline="\n",
