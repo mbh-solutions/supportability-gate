@@ -387,12 +387,14 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     output = tmp_path / "output"
     environment = quality_runner.fixed_environment(output, repository)
     plans = quality_runner.command_plans("python", repository, output, (), ("src/sample.py",))
+    pytest_plan = next(plan for plan in plans if plan.adapter == "python.pytest.v1")
 
     assert "PYTHONPATH" not in environment
     assert all(plan.actual[1] == "-I" for plan in plans[:-1])
     assert Path(plans[-1].actual[0]).is_absolute()
-    assert f"testpaths = {repository / 'tests'}" in (output / "pytest.ini").read_text()
-    assert f"pythonpath = {repository / 'src'} {repository}" in (output / "pytest.ini").read_text()
+    assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
+    assert "testpaths = tests" in (output / "pytest.ini").read_text()
+    assert "pythonpath = src" in (output / "pytest.ini").read_text()
     assert "mypy_path = src" in (output / "mypy.ini").read_text()
 
 
@@ -483,7 +485,6 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         ],
         check=False,
         capture_output=True,
-        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
@@ -601,7 +602,6 @@ maximum = 10
         ],
         check=False,
         capture_output=True,
-        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")

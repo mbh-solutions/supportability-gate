@@ -17,7 +17,6 @@ simplified_functions = [
     "_commands",
     "_result_blocks",
     "_target_identities",
-    "_write_python_configs",
     "command_plans",
     "fixed_environment",
 ]
@@ -32,7 +31,7 @@ validation_results = [
     { adapter = "python.ruff-format.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "format", "--check", "$SOURCE_FILES", "$TEST_FILES", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
     { adapter = "python.c901-touched.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "--select", "C901", "--config", "lint.mccabe.max-complexity = 10", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
     { adapter = "python.mypy-strict.v1", arguments = ["$PYTHON", "-I", "-m", "mypy", "--config-file", "$OUTPUT/mypy.ini", "--cache-dir", "$OUTPUT/mypy-cache", "$SOURCE_FILES"], exit_code = 0 },
-    { adapter = "python.pytest.v1", arguments = ["$PYTHON", "-I", "-m", "coverage", "run", "--branch", "--source=src", "--data-file=$OUTPUT/.coverage", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini"], exit_code = 0 },
+    { adapter = "python.pytest.v1", arguments = ["$PYTHON", "-I", "-m", "coverage", "run", "--branch", "--source=src", "--data-file=$OUTPUT/.coverage", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini", "--rootdir", "$REPOSITORY"], exit_code = 0 },
     { adapter = "python.build-wheel.v1", arguments = ["$PYTHON", "-I", "-m", "build", "--wheel", "--no-isolation", "--outdir", "$OUTPUT/wheel"], exit_code = 0 },
     { adapter = "python.import-linter.v1", arguments = ["$LINT_IMPORTS", "--config", "$OUTPUT/importlinter.ini", "--no-cache"], exit_code = 0 },
 ]

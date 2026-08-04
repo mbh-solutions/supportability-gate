@@ -107,6 +107,8 @@ _PYTHON_COMMANDS = (
             "-q",
             "-c",
             "$OUTPUT/pytest.ini",
+            "--rootdir",
+            "$REPOSITORY",
         ),
     ),
     (
