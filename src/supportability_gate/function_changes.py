@@ -356,9 +356,7 @@ def changed_responsibility_spans(
     all_head = responsibility_spans(
         path, head_content, set(range(1, len(head_content.splitlines()) + 1))
     )
-    head_by_identity = {
-        (span.kind, span.name): span for span in all_head if span.kind != "module"
-    }
+    head_by_identity = {(span.kind, span.name): span for span in all_head if span.kind != "module"}
     mapped = [
         head_by_identity[(span.kind, span.name)]
         for span in base

@@ -49,7 +49,7 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-source-identity"
 text = "Semantic source review accepts exactly Python, stub, CTS, MTS, TS, and TSX suffixes and maps deletion-touched surviving responsibilities to head spans while retaining removed responsibilities on base."
-citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-824", "src/supportability_gate/function_changes.py:346-375"]
+citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-824", "src/supportability_gate/function_changes.py:346-373"]
 
 [[completion_report.claims]]
 id = "claim-parser-boundaries"

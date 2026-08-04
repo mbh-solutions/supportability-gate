@@ -577,9 +577,9 @@ def test_supported_source_boundaries_include_stubs_decorators_and_react_classes(
     )
 
     decorated = "@route('/x')\ndef handle():\n    return 1\n"
-    assert app._source_boundaries(
-        "src/routes.pyi", decorated, "@@ -0,0 +1 @@\n+@route('/x')"
-    ) == [{"end_line": 3, "kind": "function", "name": "handle", "start_line": 1}]
+    assert app._source_boundaries("src/routes.pyi", decorated, "@@ -0,0 +1 @@\n+@route('/x')") == [
+        {"end_line": 3, "kind": "function", "name": "handle", "start_line": 1}
+    ]
 
     frontend = (
         "class Panel extends React.PureComponent<Props> {\n"
@@ -640,9 +640,7 @@ def test_deletion_only_change_maps_surviving_head_and_removed_base_responsibilit
     assert packet.evidence["reviewed_sources"] == [
         {
             "blob_sha": head_blob,
-            "boundaries": [
-                {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1}
-            ],
+            "boundaries": [{"end_line": 2, "kind": "function", "name": "keep", "start_line": 1}],
             "imports": [],
             "line_count": 2,
             "lines": [
