@@ -6,12 +6,13 @@ base_sha = "a8a8ddb15cdaa0a60eb972128433dc478d80d5bd"
 overall_result = "PASS"
 responsibility_changes = [
     "quality_profile and quality_runner isolate trusted Python module tools from target-controlled import paths while retaining generated source-discovery configuration.",
-    "GitHubApp binds the authenticated handoff artifact to the packet's current base and head SHAs.",
+    "GitHubApp searches successful exact-head handoff runs newest-first and binds the first artifact matching the packet's current base and head SHAs.",
     "handoff_policy validates report and authoritative command rows independently and preserves authenticated failures as deterministic blocks.",
     "refactor_policy collapses duplicate spans to their single bounded target identity.",
 ]
 simplified_functions = [
     "GitHubApp._handoff_evidence",
+    "GitHubApp._handoff_runs",
     "GitHubApp.m10_evidence_packet",
     "_command_blocks",
     "_commands",
@@ -51,8 +52,8 @@ citations = ["src/supportability_gate/quality_profile.py:14-124", "src/supportab
 
 [[completion_report.claims]]
 id = "claim-base-head-handoff-binding"
-text = "Handoff collection passes the current packet base and head and rejects an authenticated result unless both identities match."
-citations = ["src/supportability_gate/github_app.py:278-303", "src/supportability_gate/github_app.py:427-443"]
+text = "Handoff collection searches successful exact-head runs newest-first and accepts only an authenticated result whose base and head identities match the current packet."
+citations = ["src/supportability_gate/github_app.py:278-303", "src/supportability_gate/github_app.py:313-339", "src/supportability_gate/github_app.py:429-459"]
 
 [[completion_report.claims]]
 id = "claim-fail-closed-handoff-results"

@@ -255,6 +255,62 @@ def test_newest_successful_full_rerun_attempt_is_accepted() -> None:
     assert evidence["artifact_provenance"]["run_attempt"] == 2  # type: ignore[index]
 
 
+def test_older_successful_run_is_used_when_newer_run_has_stale_base() -> None:
+    head_sha = "b" * 40
+    older_archive = _handoff_archive(head_sha, run_id=122)
+    newer_archive = _handoff_archive(head_sha, base_sha="c" * 40)
+    older = {
+        "conclusion": "success",
+        "event": "pull_request",
+        "head_sha": head_sha,
+        "id": 122,
+        "path": ".github/workflows/organization-required.yml",
+        "run_attempt": 1,
+        "status": "completed",
+        "updated_at": "2026-08-02T16:00:00Z",
+    }
+    newer = {**older, "id": 123, "updated_at": "2026-08-02T17:00:00Z"}
+
+    def open_request(request: object, *args: object, **kwargs: object) -> _Reply:
+        url = request.full_url  # type: ignore[attr-defined]
+        if "/actions/runs?" in url:
+            return _Reply({"workflow_runs": [older, newer]})
+        if "/actions/runs/123/artifacts" in url:
+            return _Reply(
+                {
+                    "artifacts": [
+                        {
+                            "digest": f"sha256:{hashlib.sha256(newer_archive).hexdigest()}",
+                            "expired": False,
+                            "id": 789,
+                            "name": "supportability-evidence-123-1",
+                        }
+                    ]
+                }
+            )
+        if "/actions/runs/122/artifacts" in url:
+            return _Reply(
+                {
+                    "artifacts": [
+                        {
+                            "digest": f"sha256:{hashlib.sha256(older_archive).hexdigest()}",
+                            "expired": False,
+                            "id": 788,
+                            "name": "supportability-evidence-122-1",
+                        }
+                    ]
+                }
+            )
+        return _BytesReply(newer_archive if "/artifacts/789/" in url else older_archive)
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    evidence = app._handoff_evidence(
+        "mbh-solutions/supportability-gate", "a" * 40, head_sha, "token"
+    )
+
+    assert evidence["artifact_provenance"]["run_id"] == 122  # type: ignore[index]
+
+
 def test_failed_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
     older = {
         "conclusion": "success",
@@ -328,7 +384,7 @@ def test_rerun_attempt_with_mismatched_provenance_is_rejected(
         "run_attempt": 2,
     }
     app = GitHubApp(42, 7, b"unused")
-    monkeypatch.setattr(app, "_handoff_run", lambda *args: run)
+    monkeypatch.setattr(app, "_handoff_runs", lambda *args: (run,))
     monkeypatch.setattr(
         app,
         "_handoff_artifact",
@@ -344,7 +400,7 @@ def test_handoff_artifact_with_stale_base_is_rejected(monkeypatch: pytest.Monkey
     head_sha = "b" * 40
     archive = _handoff_archive(head_sha, base_sha="c" * 40)
     app = GitHubApp(42, 7, b"unused")
-    monkeypatch.setattr(app, "_handoff_run", lambda *args: {"id": 123, "run_attempt": 1})
+    monkeypatch.setattr(app, "_handoff_runs", lambda *args: ({"id": 123, "run_attempt": 1},))
     monkeypatch.setattr(
         app,
         "_handoff_artifact",

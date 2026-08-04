@@ -310,7 +310,9 @@ class GitHubApp:
             reasoning_effort=packet.reasoning_effort,
         )
 
-    def _handoff_run(self, repository: str, head_sha: str, token: str) -> dict[str, Any]:
+    def _handoff_runs(
+        self, repository: str, head_sha: str, token: str
+    ) -> tuple[dict[str, Any], ...]:
         result = self._request(
             "GET",
             f"/repos/{repository}/actions/runs?head_sha={head_sha}&per_page=100",
@@ -330,10 +332,10 @@ class GitHubApp:
         ]
         if not runs:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        run = max(runs, key=self._handoff_run_order)
-        if run.get("conclusion") != "success":
+        ordered = tuple(sorted(runs, key=self._handoff_run_order, reverse=True))
+        if ordered[0].get("conclusion") != "success":
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        return run
+        return tuple(run for run in ordered if run.get("conclusion") == "success")
 
     @staticmethod
     def _handoff_run_order(run: dict[str, Any]) -> tuple[datetime, int]:
@@ -427,32 +429,33 @@ class GitHubApp:
     def _handoff_evidence(
         self, repository: str, base_sha: str, head_sha: str, token: str
     ) -> dict[str, object]:
-        run = self._handoff_run(repository, head_sha, token)
-        artifact = self._handoff_artifact(repository, run, token)
-        archive = self._artifact_bytes(repository, artifact["id"], token)
-        archive_sha256 = hashlib.sha256(archive).hexdigest()
-        if artifact["digest"] != f"sha256:{archive_sha256}":
-            raise SemanticReviewError("HANDOFF_ARTIFACT_DIGEST_MISMATCH")
-        files = self._artifact_json(archive)
-        result, provenance = files["complexity-result.json"], files["quality-provenance.json"]
-        if (result.get("base_sha"), result.get("head_sha")) != (base_sha, head_sha):
-            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
-        if provenance.get("run_id") != str(run["id"]):
-            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
-        if provenance.get("run_attempt") != str(run["run_attempt"]):
-            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
-        return {
-            "artifact_provenance": {
-                "artifact_digest": artifact["digest"],
-                "artifact_id": artifact["id"],
-                "archive_sha256": archive_sha256,
-                "run_attempt": run["run_attempt"],
-                "run_conclusion": run.get("conclusion"),
-                "run_id": run["id"],
-                "workflow_path": HANDOFF_WORKFLOW_PATH,
-            },
-            "authoritative_result": result,
-        }
+        for run in self._handoff_runs(repository, head_sha, token):
+            artifact = self._handoff_artifact(repository, run, token)
+            archive = self._artifact_bytes(repository, artifact["id"], token)
+            archive_sha256 = hashlib.sha256(archive).hexdigest()
+            if artifact["digest"] != f"sha256:{archive_sha256}":
+                raise SemanticReviewError("HANDOFF_ARTIFACT_DIGEST_MISMATCH")
+            files = self._artifact_json(archive)
+            result, provenance = files["complexity-result.json"], files["quality-provenance.json"]
+            if (result.get("base_sha"), result.get("head_sha")) != (base_sha, head_sha):
+                continue
+            if provenance.get("run_id") != str(run["id"]):
+                raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+            if provenance.get("run_attempt") != str(run["run_attempt"]):
+                raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+            return {
+                "artifact_provenance": {
+                    "artifact_digest": artifact["digest"],
+                    "artifact_id": artifact["id"],
+                    "archive_sha256": archive_sha256,
+                    "run_attempt": run["run_attempt"],
+                    "run_conclusion": run.get("conclusion"),
+                    "run_id": run["id"],
+                    "workflow_path": HANDOFF_WORKFLOW_PATH,
+                },
+                "authoritative_result": result,
+            }
+        raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
 
     def _completion_report(self, repository: str, head_sha: str, token: str) -> dict[str, object]:
         path = (
