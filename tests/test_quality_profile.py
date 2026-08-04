@@ -365,6 +365,7 @@ def test_target_profile_refuses_owner_workstation(monkeypatch: pytest.MonkeyPatc
         ],
         check=False,
         capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=10,
     )
     assert completed.returncode == 2
