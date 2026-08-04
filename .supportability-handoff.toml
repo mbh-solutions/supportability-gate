@@ -2,23 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "97b0b9dcb54083e057deb75007f6bfb8d6e10604"
+base_sha = "0df70d249ce2930663758cd9626e5c6d091103c9"
 overall_result = "PASS"
 responsibility_changes = [
-    "semantic_cli publishes unresolved review-thread failures before handoff, replay, or model transport and enriches only clean packets with M10 evidence.",
-    "GitHubApp selects the newest completed exact-head workflow attempt and trusts it only when its result, artifact, digest, head, run ID, attempt, and provenance agree.",
-    "Clean review events preserve full-packet replay binding while unresolved review events invalidate from review evidence without acquiring handoff evidence.",
+    "semantic_review bounds returned ownership evidence by the exact parser-derived boundary set and still requires exact identity equality.",
+    "semantic_cli completes deterministic invalid completed responses visibly while leaving transport and retryable model states uncompleted.",
 ]
 simplified_functions = [
-    "GitHubApp._handoff_run",
-    "GitHubApp._handoff_run_order",
-    "GitHubApp.m10_evidence_packet",
+    "_boundary_evidence",
     "_review",
-    "process_review_event",
 ]
 boundary_rationale = [
-    "github_app owns authenticated workflow-attempt selection, artifact acquisition, and exact provenance binding.",
-    "semantic_cli owns deterministic unresolved-thread blocking, event invalidation, replay, and model orchestration.",
+    "semantic_review owns exact response validation against trusted parser-derived boundaries.",
+    "semantic_cli owns scheduled model orchestration and terminal check lifecycle.",
 ]
 remaining_risks = [
     "GitHub transport, model transport, or publication failure intentionally leaves required semantic enforcement non-green.",
@@ -41,16 +37,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-unresolved-review-threads-block-first"
-text = "Unresolved review threads publish deterministic failures before handoff evidence, replay, or model transport."
-citations = ["src/supportability_gate/semantic_cli.py:134-160"]
+id = "claim-exact-boundary-cardinality"
+text = "Returned boundary cardinality is bounded by the exact trusted boundary set before exact identity equality is required."
+citations = ["src/supportability_gate/semantic_review.py:229-255"]
 
 [[completion_report.claims]]
-id = "claim-newest-exact-attempt-provenance"
-text = "The newest completed exact-head workflow attempt must be successful before its exact attempt-bound artifact and provenance can be trusted."
-citations = ["src/supportability_gate/github_app.py:308-354"]
-
-[[completion_report.claims]]
-id = "claim-event-packet-binding"
-text = "Clean review events enrich the captured packet for exact completed-result replay, while unresolved review events invalidate directly from review evidence without handoff acquisition."
-citations = ["src/supportability_gate/semantic_cli.py:208-220"]
+id = "claim-terminal-invalid-response"
+text = "Deterministic invalid completed responses finish the current check, while incomplete, refused, or model-drift responses remain retryable."
+citations = ["src/supportability_gate/semantic_cli.py:184-199"]
