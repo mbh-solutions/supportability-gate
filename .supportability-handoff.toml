@@ -11,7 +11,14 @@ responsibility_changes = [
     "git_changes distinguishes real head content ranges from deletion anchors and exposes exact retained-base ranges.",
 ]
 simplified_functions = [
+    "_change_spans",
+    "_predecessor_authorization",
+    "_sequence_blocks",
     "_target_identities",
+    "changed_base_lines",
+    "changed_head_lines",
+    "main",
+    "verify_refactor",
 ]
 boundary_rationale = [
     "Driver materialization stays in the trusted hosted capture entry point; Git range extraction stays in git_changes; predecessor and target authorization stay in refactor_policy.",
@@ -40,9 +47,9 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-authenticated-predecessor-sequence"
 text = "Step 1 is rejected after a predecessor authorization, and each later step requires the current base to resolve to exactly one merged PR with a trusted exact-head authorization for the immediately prior step."
-citations = ["src/supportability_gate/refactor_policy.py:188-199", "src/supportability_gate/refactor_policy.py:272-314", "src/supportability_gate/refactor_policy.py:505-510", "src/supportability_gate/refactor_policy.py:594-610"]
+citations = ["src/supportability_gate/refactor_policy.py:188-199", "src/supportability_gate/refactor_policy.py:272-314", "src/supportability_gate/refactor_policy.py:494-499", "src/supportability_gate/refactor_policy.py:583-599"]
 
 [[completion_report.claims]]
 id = "claim-base-deletion-identity"
 text = "Retained-file deletions use exact base and head content ranges with the existing base-to-head responsibility mapper, preserving removed base identities without attributing a zero-length deletion to the following head line."
-citations = ["src/supportability_gate/git_changes.py:281-332", "src/supportability_gate/refactor_policy.py:328-407"]
+citations = ["src/supportability_gate/git_changes.py:281-332", "src/supportability_gate/refactor_policy.py:328-396"]
