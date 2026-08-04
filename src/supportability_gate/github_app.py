@@ -287,7 +287,7 @@ class GitHubApp:
         evidence = packet.evidence
         if not evidence.get("reviewed_sources") and not evidence.get("deleted_sources"):
             return packet
-        evidence.update(self._handoff_evidence(repository, packet.head_sha, token))
+        evidence.update(self._handoff_evidence(repository, packet.base_sha, packet.head_sha, token))
         evidence.update(self._completion_report(repository, packet.head_sha, token))
         context = evidence.get("refactor_context")
         changed_files = context.get("changed_files") if isinstance(context, dict) else None
@@ -424,7 +424,9 @@ class GitHubApp:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
         return values
 
-    def _handoff_evidence(self, repository: str, head_sha: str, token: str) -> dict[str, object]:
+    def _handoff_evidence(
+        self, repository: str, base_sha: str, head_sha: str, token: str
+    ) -> dict[str, object]:
         run = self._handoff_run(repository, head_sha, token)
         artifact = self._handoff_artifact(repository, run, token)
         archive = self._artifact_bytes(repository, artifact["id"], token)
@@ -433,7 +435,9 @@ class GitHubApp:
             raise SemanticReviewError("HANDOFF_ARTIFACT_DIGEST_MISMATCH")
         files = self._artifact_json(archive)
         result, provenance = files["complexity-result.json"], files["quality-provenance.json"]
-        if result.get("head_sha") != head_sha or provenance.get("run_id") != str(run["id"]):
+        if (result.get("base_sha"), result.get("head_sha")) != (base_sha, head_sha):
+            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+        if provenance.get("run_id") != str(run["id"]):
             raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
         if provenance.get("run_attempt") != str(run["run_attempt"]):
             raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")

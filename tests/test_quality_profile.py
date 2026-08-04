@@ -382,11 +382,17 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
     assert all("$(" not in argument and "`" not in argument for argument in arguments)
 
 
-def test_fixed_environment_imports_only_the_target_source(tmp_path: Path) -> None:
+def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: Path) -> None:
     repository = tmp_path / "target"
-    environment = quality_runner.fixed_environment(tmp_path / "output", repository)
+    output = tmp_path / "output"
+    environment = quality_runner.fixed_environment(output, repository)
+    plans = quality_runner.command_plans("python", repository, output, (), ("src/sample.py",))
 
-    assert environment["PYTHONPATH"] == str(repository / "src")
+    assert "PYTHONPATH" not in environment
+    assert all(plan.actual[1] == "-I" for plan in plans[:-1])
+    assert Path(plans[-1].actual[0]).is_absolute()
+    assert "pythonpath = src" in (output / "pytest.ini").read_text()
+    assert "mypy_path = src" in (output / "mypy.ini").read_text()
 
 
 def _run_git(repository: Path, *arguments: str) -> str:

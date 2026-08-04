@@ -97,9 +97,12 @@ def _blob_payload(content: bytes) -> dict[str, str]:
     }
 
 
-def _handoff_archive(head_sha: str, run_id: int = 123, run_attempt: int = 1) -> bytes:
+def _handoff_archive(
+    head_sha: str, run_id: int = 123, run_attempt: int = 1, base_sha: str = "a" * 40
+) -> bytes:
     target = io.BytesIO()
     result = {
+        "base_sha": base_sha,
         "head_sha": head_sha,
     }
     provenance = {"run_attempt": str(run_attempt), "run_id": str(run_id)}
@@ -139,7 +142,9 @@ def test_m10_packet_binds_fresh_full_run_artifact_and_report() -> None:
         return _Reply({"artifacts": [artifact]})
 
     app = GitHubApp(42, 7, b"unused", opener=open_request)
-    evidence = app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+    evidence = app._handoff_evidence(
+        "mbh-solutions/supportability-gate", "a" * 40, head_sha, "token"
+    )
 
     assert evidence["artifact_provenance"] == {
         "artifact_digest": f"sha256:{archive_sha256}",
@@ -243,7 +248,9 @@ def test_newest_successful_full_rerun_attempt_is_accepted() -> None:
         return _Reply({"artifacts": [artifact]})
 
     app = GitHubApp(42, 7, b"unused", opener=open_request)
-    evidence = app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+    evidence = app._handoff_evidence(
+        "mbh-solutions/supportability-gate", "a" * 40, head_sha, "token"
+    )
 
     assert evidence["artifact_provenance"]["run_attempt"] == 2  # type: ignore[index]
 
@@ -276,7 +283,7 @@ def test_failed_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
         opener=lambda *args, **kwargs: _Reply({"workflow_runs": [older, failed]}),
     )
     with pytest.raises(SemanticReviewError, match="HANDOFF_EVIDENCE_UNAVAILABLE"):
-        app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, "token")
 
 
 @pytest.mark.parametrize(
@@ -306,7 +313,7 @@ def test_malformed_successful_rerun_metadata_is_rejected(field: str, value: obje
     )
 
     with pytest.raises(SemanticReviewError, match="MALFORMED_GITHUB_RESPONSE"):
-        app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, "token")
 
 
 def test_rerun_attempt_with_mismatched_provenance_is_rejected(
@@ -330,7 +337,23 @@ def test_rerun_attempt_with_mismatched_provenance_is_rejected(
     monkeypatch.setattr(app, "_artifact_bytes", lambda *args: archive)
 
     with pytest.raises(SemanticReviewError, match="STALE_HANDOFF_EVIDENCE"):
-        app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, head_sha, "token")
+
+
+def test_handoff_artifact_with_stale_base_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    head_sha = "b" * 40
+    archive = _handoff_archive(head_sha, base_sha="c" * 40)
+    app = GitHubApp(42, 7, b"unused")
+    monkeypatch.setattr(app, "_handoff_run", lambda *args: {"id": 123, "run_attempt": 1})
+    monkeypatch.setattr(
+        app,
+        "_handoff_artifact",
+        lambda *args: {"digest": f"sha256:{hashlib.sha256(archive).hexdigest()}", "id": 789},
+    )
+    monkeypatch.setattr(app, "_artifact_bytes", lambda *args: archive)
+
+    with pytest.raises(SemanticReviewError, match="STALE_HANDOFF_EVIDENCE"):
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, head_sha, "token")
 
 
 def test_handoff_archive_rejects_large_expanded_member() -> None:

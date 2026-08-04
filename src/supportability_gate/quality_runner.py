@@ -30,7 +30,6 @@ def fixed_environment(output: Path, repository: Path) -> dict[str, str]:
             "CI": "true",
             "NO_COLOR": "1",
             "PYTHONHASHSEED": "0",
-            "PYTHONPATH": str(repository / "src"),
             "PYTHONPYCACHEPREFIX": str(output / "pycache"),
         }
     )

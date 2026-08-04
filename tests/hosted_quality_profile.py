@@ -30,6 +30,7 @@ def _python_coverage_proof(
     completed = subprocess.run(
         (
             plan.actual[0],
+            "-I",
             "-m",
             "coverage",
             "json",

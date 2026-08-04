@@ -57,7 +57,7 @@ class Observation:
 def _cases() -> tuple[Case, ...]:
     clean_quality = {
         "quality_decision": {
-            "schema_version": "quality-gates.v2",
+            "schema_version": "quality-gates.v3",
             "commands": [
                 {
                     "adapter": "python.pytest.v1",
