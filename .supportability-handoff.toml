@@ -37,9 +37,9 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-profile-authority"
 text = "Every inventory row is bound to frontend-only, Python-only, or both profiles by its immutable Standard source line."
-citations = ["src/supportability_gate/clause_inventory.py:11-21", "src/supportability_gate/clause_inventory.py:412-414"]
+citations = ["src/supportability_gate/clause_inventory.py:12-21", "src/supportability_gate/clause_inventory.py:412-414"]
 
 [[completion_report.claims]]
 id = "claim-milestone-authority"
 text = "Repeated principle clauses and their evidence and blocking-test references are bound to the milestone that enforces them."
-citations = ["src/supportability_gate/clause_inventory.py:22-77", "src/supportability_gate/clause_inventory.py:415-426"]
+citations = ["src/supportability_gate/clause_inventory.py:22-77", "src/supportability_gate/clause_inventory.py:415-425"]
