@@ -411,7 +411,7 @@ def _run_git(repository: Path, *arguments: str) -> str:
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="target quality commands are forbidden outside GitHub-hosted runners",
 )
-def test_python_poison_file_blocks_as_unexecuted(tmp_path: Path) -> None:
+def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path) -> None:
     repository = tmp_path / "python-target"
     repository.mkdir()
     _run_git(repository, "init", "--initial-branch=main")
@@ -484,7 +484,7 @@ def test_python_poison_file_blocks_as_unexecuted(tmp_path: Path) -> None:
         capture_output=True,
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode == 1, completed.stderr.decode(errors="replace")
+    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
     evidence = replace(
         quality_profile.load_evidence(output),
         artifact_id="789",
