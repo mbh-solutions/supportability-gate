@@ -2,30 +2,23 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "34f0cb88c4c397c42d6c792f635ddbe20a0577cb"
+base_sha = "3ad2c475ba1d241185715c05a0169a2462b9c7d2"
 overall_result = "PASS"
 responsibility_changes = [
-    "architecture_policy owns strict domain dependencies, production-root layers, and NodeNext source resolution.",
-    "modularity_policy owns pre-existing same-package ownership and executed quality coverage for new locations.",
-    "semantic_review binds dependency-direction prose to every trusted structured import citation.",
-    "cli passes authenticated quality evidence into deterministic modularity evaluation.",
+    "hosted_characterization materializes the authenticated driver blob to a fresh temporary path for each comparison execution while retaining the canonical recorded command and authenticated golden blob.",
+    "refactor_policy authenticates the current base's unique merged predecessor PR and binds each sequence step to its trusted prior authorization.",
+    "refactor_policy maps retained-file deletions through exact base and head ranges so removed responsibilities keep their base identity.",
+    "git_changes distinguishes real head content ranges from deletion anchors and exposes exact retained-base ranges.",
 ]
 simplified_functions = [
-    "_architecture_evidence",
-    "_blocks",
-    "_claim_blocks",
-    "_evaluate",
-    "_layer",
-    "_package",
-    "_typescript_target",
-    "evaluate_modularity",
+    "_target_identities",
 ]
 boundary_rationale = [
-    "Static source topology stays in architecture_policy; authenticated run observations stay in quality evidence; modularity consumes both without executing target code.",
+    "Driver materialization stays in the trusted hosted capture entry point; Git range extraction stays in git_changes; predecessor and target authorization stay in refactor_policy.",
 ]
 remaining_risks = [
-    "The domain allowlist is intentionally closed; new pure-domain standard-library needs require a separately authorized policy change.",
-    "NodeNext mapping covers relative JS-family specifiers and their index candidates; package export maps remain outside this fixed source resolver.",
+    "Predecessor evidence depends on GitHub's commit-to-pull association and issue comments; unavailable or ambiguous evidence fails closed.",
+    "Characterization drivers retain the authenticated definition path for declared fixture access, but executable bytes never come from that mutable worktree.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -45,16 +38,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-architecture-policy"
-text = "Domain code accepts only the fixed pure-Python allowlist, TypeScript domain code accepts no external dependency, NodeNext relative specifiers resolve to TypeScript sources, and production-root layer names are retained."
-citations = ["src/supportability_gate/architecture_policy.py:36-60", "src/supportability_gate/architecture_policy.py:125-131", "src/supportability_gate/architecture_policy.py:206-222", "src/supportability_gate/architecture_policy.py:276-285"]
+id = "claim-authenticated-predecessor-sequence"
+text = "Step 1 is rejected after a predecessor authorization, and each later step requires the current base to resolve to exactly one merged PR with a trusted exact-head authorization for the immediately prior step."
+citations = ["src/supportability_gate/refactor_policy.py:188-199", "src/supportability_gate/refactor_policy.py:272-314", "src/supportability_gate/refactor_policy.py:505-510", "src/supportability_gate/refactor_policy.py:594-610"]
 
 [[completion_report.claims]]
-id = "claim-modularity-evidence"
-text = "A new location requires a pre-existing governed owner in the same package and counts gate coverage only from successful executed commands that observed the path or proved it has zero statements."
-citations = ["src/supportability_gate/modularity_policy.py:91-98", "src/supportability_gate/modularity_policy.py:108-133", "src/supportability_gate/modularity_policy.py:136-166", "src/supportability_gate/cli.py:479-485"]
-
-[[completion_report.claims]]
-id = "claim-dependency-prose"
-text = "Dependency-direction prose must contain every exact trusted source-line-specifier token represented by its structured architecture citations."
-citations = ["src/supportability_gate/semantic_contract.py:294-295", "src/supportability_gate/semantic_review.py:259-286"]
+id = "claim-base-deletion-identity"
+text = "Retained-file deletions use exact base and head content ranges with the existing base-to-head responsibility mapper, preserving removed base identities without attributing a zero-length deletion to the following head line."
+citations = ["src/supportability_gate/git_changes.py:281-332", "src/supportability_gate/refactor_policy.py:328-407"]

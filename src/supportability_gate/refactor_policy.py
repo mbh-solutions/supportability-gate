@@ -364,6 +364,32 @@ def _change_spans(
     return (*surviving, *deleted)
 
 
+def _change_targets(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    change: git_changes.ChangedPath,
+    records: list[git_changes.CommandRecord],
+) -> tuple[tuple[str, ...], str | None]:
+    path = change.new_path or change.old_path
+    if path is None or not policy.is_production_path(path):
+        return (), None
+    if not _profile_source(path, policy.language):
+        return (), path
+    try:
+        spans = _change_spans(repository, identity, change, path, records)
+    except function_changes.PythonSourceError:
+        if change.new_path is not None:
+            raise
+        return (), path
+    return (
+        tuple(
+            f"{path}::{item.kind}:{item.name}:{item.start_line}-{item.end_line}" for item in spans
+        ),
+        None if spans else path,
+    )
+
+
 def _target_identities(
     repository: Path,
     identity: git_changes.RepositoryIdentity,
@@ -374,25 +400,10 @@ def _target_identities(
     targets: list[str] = []
     unbounded: list[str] = []
     for change in changes:
-        path = change.new_path or change.old_path
-        if path is None or not policy.is_production_path(path):
-            continue
-        if not _profile_source(path, policy.language):
-            unbounded.append(path)
-            continue
-        try:
-            spans = _change_spans(repository, identity, change, path, records)
-        except function_changes.PythonSourceError:
-            if change.new_path is not None:
-                raise
-            unbounded.append(path)
-            continue
-        if not spans:
-            unbounded.append(path)
-            continue
-        targets.extend(
-            f"{path}::{item.kind}:{item.name}:{item.start_line}-{item.end_line}" for item in spans
-        )
+        bounded, missing = _change_targets(repository, identity, policy, change, records)
+        targets.extend(bounded)
+        if missing is not None:
+            unbounded.append(missing)
     return tuple(sorted(targets)), tuple(sorted(unbounded))
 
 
