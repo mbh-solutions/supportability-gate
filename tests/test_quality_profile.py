@@ -483,6 +483,7 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         ],
         check=False,
         capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
@@ -600,6 +601,7 @@ maximum = 10
         ],
         check=False,
         capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
