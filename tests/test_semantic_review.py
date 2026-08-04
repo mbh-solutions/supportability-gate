@@ -360,8 +360,10 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
     assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
+@pytest.mark.parametrize("code", ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT"])
 def test_technical_model_failure_publishes_no_semantic_check(
     monkeypatch: pytest.MonkeyPatch,
+    code: str,
 ) -> None:
     class App:
         completed: list[object] = []
@@ -389,10 +391,19 @@ def test_technical_model_failure_publishes_no_semantic_check(
     app = App()
 
     def fail(*args: object) -> object:
-        raise SemanticReviewError("TIMEOUT")
+        if code == "TIMEOUT":
+            raise SemanticReviewError(code)
+        response = _response(_m10_packet())
+        if code == "INCOMPLETE_RESPONSE":
+            response["status"] = "incomplete"
+        elif code == "REFUSAL":
+            response["output"][0]["content"][0] = {"type": "refusal", "refusal": "no"}  # type: ignore[index]
+        else:
+            response["model"] = "other"
+        return response
 
     monkeypatch.setattr(semantic_cli, "request_response", fail)
-    with pytest.raises(SemanticReviewError, match="TIMEOUT"):
+    with pytest.raises(SemanticReviewError, match=code):
         semantic_cli._review(app, "mbh-solutions/supportability-gate", "token", {})  # type: ignore[arg-type]
     assert app.started == 1
     assert app.completed == []

@@ -185,6 +185,8 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
     try:
         verdict = parse_response(packet, response)
     except SemanticReviewError as error:
+        if error.code in {"INCOMPLETE_RESPONSE", "MODEL_DRIFT", "REFUSAL"}:
+            raise
         _complete_current_check(
             app,
             packet,
