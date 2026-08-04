@@ -27,6 +27,8 @@ _AUTHORITATIVE_COMMAND_FIELDS = {
     "arguments",
     "executed",
     "exit_code",
+}
+_AUTHORITATIVE_OBSERVATION_FIELDS = {
     "observed_paths",
     "proof_kind",
     "zero_statement_paths",
@@ -152,7 +154,11 @@ def _commands(
         return commands, frozenset(), malformed
     expected = _AUTHORITATIVE_COMMAND_FIELDS if authoritative else _REPORT_COMMAND_FIELDS
     for item in value:
-        if not isinstance(item, dict) or set(item) != expected:
+        fields = set(item) if isinstance(item, dict) else set()
+        if not isinstance(item, dict) or (
+            fields != expected
+            and (not authoritative or fields != expected | _AUTHORITATIVE_OBSERVATION_FIELDS)
+        ):
             malformed = True
             continue
         adapter, arguments, exit_code = (
@@ -168,6 +174,7 @@ def _commands(
             and (not authoritative or type(item.get("executed")) is bool)
             and (
                 not authoritative
+                or not fields & _AUTHORITATIVE_OBSERVATION_FIELDS
                 or (
                     isinstance(item.get("proof_kind"), str)
                     and isinstance(item.get("observed_paths"), list)
