@@ -225,6 +225,46 @@ def _captures(
     return base, head
 
 
+def test_driver_executes_authenticated_blob_from_fresh_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target"
+    definition = tmp_path / "definition"
+    target.mkdir()
+    relative, _ = characterization._scenario_paths(
+        characterization.Scenario("victim", "regression", ("src/sample.py",)), "python"
+    )
+    mutable = definition / relative
+    _write(
+        mutable,
+        "import json\n"
+        "print(json.dumps({'schema_version':'1.0','scenario':'victim',"
+        "'behavior':{'source':'mutable'}}))\n",
+    )
+    authenticated = mutable.read_bytes().replace(b"mutable", b"authenticated")
+    seen: list[Path] = []
+    command = hosted_characterization._command
+
+    def record(language: str, driver: str, materialized: Path) -> tuple[list[str], list[str]]:
+        seen.append(materialized)
+        return command(language, driver, materialized)
+
+    monkeypatch.setattr(hosted_characterization, "_command", record)
+    scenario = characterization.Scenario("victim", "regression", ("src/sample.py",))
+
+    first = hosted_characterization._run_driver(
+        target, definition, scenario, "python", authenticated
+    )
+    second = hosted_characterization._run_driver(
+        target, definition, scenario, "python", authenticated
+    )
+
+    assert first["behavior"] == second["behavior"] == {"source": "authenticated"}
+    assert first["command"] == ["python3.12", "-P", relative]
+    assert len(set(seen)) == 2
+    assert all(not path.is_relative_to(definition) and not path.exists() for path in seen)
+
+
 def _write_artifacts(
     tmp_path: Path, base: dict[str, object], head: dict[str, object]
 ) -> tuple[Path, Path]:

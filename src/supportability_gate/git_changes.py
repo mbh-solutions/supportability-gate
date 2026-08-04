@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 GIT_TIMEOUT_SECONDS = 30
 _FULL_SHA = re.compile(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}")
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+_BASE_HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@")
 
 
 class GitError(RuntimeError):
@@ -283,6 +284,8 @@ def changed_head_lines(
     head_sha: str,
     path: str,
     records: list[CommandRecord],
+    *,
+    include_deletion_anchor: bool = True,
 ) -> tuple[int, ...]:
     """Return exact changed line numbers in the head blob."""
     patch = run_git(
@@ -296,5 +299,34 @@ def changed_head_lines(
         if match:
             start = int(match.group(1))
             count = int(match.group(2) or "1")
-            lines.update(range(start, start + count) if count else (max(1, start),))
+            lines.update(
+                range(start, start + count)
+                if count
+                else (max(1, start),)
+                if include_deletion_anchor
+                else ()
+            )
+    return tuple(sorted(lines))
+
+
+def changed_base_lines(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    path: str,
+    records: list[CommandRecord],
+) -> tuple[int, ...]:
+    """Return exact removed or modified line numbers in a retained base blob."""
+    patch = run_git(
+        repository,
+        ("diff", "--unified=0", "--no-color", "--no-ext-diff", base_sha, head_sha, "--", path),
+        records,
+    ).decode("utf-8", errors="strict")
+    lines: set[int] = set()
+    for line in patch.splitlines():
+        match = _BASE_HUNK.match(line)
+        if match:
+            start = int(match.group(1))
+            count = int(match.group(2) or "1")
+            lines.update(range(start, start + count))
     return tuple(sorted(lines))

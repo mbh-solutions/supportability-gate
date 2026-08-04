@@ -96,6 +96,7 @@ def _authorization(
     *,
     broad: bool = False,
     predecessor_sha: str | None = None,
+    step: int = 1,
 ) -> str:
     value = {
         "base_sha": base_sha,
@@ -104,7 +105,7 @@ def _authorization(
         "repository": "example/fixture",
         "schema_version": "1.0",
         "scope": sorted(scope),
-        "sequence": {"predecessor_sha": predecessor_sha or base_sha, "step": 1},
+        "sequence": {"predecessor_sha": predecessor_sha or base_sha, "step": step},
         "targets": sorted(targets),
     }
     return refactor_policy.AUTHORIZATION_PREFIX + json.dumps(value, separators=(",", ":"))
@@ -152,10 +153,14 @@ def _verify(
     characterization: dict[str, object],
     *,
     owner_id: int = refactor_policy.TRUSTED_OWNER_ID,
+    predecessor: refactor_policy.Authorization | None = None,
+    predecessor_block: str | None = None,
 ) -> dict[str, object]:
     body = event["pull_request"]["body"]  # type: ignore[index]
     comments = () if body is None else ({"body": body, "id": 11, "user": {"id": owner_id}},)
-    return refactor_policy.verify_refactor(repository, event, characterization, comments)
+    return refactor_policy.verify_refactor(
+        repository, event, characterization, comments, predecessor, predecessor_block
+    )
 
 
 @pytest.mark.parametrize(
@@ -315,6 +320,26 @@ def test_exact_authorized_python_deletion_uses_base_responsibilities(tmp_path: P
     assert first["unbounded_paths"] == []
 
 
+def test_retained_file_deletion_uses_deleted_base_responsibility(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    path = "src/sample.py"
+    _write(
+        repository / path,
+        "def removed() -> int:\n    return 1\n\ndef retained() -> int:\n    return 2\n",
+    )
+    base_sha = _commit(repository, "two functions")
+    _write(repository / path, "def retained() -> int:\n    return 2\n")
+    head_sha = _commit(repository, "delete first function")
+    target = f"{path}::function:removed:1-2"
+    event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, [path], [target]))
+
+    result = _verify(repository, event, _characterization(base_sha, head_sha, [path]))
+
+    assert result["overall_result"] == "PASS"
+    assert result["targets"] == [target]
+
+
 def test_existing_addition_enforcement_is_unchanged(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
@@ -427,6 +452,84 @@ def test_github_comment_evidence_uses_fixed_authenticated_endpoint() -> None:
     assert comments[0]["id"] == 11
     assert requests[0].full_url.endswith("/repos/example/fixture/issues/7/comments?per_page=100")
     assert requests[0].get_header("Authorization") == "Bearer token"
+
+
+def test_predecessor_uses_exact_merged_pr_and_trusted_authorization() -> None:
+    merge_sha, prior_base, prior_head = "a" * 40, "b" * 40, "c" * 40
+    body = _authorization(
+        prior_base,
+        prior_head,
+        ["src/sample.py"],
+        ["src/sample.py::function:calculate:1-2"],
+        step=2,
+    )
+    responses = iter(
+        [
+            [
+                {
+                    "base": {"sha": prior_base},
+                    "head": {"sha": prior_head},
+                    "merge_commit_sha": merge_sha,
+                    "merged_at": "2026-08-04T00:00:00Z",
+                    "number": 6,
+                }
+            ],
+            [{"body": body, "id": 11, "user": {"id": refactor_policy.TRUSTED_OWNER_ID}}],
+        ]
+    )
+    requests: list[Any] = []
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        assert kwargs == {"timeout": 30}
+        return _Reply(next(responses))
+
+    predecessor, block = refactor_policy._predecessor_authorization(
+        "example/fixture", merge_sha, "token", opener
+    )
+
+    assert block is None
+    assert predecessor is not None and predecessor.sequence.step == 2
+    assert requests[0].full_url.endswith(f"/commits/{merge_sha}/pulls?per_page=100")
+    assert requests[1].full_url.endswith("/issues/6/comments?per_page=100")
+
+
+def test_sequence_step_requires_immediate_authenticated_predecessor() -> None:
+    previous = refactor_policy._parse_authorization(
+        _authorization(
+            "d" * 40,
+            "e" * 40,
+            ["src/sample.py"],
+            ["src/sample.py::function:calculate:1-2"],
+            step=2,
+        )
+    )
+    step_three = refactor_policy._parse_authorization(
+        _authorization(
+            "a" * 40,
+            "b" * 40,
+            ["src/sample.py"],
+            ["src/sample.py::function:calculate:1-2"],
+            step=3,
+        )
+    )
+    reset = refactor_policy._parse_authorization(
+        _authorization(
+            "a" * 40,
+            "b" * 40,
+            ["src/sample.py"],
+            ["src/sample.py::function:calculate:1-2"],
+        )
+    )
+
+    assert refactor_policy._sequence_blocks(step_three, previous, None) == []
+    assert refactor_policy._sequence_blocks(reset, previous, None) == ["INVALID_STRANGLER_SEQUENCE"]
+    assert refactor_policy._sequence_blocks(step_three, None, None) == [
+        "INVALID_STRANGLER_SEQUENCE"
+    ]
+    assert refactor_policy._sequence_blocks(
+        step_three, previous, "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"
+    ) == ["GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"]
 
 
 @pytest.mark.parametrize(

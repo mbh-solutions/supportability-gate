@@ -185,6 +185,20 @@ def _authorization_blocks(event: dict[str, Any], authorization: Authorization) -
     return blocks
 
 
+def _sequence_blocks(
+    authorization: Authorization,
+    predecessor: Authorization | None,
+    predecessor_block: str | None,
+) -> list[str]:
+    if predecessor_block is not None:
+        return [predecessor_block]
+    if authorization.sequence.step == 1:
+        return ["INVALID_STRANGLER_SEQUENCE"] if predecessor is not None else []
+    if predecessor is None or predecessor.sequence.step != authorization.sequence.step - 1:
+        return ["INVALID_STRANGLER_SEQUENCE"]
+    return []
+
+
 def _owner_authorization(
     event: dict[str, Any], comments: tuple[dict[str, Any], ...]
 ) -> tuple[Authorization, int]:
@@ -255,6 +269,51 @@ def _github_comments(
     return tuple(value)
 
 
+def _predecessor_authorization(
+    repository: str,
+    base_sha: str,
+    token: str,
+    opener: Any = urllib.request.urlopen,
+) -> tuple[Authorization | None, str | None]:
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repository}/commits/{base_sha}/pulls?per_page=100",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with opener(request, timeout=30) as response:
+            value = json.loads(response.read())
+    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError):
+        return None, "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"
+    if not isinstance(value, list) or len(value) >= 100:
+        return None, "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"
+    merged = [
+        item
+        for item in value
+        if isinstance(item, dict)
+        and item.get("merge_commit_sha") == base_sha
+        and isinstance(item.get("merged_at"), str)
+    ]
+    if not merged:
+        return None, None
+    if len(merged) != 1 or type(merged[0].get("number")) is not int:
+        return None, "INVALID_STRANGLER_SEQUENCE"
+    event = {"repository": {"full_name": repository}, "pull_request": merged[0]}
+    try:
+        comments = _github_comments(repository, merged[0]["number"], token, opener)
+        authorization, _ = _owner_authorization(event, comments)
+    except RefactorPolicyError as error:
+        if error.code == "MISSING_OWNER_AUTHORIZATION":
+            return None, None
+        return None, error.code
+    if _authorization_blocks(event, authorization):
+        return None, "INVALID_STRANGLER_SEQUENCE"
+    return authorization, None
+
+
 def _profile_source(path: str, language: str) -> bool:
     suffixes = (".py", ".pyi") if language == "python" else (".cts", ".mts", ".ts", ".tsx")
     return path.endswith(suffixes)
@@ -264,6 +323,45 @@ def _changed_scope(changes: tuple[git_changes.ChangedPath, ...]) -> tuple[str, .
     return tuple(
         sorted({path for item in changes for path in (item.old_path, item.new_path) if path})
     )
+
+
+def _change_spans(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    change: git_changes.ChangedPath,
+    path: str,
+    records: list[git_changes.CommandRecord],
+) -> tuple[function_changes.ResponsibilitySpan, ...]:
+    if change.new_path is None:
+        content = git_changes.read_regular_blob(
+            repository, identity.base_sha, path, records
+        ).content
+        return function_changes.responsibility_spans(
+            path, content, set(range(1, len(content.splitlines()) + 1))
+        )
+    head = git_changes.read_regular_blob(repository, identity.head_sha, path, records).content
+    head_lines = set(
+        git_changes.changed_head_lines(
+            repository,
+            identity.base_sha,
+            identity.head_sha,
+            path,
+            records,
+            include_deletion_anchor=False,
+        )
+    )
+    if change.old_path != change.new_path:
+        return function_changes.responsibility_spans(path, head, head_lines)
+    base = git_changes.read_regular_blob(repository, identity.base_sha, path, records).content
+    base_lines = set(
+        git_changes.changed_base_lines(
+            repository, identity.base_sha, identity.head_sha, path, records
+        )
+    )
+    surviving, deleted = function_changes.changed_responsibility_spans(
+        path, base, head, base_lines, head_lines
+    )
+    return (*surviving, *deleted)
 
 
 def _target_identities(
@@ -282,24 +380,14 @@ def _target_identities(
         if not _profile_source(path, policy.language):
             unbounded.append(path)
             continue
-        deleted = change.new_path is None
-        commit = identity.base_sha if deleted else identity.head_sha
-        blob = git_changes.read_regular_blob(repository, commit, path, records)
-        lines = (
-            tuple(range(1, len(blob.content.splitlines()) + 1))
-            if deleted
-            else git_changes.changed_head_lines(
-                repository, identity.base_sha, identity.head_sha, path, records
-            )
-        )
-        if not lines:
+        try:
+            spans = _change_spans(repository, identity, change, path, records)
+        except function_changes.PythonSourceError:
+            if change.new_path is not None:
+                raise
             unbounded.append(path)
             continue
-        try:
-            spans = function_changes.responsibility_spans(path, blob.content, set(lines))
-        except function_changes.PythonSourceError:
-            if not deleted:
-                raise
+        if not spans:
             unbounded.append(path)
             continue
         targets.extend(
@@ -384,6 +472,8 @@ def verify_refactor(
     event: dict[str, Any],
     characterization: dict[str, Any],
     comments: tuple[dict[str, Any], ...],
+    predecessor: Authorization | None = None,
+    predecessor_block: str | None = None,
 ) -> dict[str, object]:
     """Return deterministic M8 authorization, focus, runnability, and sequence evidence."""
     records: list[git_changes.CommandRecord] = []
@@ -405,6 +495,7 @@ def verify_refactor(
         try:
             authorization, authorization_comment_id = _owner_authorization(event, comments)
             blocks.extend(_authorization_blocks(event, authorization))
+            blocks.extend(_sequence_blocks(authorization, predecessor, predecessor_block))
             blocks.extend(_focus_blocks(authorization, actual_scope, targets, unbounded, policy))
         except RefactorPolicyError as error:
             blocks.append(error.code)
@@ -494,7 +585,18 @@ def main(argv: list[str] | None = None) -> int:
         if not token:
             raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
         comments = _github_comments(repository_name, pull_number, token)
-        result = verify_refactor(Path(arguments.repository), event, characterization, comments)
+        _, base_sha, _, _ = _event_values(event)
+        predecessor, predecessor_block = _predecessor_authorization(
+            repository_name, base_sha, token
+        )
+        result = verify_refactor(
+            Path(arguments.repository),
+            event,
+            characterization,
+            comments,
+            predecessor,
+            predecessor_block,
+        )
         _write_result(Path(arguments.output), result)
     except Exception as error:  # fail closed at hosted-job boundary
         print(getattr(error, "code", "TECHNICAL_FAILURE"))
