@@ -138,7 +138,7 @@ def _run_command(
     try:
         completed = subprocess.run(
             plan.actual,
-            cwd=repository,
+            cwd=repository / "src" if plan.adapter == "python.import-linter.v1" else repository,
             env=quality_runner.fixed_environment(output, repository),
             check=False,
             capture_output=True,
