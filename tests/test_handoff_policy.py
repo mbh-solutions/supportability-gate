@@ -28,6 +28,9 @@ def _authoritative() -> dict[str, object]:
                     "arguments": ["check", "src"],
                     "executed": True,
                     "exit_code": 0,
+                    "observed_paths": [PATH],
+                    "proof_kind": "explicit-source",
+                    "zero_statement_paths": [],
                 }
             ]
         },
@@ -154,6 +157,9 @@ def test_hidden_failed_command_blocks() -> None:
             "arguments": ["-m", "pytest", "-q"],
             "executed": True,
             "exit_code": 1,
+            "observed_paths": [PATH],
+            "proof_kind": "runtime-lines",
+            "zero_statement_paths": [],
         }
     )
     assert "HIDDEN_FAILED_COMMAND:python.pytest.v1" in _blocks(_report(), authoritative)
@@ -183,6 +189,36 @@ def test_duplicate_validation_result_blocks() -> None:
         {"adapter": "python.ruff-lint.v1", "arguments": ["invented"], "exit_code": 0}
     )
     assert "DUPLICATE_VALIDATION_RESULT:python.ruff-lint.v1" in _blocks(report)
+
+
+def test_malformed_report_and_authoritative_rows_block_separately() -> None:
+    report = _report()
+    report["validation_results"] = [{"adapter": "malformed"}]
+    assert "MALFORMED_VALIDATION_RESULT" in _blocks(report)
+
+    authoritative = _authoritative()
+    authoritative["quality_profile"] = {"commands": [{"adapter": "malformed"}]}
+    assert "MALFORMED_AUTHORITATIVE_COMMAND" in _blocks(_report(), authoritative)
+
+
+def test_authoritative_failures_block_even_when_report_agrees() -> None:
+    authoritative = _authoritative()
+    authoritative["overall_result"] = "BLOCK"
+    report = _report()
+    report["overall_result"] = "BLOCK"
+    assert "AUTHORITATIVE_RESULT_NOT_PASS" in _blocks(report, authoritative)
+
+    authoritative = _authoritative()
+    authoritative["quality_profile"]["commands"][0]["executed"] = False  # type: ignore[index]
+    assert "AUTHORITATIVE_COMMAND_NOT_EXECUTED:python.ruff-lint.v1" in _blocks(
+        _report(), authoritative
+    )
+
+    authoritative = _authoritative()
+    authoritative["quality_profile"]["commands"][0]["exit_code"] = 1  # type: ignore[index]
+    report = _report()
+    report["validation_results"][0]["exit_code"] = 1  # type: ignore[index]
+    assert "AUTHORITATIVE_COMMAND_FAILED:python.ruff-lint.v1" in _blocks(report, authoritative)
 
 
 def test_malformed_list_sections_return_blocks_instead_of_raising() -> None:

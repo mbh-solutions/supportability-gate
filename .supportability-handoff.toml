@@ -2,38 +2,39 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "3ad2c475ba1d241185715c05a0169a2462b9c7d2"
+base_sha = "a8a8ddb15cdaa0a60eb972128433dc478d80d5bd"
 overall_result = "PASS"
 responsibility_changes = [
-    "hosted_characterization materializes the authenticated driver blob to a fresh temporary path for each comparison execution while retaining the canonical recorded command and authenticated golden blob.",
-    "refactor_policy authenticates the current base's unique merged predecessor PR and binds each sequence step to its trusted prior authorization.",
-    "refactor_policy maps retained-file deletions through exact base and head ranges so removed responsibilities keep their base identity.",
-    "git_changes distinguishes real head content ranges from deletion anchors and exposes exact retained-base ranges.",
+    "quality_profile and quality_runner isolate trusted Python module tools from target-controlled import paths while retaining generated source-discovery configuration.",
+    "GitHubApp searches successful exact-head handoff runs newest-first and binds the first artifact matching the packet's current base and head SHAs.",
+    "handoff_policy validates report and authoritative command rows independently and preserves authenticated failures as deterministic blocks.",
+    "refactor_policy collapses duplicate spans to their single bounded target identity.",
 ]
 simplified_functions = [
-    "_change_spans",
-    "_predecessor_authorization",
-    "_sequence_blocks",
+    "GitHubApp._handoff_evidence",
+    "GitHubApp._handoff_runs",
+    "GitHubApp.m10_evidence_packet",
+    "_command_blocks",
+    "_commands",
+    "_result_blocks",
     "_target_identities",
-    "changed_base_lines",
-    "changed_head_lines",
-    "main",
-    "verify_refactor",
+    "_write_python_configs",
+    "command_plans",
+    "fixed_environment",
 ]
 boundary_rationale = [
-    "Driver materialization stays in the trusted hosted capture entry point; Git range extraction stays in git_changes; predecessor and target authorization stay in refactor_policy.",
+    "Command isolation remains in the fixed quality profile and runner; artifact identity remains in GitHub evidence collection; semantic fail-closed decisions remain in handoff policy.",
 ]
 remaining_risks = [
-    "Predecessor evidence depends on GitHub's commit-to-pull association and issue comments; unavailable or ambiguous evidence fails closed.",
-    "Characterization drivers retain the authenticated definition path for declared fixture access, but executable bytes never come from that mutable worktree.",
+    "Quality and handoff evidence still depend on authenticated GitHub workflow availability; missing, stale, malformed, unexecuted, or failed evidence blocks.",
 ]
 validation_results = [
-    { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
-    { adapter = "python.ruff-format.v1", arguments = ["$PYTHON", "-m", "ruff", "format", "--check", "$SOURCE_FILES", "$TEST_FILES", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
-    { adapter = "python.c901-touched.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "--select", "C901", "--config", "lint.mccabe.max-complexity = 10", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
-    { adapter = "python.mypy-strict.v1", arguments = ["$PYTHON", "-m", "mypy", "--config-file", "$OUTPUT/mypy.ini", "--cache-dir", "$OUTPUT/mypy-cache", "$SOURCE_FILES"], exit_code = 0 },
-    { adapter = "python.pytest.v1", arguments = ["$PYTHON", "-m", "coverage", "run", "--branch", "--source=src", "--data-file=$OUTPUT/.coverage", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini"], exit_code = 0 },
-    { adapter = "python.build-wheel.v1", arguments = ["$PYTHON", "-m", "build", "--wheel", "--no-isolation", "--outdir", "$OUTPUT/wheel"], exit_code = 0 },
+    { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
+    { adapter = "python.ruff-format.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "format", "--check", "$SOURCE_FILES", "$TEST_FILES", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
+    { adapter = "python.c901-touched.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "--select", "C901", "--config", "lint.mccabe.max-complexity = 10", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
+    { adapter = "python.mypy-strict.v1", arguments = ["$PYTHON", "-I", "-m", "mypy", "--config-file", "$OUTPUT/mypy.ini", "--cache-dir", "$OUTPUT/mypy-cache", "$SOURCE_FILES"], exit_code = 0 },
+    { adapter = "python.pytest.v1", arguments = ["$PYTHON", "-I", "-m", "coverage", "run", "--branch", "--source=src", "--data-file=$OUTPUT/.coverage", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini", "--rootdir", "$REPOSITORY"], exit_code = 0 },
+    { adapter = "python.build-wheel.v1", arguments = ["$PYTHON", "-I", "-m", "build", "--wheel", "--no-isolation", "--outdir", "$OUTPUT/wheel"], exit_code = 0 },
     { adapter = "python.import-linter.v1", arguments = ["$LINT_IMPORTS", "--config", "$OUTPUT/importlinter.ini", "--no-cache"], exit_code = 0 },
 ]
 gate_coverage = [
@@ -45,11 +46,21 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-authenticated-predecessor-sequence"
-text = "Step 1 is rejected after a predecessor authorization, and each later step requires the current base to resolve to exactly one merged PR with a trusted exact-head authorization for the immediately prior step."
-citations = ["src/supportability_gate/refactor_policy.py:188-199", "src/supportability_gate/refactor_policy.py:272-314", "src/supportability_gate/refactor_policy.py:494-499", "src/supportability_gate/refactor_policy.py:583-599"]
+id = "claim-trusted-python-tools"
+text = "Every Python module quality tool uses isolated mode, the fixed target environment omits PYTHONPATH, and generated pytest and mypy configuration supplies intended source discovery."
+citations = ["src/supportability_gate/quality_profile.py:14-118", "src/supportability_gate/quality_runner.py:24-36", "src/supportability_gate/quality_runner.py:125-136"]
 
 [[completion_report.claims]]
-id = "claim-base-deletion-identity"
-text = "Retained-file deletions use exact base and head content ranges with the existing base-to-head responsibility mapper, preserving removed base identities without attributing a zero-length deletion to the following head line."
-citations = ["src/supportability_gate/git_changes.py:281-332", "src/supportability_gate/refactor_policy.py:328-396"]
+id = "claim-base-head-handoff-binding"
+text = "Handoff collection searches successful exact-head runs newest-first and accepts only an authenticated result whose base and head identities match the current packet."
+citations = ["src/supportability_gate/github_app.py:278-303", "src/supportability_gate/github_app.py:313-339", "src/supportability_gate/github_app.py:429-458"]
+
+[[completion_report.claims]]
+id = "claim-fail-closed-handoff-results"
+text = "Report and authoritative command rows use separate strict shapes and failure codes, while authoritative non-PASS, unexecuted, and nonzero results always produce deterministic blocks."
+citations = ["src/supportability_gate/handoff_policy.py:24-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:273-289"]
+
+[[completion_report.claims]]
+id = "claim-unique-refactor-targets"
+text = "Repeated spans for the same changed responsibility collapse to one exact authorization target."
+citations = ["src/supportability_gate/refactor_policy.py:367-396"]

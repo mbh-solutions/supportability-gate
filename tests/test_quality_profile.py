@@ -365,6 +365,7 @@ def test_target_profile_refuses_owner_workstation(monkeypatch: pytest.MonkeyPatc
         ],
         check=False,
         capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=10,
     )
     assert completed.returncode == 2
@@ -382,11 +383,23 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
     assert all("$(" not in argument and "`" not in argument for argument in arguments)
 
 
-def test_fixed_environment_imports_only_the_target_source(tmp_path: Path) -> None:
+def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: Path) -> None:
     repository = tmp_path / "target"
-    environment = quality_runner.fixed_environment(tmp_path / "output", repository)
+    output = tmp_path / "output"
+    environment = quality_runner.fixed_environment(output, repository)
+    plans = quality_runner.command_plans("python", repository, output, (), ("src/sample.py",))
+    pytest_plan = next(plan for plan in plans if plan.adapter == "python.pytest.v1")
 
-    assert environment["PYTHONPATH"] == str(repository / "src")
+    assert "PYTHONPATH" not in environment
+    assert all(plan.actual[1] == "-I" for plan in plans[:-1])
+    assert Path(plans[-1].actual[0]).is_absolute()
+    assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
+    assert "testpaths = tests" in (output / "pytest.ini").read_text()
+    assert (
+        f"pythonpath =\n    {repository / 'src'}\n    {repository}"
+        in (output / "pytest.ini").read_text()
+    )
+    assert "mypy_path = src" in (output / "mypy.ini").read_text()
 
 
 def _run_git(repository: Path, *arguments: str) -> str:
@@ -476,6 +489,7 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         ],
         check=False,
         capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
@@ -593,6 +607,7 @@ maximum = 10
         ],
         check=False,
         capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")

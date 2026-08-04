@@ -11,7 +11,7 @@ from pathlib import Path
 from supportability_gate import contract, git_changes
 from supportability_gate.function_changes import ChangedFileAssessment
 
-SCHEMA_VERSION = "quality-gates.v2"
+SCHEMA_VERSION = "quality-gates.v3"
 TIMEOUT_SECONDS = 180
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {
@@ -23,6 +23,7 @@ _PYTHON_COMMANDS = (
         "python.ruff-lint.v1",
         (
             "$PYTHON",
+            "-I",
             "-m",
             "ruff",
             "check",
@@ -42,6 +43,7 @@ _PYTHON_COMMANDS = (
         "python.ruff-format.v1",
         (
             "$PYTHON",
+            "-I",
             "-m",
             "ruff",
             "format",
@@ -60,6 +62,7 @@ _PYTHON_COMMANDS = (
         "python.c901-touched.v1",
         (
             "$PYTHON",
+            "-I",
             "-m",
             "ruff",
             "check",
@@ -78,6 +81,7 @@ _PYTHON_COMMANDS = (
         "python.mypy-strict.v1",
         (
             "$PYTHON",
+            "-I",
             "-m",
             "mypy",
             "--config-file",
@@ -91,6 +95,7 @@ _PYTHON_COMMANDS = (
         "python.pytest.v1",
         (
             "$PYTHON",
+            "-I",
             "-m",
             "coverage",
             "run",
@@ -102,12 +107,15 @@ _PYTHON_COMMANDS = (
             "-q",
             "-c",
             "$OUTPUT/pytest.ini",
+            "--rootdir",
+            "$REPOSITORY",
         ),
     ),
     (
         "python.build-wheel.v1",
         (
             "$PYTHON",
+            "-I",
             "-m",
             "build",
             "--wheel",

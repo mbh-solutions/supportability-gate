@@ -170,6 +170,9 @@ def _m10_packet(claim: str = "parse_input strips surrounding whitespace.") -> Ev
                     "arguments": ["check", "src"],
                     "executed": True,
                     "exit_code": 0,
+                    "observed_paths": [PYTHON_PATH],
+                    "proof_kind": "explicit-source",
+                    "zero_statement_paths": [],
                 }
             ]
         },
