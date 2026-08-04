@@ -655,7 +655,6 @@ def test_deletion_only_change_maps_surviving_head_and_removed_base_responsibilit
             "blob_sha": base_blob,
             "boundaries": [
                 {"end_line": 6, "kind": "function", "name": "obsolete", "start_line": 5},
-                {"end_line": 4, "kind": "module", "name": "src/a.py", "start_line": 4},
             ],
             "line_count": 6,
             "path": "src/a.py",
@@ -815,7 +814,6 @@ def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibi
     assert deleted["blob_sha"] == base_blob
     assert deleted["boundaries"] == [
         {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
-        {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
     ]
     assert app._completion_sources(
         "mbh-solutions/supportability-gate",

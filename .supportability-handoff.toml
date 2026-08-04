@@ -29,6 +29,7 @@ boundary_rationale = [
 ]
 remaining_risks = [
     "Responsibility identity uses exact qualified names; a deliberate rename remains a removed base responsibility plus a new head responsibility.",
+    "Whitespace-only changed lines are omitted because they have no reviewable source responsibility.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -50,9 +51,9 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-source-identity"
 text = "Semantic source review accepts exactly Python, stub, CTS, MTS, TS, and TSX suffixes and maps deletion-touched surviving responsibilities to head spans while retaining removed responsibilities on base."
-citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-844", "src/supportability_gate/function_changes.py:343-370"]
+citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-844", "src/supportability_gate/function_changes.py:349-376"]
 
 [[completion_report.claims]]
 id = "claim-parser-boundaries"
 text = "Python spans begin at the earliest decorator and supported React component classes receive aggregate component spans while their methods remain separately reviewable."
-citations = ["src/supportability_gate/function_changes.py:121-136", "src/supportability_gate/function_changes.py:184-255", "src/supportability_gate/function_changes.py:304-340"]
+citations = ["src/supportability_gate/function_changes.py:121-136", "src/supportability_gate/function_changes.py:184-255", "src/supportability_gate/function_changes.py:304-346"]

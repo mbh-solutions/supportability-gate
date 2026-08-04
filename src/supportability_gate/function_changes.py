@@ -335,7 +335,13 @@ def responsibility_spans(
     )
     covered = {line for span in components for line in range(span.start_line, span.end_line + 1)}
     covered.update(line for span in touched for line in range(span.start_line, span.end_line + 1))
-    module_spans = _line_spans(changed_lines - covered)
+    source_lines = content.decode("utf-8").splitlines()
+    module_lines = {
+        line
+        for line in changed_lines - covered
+        if 1 <= line <= len(source_lines) and source_lines[line - 1].strip()
+    }
+    module_spans = _line_spans(module_lines)
     boundaries.extend(ResponsibilitySpan(start, end, "module", path) for start, end in module_spans)
     return tuple(boundaries)
 
