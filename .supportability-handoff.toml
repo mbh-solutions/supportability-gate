@@ -57,4 +57,4 @@ citations = ["src/supportability_gate/modularity_policy.py:91-98", "src/supporta
 [[completion_report.claims]]
 id = "claim-dependency-prose"
 text = "Dependency-direction prose must contain every exact trusted source-line-specifier token represented by its structured architecture citations."
-citations = ["src/supportability_gate/semantic_contract.py:293-295", "src/supportability_gate/semantic_review.py:259-286"]
+citations = ["src/supportability_gate/semantic_contract.py:294-295", "src/supportability_gate/semantic_review.py:259-286"]
