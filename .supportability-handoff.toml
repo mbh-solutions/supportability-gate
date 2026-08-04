@@ -10,6 +10,7 @@ responsibility_changes = [
 ]
 simplified_functions = [
     "GitHubApp._boundaries",
+    "GitHubApp._deletion_evidence",
     "GitHubApp._responsibility_spans",
     "GitHubApp._reviewed_source",
     "GitHubApp._source_boundaries",
@@ -49,9 +50,9 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-source-identity"
 text = "Semantic source review accepts exactly Python, stub, CTS, MTS, TS, and TSX suffixes and maps deletion-touched surviving responsibilities to head spans while retaining removed responsibilities on base."
-citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-824", "src/supportability_gate/function_changes.py:346-373"]
+citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-844", "src/supportability_gate/function_changes.py:343-370"]
 
 [[completion_report.claims]]
 id = "claim-parser-boundaries"
 text = "Python spans begin at the earliest decorator and supported React component classes receive aggregate component spans while their methods remain separately reviewable."
-citations = ["src/supportability_gate/function_changes.py:121-136", "src/supportability_gate/function_changes.py:184-255", "src/supportability_gate/function_changes.py:304-343"]
+citations = ["src/supportability_gate/function_changes.py:121-136", "src/supportability_gate/function_changes.py:184-255", "src/supportability_gate/function_changes.py:304-340"]

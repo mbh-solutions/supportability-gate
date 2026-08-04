@@ -765,63 +765,83 @@ class GitHubApp:
             return [], []
         production_paths = self._production_paths(repository, base_sha, token)
         production = self._production_candidates(candidates, production_paths)
-        sources_by_path = {
-            source["path"]: source
+        sources_by_path: dict[str, dict[str, Any]] = {
+            str(source["path"]): source
             for item in production
             if (source := self._reviewed_source(repository, item, token)) is not None
         }
-        deleted = []
+        deleted: list[dict[str, Any]] = []
         for item in production:
-            patch = item.get("patch")
-            if not isinstance(patch, str) or not patch:
-                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-            if not self._changed_lines(patch, "-"):
-                continue
-            path = item.get("previous_filename", item["filename"])
-            if not isinstance(path, str):
-                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-            result = self._request(
-                "GET",
-                f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
-                f"?ref={urllib.parse.quote(base_sha)}",
-                token,
-            )
-            blob_sha = result.get("sha") if isinstance(result, dict) else None
-            if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
-                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-            content = self._blob_content(repository, blob_sha, token)
-            head_path, head_blob_sha = item["filename"], item.get("sha")
-            if not isinstance(head_blob_sha, str) or not SHA_PATTERN.fullmatch(head_blob_sha):
-                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-            head_content = self._blob_content(repository, head_blob_sha, token)
-            try:
-                surviving, removed = changed_responsibility_spans(
-                    head_path,
-                    content.encode(),
-                    head_content.encode(),
-                    self._changed_lines(patch, "-"),
-                    self._changed_lines(patch),
-                )
-            except PythonSourceError as error:
-                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
-            if not surviving and not removed:
-                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-            if surviving:
-                sources_by_path[head_path] = self._source_record(
-                    head_path, head_blob_sha, head_content, surviving
-                )
-            if removed:
-                deleted.append(
-                    {
-                        "blob_sha": blob_sha,
-                        "boundaries": self._boundaries(removed),
-                        "line_count": len(content.splitlines()),
-                        "path": path,
-                    }
-                )
+            surviving, removed = self._deletion_evidence(repository, base_sha, item, token)
+            if surviving is not None:
+                sources_by_path[str(surviving["path"])] = surviving
+            if removed is not None:
+                deleted.append(removed)
         sources = [sources_by_path[path] for path in sorted(sources_by_path)]
         self._validate_review_size(sources)
         return sources, deleted
+
+    def _deletion_evidence(
+        self,
+        repository: str,
+        base_sha: str,
+        item: dict[str, Any],
+        token: str,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        patch = item.get("patch")
+        if not isinstance(patch, str) or not patch:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        base_lines = self._changed_lines(patch, "-")
+        if not base_lines:
+            return None, None
+        path = item.get("previous_filename", item.get("filename"))
+        head_path, head_blob_sha = item.get("filename"), item.get("sha")
+        if not isinstance(path, str) or not isinstance(head_path, str):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        result = self._request(
+            "GET",
+            f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
+            f"?ref={urllib.parse.quote(base_sha)}",
+            token,
+        )
+        blob_sha = result.get("sha") if isinstance(result, dict) else None
+        if (
+            not isinstance(blob_sha, str)
+            or not SHA_PATTERN.fullmatch(blob_sha)
+            or not isinstance(head_blob_sha, str)
+            or not SHA_PATTERN.fullmatch(head_blob_sha)
+        ):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        content = self._blob_content(repository, blob_sha, token)
+        head_content = self._blob_content(repository, head_blob_sha, token)
+        try:
+            surviving, removed = changed_responsibility_spans(
+                head_path,
+                content.encode(),
+                head_content.encode(),
+                base_lines,
+                self._changed_lines(patch),
+            )
+        except PythonSourceError as error:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
+        if not surviving and not removed:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        source = (
+            self._source_record(head_path, head_blob_sha, head_content, surviving)
+            if surviving
+            else None
+        )
+        deleted = (
+            {
+                "blob_sha": blob_sha,
+                "boundaries": self._boundaries(removed),
+                "line_count": len(content.splitlines()),
+                "path": path,
+            }
+            if removed
+            else None
+        )
+        return source, deleted
 
     def _production_candidates(
         self, candidates: tuple[dict[str, Any], ...], production_paths: tuple[str, ...]
