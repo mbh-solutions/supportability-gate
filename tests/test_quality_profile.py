@@ -488,7 +488,11 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode == 0, quality_profile.load_evidence(output).commands
+    assert completed.returncode == 0, [
+        (item.adapter, item.exit_code)
+        for item in quality_profile.load_evidence(output).commands
+        if item.exit_code
+    ]
     evidence = replace(
         quality_profile.load_evidence(output),
         artifact_id="789",
