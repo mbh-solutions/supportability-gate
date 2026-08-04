@@ -111,13 +111,14 @@ reviewability = "Change is small enough for direct review."
 
 
 def _review_evidence_for_new_path(path: str) -> str:
+    owner_path = "src/owner.py" if path.endswith((".py", ".pyi")) else "src/owner.ts"
     return (
         REVIEW_EVIDENCE
         + f'''\
 
 [[module_boundaries]]
 path = "{path}"
-owner_path = "{path}"
+owner_path = "{owner_path}"
 basis = "responsibility"
 justification = "Exact source path owns one cohesive fixture boundary."
 '''
@@ -177,6 +178,9 @@ def _initialize_repository(tmp_path: Path, contract_text: str = CONTRACT) -> Pat
     _run_git(repository, "remote", "add", "origin", "https://github.com/example/fixture.git")
     _write(repository / ".supportability.toml", contract_text)
     _write(repository / ".supportability-review.toml", REVIEW_EVIDENCE)
+    owner = "owner.ts" if 'language = "typescript"' in contract_text else "owner.py"
+    owner_source = "export const OWNER = true;\n" if owner.endswith(".ts") else "OWNER = True\n"
+    _write(repository / "src" / owner, owner_source)
     return repository
 
 
@@ -380,7 +384,7 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
     assert result["functions"][0]["head"]["complexity"] == 10
     assert result["language"] == "python"
     assert result["architecture"]["executed"] is True
-    assert result["architecture"]["covered_paths"] == ["src/sample.py"]
+    assert result["architecture"]["covered_paths"] == ["src/owner.py", "src/sample.py"]
     assert result["modularity"]["new_paths"] == ["src/sample.py"]
     assert result["modularity"]["coverage"][0]["architecture"] is True
     assert len(result["modularity"]["coverage"][0]["adapters"]) == 5

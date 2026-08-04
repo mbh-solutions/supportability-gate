@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from supportability_gate.architecture_policy import evaluate_architecture
+from supportability_gate.architecture_policy import _layer, evaluate_architecture
 from supportability_gate.contract import GateAdapter, parse_contract
 
 
@@ -64,7 +64,15 @@ def test_valid_layered_typescript_graph_passes() -> None:
     result = _evaluate(
         {
             "src/domain/model.ts": "export const value = 1;\n",
-            "src/application/useCase.ts": "import { value } from '../domain/model';\n",
+            "src/domain/native.mts": "export const native = 2;\n",
+            "src/domain/legacy.cts": "export const legacy = 3;\n",
+            "src/domain/view/index.tsx": "export const view = 4;\n",
+            "src/application/useCase.ts": (
+                "import { value } from '../domain/model.js';\n"
+                "import { native } from '../domain/native.mjs';\n"
+                "import { legacy } from '../domain/legacy.cjs';\n"
+                "import { view } from '../domain/view.js';\n"
+            ),
             "src/infrastructure/repository.ts": "import { value } from '../domain/model';\n",
             "src/presentation/view.ts": "import { value } from '../application/useCase';\n",
         },
@@ -73,7 +81,7 @@ def test_valid_layered_typescript_graph_passes() -> None:
 
     assert result.executed is True
     assert result.blocks == ()
-    assert len(result.edges) == 3
+    assert len(result.edges) == 6
 
 
 def test_python_cycle_blocks() -> None:
@@ -125,9 +133,15 @@ def test_domain_to_infrastructure_and_presentation_block() -> None:
 
 
 def test_domain_to_external_package_blocks() -> None:
-    result = _evaluate({"src/domain/model.py": "import fastapi\n"})
+    result = _evaluate({"src/domain/model.py": "import fastapi\nimport sqlite3\nimport typing\n"})
+    node = _evaluate({"src/domain/model.ts": "import { readFile } from 'node:fs';\n"}, "typescript")
 
-    assert result.blocks == ("FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/model.py:1:fastapi",)
+    assert result.blocks == (
+        "FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/model.py:1:fastapi",
+        "FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/model.py:2:sqlite3",
+    )
+    assert node.blocks == ("FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/model.ts:1:node:fs",)
+    assert _layer("domain/model.py", ("domain",)) == "domain"
 
 
 def test_declared_but_unexecuted_architecture_gate_blocks() -> None:

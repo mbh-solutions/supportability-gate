@@ -72,6 +72,14 @@
       ],
       "id": "clause-inventory-baseline",
       "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/architecture_policy.py",
+        "src/supportability_gate/modularity_policy.py"
+      ],
+      "id": "architecture-modularity-baseline",
+      "kind": "regression"
     }
   ],
   "schema_version": "1.0"

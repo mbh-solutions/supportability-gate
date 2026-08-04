@@ -2,34 +2,30 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "0b5c647317eebe196eaa287e4a755e4356ec4737"
+base_sha = "34f0cb88c4c397c42d6c792f635ddbe20a0577cb"
 overall_result = "PASS"
 responsibility_changes = [
-    "function_changes owns parser-derived Python, stub, TypeScript, and React-class responsibility identity across base and head.",
-    "github_app owns authenticated source acquisition while delegating responsibility mapping to function_changes.",
+    "architecture_policy owns strict domain dependencies, production-root layers, and NodeNext source resolution.",
+    "modularity_policy owns pre-existing same-package ownership and executed quality coverage for new locations.",
+    "semantic_review binds dependency-direction prose to every trusted structured import citation.",
+    "cli passes authenticated quality evidence into deterministic modularity evaluation.",
 ]
 simplified_functions = [
-    "GitHubApp._boundaries",
-    "GitHubApp._deletion_evidence",
-    "GitHubApp._responsibility_spans",
-    "GitHubApp._reviewed_source",
-    "GitHubApp._source_boundaries",
-    "GitHubApp._source_evidence",
-    "GitHubApp._source_record",
-    "_FunctionCollector._visit_function",
-    "_TypeScriptFunctionCollector.__init__",
-    "_TypeScriptFunctionCollector._react_component",
-    "_TypeScriptFunctionCollector.visit",
-    "changed_responsibility_spans",
-    "parse_typescript_file",
-    "responsibility_spans",
+    "_architecture_evidence",
+    "_blocks",
+    "_claim_blocks",
+    "_evaluate",
+    "_layer",
+    "_package",
+    "_typescript_target",
+    "evaluate_modularity",
 ]
 boundary_rationale = [
-    "function_changes parses source identity without importing target code; github_app binds those spans to authenticated GitHub blobs.",
+    "Static source topology stays in architecture_policy; authenticated run observations stay in quality evidence; modularity consumes both without executing target code.",
 ]
 remaining_risks = [
-    "Responsibility identity uses exact qualified names; a deliberate rename remains a removed base responsibility plus a new head responsibility.",
-    "Whitespace-only changed lines are omitted because they have no reviewable source responsibility.",
+    "The domain allowlist is intentionally closed; new pure-domain standard-library needs require a separately authorized policy change.",
+    "NodeNext mapping covers relative JS-family specifiers and their index candidates; package export maps remain outside this fixed source resolver.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -49,11 +45,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-source-identity"
-text = "Semantic source review accepts exactly Python, stub, CTS, MTS, TS, and TSX suffixes and maps deletion-touched surviving responsibilities to head spans while retaining removed responsibilities on base."
-citations = ["src/supportability_gate/github_app.py:48-48", "src/supportability_gate/github_app.py:756-844", "src/supportability_gate/function_changes.py:349-376"]
+id = "claim-architecture-policy"
+text = "Domain code accepts only the fixed pure-Python allowlist, TypeScript domain code accepts no external dependency, NodeNext relative specifiers resolve to TypeScript sources, and production-root layer names are retained."
+citations = ["src/supportability_gate/architecture_policy.py:36-60", "src/supportability_gate/architecture_policy.py:125-131", "src/supportability_gate/architecture_policy.py:206-222", "src/supportability_gate/architecture_policy.py:276-285"]
 
 [[completion_report.claims]]
-id = "claim-parser-boundaries"
-text = "Python spans begin at the earliest decorator and supported React component classes receive aggregate component spans while their methods remain separately reviewable."
-citations = ["src/supportability_gate/function_changes.py:121-136", "src/supportability_gate/function_changes.py:184-255", "src/supportability_gate/function_changes.py:304-346"]
+id = "claim-modularity-evidence"
+text = "A new location requires a pre-existing governed owner in the same package and counts gate coverage only from successful executed commands that observed the path or proved it has zero statements."
+citations = ["src/supportability_gate/modularity_policy.py:91-98", "src/supportability_gate/modularity_policy.py:108-133", "src/supportability_gate/modularity_policy.py:136-166", "src/supportability_gate/cli.py:479-485"]
+
+[[completion_report.claims]]
+id = "claim-dependency-prose"
+text = "Dependency-direction prose must contain every exact trusted source-line-specifier token represented by its structured architecture citations."
+citations = ["src/supportability_gate/semantic_contract.py:294-295", "src/supportability_gate/semantic_review.py:259-286"]

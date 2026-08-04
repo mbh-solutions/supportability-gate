@@ -117,7 +117,8 @@ def _response(
         "findings": findings or [],
         "reviewed_paths": reviewed_paths if reviewed_paths is not None else [PYTHON_PATH],
         "boundaries": boundaries if boundaries is not None else [PYTHON_BOUNDARY],
-        "dependency_direction": "Verified structured import graph."
+        "dependency_direction": "Verified structured import graph: "
+        + ", ".join(f"{item['source']}:{item['line']}:{item['specifier']}" for item in citations)
         if sources
         else "No changed production paths.",
         "architecture_citations": citations,
@@ -536,6 +537,12 @@ def test_structured_import_citation_is_source_backed() -> None:
     verdict = parse_response(packet, _response(packet))
 
     assert verdict.architecture_citations == ("src/sample.py:1:domain.model",)
+    response = _response(packet)
+    content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
+    content["dependency_direction"] = "Dependencies point inward."
+    response["output"][0]["content"][0]["text"] = json.dumps(content)  # type: ignore[index]
+    with pytest.raises(SemanticReviewError, match="UNVERIFIED_DEPENDENCY_DIRECTION"):
+        parse_response(packet, response)
 
 
 @pytest.mark.parametrize(
@@ -808,6 +815,7 @@ def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
         "Trusted imports are only imports listed under reviewed_sources" in payload["instructions"]
     )
     assert "completion_sources binds completion-report citations only" in payload["instructions"]
+    assert "exact source:line:specifier token" in payload["instructions"]
     assert "fresh head without a trusted verdict" not in payload["instructions"]
     assert "BLOCK contradictory coverage observations" not in payload["instructions"]
     assert RUBRIC_VERSION in packet.canonical_bytes().decode()

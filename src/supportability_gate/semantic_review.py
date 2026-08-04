@@ -281,6 +281,8 @@ def _architecture_evidence(
         actual.append(f"{source}:{line}:{specifier}")
     if tuple(actual) != expected:
         raise SemanticReviewError("UNVERIFIED_ARCHITECTURE_CITATION")
+    if any(citation not in direction for citation in expected):
+        raise SemanticReviewError("UNVERIFIED_DEPENDENCY_DIRECTION")
     return direction, expected
 
 
