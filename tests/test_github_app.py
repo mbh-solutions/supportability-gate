@@ -12,6 +12,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from supportability_gate.function_changes import ResponsibilitySpan, responsibility_spans
 from supportability_gate.github_app import CHECK_NAME, REVIEWED_SUFFIXES, GitHubApp, app_jwt
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 
@@ -580,6 +581,10 @@ def test_supported_source_boundaries_include_stubs_decorators_and_react_classes(
     assert app._source_boundaries("src/routes.pyi", decorated, "@@ -0,0 +1 @@\n+@route('/x')") == [
         {"end_line": 3, "kind": "function", "name": "handle", "start_line": 1}
     ]
+    latin = b"# coding: latin-1\nlabel = 'caf\xe9'\n"
+    assert responsibility_spans("src/labels.py", latin, {2}) == (
+        ResponsibilitySpan(2, 2, "module", "src/labels.py"),
+    )
 
     frontend = (
         "class Panel extends React.PureComponent<Props> {\n"

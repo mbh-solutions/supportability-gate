@@ -335,7 +335,7 @@ def responsibility_spans(
     )
     covered = {line for span in components for line in range(span.start_line, span.end_line + 1)}
     covered.update(line for span in touched for line in range(span.start_line, span.end_line + 1))
-    source_lines = content.decode("utf-8").splitlines()
+    source_lines = content.splitlines()
     module_lines = {
         line
         for line in changed_lines - covered
