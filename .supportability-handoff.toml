@@ -47,7 +47,7 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-architecture-policy"
 text = "Domain code accepts only the fixed pure-Python allowlist, TypeScript domain code accepts no external dependency, NodeNext relative specifiers resolve to TypeScript sources, and production-root layer names are retained."
-citations = ["src/supportability_gate/architecture_policy.py:36-60", "src/supportability_gate/architecture_policy.py:125-131", "src/supportability_gate/architecture_policy.py:206-220", "src/supportability_gate/architecture_policy.py:276-284"]
+citations = ["src/supportability_gate/architecture_policy.py:36-60", "src/supportability_gate/architecture_policy.py:125-131", "src/supportability_gate/architecture_policy.py:206-222", "src/supportability_gate/architecture_policy.py:276-285"]
 
 [[completion_report.claims]]
 id = "claim-modularity-evidence"

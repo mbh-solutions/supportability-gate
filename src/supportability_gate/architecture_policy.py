@@ -278,7 +278,9 @@ def _blocks(edges: tuple[ImportEdge, ...], roots: tuple[str, ...]) -> tuple[str,
             root = edge.target.split(".", 1)[0]
             if (edge.internal and target_layer != "domain") or (
                 not edge.internal
-                and (not edge.source.endswith((".py", ".pyi")) or root not in _DOMAIN_PYTHON_IMPORTS)
+                and (
+                    not edge.source.endswith((".py", ".pyi")) or root not in _DOMAIN_PYTHON_IMPORTS
+                )
             ):
                 blocks.add(f"FORBIDDEN_DOMAIN_DEPENDENCY:{location}")
     return tuple(sorted(blocks))

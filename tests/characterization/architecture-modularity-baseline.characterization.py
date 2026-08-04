@@ -10,9 +10,8 @@ from supportability_gate.function_changes import ChangedFileAssessment
 from supportability_gate.git_changes import ChangedPath
 from supportability_gate.modularity_policy import evaluate_modularity
 
-
 POLICY = parse_contract(
-    b'''schema_version = "1.0"
+    b"""schema_version = "1.0"
 language = "python"
 production_paths = ["src"]
 high_risk_paths = []
@@ -40,7 +39,7 @@ paths = ["src"]
 [complexity]
 adapter = "python.c901-touched.v1"
 maximum = 10
-'''
+"""
 )
 PATH = "src/orders/service.py"
 OWNER = "src/orders/model.py"
@@ -55,9 +54,7 @@ def main() -> None:
         },
         GateAdapter("python.import-linter.v1", ("src",)),
     )
-    assessment = ChangedFileAssessment(
-        ChangedPath("ADDED", None, PATH), False, True, True, (1, 2)
-    )
+    assessment = ChangedFileAssessment(ChangedPath("ADDED", None, PATH), False, True, True, (1, 2))
     review = {
         "module_boundaries": [
             {

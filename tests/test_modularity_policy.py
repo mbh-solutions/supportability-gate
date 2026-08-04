@@ -145,19 +145,20 @@ def test_unjustified_parallel_package_blocks() -> None:
 
 def test_new_location_without_complete_architecture_coverage_blocks() -> None:
     path = "src/orders/model.py"
+    owner = "src/orders/owner.py"
 
     result = evaluate_modularity(
         _policy(),
         (_assessment(path),),
-        _review(path, "domain"),
-        _architecture(path, covered=False),
+        _review(path, "domain", owner),
+        _architecture(path, owner_path=owner, covered=False),
         _quality(path),
     )
     unexecuted = evaluate_modularity(
         _policy(),
         (_assessment(path),),
-        _review(path, "domain", "src/orders/owner.py"),
-        _architecture(path, owner_path="src/orders/owner.py"),
+        _review(path, "domain", owner),
+        _architecture(path, owner_path=owner),
         _quality(path, unexecuted="python.pytest.v1"),
     )
 
