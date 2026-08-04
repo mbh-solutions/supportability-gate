@@ -407,22 +407,29 @@ def _verify_coverage(clauses: tuple[Clause, ...]) -> None:
     if unknown := sorted(actual - expected):
         raise ClauseInventoryError("UNKNOWN_CLAUSE_ID", unknown[0])
     for clause in clauses:
-        if clause.clause_id != f"SS-{clause.source_line:04d}":
-            raise ClauseInventoryError("CLAUSE_SOURCE_MISMATCH", clause.clause_id)
         expected_profiles = PROFILE_BY_LINE.get(clause.source_line, PROFILES)
-        if set(clause.profiles) != expected_profiles:
-            raise ClauseInventoryError("UNSUPPORTED_NOT_APPLICABLE", clause.clause_id)
         expected_owner = REASSIGNED_OWNER.get(clause.source_line, clause.enforcement_owner)
-        if clause.enforcement_owner != expected_owner or expected_owner not in OWNER_EVIDENCE:
-            raise ClauseInventoryError("MISSING_ENFORCEMENT_OWNER", clause.clause_id)
-        expected_evidence = (
-            f"{OWNER_EVIDENCE[expected_owner]} tied to immutable inputs and source line "
-            f"{clause.source_line}."
+        expected_evidence = OWNER_EVIDENCE.get(expected_owner)
+        checks = (
+            (clause.clause_id == f"SS-{clause.source_line:04d}", "CLAUSE_SOURCE_MISMATCH"),
+            (set(clause.profiles) == expected_profiles, "UNSUPPORTED_NOT_APPLICABLE"),
+            (
+                clause.enforcement_owner == expected_owner and expected_evidence is not None,
+                "MISSING_ENFORCEMENT_OWNER",
+            ),
+            (
+                clause.evidence_requirement
+                == f"{expected_evidence} tied to immutable inputs and source line {clause.source_line}.",
+                "MISSING_EVIDENCE_REQUIREMENT",
+            ),
+            (
+                clause.blocking_test == OWNER_BLOCKING_TEST.get(expected_owner),
+                "ABSENT_BLOCKING_TEST",
+            ),
         )
-        if clause.evidence_requirement != expected_evidence:
-            raise ClauseInventoryError("MISSING_EVIDENCE_REQUIREMENT", clause.clause_id)
-        if clause.blocking_test != OWNER_BLOCKING_TEST[expected_owner]:
-            raise ClauseInventoryError("ABSENT_BLOCKING_TEST", clause.clause_id)
+        for valid, error_code in checks:
+            if not valid:
+                raise ClauseInventoryError(error_code, clause.clause_id)
 
 
 def validate_inventory(standard_content: bytes, inventory_content: bytes) -> tuple[Clause, ...]:
