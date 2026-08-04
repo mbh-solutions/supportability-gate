@@ -36,6 +36,7 @@ def _semantic_verdict() -> str:
         "base_sha": packet.base_sha,
         "head_sha": packet.head_sha,
         "evidence_sha256": packet.sha256,
+        "instruction_sha256": packet.instruction_sha256,
         "rubric_version": semantic_contract.RUBRIC_VERSION,
         "schema_version": semantic_contract.SCHEMA_VERSION,
         "standard_sha256": semantic_contract.STANDARD_SHA256,
