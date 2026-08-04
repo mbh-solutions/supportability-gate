@@ -394,9 +394,7 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert Path(plans[-1].actual[0]).is_absolute()
     assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
     assert "testpaths = tests" in (output / "pytest.ini").read_text()
-    assert f"pythonpath = {repository / 'src'} {repository}" in (
-        output / "pytest.ini"
-    ).read_text()
+    assert f"pythonpath = {repository / 'src'} {repository}" in (output / "pytest.ini").read_text()
     assert "mypy_path = src" in (output / "mypy.ini").read_text()
 
 
