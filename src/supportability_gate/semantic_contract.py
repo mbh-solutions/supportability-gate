@@ -305,6 +305,7 @@ INSTRUCTION_SHA256 = hashlib.sha256(INSTRUCTION_TEXT.encode()).hexdigest()
 
 def request_payload(packet: EvidencePacket) -> dict[str, Any]:
     """Build tool-free structured request; evidence remains untrusted data."""
+    # Control proof: preserve request behavior while exercising source review.
     bindings = {
         "app_id": packet.app_id,
         "base_sha": packet.base_sha,

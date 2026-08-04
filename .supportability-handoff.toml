@@ -2,26 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "b97a9d6436180e403bbdc99227e8e066fc5af456"
+base_sha = "aaa7a602819d3a987de722f5a11d517f94af14ef"
 overall_result = "PASS"
 responsibility_changes = [
-    "semantic_contract binds the exact semantic instruction hash into the existing canonical evidence-packet identity.",
-    "github_app publishes the bound instruction hash beside the existing evidence hash without changing response or verdict contracts.",
+    "semantic_contract retains request_payload behavior while the temporary control branch exercises semantic packet replay identity.",
 ]
 simplified_functions = [
-    "EvidencePacket.canonical_bytes",
-    "EvidencePacket.instruction_sha256",
-    "GitHubApp.complete_check",
-    "GitHubApp.publish_check",
-    "GitHubApp.start_check",
     "request_payload",
 ]
 boundary_rationale = [
-    "semantic_contract owns instruction bytes and canonical evidence identity.",
-    "github_app owns semantic check publication and displays both bound hashes.",
+    "request_payload owns construction of the tool-disabled structured semantic request.",
 ]
 remaining_risks = [
-    "The active reviewer runtime remains on the pre-fix packet identity until the authorized interim cutover after merge.",
+    "This temporary branch is intentionally unmerged and exists only to compare old and interim reviewer packet identities.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -41,11 +34,6 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-instruction-packet-binding"
-text = "The exact instruction hash is included in canonical evidence bytes and therefore changes the existing packet SHA and replay external ID."
-citations = ["src/supportability_gate/semantic_contract.py:89-92", "src/supportability_gate/semantic_contract.py:109-111", "src/supportability_gate/semantic_contract.py:303-303"]
-
-[[completion_report.claims]]
-id = "claim-visible-instruction-hash"
-text = "Semantic check summaries publish the instruction hash beside the evidence hash."
-citations = ["src/supportability_gate/github_app.py:962-966", "src/supportability_gate/github_app.py:1000-1006", "src/supportability_gate/github_app.py:1039-1043"]
+id = "claim-control-request-boundary"
+text = "The control change leaves request construction inside the existing request_payload boundary."
+citations = ["src/supportability_gate/semantic_contract.py:306-342"]
