@@ -391,6 +391,7 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert "PYTHONPATH" not in environment
     assert all(plan.actual[1] == "-I" for plan in plans[:-1])
     assert Path(plans[-1].actual[0]).is_absolute()
+    assert f"testpaths = {repository / 'tests'}" in (output / "pytest.ini").read_text()
     assert f"pythonpath = {repository / 'src'}" in (output / "pytest.ini").read_text()
     assert "mypy_path = src" in (output / "mypy.ini").read_text()
 
