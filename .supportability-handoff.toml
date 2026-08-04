@@ -48,17 +48,17 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-trusted-python-tools"
 text = "Every Python module quality tool uses isolated mode, the fixed target environment omits PYTHONPATH, and generated pytest and mypy configuration supplies intended source discovery."
-citations = ["src/supportability_gate/quality_profile.py:14-124", "src/supportability_gate/quality_runner.py:24-36", "src/supportability_gate/quality_runner.py:125-136"]
+citations = ["src/supportability_gate/quality_profile.py:14-118", "src/supportability_gate/quality_runner.py:24-36", "src/supportability_gate/quality_runner.py:125-136"]
 
 [[completion_report.claims]]
 id = "claim-base-head-handoff-binding"
 text = "Handoff collection searches successful exact-head runs newest-first and accepts only an authenticated result whose base and head identities match the current packet."
-citations = ["src/supportability_gate/github_app.py:278-303", "src/supportability_gate/github_app.py:313-339", "src/supportability_gate/github_app.py:429-459"]
+citations = ["src/supportability_gate/github_app.py:278-303", "src/supportability_gate/github_app.py:313-339", "src/supportability_gate/github_app.py:429-458"]
 
 [[completion_report.claims]]
 id = "claim-fail-closed-handoff-results"
 text = "Report and authoritative command rows use separate strict shapes and failure codes, while authoritative non-PASS, unexecuted, and nonzero results always produce deterministic blocks."
-citations = ["src/supportability_gate/handoff_policy.py:21-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:266-274"]
+citations = ["src/supportability_gate/handoff_policy.py:24-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:266-274"]
 
 [[completion_report.claims]]
 id = "claim-unique-refactor-targets"
