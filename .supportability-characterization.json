@@ -65,6 +65,13 @@
       ],
       "id": "s02-review-events",
       "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/clause_inventory.py"
+      ],
+      "id": "clause-inventory-baseline",
+      "kind": "regression"
     }
   ],
   "schema_version": "1.0"

@@ -14,7 +14,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 18.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 18.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -29,7 +29,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 26.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 26.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -44,7 +44,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 28.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 28.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -59,7 +59,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 30.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 30.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -74,7 +74,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 32.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 32.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -89,7 +89,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 34.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 34.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -104,7 +104,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 40.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 40.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -119,7 +119,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 42.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 42.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -134,7 +134,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 43.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 43.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -149,7 +149,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 44.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 44.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -164,7 +164,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 45.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 45.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -179,7 +179,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 46.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 46.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -194,7 +194,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 47.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 47.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -209,7 +209,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 48.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 48.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -224,7 +224,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 49.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 49.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -239,7 +239,7 @@
         "condition": "Task matches the listed build, refactor, maintenance, or review type."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 50.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 50.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -254,7 +254,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 52.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 52.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -269,7 +269,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 54.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 54.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -284,7 +284,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 55.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 55.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -299,7 +299,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 56.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 56.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -314,7 +314,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 57.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 57.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -329,7 +329,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 58.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 58.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -344,7 +344,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 60.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 60.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -359,7 +359,7 @@
         "condition": "Task is small enough for the shortened instruction."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 62.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 62.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -374,7 +374,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 68.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 68.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -389,7 +389,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 70.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 70.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -404,7 +404,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 72.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 72.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -419,7 +419,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 73.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 73.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -434,7 +434,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 74.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 74.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -449,7 +449,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 75.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 75.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -464,7 +464,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 76.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 76.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -479,7 +479,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 77.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 77.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -494,7 +494,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 78.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 78.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -509,7 +509,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 80.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 80.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -524,7 +524,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 83.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 83.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -539,7 +539,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 86.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 86.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -554,7 +554,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 89.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 89.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -569,7 +569,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 92.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 92.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -584,7 +584,7 @@
         "condition": "Supportability Standard is invoked."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 100.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 100.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -598,8 +598,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 120.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 120.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0122",
@@ -612,8 +612,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 122.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 122.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0124",
@@ -626,8 +626,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 124.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 124.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0126",
@@ -640,8 +640,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 126.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 126.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0127",
@@ -654,8 +654,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 127.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 127.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0128",
@@ -668,8 +668,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 128.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 128.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0129",
@@ -682,8 +682,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 129.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 129.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0130",
@@ -696,8 +696,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 130.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 130.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0131",
@@ -710,8 +710,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 131.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 131.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0155",
@@ -724,8 +724,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 155.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 155.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0157",
@@ -738,8 +738,8 @@
         "condition": "Target includes Python production functions; legacy clauses apply only when starting complexity exceeds 10."
       },
       "enforcement_owner": "Milestone 3 complexity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 157.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 157.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0165",
@@ -753,8 +753,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 165.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 165.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0167",
@@ -768,8 +768,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 167.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 167.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0175",
@@ -783,8 +783,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 175.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 175.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0177",
@@ -798,8 +798,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 177.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 177.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0178",
@@ -813,8 +813,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 178.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 178.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0179",
@@ -828,8 +828,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 179.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 179.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0180",
@@ -843,8 +843,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 180.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 180.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0181",
@@ -858,8 +858,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 181.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 181.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0182",
@@ -873,8 +873,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 182.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 182.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0183",
@@ -888,8 +888,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 183.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 183.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0184",
@@ -903,8 +903,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 184.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 184.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0185",
@@ -918,8 +918,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 185.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 185.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0186",
@@ -933,8 +933,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 186.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 186.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0187",
@@ -948,8 +948,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 187.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 187.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0188",
@@ -963,8 +963,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 188.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 188.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0192",
@@ -978,8 +978,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 192.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 192.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0195",
@@ -993,8 +993,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 195.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 195.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0196",
@@ -1008,8 +1008,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 196.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 196.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0197",
@@ -1023,8 +1023,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 197.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 197.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0200",
@@ -1038,8 +1038,8 @@
         "condition": "Change creates or modifies a function, file, module, or component boundary."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 200.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 200.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0204",
@@ -1052,8 +1052,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 204.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 204.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0206",
@@ -1066,8 +1066,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 206.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 206.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0208",
@@ -1080,8 +1080,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 208.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 208.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0210",
@@ -1094,8 +1094,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 210.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 210.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0211",
@@ -1108,8 +1108,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 211.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 211.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0212",
@@ -1122,8 +1122,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 212.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 212.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0213",
@@ -1136,8 +1136,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 213.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 213.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0214",
@@ -1150,8 +1150,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 214.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 214.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0215",
@@ -1164,8 +1164,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 215.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 215.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0216",
@@ -1178,8 +1178,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 216.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 216.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0217",
@@ -1192,8 +1192,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 217.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 217.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0218",
@@ -1206,8 +1206,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 218.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 218.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0219",
@@ -1220,8 +1220,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 219.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 219.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0221",
@@ -1234,8 +1234,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 221.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 221.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0223",
@@ -1248,8 +1248,8 @@
         "condition": "Target includes frontend or component code."
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 223.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 223.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0231",
@@ -1263,8 +1263,8 @@
         "condition": "Change can affect imports or dependency direction."
       },
       "enforcement_owner": "Milestone 5 dependency-direction enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 231.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 231.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0251",
@@ -1278,8 +1278,8 @@
         "condition": "Change can affect imports or dependency direction."
       },
       "enforcement_owner": "Milestone 5 dependency-direction enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 251.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 251.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0253",
@@ -1293,8 +1293,8 @@
         "condition": "Change can affect imports or dependency direction."
       },
       "enforcement_owner": "Milestone 5 dependency-direction enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 253.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 253.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0255",
@@ -1308,8 +1308,8 @@
         "condition": "Change can affect imports or dependency direction."
       },
       "enforcement_owner": "Milestone 5 dependency-direction enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 255.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 255.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0259",
@@ -1323,8 +1323,8 @@
         "condition": "Change can affect imports or dependency direction."
       },
       "enforcement_owner": "Milestone 5 dependency-direction enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 259.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 259.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0267",
@@ -1338,8 +1338,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 267.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 267.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0279",
@@ -1353,8 +1353,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 279.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 279.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0281",
@@ -1368,8 +1368,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 281.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 281.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0283",
@@ -1383,8 +1383,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 283.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 283.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0285",
@@ -1398,8 +1398,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 285.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 285.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0287",
@@ -1413,8 +1413,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 287.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 287.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0289",
@@ -1428,8 +1428,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 289.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 289.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0290",
@@ -1443,8 +1443,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 290.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 290.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0291",
@@ -1458,8 +1458,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 291.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 291.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0292",
@@ -1473,8 +1473,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 292.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 292.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0293",
@@ -1488,8 +1488,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 293.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 293.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0294",
@@ -1503,8 +1503,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 294.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 294.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0295",
@@ -1518,8 +1518,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 295.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 295.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0296",
@@ -1533,8 +1533,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 296.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 296.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0298",
@@ -1548,8 +1548,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 298.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 298.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0335",
@@ -1563,8 +1563,8 @@
         "condition": "Change creates, moves, or modifies a module, package, or domain boundary."
       },
       "enforcement_owner": "Milestone 6 modularity enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 335.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 335.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0343",
@@ -1578,8 +1578,8 @@
         "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
       },
       "enforcement_owner": "Milestone 7 characterization enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 343.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 343.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0345",
@@ -1593,8 +1593,8 @@
         "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
       },
       "enforcement_owner": "Milestone 7 characterization enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 345.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 345.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0353",
@@ -1608,8 +1608,8 @@
         "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
       },
       "enforcement_owner": "Milestone 7 characterization enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 353.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 353.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0355",
@@ -1623,8 +1623,8 @@
         "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
       },
       "enforcement_owner": "Milestone 7 characterization enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 355.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 355.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0359",
@@ -1638,8 +1638,8 @@
         "condition": "Change touches legacy, complex, wrapper, orchestration, package, or runtime-sensitive behavior."
       },
       "enforcement_owner": "Milestone 7 characterization enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 359.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 359.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0367",
@@ -1653,8 +1653,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 367.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 367.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0369",
@@ -1668,8 +1668,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 369.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 369.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0377",
@@ -1683,8 +1683,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 377.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 377.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0379",
@@ -1698,8 +1698,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 379.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 379.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0381",
@@ -1713,8 +1713,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 381.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 381.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0383",
@@ -1728,8 +1728,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 383.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 383.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0387",
@@ -1743,8 +1743,8 @@
         "condition": "Task includes refactoring or cleanup."
       },
       "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 387.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 387.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0403",
@@ -1758,8 +1758,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 403.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 403.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0405",
@@ -1773,8 +1773,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 405.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 405.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0407",
@@ -1788,8 +1788,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 407.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 407.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0409",
@@ -1803,8 +1803,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 409.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 409.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0410",
@@ -1818,8 +1818,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 410.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 410.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0411",
@@ -1833,8 +1833,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 411.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 411.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0412",
@@ -1848,8 +1848,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 412.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 412.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0413",
@@ -1863,8 +1863,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 413.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 413.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0414",
@@ -1878,8 +1878,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 414.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 414.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0416",
@@ -1893,8 +1893,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 416.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 416.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0418",
@@ -1908,8 +1908,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 418.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 418.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0420",
@@ -1923,8 +1923,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 420.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 420.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0438",
@@ -1938,8 +1938,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 438.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 438.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0442",
@@ -1953,8 +1953,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 442.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 442.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0444",
@@ -1968,8 +1968,8 @@
         "condition": "A validation or quality-gate claim is made."
       },
       "enforcement_owner": "Milestone 9 quality-gate enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 444.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 444.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0452",
@@ -1983,8 +1983,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 452.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 452.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0454",
@@ -1998,8 +1998,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 454.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 454.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0462",
@@ -2013,8 +2013,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 462.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 462.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0464",
@@ -2028,8 +2028,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 464.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 464.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0465",
@@ -2043,8 +2043,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 465.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 465.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0466",
@@ -2058,8 +2058,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 466.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 466.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0467",
@@ -2073,8 +2073,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 467.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 467.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0468",
@@ -2088,8 +2088,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 468.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 468.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0469",
@@ -2103,8 +2103,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 469.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 469.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0470",
@@ -2118,8 +2118,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 470.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 470.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0471",
@@ -2133,8 +2133,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 471.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 471.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0475",
@@ -2148,8 +2148,8 @@
         "condition": "A completion report or review handoff is produced."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 475.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 475.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0481",
@@ -2162,8 +2162,8 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 481.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 481.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2177,9 +2177,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 485.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 485.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0501",
@@ -2192,9 +2192,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 501.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 501.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0506",
@@ -2207,9 +2207,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 506.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 506.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0510",
@@ -2222,9 +2222,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 510.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 510.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0514",
@@ -2237,9 +2237,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 514.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 514.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0521",
@@ -2252,9 +2252,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 521.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 521.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0526",
@@ -2267,9 +2267,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 526.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 526.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0530",
@@ -2282,9 +2282,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 530.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 530.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0534",
@@ -2297,9 +2297,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 534.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 534.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0541",
@@ -2312,9 +2312,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 541.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 541.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0566",
@@ -2327,9 +2327,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 566.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 566.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0571",
@@ -2341,9 +2341,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 571.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 571.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0578",
@@ -2356,9 +2356,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 578.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 578.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0583",
@@ -2371,9 +2371,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 583.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 583.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0590",
@@ -2386,9 +2386,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 590.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 590.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0595",
@@ -2401,9 +2401,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 595.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 595.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0602",
@@ -2416,9 +2416,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 602.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 602.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0607",
@@ -2431,9 +2431,9 @@
         ],
         "condition": "AI is asked to build or refactor; the referenced workflow step applies."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 607.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 607.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0614",
@@ -2446,8 +2446,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 614.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 614.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2461,8 +2461,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 617.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 617.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2476,8 +2476,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 619.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 619.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2491,8 +2491,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 621.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 621.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2506,8 +2506,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 623.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 623.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2521,8 +2521,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 625.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 625.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2535,9 +2535,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 626.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 626.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0627",
@@ -2550,9 +2550,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 627.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 627.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0628",
@@ -2565,9 +2565,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 628.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 628.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0629",
@@ -2580,9 +2580,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 629.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 629.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0630",
@@ -2595,9 +2595,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 630.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 630.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0631",
@@ -2610,9 +2610,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 631.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 631.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0632",
@@ -2625,9 +2625,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 632.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 632.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0634",
@@ -2640,8 +2640,8 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 634.",
+      "enforcement_owner": "Milestone 1 policy authority",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 634.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -2654,9 +2654,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 638.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 638.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0639",
@@ -2668,9 +2668,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 639.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 639.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0640",
@@ -2683,9 +2683,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 640.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 3 complexity enforcement",
+      "evidence_requirement": "Milestone 3 complexity evidence tied to immutable inputs and source line 640.",
+      "blocking_test": "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     },
     {
       "clause_id": "SS-0641",
@@ -2698,9 +2698,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 641.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 641.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0642",
@@ -2713,9 +2713,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 642.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
+      "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 642.",
+      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
     },
     {
       "clause_id": "SS-0643",
@@ -2728,9 +2728,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 643.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 643.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0644",
@@ -2743,9 +2743,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 644.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 6 modularity enforcement",
+      "evidence_requirement": "Milestone 6 modularity evidence tied to immutable inputs and source line 644.",
+      "blocking_test": "tests/test_modularity_policy.py::test_vague_new_location_blocks"
     },
     {
       "clause_id": "SS-0645",
@@ -2758,9 +2758,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 645.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 645.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0646",
@@ -2773,9 +2773,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 646.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 5 dependency-direction enforcement",
+      "evidence_requirement": "Milestone 5 dependency evidence tied to immutable inputs and source line 646.",
+      "blocking_test": "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
     },
     {
       "clause_id": "SS-0647",
@@ -2788,9 +2788,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 647.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 647.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0648",
@@ -2803,9 +2803,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 648.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 648.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0649",
@@ -2818,9 +2818,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 649.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 8 incremental-refactor enforcement",
+      "evidence_requirement": "Milestone 8 incremental-refactor evidence tied to immutable inputs and source line 649.",
+      "blocking_test": "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
     },
     {
       "clause_id": "SS-0650",
@@ -2833,9 +2833,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 650.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 7 characterization enforcement",
+      "evidence_requirement": "Milestone 7 characterization evidence tied to immutable inputs and source line 650.",
+      "blocking_test": "tests/test_characterization.py::test_incompatible_behavior_blocks"
     },
     {
       "clause_id": "SS-0654",
@@ -2848,9 +2848,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 654.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 654.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0656",
@@ -2863,9 +2863,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 656.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 9 quality-gate enforcement",
+      "evidence_requirement": "Milestone 9 quality-gate evidence tied to immutable inputs and source line 656.",
+      "blocking_test": "tests/test_quality_profile.py::test_missing_required_command_blocks"
     },
     {
       "clause_id": "SS-0660",
@@ -2878,9 +2878,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 660.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 660.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0662",
@@ -2893,9 +2893,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 662.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 662.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0663",
@@ -2908,9 +2908,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 663.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 663.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0664",
@@ -2923,9 +2923,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 664.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 664.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0665",
@@ -2938,9 +2938,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 665.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 665.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0666",
@@ -2953,9 +2953,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 666.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 666.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0667",
@@ -2968,9 +2968,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 667.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 667.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0668",
@@ -2983,9 +2983,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 668.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 668.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0669",
@@ -2998,9 +2998,9 @@
         ],
         "condition": "Default build, refactor, or cleanup instruction is used."
       },
-      "enforcement_owner": "Milestone 1 traceability validator",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 669.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "enforcement_owner": "Milestone 10 review-handoff enforcement",
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 669.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0676",
@@ -3014,7 +3014,7 @@
         "condition": "Task is narrow and the short instruction applies."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 676.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 676.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -3029,7 +3029,7 @@
         "condition": "Task is narrow and the short instruction applies."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 679.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 679.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -3044,7 +3044,7 @@
         "condition": "Task is narrow and the short instruction applies."
       },
       "enforcement_owner": "Milestone 1 policy authority",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 681.",
+      "evidence_requirement": "Milestone 1 policy-authority evidence tied to immutable inputs and source line 681.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
     },
     {
@@ -3059,8 +3059,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 688.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 688.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0690",
@@ -3074,8 +3074,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 690.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 690.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0692",
@@ -3089,8 +3089,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 692.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 692.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0693",
@@ -3104,8 +3104,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 693.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 693.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0694",
@@ -3119,8 +3119,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 694.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 694.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0695",
@@ -3134,8 +3134,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 695.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 695.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0696",
@@ -3149,8 +3149,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 696.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 696.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0697",
@@ -3164,8 +3164,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 697.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 697.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0698",
@@ -3179,8 +3179,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 698.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 698.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0699",
@@ -3194,8 +3194,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 699.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 699.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0700",
@@ -3209,8 +3209,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 700.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 700.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0701",
@@ -3224,8 +3224,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 701.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 701.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     },
     {
       "clause_id": "SS-0703",
@@ -3239,8 +3239,8 @@
         "condition": "AI output is being judged for completion."
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
-      "evidence_requirement": "Authenticated clause result tied to immutable inputs and source line 703.",
-      "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+      "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 703.",
+      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
     }
   ]
 }

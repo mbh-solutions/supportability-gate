@@ -2,26 +2,20 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "b97a9d6436180e403bbdc99227e8e066fc5af456"
+base_sha = "aaa7a602819d3a987de722f5a11d517f94af14ef"
 overall_result = "PASS"
 responsibility_changes = [
-    "semantic_contract binds the exact semantic instruction hash into the existing canonical evidence-packet identity.",
-    "github_app publishes the bound instruction hash beside the existing evidence hash without changing response or verdict contracts.",
+    "clause_inventory enforces exact Standard-line profile scope and milestone-owned evidence and blocking-test authority.",
+    "normative_clause_inventory assigns repeated principle rows to their real milestone owners.",
 ]
 simplified_functions = [
-    "EvidencePacket.canonical_bytes",
-    "EvidencePacket.instruction_sha256",
-    "GitHubApp.complete_check",
-    "GitHubApp.publish_check",
-    "GitHubApp.start_check",
-    "request_payload",
+    "_verify_coverage",
 ]
 boundary_rationale = [
-    "semantic_contract owns instruction bytes and canonical evidence identity.",
-    "github_app owns semantic check publication and displays both bound hashes.",
+    "clause_inventory owns deterministic completeness and authority validation for the immutable Standard inventory.",
 ]
 remaining_risks = [
-    "The active reviewer runtime remains on the pre-fix packet identity until the authorized interim cutover after merge.",
+    "Inventory loading validates blocking-test ownership references but does not execute those referenced tests.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -41,11 +35,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-instruction-packet-binding"
-text = "The exact instruction hash is included in canonical evidence bytes and therefore changes the existing packet SHA and replay external ID."
-citations = ["src/supportability_gate/semantic_contract.py:89-92", "src/supportability_gate/semantic_contract.py:109-111", "src/supportability_gate/semantic_contract.py:303-303"]
+id = "claim-profile-authority"
+text = "Every inventory row is bound to frontend-only, Python-only, or both profiles by its immutable Standard source line."
+citations = ["src/supportability_gate/clause_inventory.py:12-21", "src/supportability_gate/clause_inventory.py:410-415"]
 
 [[completion_report.claims]]
-id = "claim-visible-instruction-hash"
-text = "Semantic check summaries publish the instruction hash beside the evidence hash."
-citations = ["src/supportability_gate/github_app.py:962-966", "src/supportability_gate/github_app.py:1000-1006", "src/supportability_gate/github_app.py:1039-1043"]
+id = "claim-milestone-authority"
+text = "Repeated principle clauses and their evidence and blocking-test references are bound to the milestone that enforces them."
+citations = ["src/supportability_gate/clause_inventory.py:22-77", "src/supportability_gate/clause_inventory.py:411-432"]
