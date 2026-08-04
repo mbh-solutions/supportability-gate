@@ -122,7 +122,7 @@ def _write_typescript_configs(
     )
 
 
-def _write_python_configs(output: Path, source_files: tuple[str, ...]) -> None:
+def _write_python_configs(output: Path, repository: Path, source_files: tuple[str, ...]) -> None:
     output.mkdir(parents=True, exist_ok=True)
     (output / "mypy.ini").write_text(
         "[mypy]\npython_version = 3.12\nstrict = True\nmypy_path = src\n",
@@ -130,7 +130,8 @@ def _write_python_configs(output: Path, source_files: tuple[str, ...]) -> None:
         newline="\n",
     )
     (output / "pytest.ini").write_text(
-        "[pytest]\ntestpaths = tests\npythonpath = src\naddopts = -p no:cacheprovider\n",
+        f"[pytest]\ntestpaths = tests\npythonpath = {repository / 'src'}\n"
+        "addopts = -p no:cacheprovider\n",
         encoding="utf-8",
         newline="\n",
     )
@@ -175,7 +176,7 @@ def command_plans(
             tuple(str((repository / path).resolve()) for path in source_files),
         )
     else:
-        _write_python_configs(output, source_files)
+        _write_python_configs(output, repository, source_files)
     lint_imports = shutil.which("lint-imports") or str(
         Path(sys.executable).with_name("lint-imports")
     )

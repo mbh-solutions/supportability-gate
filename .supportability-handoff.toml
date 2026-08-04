@@ -17,6 +17,7 @@ simplified_functions = [
     "_commands",
     "_result_blocks",
     "_target_identities",
+    "_write_python_configs",
     "command_plans",
     "fixed_environment",
 ]
