@@ -118,9 +118,7 @@ def _response(
         "reviewed_paths": reviewed_paths if reviewed_paths is not None else [PYTHON_PATH],
         "boundaries": boundaries if boundaries is not None else [PYTHON_BOUNDARY],
         "dependency_direction": "Verified structured import graph: "
-        + ", ".join(
-            f"{item['source']}:{item['line']}:{item['specifier']}" for item in citations
-        )
+        + ", ".join(f"{item['source']}:{item['line']}:{item['specifier']}" for item in citations)
         if sources
         else "No changed production paths.",
         "architecture_citations": citations,

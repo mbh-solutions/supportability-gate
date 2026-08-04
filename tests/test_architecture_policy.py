@@ -133,12 +133,8 @@ def test_domain_to_infrastructure_and_presentation_block() -> None:
 
 
 def test_domain_to_external_package_blocks() -> None:
-    result = _evaluate(
-        {"src/domain/model.py": "import fastapi\nimport sqlite3\nimport typing\n"}
-    )
-    node = _evaluate(
-        {"src/domain/model.ts": "import { readFile } from 'node:fs';\n"}, "typescript"
-    )
+    result = _evaluate({"src/domain/model.py": "import fastapi\nimport sqlite3\nimport typing\n"})
+    node = _evaluate({"src/domain/model.ts": "import { readFile } from 'node:fs';\n"}, "typescript")
 
     assert result.blocks == (
         "FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/model.py:1:fastapi",

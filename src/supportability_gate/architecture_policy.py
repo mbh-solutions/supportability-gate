@@ -208,9 +208,7 @@ def _typescript_target(source: str, specifier: str, paths: set[str]) -> tuple[st
         stem = posixpath.normpath(posixpath.join(posixpath.dirname(source), specifier))
         suffix = PurePosixPath(stem).suffix
         rewrites = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
-        base, candidates = (
-            (stem[: -len(suffix)], []) if suffix in rewrites else (stem, [stem])
-        )
+        base, candidates = (stem[: -len(suffix)], []) if suffix in rewrites else (stem, [stem])
         candidates.extend(f"{base}{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
         candidates.extend(
             f"{base}/index{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES)
@@ -280,10 +278,7 @@ def _blocks(edges: tuple[ImportEdge, ...], roots: tuple[str, ...]) -> tuple[str,
             root = edge.target.split(".", 1)[0]
             if (edge.internal and target_layer != "domain") or (
                 not edge.internal
-                and (
-                    not edge.source.endswith((".py", ".pyi"))
-                    or root not in _DOMAIN_PYTHON_IMPORTS
-                )
+                and (not edge.source.endswith((".py", ".pyi")) or root not in _DOMAIN_PYTHON_IMPORTS)
             ):
                 blocks.add(f"FORBIDDEN_DOMAIN_DEPENDENCY:{location}")
     return tuple(sorted(blocks))

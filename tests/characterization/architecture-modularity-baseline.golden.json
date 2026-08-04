@@ -1,0 +1,12 @@
+{
+  "architecture_blocks": [],
+  "architecture_edges": 2,
+  "modularity_adapters": [
+    "python.c901-touched.v1",
+    "python.import-linter.v1",
+    "python.mypy-strict.v1",
+    "python.pytest.v1",
+    "python.ruff-lint.v1"
+  ],
+  "modularity_blocks": []
+}
