@@ -360,8 +360,10 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
     assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
+@pytest.mark.parametrize("code", ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT"])
 def test_technical_model_failure_publishes_no_semantic_check(
     monkeypatch: pytest.MonkeyPatch,
+    code: str,
 ) -> None:
     class App:
         completed: list[object] = []
@@ -389,13 +391,74 @@ def test_technical_model_failure_publishes_no_semantic_check(
     app = App()
 
     def fail(*args: object) -> object:
-        raise SemanticReviewError("TIMEOUT")
+        if code == "TIMEOUT":
+            raise SemanticReviewError(code)
+        response = _response(_m10_packet())
+        if code == "INCOMPLETE_RESPONSE":
+            response["status"] = "incomplete"
+        elif code == "REFUSAL":
+            response["output"][0]["content"][0] = {"type": "refusal", "refusal": "no"}  # type: ignore[index]
+        else:
+            response["model"] = "other"
+        return response
 
     monkeypatch.setattr(semantic_cli, "request_response", fail)
-    with pytest.raises(SemanticReviewError, match="TIMEOUT"):
+    with pytest.raises(SemanticReviewError, match=code):
         semantic_cli._review(app, "mbh-solutions/supportability-gate", "token", {})  # type: ignore[arg-type]
     assert app.started == 1
     assert app.completed == []
+
+
+def test_deterministic_response_failure_completes_once_without_recalling_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _m10_packet()
+
+    class App:
+        completed: list[object] = []
+        result: bool | None = None
+        started = 0
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> bool | None:
+            return self.result
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            self.started += 1
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
+            self.result = False
+
+    app = App()
+    calls = 0
+    response = _response(packet)
+    response["output"][0]["content"][0]["text"] = "not json"  # type: ignore[index]
+
+    def malformed(*args: object) -> object:
+        nonlocal calls
+        calls += 1
+        return response
+
+    monkeypatch.setattr(semantic_cli, "request_response", malformed)
+
+    assert not semantic_cli._review(  # type: ignore[arg-type]
+        app, "mbh-solutions/supportability-gate", "token", {}
+    )
+    assert not semantic_cli._review(  # type: ignore[arg-type]
+        app, "mbh-solutions/supportability-gate", "token", {}
+    )
+    assert (app.started, calls, len(app.completed)) == (1, 1, 1)
+    assert app.completed[0][3:] == ("failure", "TECHNICAL_FAILURE\nMALFORMED_SCHEMA")
 
 
 def test_evidence_packet_is_immutable_after_construction() -> None:
@@ -556,6 +619,37 @@ def test_invalid_responsibility_evidence_blocks(defect: str, code: str) -> None:
             packet,
             _response(packet, reviewed_paths=reviewed_paths, boundaries=boundaries),
         )
+
+
+def test_exact_102_boundaries_pass_but_missing_one_blocks() -> None:
+    source_boundaries = [
+        {"start_line": line, "end_line": line, "kind": "function", "name": f"boundary_{line}"}
+        for line in range(1, 103)
+    ]
+    source = {
+        "blob_sha": "c" * 40,
+        "boundaries": source_boundaries,
+        "imports": [],
+        "line_count": 102,
+        "lines": [{"line": line, "text": f"def boundary_{line}(): pass"} for line in range(1, 103)],
+        "path": PYTHON_PATH,
+    }
+    packet = _packet({"reviewed_sources": [source], "completion_sources": [source]})
+    returned = [
+        {
+            **boundary,
+            "path": PYTHON_PATH,
+            "owns": f"Boundary {boundary['name']} responsibility.",
+            "does_not_own": "Other boundaries.",
+            "basis": "responsibility",
+            "evidence_lines": [boundary["start_line"]],
+        }
+        for boundary in source_boundaries
+    ]
+
+    assert len(parse_response(packet, _response(packet, boundaries=returned)).boundaries) == 102
+    with pytest.raises(SemanticReviewError, match="MISSING_BOUNDARY_EVIDENCE"):
+        parse_response(packet, _response(packet, boundaries=returned[:-1]))
 
 
 def test_evidence_path_not_in_exact_head_blocks() -> None:

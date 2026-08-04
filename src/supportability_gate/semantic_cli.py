@@ -181,7 +181,22 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
             "BLOCK\n" + "\n".join(preflight),
         )
         return False
-    verdict = parse_response(packet, request_response(packet))
+    response = request_response(packet)
+    try:
+        verdict = parse_response(packet, response)
+    except SemanticReviewError as error:
+        if error.code in {"INCOMPLETE_RESPONSE", "MODEL_DRIFT", "REFUSAL"}:
+            raise
+        _complete_current_check(
+            app,
+            packet,
+            pull_number,
+            token,
+            check_id,
+            "failure",
+            f"TECHNICAL_FAILURE\n{error.code}",
+        )
+        return False
     if verdict.verdict == "PASS":
         _complete_current_check(
             app,

@@ -229,8 +229,13 @@ def _boundary_evidence(
     expected_paths = tuple(sources)
     if tuple(reviewed) != expected_paths:
         raise SemanticReviewError("MISSING_REVIEWED_PATHS")
+    expected_boundaries = {
+        (path, start, end, kind, name)
+        for path, (_, _, trusted, _) in sources.items()
+        for start, end, kind, name in trusted
+    }
     raw_boundaries = data.get("boundaries")
-    if not isinstance(raw_boundaries, list) or len(raw_boundaries) > 100:
+    if not isinstance(raw_boundaries, list) or len(raw_boundaries) > len(expected_boundaries):
         raise SemanticReviewError("MALFORMED_SCHEMA")
     boundaries = tuple(
         sorted(
@@ -243,11 +248,6 @@ def _boundary_evidence(
     }
     if len(identities) != len(boundaries):
         raise SemanticReviewError("MALFORMED_SCHEMA")
-    expected_boundaries = {
-        (path, start, end, kind, name)
-        for path, (_, _, trusted, _) in sources.items()
-        for start, end, kind, name in trusted
-    }
     if identities != expected_boundaries:
         raise SemanticReviewError("MISSING_BOUNDARY_EVIDENCE")
     prefixes = tuple(f"{item.path}:{item.start_line}-{item.end_line}" for item in boundaries)
