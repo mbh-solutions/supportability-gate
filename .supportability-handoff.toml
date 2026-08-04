@@ -58,7 +58,7 @@ citations = ["src/supportability_gate/github_app.py:278-303", "src/supportabilit
 [[completion_report.claims]]
 id = "claim-fail-closed-handoff-results"
 text = "Report and authoritative command rows use separate strict shapes and failure codes, while authoritative non-PASS, unexecuted, and nonzero results always produce deterministic blocks."
-citations = ["src/supportability_gate/handoff_policy.py:24-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:266-274"]
+citations = ["src/supportability_gate/handoff_policy.py:24-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:273-289"]
 
 [[completion_report.claims]]
 id = "claim-unique-refactor-targets"
