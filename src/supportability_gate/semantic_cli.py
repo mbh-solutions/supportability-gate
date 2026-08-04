@@ -39,7 +39,6 @@ def _verdict_summary(verdict: SemanticVerdict) -> str:
         (
             f"model: {verdict.returned_model} ({verdict.reasoning_effort})",
             f"response SHA-256: {verdict.response_sha256}",
-            f"instruction SHA-256: {verdict.instruction_sha256}",
             f"terminal status: {verdict.terminal_status}",
             f"parser result: {verdict.parser_result}",
         )

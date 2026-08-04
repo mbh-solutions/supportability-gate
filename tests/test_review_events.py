@@ -56,7 +56,6 @@ def _pass_verdict() -> object:
             "returned_model": "model",
             "reasoning_effort": "medium",
             "response_sha256": "c" * 64,
-            "instruction_sha256": "d" * 64,
             "terminal_status": "completed",
             "parser_result": "PASS",
             "reviewed_paths": (),
