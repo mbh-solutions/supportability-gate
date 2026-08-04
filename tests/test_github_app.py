@@ -520,6 +520,7 @@ def test_compare_evidence_and_check_bind_exact_head_app_and_hash() -> None:
     assert payload["name"] == CHECK_NAME
     assert payload["head_sha"] == "b" * 40
     assert packet.sha256 in payload["output"]["summary"]
+    assert packet.instruction_sha256 in payload["output"]["summary"]
     assert packet.evidence["reviewed_sources"] == [
         {
             "blob_sha": source_sha,
@@ -960,8 +961,11 @@ def test_pending_check_is_completed_with_same_evidence_binding() -> None:
     check_id = app.start_check(packet, "token")
     result = app.complete_check(packet, "token", check_id, "success", "PASS")
     assert result["id"] == 99
-    assert json.loads(requests[1].data)["status"] == "in_progress"
+    pending = json.loads(requests[1].data)
+    assert pending["status"] == "in_progress"
+    assert packet.instruction_sha256 in pending["output"]["summary"]
     assert requests[2].method == "PATCH"
+    assert packet.instruction_sha256 in json.loads(requests[2].data)["output"]["summary"]
 
 
 def test_existing_pending_check_is_reused_idempotently() -> None:

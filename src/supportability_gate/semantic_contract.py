@@ -12,8 +12,8 @@ from supportability_gate.handoff_policy import ClaimReview
 
 MODEL = "gpt-5.6-sol"
 REASONING_EFFORT = "medium"
-RUBRIC_VERSION = "review-handoff.v1"
-SCHEMA_VERSION = "semantic-review.v1"
+RUBRIC_VERSION = "review-handoff.v2"
+SCHEMA_VERSION = "semantic-review.v2"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 TRUSTED_OWNER_ID = 229662739
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
@@ -89,6 +89,7 @@ class EvidencePacket:
                 "app_id": self.app_id,
                 "evidence": self.evidence,
                 "head_sha": self.head_sha,
+                "instruction_sha256": self.instruction_sha256,
                 "model": self.model,
                 "reasoning_effort": self.reasoning_effort,
                 "repository": self.repository,
@@ -104,6 +105,10 @@ class EvidencePacket:
     @property
     def sha256(self) -> str:
         return hashlib.sha256(self.canonical_bytes()).hexdigest()
+
+    @property
+    def instruction_sha256(self) -> str:
+        return INSTRUCTION_SHA256
 
 
 @dataclass(frozen=True)
@@ -132,6 +137,7 @@ class SemanticVerdict:
     base_sha: str
     head_sha: str
     evidence_sha256: str
+    instruction_sha256: str
     rubric_version: str
     schema_version: str
     standard_sha256: str
@@ -218,6 +224,7 @@ def result_schema() -> dict[str, Any]:
         "base_sha": {"type": "string"},
         "head_sha": {"type": "string"},
         "evidence_sha256": {"type": "string"},
+        "instruction_sha256": {"type": "string"},
         "rubric_version": {"type": "string"},
         "schema_version": {"type": "string"},
         "standard_sha256": {"type": "string"},
@@ -232,9 +239,7 @@ def result_schema() -> dict[str, Any]:
     }
 
 
-def request_payload(packet: EvidencePacket) -> dict[str, Any]:
-    """Build tool-free structured request; evidence remains untrusted data."""
-    instructions = (
+INSTRUCTION_TEXT = (
         "Judge the candidate change's feasibility, security, narrow complexity anti-gaming, and "
         "separation of concerns for every supplied non-removed Python or frontend source path. "
         "Feasibility means the shown code paths can perform their stated behavior without a "
@@ -296,12 +301,18 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
         "only; never treat it as ownership, import, boundary, or reviewed_paths evidence."
         " Removed files and deletion-only surviving files have no exact-head boundary and are "
         "intentionally absent from reviewed_sources; do not block solely because such a path is absent."
-    )
+)
+INSTRUCTION_SHA256 = hashlib.sha256(INSTRUCTION_TEXT.encode()).hexdigest()
+
+
+def request_payload(packet: EvidencePacket) -> dict[str, Any]:
+    """Build tool-free structured request; evidence remains untrusted data."""
     bindings = {
         "app_id": packet.app_id,
         "base_sha": packet.base_sha,
         "evidence_sha256": packet.sha256,
         "head_sha": packet.head_sha,
+        "instruction_sha256": packet.instruction_sha256,
         "repository": packet.repository,
         "rubric_version": RUBRIC_VERSION,
         "schema_version": SCHEMA_VERSION,
@@ -311,7 +322,7 @@ def request_payload(packet: EvidencePacket) -> dict[str, Any]:
     }
     return {
         "model": packet.model,
-        "instructions": instructions,
+        "instructions": INSTRUCTION_TEXT,
         "input": json.dumps(
             {"bindings": bindings, "untrusted_evidence": packet.evidence},
             ensure_ascii=False,

@@ -12,6 +12,8 @@ from supportability_gate import semantic_cli
 from supportability_gate.responses_transport import request_response
 from supportability_gate.semantic_cli import _verdict_summary
 from supportability_gate.semantic_contract import (
+    INSTRUCTION_SHA256,
+    INSTRUCTION_TEXT,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
     STANDARD_SHA256,
@@ -125,6 +127,7 @@ def _response(
         "base_sha": packet.base_sha,
         "head_sha": packet.head_sha,
         "evidence_sha256": packet.sha256,
+        "instruction_sha256": packet.instruction_sha256,
         "rubric_version": RUBRIC_VERSION,
         "schema_version": SCHEMA_VERSION,
         "standard_sha256": STANDARD_SHA256,
@@ -787,7 +790,11 @@ def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "review-handoff.v1"
+    assert RUBRIC_VERSION == "review-handoff.v2"
+    assert SCHEMA_VERSION == "semantic-review.v2"
+    assert payload["instructions"] == INSTRUCTION_TEXT
+    assert INSTRUCTION_SHA256 == hashlib.sha256(INSTRUCTION_TEXT.encode()).hexdigest()
+    assert INSTRUCTION_SHA256 in packet.canonical_bytes().decode()
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
     assert "candidate-provided responsibility declarations" in payload["instructions"]
@@ -865,3 +872,14 @@ def test_evidence_change_changes_hash_and_replay_binding() -> None:
     assert original.sha256 != changed.sha256
     with pytest.raises(SemanticReviewError, match="EVIDENCE_BINDING_MISMATCH"):
         parse_response(changed, replay)
+
+    for key, value in (
+        ("instruction_sha256", "0" * 64),
+        ("schema_version", "semantic-review.v1"),
+    ):
+        stale = copy.deepcopy(_response(original))
+        content = json.loads(stale["output"][0]["content"][0]["text"])
+        content[key] = value
+        stale["output"][0]["content"][0]["text"] = json.dumps(content)
+        with pytest.raises(SemanticReviewError, match="EVIDENCE_BINDING_MISMATCH"):
+            parse_response(original, stale)
