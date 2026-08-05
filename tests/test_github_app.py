@@ -475,11 +475,29 @@ def test_open_pull_truncation_blocks() -> None:
         app.open_pulls("mbh-solutions/supportability-gate", "token")
 
 
-def test_semantic_source_limit_accepts_m9_packet_but_remains_bounded() -> None:
+def test_semantic_source_collection_has_no_total_line_ceiling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     app = GitHubApp(42, 7, b"unused")
-    app._validate_review_size([{"lines": [None] * 2_228}])
-    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
-        app._validate_review_size([{"lines": [None] * 2_501}])
+    files = (
+        {"filename": "src/a.py", "status": "modified"},
+        {"filename": "src/b.py", "status": "modified"},
+    )
+    monkeypatch.setattr(app, "_production_paths", lambda *args: ("src",))
+    monkeypatch.setattr(
+        app,
+        "_reviewed_source",
+        lambda repository, item, token: {
+            "lines": [None] * 2_003,
+            "path": item["filename"],
+        },
+    )
+    monkeypatch.setattr(app, "_deletion_evidence", lambda *args: (None, None))
+
+    sources, deleted = app._source_evidence("owner/repo", "a" * 40, files, "token")
+
+    assert sum(len(source["lines"]) for source in sources) == 4_006
+    assert deleted == []
 
 
 def test_stale_pull_evidence_blocks_before_publication() -> None:
@@ -806,11 +824,6 @@ def test_completion_sources_reject_unbounded_paths_and_ranges() -> None:
             [{"path": "src/a.txt", "status": "modified"}],
         ),
         (
-            {"claims": [{"citations": ["src/a.py:1-2501"], "id": "claim", "text": "too large"}]},
-            [{"path": "src/a.py"}],
-            [{"path": "src/a.py", "status": "modified"}],
-        ),
-        (
             {"claims": [{"citations": ["not-a-citation"], "id": "claim", "text": "bad"}]},
             [{"path": "src/a.py"}],
             [{"path": "src/a.py", "status": "modified"}],
@@ -854,6 +867,34 @@ def test_completion_sources_reject_unbounded_paths_and_ranges() -> None:
         )
         == []
     )
+
+
+def test_completion_sources_include_large_valid_citation() -> None:
+    head = b"value = 1\n" * 2_501
+    head_blob = _blob_sha(head)
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda request, **kwargs: (
+            _Reply({"sha": head_blob})
+            if "/contents/" in request.full_url
+            else _Reply(_blob_payload(head))
+        ),
+    )
+
+    sources = app._completion_sources(
+        "mbh-solutions/supportability-gate",
+        "b" * 40,
+        {"claims": [{"citations": ["src/a.py:1-2501"], "id": "claim", "text": "large"}]},
+        [],
+        [{"path": "src/a.py"}],
+        [{"path": "src/a.py", "status": "modified"}],
+        "token",
+    )
+
+    assert len(sources) == 1
+    assert len(sources[0]["lines"]) == 2_501
 
 
 def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibilities() -> None:

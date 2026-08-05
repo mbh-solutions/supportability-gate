@@ -521,14 +521,12 @@ class GitHubApp:
         allowed = (changed_paths & deleted_paths) - reviewed_paths
         requested: dict[str, list[tuple[int, int]]] = {}
         for path, start, end in completion_citations(report):
-            if path in allowed and end - start < 2_500:
+            if path in allowed:
                 requested.setdefault(path, []).append((start, end))
-        used = sum(len(source["lines"]) for source in sources)
         for path, ranges in sorted(requested.items()):
             source = self._completion_source(repository, head_sha, path, ranges, token)
-            if source is not None and used + len(source["lines"]) <= 2_500:
+            if source is not None:
                 sources.append(source)
-                used += len(source["lines"])
         return sources
 
     def _completion_source(
@@ -785,7 +783,6 @@ class GitHubApp:
             if removed is not None:
                 deleted.append(removed)
         sources = [sources_by_path[path] for path in sorted(sources_by_path)]
-        self._validate_review_size(sources)
         return sources, deleted
 
     def _deletion_evidence(
@@ -861,10 +858,6 @@ class GitHubApp:
                 for root in production_paths
             )
         )
-
-    def _validate_review_size(self, sources: list[dict[str, Any]]) -> None:
-        if sum(len(source["lines"]) for source in sources) > 2_500:
-            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
 
     def _source_candidates(self, files: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
         candidates: list[dict[str, Any]] = []
