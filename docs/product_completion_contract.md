@@ -428,6 +428,79 @@ direct runtime proof.
 - Last completed authority: owner-authorized Enforcement Milestone 11 issue #26.
 - Current inventory: `docs/normative_clause_inventory.json`.
 
+## Critical maintenance — Project #3 issue #79
+
+- Status: `COMPLETE` upon protected merge of this evidence-only change; Evidence `Complete`; Scope
+  `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #79, frozen at 24 root issues, 28 target review threads, 20
+  implementation gaps, 3 proof gaps, and 1 historical ledger/scope issue.
+- Completion evidence:
+  - Seven focused remediation PRs normally merged without bypass: #80 as
+    `aaa7a602819d3a987de722f5a11d517f94af14ef`, #82 as
+    `0b5c647317eebe196eaa287e4a755e4356ec4737`, #83 as
+    `34f0cb88c4c397c42d6c792f635ddbe20a0577cb`, #84 as
+    `3ad2c475ba1d241185715c05a0169a2462b9c7d2`, #85 as
+    `a8a8ddb15cdaa0a60eb972128433dc478d80d5bd`, #86 as
+    `2007ad00b6b78d0f9c76e3be5d67d7fb34a38c51`, and #87 as
+    `c66d276d17f8c968f6422728a0afeec7de981d8f`.
+  - All 28 frozen target threads received separate root/fix/check/proof replies and GraphQL readback
+    reported 28 resolved and 0 unresolved. Mutations named only those 28 thread IDs; no other
+    audited thread was replied to or resolved.
+  - Malformed-inventory canary PR #88, base/head
+    `c66d276d17f8c968f6422728a0afeec7de981d8f` /
+    `292c374acd4d1ffbf4bb8fb0d4c8e163771568d2`, produced `MALFORMED_INVENTORY` in
+    Source Validation check `92201610365`. Remaining-gap canary PR #90, head
+    `e6c33f5cdb04fd76ec4e080bbfa5180a6848ce35`, made
+    `test_incomplete_remaining_gap_blocks` fail in check `92201262380`. Complexity canary PR #89,
+    head `03f9abb6bcb41a33a129b508642328230eeb6ab1`, accepted exact broad owner authorization
+    comment `5187332926`, then Gate check `92202820250` blocked only
+    `QUALITY_GATE_FAILED:python.c901-touched.v1`. App `15368` produced all three protected checks
+    under ruleset `19767613`; each normal merge returned HTTP `405`; all closed unmerged and their
+    temporary branches were deleted.
+  - Control PR #81 first proved instruction-bound replay at unchanged head
+    `8d97b4278a69d49943e878c53f3927403ab31337`: semantic check `92118115000` used instruction
+    SHA-256 `de5e7d0b5410bd3fe2a7f11ee88885d29fea27b636100eaf4a9832158de5a184`, evidence
+    SHA-256 `f6d09b7f4566b2248806a4f91906cea092587dfc91ac0bb952b655d3b41b420f`, and base
+    `aaa7a602819d3a987de722f5a11d517f94af14ef`. After `main` advanced, final runtime rejected the
+    stale-base artifact; controlled workflow attempt 2 remained bound to that old base at artifact
+    `8917334198`, digest
+    `sha256:542f4577a4c8c8b313edcf6791507aece6b4ae43ea105bb169278ed0e93639ae`.
+  - Owner authorized the minimal conflict exception: merge final `main` into the control branch and
+    preserve one merge commit. Final control head `54a6fd69bbdace5622c20ded3e86ee4ead2dd188` has parents
+    `8d97b4278a69d49943e878c53f3927403ab31337` and
+    `c66d276d17f8c968f6422728a0afeec7de981d8f`. Source Validation `92214753945`, Gate
+    `92214871179`, and semantic App check `92215023109` passed. The semantic result bound current
+    base/head, evidence SHA-256
+    `d18cbf50f09a52b00344981c98a2d110acf016dd6c84fa710097e5a7f9af031c`, the same instruction
+    SHA-256, and artifact `8918859651`, digest
+    `sha256:47fb73fe11fcf894b58dc3d3744e60e531e62f6f33b76831a7b7a3d2162bec96`.
+    PR #81 closed unmerged and its temporary remote branch was deleted.
+  - Final runtime is exact source `c66d276d17f8c968f6422728a0afeec7de981d8f`, installed at
+    `runtime-maint-c66d276` under Python `3.12.12`. Wheel SHA-256 is
+    `5d5db5d1e02217018b3b519101295c1e6fb1f73ba86865b1d33a67d9484fceec`; installed CLI help
+    passed. Prior working runtimes remain available for rollback.
+  - Scheduled tasks `Supportability Semantic Review` and `Supportability Semantic Review - TWMN`
+    both use that versioned runtime, one-minute triggers, `IgnoreNew`, and ten-minute limits. Their
+    XML SHA-256 values are `5712864b2a20f211e6b4704b16fed28dbb81f54dae990837e02bcb9edfc70f1a`
+    and `5c81deaf17a4382cf5be00fe2090447cbfa8e71f33b617c1c9ff46bda45d62c9`.
+    Each reviewer produced bounded result `0` when exercised alone. Simultaneous starts share one
+    advisory lock, so the loser returns documented `EVALUATION_IN_PROGRESS` / exit `2` while the
+    winner returns `0`; this is explained contention, not an unresolved health failure.
+  - Organization ruleset `19913103` is active with zero bypass actors and pins
+    `.github/workflows/organization-required.yml` to exact final merge
+    `c66d276d17f8c968f6422728a0afeec7de981d8f`. Repository ruleset `19767613` is active with zero
+    bypass actors, native thread resolution, strict Source Validation from App `15368`, and strict
+    semantic review from App `4418989`. The historical orphan ruleset `20224623` still names deleted
+    repository `1319911879` and old pin `0c4c2419d6da486a97acb8e73cac5e91430d2c7b`; GitHub rejected
+    its update with HTTP `422`, so it is not a live production target and was not deleted outside
+    issue #79 authority.
+  - No TWMN repository, branch, comment, issue, test, or Project mutation was made; final readback
+    found zero open TWMN pull requests. No broad local test matrix, new test file, package, module,
+    bypass, or unrelated remediation was added. Immutable Standard SHA-256 remains
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Remaining work: None after this evidence-only PR normally merges and issue #79 / Project #3
+  closure fields are read back. Stop; no successor work is authorized.
+
 ## Historical delivery ledger
 
 The five entries below preserve direct evidence from historical Project #2. They do not establish
@@ -799,8 +872,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #6 is complete; stop
-Next milestone authorized: NO — Project #6 ends with S04
+Current authorized work: NONE — Project #3 issue #79 maintenance is complete; stop
+Next milestone authorized: NO — no successor work is authorized
 ```
 
 ## Milestone transition rules
