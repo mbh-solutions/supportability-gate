@@ -866,13 +866,69 @@ workflow, check-run, ruleset, or GitHub state supports them.
 - Remaining work: None after protected ledger merge, issue #69/#65 closure, and Project #6 field
   readback. Stop; no successor work is authorized.
 
+## Critical maintenance — Project #3 issue #92
+
+- Semantic review source capacity: `COMPLETE` upon protected merge of this evidence-only ledger
+  change; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #92 under reopened Project #3. The work is one focused
+  maintenance defect; no successor milestone is authorized.
+- Completion evidence:
+  - The installed pre-repair reviewer deterministically rejected TWMN PR #62 exact base
+    `ab80ed1047698bd8586ae1e11aa7a2e3b305ec79` and head
+    `778f5aa3717cb9b9dd3447e331453bb954419acc` as `INCOMPLETE_GITHUB_EVIDENCE` because 13
+    reviewed sources contained 4,004 lines above the fixed 2,500-line ceiling.
+  - Protected implementation PR #93 exact head
+    `00816c6ca133d820aa24986d2b5ab320cfa5a094` normally squash-merged as
+    `51847aa57682ecc5aeb4b4fa2cf6e45ae2cccf4e`. The repair removes the total reviewed-line
+    rejection and validates, deduplicates, and coalesces completion citation intervals before
+    expansion, bounding work by the fetched blob rather than citation count multiplied by range
+    length. Review thread `PRRT_kwDOTjnTcc6WxM8H` caught the unbounded-expansion defect before
+    merge; commit `14ee2d75472a7a9a4147ca2cd35d1a1dee19bc0c` fixed it with a 10,000-overlapping-range
+    regression.
+  - Final Source Validation run `31041707428`/check `92427362648` and organization-required run
+    `31041707618` passed. Checks were Characterize Base `92427363478`, Characterize Head
+    `92427363414`, Quality Profile `92427363411`, and Supportability Gate `92427560588`.
+    Authoritative artifact `8944846031` has digest
+    `sha256:e4bee805f3c5684bd235d00a721904d435ac8ec131ea9d6f598179cf53f2c405`.
+    Semantic App `4418989` check `92428271762` passed with evidence SHA-256
+    `4f3b627e1b6410848ade99aa90f2885291d32166317858d397b8c7a08ae84975` and response
+    SHA-256 `095bbf56cb2cf03152f2d13e527f53df965aac6bafb807725be6be5662192dbe`.
+  - Exact source proof passed Ruff lint and format, C901 at maximum 10, strict mypy across 26
+    source files, both import contracts, compileall, immutable-Standard tamper detection, wheel
+    build/install, installed CLI help, and 307 tests with 2 skips. The immutable Standard SHA-256
+    remained `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Merge `51847aa57682ecc5aeb4b4fa2cf6e45ae2cccf4e` produced wheel SHA-256
+    `122d67872ff6f582e63d758db44d9899f1e694314ffa224d918a78fa11ca3f28`. Versioned runtime
+    `runtime-issue92-51847aa` uses Python 3.12 and the exact lock. Both production tasks read back
+    enabled and idle with unchanged arguments, one-minute cadence, `IgnoreNew`, and ten-minute
+    limits; their executable and working directory point to the new runtime. TWMN's start boundary
+    is offset 30 seconds from the supportability-gate task so the two repositories retain the
+    deliberate global nonblocking model lock without same-second starvation. Rollback runtime
+    `runtime-maint-c66d276` remains retained.
+  - The new installed runtime collected TWMN PR #62's same exact base/head as 13 reviewed and 13
+    completion sources, each containing all 4,004 lines; canonical evidence was 767,730 bytes.
+    Scheduled reconciliation completed with task result `1`, not technical exit `2`; after the
+    trigger offset, consecutive scheduled runs at `2026-08-05T15:10:05-05:00` and
+    `2026-08-05T15:11:05-05:00` both returned `1`. App check `92429445065` blocked on TWMN's
+    genuine `CONTRADICTED_SIMPLIFIED_FUNCTIONS` and
+    `STALE_COMPLETION_REPORT_SHA`; evidence SHA-256 was
+    `470d789b3c618cdc84bafd74a5b96ad3905184690741a722d366ce3298030024`. TWMN code, branch,
+    issue, Project, and review state were not changed.
+  - Measured complete transport fit the existing single model call, so internal partitioning,
+    aggregation, and progress persistence were not required. Final-unit, missing-unit, and
+    cross-unit poison cases are therefore inapplicable; existing fail-closed missing, stale,
+    malformed, timeout, refusal, and transport behavior remains covered by the passing suite.
+- Remaining work: None after this evidence-only ledger PR normally merges, issue #92 closes, and
+  Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; no successor work
+  is authorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #79 maintenance is complete; stop
+Current authorized work: NONE — Project #3 issue #92 maintenance is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
