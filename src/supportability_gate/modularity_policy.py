@@ -8,6 +8,7 @@ from pathlib import PurePosixPath
 from supportability_gate.architecture_policy import ArchitectureResult, ImportEdge
 from supportability_gate.contract import Contract, ContractError, normalize_repository_path
 from supportability_gate.function_changes import ChangedFileAssessment
+from supportability_gate.quality_profile import QualityEvidence
 from supportability_gate.review_evidence import ReviewEvidence
 
 VAGUE_LOCATION_NAMES = frozenset({"common", "helpers", "misc", "stuff", "utils"})
@@ -93,7 +94,7 @@ def _package(path: str, policy: Contract) -> str:
         key=len,
     )
     relative = PurePosixPath(path).relative_to(root)
-    return relative.parts[0] if len(relative.parts) > 1 else relative.stem
+    return relative.parts[0] if len(relative.parts) > 1 else PurePosixPath(root).name
 
 
 def _path_blocks(path: str) -> tuple[str, ...]:
@@ -125,9 +126,9 @@ def _claim_blocks(
             continue
         if claim.owner_path not in nodes:
             blocks.append(f"UNRESOLVED_MODULE_OWNER:{path}:{claim.owner_path}")
-        elif claim.owner_path != path and _package(claim.owner_path, policy) != _package(
-            path, policy
-        ):
+        elif claim.owner_path in new_paths:
+            blocks.append(f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{claim.owner_path}")
+        elif _package(claim.owner_path, policy) != _package(path, policy):
             blocks.append(f"PARALLEL_PACKAGE:{path}:{claim.owner_path}")
     return tuple(blocks)
 
@@ -137,6 +138,7 @@ def evaluate_modularity(
     assessments: tuple[ChangedFileAssessment, ...],
     review: ReviewEvidence | None,
     architecture: ArchitectureResult,
+    quality: QualityEvidence,
 ) -> ModularityResult:
     """Return deterministic exact-path modularity evidence without executing target code."""
     changed_paths = _changed_paths(assessments)
@@ -145,7 +147,18 @@ def evaluate_modularity(
     coverage = tuple(
         LocationCoverage(
             path,
-            tuple(sorted(gate.adapter for gate in policy.gates if gate.covers(path))),
+            tuple(
+                sorted(
+                    gate.adapter
+                    for gate in policy.gates
+                    for command in quality.commands
+                    if gate.adapter == command.adapter
+                    and gate.covers(path)
+                    and command.executed
+                    and command.exit_code == 0
+                    and path in (*command.observed_paths, *command.zero_statement_paths)
+                )
+            ),
             path in architecture.covered_paths,
         )
         for path in new_paths

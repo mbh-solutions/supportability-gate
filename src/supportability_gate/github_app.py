@@ -23,7 +23,12 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from supportability_gate.architecture_policy import source_imports
 from supportability_gate.contract import ContractError, parse_contract
-from supportability_gate.function_changes import PythonSourceError, responsibility_spans
+from supportability_gate.function_changes import (
+    PythonSourceError,
+    ResponsibilitySpan,
+    changed_responsibility_spans,
+    responsibility_spans,
+)
 from supportability_gate.handoff_policy import (
     HANDOFF_REPORT_PATH,
     CompletionReportError,
@@ -40,7 +45,7 @@ from supportability_gate.semantic_contract import (
 
 API = "https://api.github.com"
 CHECK_NAME = "Supportability Semantic Review"
-REVIEWED_SUFFIXES = frozenset({".py", ".ts", ".tsx"})
+REVIEWED_SUFFIXES = frozenset({".py", ".pyi", ".cts", ".mts", ".ts", ".tsx"})
 HUNK_PATTERN = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
 HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
@@ -282,7 +287,7 @@ class GitHubApp:
         evidence = packet.evidence
         if not evidence.get("reviewed_sources") and not evidence.get("deleted_sources"):
             return packet
-        evidence.update(self._handoff_evidence(repository, packet.head_sha, token))
+        evidence.update(self._handoff_evidence(repository, packet.base_sha, packet.head_sha, token))
         evidence.update(self._completion_report(repository, packet.head_sha, token))
         context = evidence.get("refactor_context")
         changed_files = context.get("changed_files") if isinstance(context, dict) else None
@@ -305,7 +310,9 @@ class GitHubApp:
             reasoning_effort=packet.reasoning_effort,
         )
 
-    def _handoff_run(self, repository: str, head_sha: str, token: str) -> dict[str, Any]:
+    def _handoff_runs(
+        self, repository: str, head_sha: str, token: str
+    ) -> tuple[dict[str, Any], ...]:
         result = self._request(
             "GET",
             f"/repos/{repository}/actions/runs?head_sha={head_sha}&per_page=100",
@@ -325,10 +332,10 @@ class GitHubApp:
         ]
         if not runs:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        run = max(runs, key=self._handoff_run_order)
-        if run.get("conclusion") != "success":
+        ordered = tuple(sorted(runs, key=self._handoff_run_order, reverse=True))
+        if ordered[0].get("conclusion") != "success":
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        return run
+        return tuple(run for run in ordered if run.get("conclusion") == "success")
 
     @staticmethod
     def _handoff_run_order(run: dict[str, Any]) -> tuple[datetime, int]:
@@ -419,31 +426,36 @@ class GitHubApp:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
         return values
 
-    def _handoff_evidence(self, repository: str, head_sha: str, token: str) -> dict[str, object]:
-        run = self._handoff_run(repository, head_sha, token)
-        artifact = self._handoff_artifact(repository, run, token)
-        archive = self._artifact_bytes(repository, artifact["id"], token)
-        archive_sha256 = hashlib.sha256(archive).hexdigest()
-        if artifact["digest"] != f"sha256:{archive_sha256}":
-            raise SemanticReviewError("HANDOFF_ARTIFACT_DIGEST_MISMATCH")
-        files = self._artifact_json(archive)
-        result, provenance = files["complexity-result.json"], files["quality-provenance.json"]
-        if result.get("head_sha") != head_sha or provenance.get("run_id") != str(run["id"]):
-            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
-        if provenance.get("run_attempt") != str(run["run_attempt"]):
-            raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
-        return {
-            "artifact_provenance": {
-                "artifact_digest": artifact["digest"],
-                "artifact_id": artifact["id"],
-                "archive_sha256": archive_sha256,
-                "run_attempt": run["run_attempt"],
-                "run_conclusion": run.get("conclusion"),
-                "run_id": run["id"],
-                "workflow_path": HANDOFF_WORKFLOW_PATH,
-            },
-            "authoritative_result": result,
-        }
+    def _handoff_evidence(
+        self, repository: str, base_sha: str, head_sha: str, token: str
+    ) -> dict[str, object]:
+        for run in self._handoff_runs(repository, head_sha, token):
+            artifact = self._handoff_artifact(repository, run, token)
+            archive = self._artifact_bytes(repository, artifact["id"], token)
+            archive_sha256 = hashlib.sha256(archive).hexdigest()
+            if artifact["digest"] != f"sha256:{archive_sha256}":
+                raise SemanticReviewError("HANDOFF_ARTIFACT_DIGEST_MISMATCH")
+            files = self._artifact_json(archive)
+            result, provenance = files["complexity-result.json"], files["quality-provenance.json"]
+            if (result.get("base_sha"), result.get("head_sha")) != (base_sha, head_sha):
+                continue
+            if provenance.get("run_id") != str(run["id"]):
+                raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+            if provenance.get("run_attempt") != str(run["run_attempt"]):
+                raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
+            return {
+                "artifact_provenance": {
+                    "artifact_digest": artifact["digest"],
+                    "artifact_id": artifact["id"],
+                    "archive_sha256": archive_sha256,
+                    "run_attempt": run["run_attempt"],
+                    "run_conclusion": run.get("conclusion"),
+                    "run_id": run["id"],
+                    "workflow_path": HANDOFF_WORKFLOW_PATH,
+                },
+                "authoritative_result": result,
+            }
+        raise SemanticReviewError("STALE_HANDOFF_EVIDENCE")
 
     def _completion_report(self, repository: str, head_sha: str, token: str) -> dict[str, object]:
         path = (
@@ -760,44 +772,83 @@ class GitHubApp:
             return [], []
         production_paths = self._production_paths(repository, base_sha, token)
         production = self._production_candidates(candidates, production_paths)
-        sources = [
-            source
+        sources_by_path: dict[str, dict[str, Any]] = {
+            str(source["path"]): source
             for item in production
             if (source := self._reviewed_source(repository, item, token)) is not None
-        ]
-        deleted = []
+        }
+        deleted: list[dict[str, Any]] = []
         for item in production:
-            patch = item.get("patch")
-            if not isinstance(patch, str) or not patch:
-                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-            if not self._changed_lines(patch, "-"):
-                continue
-            path = item.get("previous_filename", item["filename"])
-            if not isinstance(path, str):
-                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-            result = self._request(
-                "GET",
-                f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
-                f"?ref={urllib.parse.quote(base_sha)}",
-                token,
-            )
-            blob_sha = result.get("sha") if isinstance(result, dict) else None
-            if not isinstance(blob_sha, str) or not SHA_PATTERN.fullmatch(blob_sha):
-                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-            content = self._blob_content(repository, blob_sha, token)
-            boundaries = self._source_boundaries(path, content, patch, "-")
-            if not boundaries:
-                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-            deleted.append(
-                {
-                    "blob_sha": blob_sha,
-                    "boundaries": boundaries,
-                    "line_count": len(content.splitlines()),
-                    "path": path,
-                }
-            )
+            surviving, removed = self._deletion_evidence(repository, base_sha, item, token)
+            if surviving is not None:
+                sources_by_path[str(surviving["path"])] = surviving
+            if removed is not None:
+                deleted.append(removed)
+        sources = [sources_by_path[path] for path in sorted(sources_by_path)]
         self._validate_review_size(sources)
         return sources, deleted
+
+    def _deletion_evidence(
+        self,
+        repository: str,
+        base_sha: str,
+        item: dict[str, Any],
+        token: str,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        patch = item.get("patch")
+        if not isinstance(patch, str) or not patch:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        base_lines = self._changed_lines(patch, "-")
+        if not base_lines:
+            return None, None
+        path = item.get("previous_filename", item.get("filename"))
+        head_path, head_blob_sha = item.get("filename"), item.get("sha")
+        if not isinstance(path, str) or not isinstance(head_path, str):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        result = self._request(
+            "GET",
+            f"/repos/{repository}/contents/{urllib.parse.quote(path)}"
+            f"?ref={urllib.parse.quote(base_sha)}",
+            token,
+        )
+        blob_sha = result.get("sha") if isinstance(result, dict) else None
+        if (
+            not isinstance(blob_sha, str)
+            or not SHA_PATTERN.fullmatch(blob_sha)
+            or not isinstance(head_blob_sha, str)
+            or not SHA_PATTERN.fullmatch(head_blob_sha)
+        ):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        content = self._blob_content(repository, blob_sha, token)
+        head_content = self._blob_content(repository, head_blob_sha, token)
+        try:
+            surviving, removed = changed_responsibility_spans(
+                head_path,
+                content.encode(),
+                head_content.encode(),
+                base_lines,
+                self._changed_lines(patch),
+            )
+        except PythonSourceError as error:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
+        if not surviving and not removed:
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+        source = (
+            self._source_record(head_path, head_blob_sha, head_content, surviving)
+            if surviving
+            else None
+        )
+        deleted = (
+            {
+                "blob_sha": blob_sha,
+                "boundaries": self._boundaries(removed),
+                "line_count": len(content.splitlines()),
+                "path": path,
+            }
+            if removed
+            else None
+        )
+        return source, deleted
 
     def _production_candidates(
         self, candidates: tuple[dict[str, Any], ...], production_paths: tuple[str, ...]
@@ -834,9 +885,19 @@ class GitHubApp:
         if not isinstance(patch, str) or not patch:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         content = self._blob_content(repository, blob_sha, token)
-        boundaries = self._source_boundaries(path, content, patch)
-        if not boundaries:
+        spans = self._responsibility_spans(path, content, patch)
+        if not spans:
             return None
+        return self._source_record(path, blob_sha, content, spans)
+
+    def _source_record(
+        self,
+        path: str,
+        blob_sha: str,
+        content: str,
+        spans: tuple[ResponsibilitySpan, ...],
+    ) -> dict[str, Any]:
+        boundaries = self._boundaries(spans)
         return {
             "boundaries": boundaries,
             "blob_sha": blob_sha,
@@ -849,15 +910,16 @@ class GitHubApp:
             "path": path,
         }
 
-    def _source_boundaries(
+    def _responsibility_spans(
         self, path: str, content: str, patch: str, side: str = "+"
-    ) -> list[SourceBoundary]:
-        changed_lines = self._changed_lines(patch, side)
+    ) -> tuple[ResponsibilitySpan, ...]:
         try:
-            spans = responsibility_spans(path, content.encode(), changed_lines)
+            return responsibility_spans(path, content.encode(), self._changed_lines(patch, side))
         except PythonSourceError as error:
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE") from error
-        boundaries: list[SourceBoundary] = [
+
+    def _boundaries(self, spans: tuple[ResponsibilitySpan, ...]) -> list[SourceBoundary]:
+        return [
             {
                 "end_line": span.end_line,
                 "kind": span.kind,
@@ -866,7 +928,11 @@ class GitHubApp:
             }
             for span in spans
         ]
-        return boundaries
+
+    def _source_boundaries(
+        self, path: str, content: str, patch: str, side: str = "+"
+    ) -> list[SourceBoundary]:
+        return self._boundaries(self._responsibility_spans(path, content, patch, side))
 
     def _changed_lines(self, patch: str, side: str = "+") -> set[int]:
         changed: set[int] = set()

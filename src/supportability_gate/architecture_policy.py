@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import posixpath
-import sys
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -34,6 +33,31 @@ _LAYERS = {
     "api": "presentation",
 }
 _TYPESCRIPT_SUFFIXES = (".cts", ".mts", ".ts", ".tsx")
+_DOMAIN_PYTHON_IMPORTS = frozenset(
+    {
+        "__future__",
+        "abc",
+        "collections",
+        "contextlib",
+        "copy",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "fractions",
+        "functools",
+        "heapq",
+        "itertools",
+        "math",
+        "numbers",
+        "operator",
+        "re",
+        "statistics",
+        "string",
+        "types",
+        "typing",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -100,8 +124,11 @@ def _production_root(path: str, roots: tuple[str, ...]) -> str:
 
 def _layer(path: str, roots: tuple[str, ...]) -> str | None:
     root = _production_root(path, roots)
+    root_layer = _LAYERS.get(PurePosixPath(root).name)
     relative = PurePosixPath(path).relative_to(root)
-    return next((_LAYERS[part] for part in relative.parts[:-1] if part in _LAYERS), None)
+    return root_layer or next(
+        (_LAYERS[part] for part in relative.parts[:-1] if part in _LAYERS), None
+    )
 
 
 def _python_modules(paths: tuple[str, ...], roots: tuple[str, ...]) -> dict[str, str]:
@@ -179,8 +206,13 @@ def _typescript_specifiers(node: Node, content: bytes) -> list[tuple[int, str]]:
 def _typescript_target(source: str, specifier: str, paths: set[str]) -> tuple[str, bool]:
     if specifier.startswith("."):
         stem = posixpath.normpath(posixpath.join(posixpath.dirname(source), specifier))
-        candidates = [stem, *(f"{stem}{suffix}" for suffix in _TYPESCRIPT_SUFFIXES)]
-        candidates.extend(f"{stem}/index{suffix}" for suffix in _TYPESCRIPT_SUFFIXES)
+        suffix = PurePosixPath(stem).suffix
+        rewrites = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
+        base, candidates = (stem[: -len(suffix)], []) if suffix in rewrites else (stem, [stem])
+        candidates.extend(f"{base}{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
+        candidates.extend(
+            f"{base}/index{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES)
+        )
         target = next((item for item in candidates if item in paths), None)
         return (target, True) if target else (specifier, False)
     target = next(
@@ -246,8 +278,9 @@ def _blocks(edges: tuple[ImportEdge, ...], roots: tuple[str, ...]) -> tuple[str,
             root = edge.target.split(".", 1)[0]
             if (edge.internal and target_layer != "domain") or (
                 not edge.internal
-                and root not in sys.stdlib_module_names
-                and not root.startswith("node:")
+                and (
+                    not edge.source.endswith((".py", ".pyi")) or root not in _DOMAIN_PYTHON_IMPORTS
+                )
             ):
                 blocks.add(f"FORBIDDEN_DOMAIN_DEPENDENCY:{location}")
     return tuple(sorted(blocks))

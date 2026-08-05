@@ -8,10 +8,73 @@ from dataclasses import dataclass
 from typing import Any
 
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
-BLOCKING_TEST = (
-    "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
-)
 PROFILES = {"python", "frontend"}
+FRONTEND_ONLY_LINES = frozenset(
+    {204, 206, 208, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 221, 223}
+)
+PYTHON_ONLY_LINES = frozenset(
+    {120, 122, 124, 126, 127, 128, 129, 130, 131, 155, 157, 571, 626, 638, 639}
+)
+PROFILE_BY_LINE = {
+    **dict.fromkeys(FRONTEND_ONLY_LINES, frozenset({"frontend"})),
+    **dict.fromkeys(PYTHON_ONLY_LINES, frozenset({"python"})),
+}
+OWNER_LINES = {
+    "Milestone 1 policy authority": frozenset({481, 614, 617, 619, 621, 623, 625, 634}),
+    "Milestone 3 complexity enforcement": frozenset({566, 571, 626, 638, 639, 640}),
+    "Milestone 4 responsibility-boundary enforcement": frozenset({485, 541, 627, 641, 642}),
+    "Milestone 5 dependency-direction enforcement": frozenset({578, 583, 645, 646}),
+    "Milestone 6 modularity enforcement": frozenset({643, 644}),
+    "Milestone 7 characterization enforcement": frozenset({501, 506, 510, 514, 647, 650}),
+    "Milestone 8 incremental-refactor enforcement": frozenset(
+        {521, 526, 530, 534, 628, 629, 630, 648, 649}
+    ),
+    "Milestone 9 quality-gate enforcement": frozenset({590, 595, 631, 632, 654, 656}),
+    "Milestone 10 review-handoff enforcement": frozenset(
+        {602, 607, 660, 662, 663, 664, 665, 666, 667, 668, 669}
+    ),
+}
+REASSIGNED_OWNER = {line: owner for owner, lines in OWNER_LINES.items() for line in lines}
+OWNER_EVIDENCE = {
+    "Milestone 1 policy authority": "Milestone 1 policy-authority evidence",
+    "Milestone 3 complexity enforcement": "Milestone 3 complexity evidence",
+    "Milestone 4 responsibility-boundary enforcement": "Milestone 4 responsibility evidence",
+    "Milestone 5 dependency-direction enforcement": "Milestone 5 dependency evidence",
+    "Milestone 6 modularity enforcement": "Milestone 6 modularity evidence",
+    "Milestone 7 characterization enforcement": "Milestone 7 characterization evidence",
+    "Milestone 8 incremental-refactor enforcement": "Milestone 8 incremental-refactor evidence",
+    "Milestone 9 quality-gate enforcement": "Milestone 9 quality-gate evidence",
+    "Milestone 10 review-handoff enforcement": "Milestone 10 review-handoff evidence",
+}
+OWNER_BLOCKING_TEST = {
+    "Milestone 1 policy authority": (
+        "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing"
+    ),
+    "Milestone 3 complexity enforcement": (
+        "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
+    ),
+    "Milestone 4 responsibility-boundary enforcement": (
+        "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+    ),
+    "Milestone 5 dependency-direction enforcement": (
+        "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
+    ),
+    "Milestone 6 modularity enforcement": (
+        "tests/test_modularity_policy.py::test_vague_new_location_blocks"
+    ),
+    "Milestone 7 characterization enforcement": (
+        "tests/test_characterization.py::test_incompatible_behavior_blocks"
+    ),
+    "Milestone 8 incremental-refactor enforcement": (
+        "tests/test_refactor_policy.py::test_non_runnable_intermediate_state_blocks"
+    ),
+    "Milestone 9 quality-gate enforcement": (
+        "tests/test_quality_profile.py::test_missing_required_command_blocks"
+    ),
+    "Milestone 10 review-handoff enforcement": (
+        "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+    ),
+}
 EXPECTED_SOURCE_LINES = (
     18,
     26,
@@ -344,10 +407,29 @@ def _verify_coverage(clauses: tuple[Clause, ...]) -> None:
     if unknown := sorted(actual - expected):
         raise ClauseInventoryError("UNKNOWN_CLAUSE_ID", unknown[0])
     for clause in clauses:
-        if clause.clause_id != f"SS-{clause.source_line:04d}":
-            raise ClauseInventoryError("CLAUSE_SOURCE_MISMATCH", clause.clause_id)
-        if clause.blocking_test != BLOCKING_TEST:
-            raise ClauseInventoryError("ABSENT_BLOCKING_TEST", clause.clause_id)
+        expected_profiles = PROFILE_BY_LINE.get(clause.source_line, PROFILES)
+        expected_owner = REASSIGNED_OWNER.get(clause.source_line, clause.enforcement_owner)
+        expected_evidence = OWNER_EVIDENCE.get(expected_owner)
+        checks = (
+            (clause.clause_id == f"SS-{clause.source_line:04d}", "CLAUSE_SOURCE_MISMATCH"),
+            (set(clause.profiles) == expected_profiles, "UNSUPPORTED_NOT_APPLICABLE"),
+            (
+                clause.enforcement_owner == expected_owner and expected_evidence is not None,
+                "MISSING_ENFORCEMENT_OWNER",
+            ),
+            (
+                clause.evidence_requirement
+                == f"{expected_evidence} tied to immutable inputs and source line {clause.source_line}.",
+                "MISSING_EVIDENCE_REQUIREMENT",
+            ),
+            (
+                clause.blocking_test == OWNER_BLOCKING_TEST.get(expected_owner),
+                "ABSENT_BLOCKING_TEST",
+            ),
+        )
+        for valid, error_code in checks:
+            if not valid:
+                raise ClauseInventoryError(error_code, clause.clause_id)
 
 
 def validate_inventory(standard_content: bytes, inventory_content: bytes) -> tuple[Clause, ...]:

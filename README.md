@@ -6,15 +6,11 @@ isolated GitHub-hosted jobs.
 
 ## Status
 
-- Completed successor scope: Supportability Standard Enforcement Milestones 1–8
-- Current authorized work: Enforcement Milestone 9 — executed quality gates
-- Completed capability: clause inventory through authenticated incremental-refactor enforcement
-- Existing complexity adapter: `python.c901-touched.v1`; maximum complexity: `10`
-- Full Supportability Standard runtime: **incomplete**
+Current product status, authorized work, milestone evidence, and remaining work are recorded only
+in the [Product Completion Contract](docs/product_completion_contract.md).
 
-Delivery state and milestone evidence are tracked in the
-[Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3)
-organization project. Project #2 is historical and is not successor execution authority.
+The [Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3)
+organization project is successor execution authority. Project #2 is historical.
 
 ## Requirements
 
@@ -23,6 +19,8 @@ organization project. Project #2 is historical and is not successor execution au
 - Dependencies installed from `requirements-dev.lock`
 
 ## Evaluate
+
+Complexity evaluation uses adapter `python.c901-touched.v1` with maximum complexity `10`.
 
 ```powershell
 python -m supportability_gate evaluate-complexity `

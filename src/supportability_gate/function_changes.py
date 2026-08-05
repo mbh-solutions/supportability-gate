@@ -68,6 +68,7 @@ class ParsedSourceFile:
     path: str
     content: bytes
     functions: tuple[FunctionDefinition, ...]
+    components: tuple[ResponsibilitySpan, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -124,7 +125,10 @@ class _FunctionCollector(ast.NodeVisitor):
             raise PythonSourceError(
                 "MISSING_AST_SPAN", f"missing AST end line: {self.path}:{node.lineno}"
             )
-        span = FunctionSpan(self.path, qualified_name, node.lineno, end_line)
+        start_line = min(
+            (decorator.lineno for decorator in node.decorator_list), default=node.lineno
+        )
+        span = FunctionSpan(self.path, qualified_name, start_line, end_line)
         self.functions.append(FunctionDefinition(span, node))
         self.context.append(node.name)
         for child in node.body:
@@ -183,6 +187,7 @@ class _TypeScriptFunctionCollector:
         self.content = content
         self.context: list[str] = []
         self.functions: list[FunctionDefinition] = []
+        self.components: list[ResponsibilitySpan] = []
 
     def _name(self, node: Node) -> str:
         name = node.child_by_field_name("name")
@@ -207,7 +212,18 @@ class _TypeScriptFunctionCollector:
 
     def visit(self, node: Node) -> None:
         if node.type in {"class_declaration", "class_expression"}:
-            self.context.append(self._name(node))
+            name = self._name(node)
+            qualified_name = ".".join([*self.context, name])
+            if self._react_component(node):
+                self.components.append(
+                    ResponsibilitySpan(
+                        node.start_point.row + 1,
+                        node.end_point.row + 1,
+                        "component",
+                        qualified_name,
+                    )
+                )
+            self.context.append(name)
             for child in node.named_children:
                 self.visit(child)
             self.context.pop()
@@ -217,6 +233,26 @@ class _TypeScriptFunctionCollector:
             return
         for child in node.named_children:
             self.visit(child)
+
+    def _react_component(self, node: Node) -> bool:
+        heritage = next(
+            (child for child in node.named_children if child.type == "class_heritage"), None
+        )
+        extends = (
+            next(
+                (child for child in heritage.named_children if child.type == "extends_clause"),
+                None,
+            )
+            if heritage is not None
+            else None
+        )
+        value = extends.child_by_field_name("value") if extends is not None else None
+        return value is not None and _typescript_text(value, self.content) in {
+            "React.Component",
+            "React.PureComponent",
+            "Component",
+            "PureComponent",
+        }
 
     def _visit_function(self, node: Node) -> None:
         name = self._name(node)
@@ -247,7 +283,12 @@ def parse_typescript_file(path: str, content: bytes) -> ParsedSourceFile:
         raise PythonSourceError("SYNTAX_ERROR", f"syntax error in changed production file: {path}")
     collector = _TypeScriptFunctionCollector(path, content)
     collector.visit(tree.root_node)
-    return ParsedSourceFile(path, content, _unique_functions(path, collector.functions))
+    return ParsedSourceFile(
+        path,
+        content,
+        _unique_functions(path, collector.functions),
+        tuple(collector.components),
+    )
 
 
 def _line_spans(lines: set[int]) -> list[tuple[int, int]]:
@@ -266,7 +307,7 @@ def responsibility_spans(
     """Map changed lines to exact parser-derived responsibility spans."""
     parsed = (
         parse_python_file(path, content)
-        if path.endswith(".py")
+        if path.endswith((".py", ".pyi"))
         else parse_typescript_file(path, content)
     )
     touched = tuple(
@@ -274,21 +315,65 @@ def responsibility_spans(
         for item in parsed.functions
         if changed_lines.intersection(range(item.span.start_line, item.span.end_line + 1))
     )
-    boundaries = [
+    components = tuple(
+        item
+        for item in parsed.components
+        if changed_lines.intersection(range(item.start_line, item.end_line + 1))
+    )
+    boundaries = list(components)
+    boundaries.extend(
         ResponsibilitySpan(
             span.start_line,
             span.end_line,
             "component"
-            if not path.endswith(".py") and span.qualified_name.rsplit(".", 1)[-1][:1].isupper()
+            if not path.endswith((".py", ".pyi"))
+            and span.qualified_name.rsplit(".", 1)[-1][:1].isupper()
             else "function",
             span.qualified_name,
         )
         for span in touched
-    ]
-    covered = {line for span in touched for line in range(span.start_line, span.end_line + 1)}
-    module_spans = _line_spans(changed_lines - covered)
+    )
+    covered = {line for span in components for line in range(span.start_line, span.end_line + 1)}
+    covered.update(line for span in touched for line in range(span.start_line, span.end_line + 1))
+    source_lines = content.splitlines()
+    module_lines = {
+        line
+        for line in changed_lines - covered
+        if 1 <= line <= len(source_lines) and source_lines[line - 1].strip()
+    }
+    module_spans = _line_spans(module_lines)
     boundaries.extend(ResponsibilitySpan(start, end, "module", path) for start, end in module_spans)
     return tuple(boundaries)
+
+
+def changed_responsibility_spans(
+    path: str,
+    base_content: bytes,
+    head_content: bytes,
+    base_changed_lines: set[int],
+    head_changed_lines: set[int],
+) -> tuple[tuple[ResponsibilitySpan, ...], tuple[ResponsibilitySpan, ...]]:
+    """Map retained base responsibilities to head and keep removed ones base-bound."""
+    base = responsibility_spans(path, base_content, base_changed_lines)
+    head = responsibility_spans(path, head_content, head_changed_lines)
+    all_head = responsibility_spans(
+        path, head_content, set(range(1, len(head_content.splitlines()) + 1))
+    )
+    head_by_identity = {(span.kind, span.name): span for span in all_head if span.kind != "module"}
+    mapped = [
+        head_by_identity[(span.kind, span.name)]
+        for span in base
+        if (span.kind, span.name) in head_by_identity
+    ]
+    deleted = [
+        span
+        for span in base
+        if span.kind == "module" or (span.kind, span.name) not in head_by_identity
+    ]
+    surviving = {
+        (span.start_line, span.end_line, span.kind, span.name): span for span in (*head, *mapped)
+    }
+    return tuple(surviving[key] for key in sorted(surviving)), tuple(deleted)
 
 
 def _deltas(

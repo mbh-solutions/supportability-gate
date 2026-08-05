@@ -12,7 +12,8 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from supportability_gate.github_app import CHECK_NAME, GitHubApp, app_jwt
+from supportability_gate.function_changes import ResponsibilitySpan, responsibility_spans
+from supportability_gate.github_app import CHECK_NAME, REVIEWED_SUFFIXES, GitHubApp, app_jwt
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 
 CONTRACT = b"""schema_version = "1.0"
@@ -96,9 +97,12 @@ def _blob_payload(content: bytes) -> dict[str, str]:
     }
 
 
-def _handoff_archive(head_sha: str, run_id: int = 123, run_attempt: int = 1) -> bytes:
+def _handoff_archive(
+    head_sha: str, run_id: int = 123, run_attempt: int = 1, base_sha: str = "a" * 40
+) -> bytes:
     target = io.BytesIO()
     result = {
+        "base_sha": base_sha,
         "head_sha": head_sha,
     }
     provenance = {"run_attempt": str(run_attempt), "run_id": str(run_id)}
@@ -138,7 +142,9 @@ def test_m10_packet_binds_fresh_full_run_artifact_and_report() -> None:
         return _Reply({"artifacts": [artifact]})
 
     app = GitHubApp(42, 7, b"unused", opener=open_request)
-    evidence = app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+    evidence = app._handoff_evidence(
+        "mbh-solutions/supportability-gate", "a" * 40, head_sha, "token"
+    )
 
     assert evidence["artifact_provenance"] == {
         "artifact_digest": f"sha256:{archive_sha256}",
@@ -242,9 +248,67 @@ def test_newest_successful_full_rerun_attempt_is_accepted() -> None:
         return _Reply({"artifacts": [artifact]})
 
     app = GitHubApp(42, 7, b"unused", opener=open_request)
-    evidence = app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+    evidence = app._handoff_evidence(
+        "mbh-solutions/supportability-gate", "a" * 40, head_sha, "token"
+    )
 
     assert evidence["artifact_provenance"]["run_attempt"] == 2  # type: ignore[index]
+
+
+def test_older_successful_run_is_used_when_newer_run_has_stale_base() -> None:
+    head_sha = "b" * 40
+    older_archive = _handoff_archive(head_sha, run_id=122)
+    newer_archive = _handoff_archive(head_sha, base_sha="c" * 40)
+    older = {
+        "conclusion": "success",
+        "event": "pull_request",
+        "head_sha": head_sha,
+        "id": 122,
+        "path": ".github/workflows/organization-required.yml",
+        "run_attempt": 1,
+        "status": "completed",
+        "updated_at": "2026-08-02T16:00:00Z",
+    }
+    newer = {**older, "id": 123, "updated_at": "2026-08-02T17:00:00Z"}
+
+    def open_request(request: object, *args: object, **kwargs: object) -> _Reply:
+        url = request.full_url  # type: ignore[attr-defined]
+        if "/actions/runs?" in url:
+            return _Reply({"workflow_runs": [older, newer]})
+        if "/actions/runs/123/artifacts" in url:
+            return _Reply(
+                {
+                    "artifacts": [
+                        {
+                            "digest": f"sha256:{hashlib.sha256(newer_archive).hexdigest()}",
+                            "expired": False,
+                            "id": 789,
+                            "name": "supportability-evidence-123-1",
+                        }
+                    ]
+                }
+            )
+        if "/actions/runs/122/artifacts" in url:
+            return _Reply(
+                {
+                    "artifacts": [
+                        {
+                            "digest": f"sha256:{hashlib.sha256(older_archive).hexdigest()}",
+                            "expired": False,
+                            "id": 788,
+                            "name": "supportability-evidence-122-1",
+                        }
+                    ]
+                }
+            )
+        return _BytesReply(newer_archive if "/artifacts/789/" in url else older_archive)
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    evidence = app._handoff_evidence(
+        "mbh-solutions/supportability-gate", "a" * 40, head_sha, "token"
+    )
+
+    assert evidence["artifact_provenance"]["run_id"] == 122  # type: ignore[index]
 
 
 def test_failed_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
@@ -275,7 +339,7 @@ def test_failed_rerun_attempt_is_not_accepted_as_m10_evidence() -> None:
         opener=lambda *args, **kwargs: _Reply({"workflow_runs": [older, failed]}),
     )
     with pytest.raises(SemanticReviewError, match="HANDOFF_EVIDENCE_UNAVAILABLE"):
-        app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, "token")
 
 
 @pytest.mark.parametrize(
@@ -305,7 +369,7 @@ def test_malformed_successful_rerun_metadata_is_rejected(field: str, value: obje
     )
 
     with pytest.raises(SemanticReviewError, match="MALFORMED_GITHUB_RESPONSE"):
-        app._handoff_evidence("mbh-solutions/supportability-gate", "b" * 40, "token")
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, "token")
 
 
 def test_rerun_attempt_with_mismatched_provenance_is_rejected(
@@ -320,7 +384,7 @@ def test_rerun_attempt_with_mismatched_provenance_is_rejected(
         "run_attempt": 2,
     }
     app = GitHubApp(42, 7, b"unused")
-    monkeypatch.setattr(app, "_handoff_run", lambda *args: run)
+    monkeypatch.setattr(app, "_handoff_runs", lambda *args: (run,))
     monkeypatch.setattr(
         app,
         "_handoff_artifact",
@@ -329,7 +393,23 @@ def test_rerun_attempt_with_mismatched_provenance_is_rejected(
     monkeypatch.setattr(app, "_artifact_bytes", lambda *args: archive)
 
     with pytest.raises(SemanticReviewError, match="STALE_HANDOFF_EVIDENCE"):
-        app._handoff_evidence("mbh-solutions/supportability-gate", head_sha, "token")
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, head_sha, "token")
+
+
+def test_handoff_artifact_with_stale_base_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    head_sha = "b" * 40
+    archive = _handoff_archive(head_sha, base_sha="c" * 40)
+    app = GitHubApp(42, 7, b"unused")
+    monkeypatch.setattr(app, "_handoff_runs", lambda *args: ({"id": 123, "run_attempt": 1},))
+    monkeypatch.setattr(
+        app,
+        "_handoff_artifact",
+        lambda *args: {"digest": f"sha256:{hashlib.sha256(archive).hexdigest()}", "id": 789},
+    )
+    monkeypatch.setattr(app, "_artifact_bytes", lambda *args: archive)
+
+    with pytest.raises(SemanticReviewError, match="STALE_HANDOFF_EVIDENCE"):
+        app._handoff_evidence("mbh-solutions/supportability-gate", "a" * 40, head_sha, "token")
 
 
 def test_handoff_archive_rejects_large_expanded_member() -> None:
@@ -564,11 +644,53 @@ def test_frontend_component_boundary_uses_complete_parser_span() -> None:
     assert [item["line"] for item in app._source_excerpt(source, boundaries)] == [1, 2, 3, 4]
 
 
-def test_deletion_only_surviving_source_uses_base_identity_without_head_boundary() -> None:
-    base = b"def keep():\n    return 1\n\ndef obsolete():\n    return 2\n"
+def test_supported_source_boundaries_include_stubs_decorators_and_react_classes() -> None:
+    app = GitHubApp(42, 7, b"unused")
+    candidates = app._source_candidates(
+        tuple(
+            {"filename": f"src/sample{suffix}", "status": "modified"}
+            for suffix in (*sorted(REVIEWED_SUFFIXES), ".js", ".jsx")
+        )
+    )
+    assert {item["filename"].rsplit("sample", 1)[1] for item in candidates} == set(
+        REVIEWED_SUFFIXES
+    )
+
+    decorated = "@route('/x')\ndef handle():\n    return 1\n"
+    assert app._source_boundaries("src/routes.pyi", decorated, "@@ -0,0 +1 @@\n+@route('/x')") == [
+        {"end_line": 3, "kind": "function", "name": "handle", "start_line": 1}
+    ]
+    latin = b"# coding: latin-1\nlabel = 'caf\xe9'\n"
+    assert responsibility_spans("src/labels.py", latin, {2}) == (
+        ResponsibilitySpan(2, 2, "module", "src/labels.py"),
+    )
+
+    frontend = (
+        "class Panel extends React.PureComponent<Props> {\n"
+        "  render() { return <div />; }\n}\n"
+        "class Plain {\n  method() {}\n}\n"
+    )
+    assert app._source_boundaries(
+        "src/panel.tsx",
+        frontend,
+        "@@ -2 +2 @@\n-  render() { return null; }\n"
+        "+  render() { return <div />; }\n"
+        "@@ -5 +5 @@\n-  old() {}\n+  method() {}",
+    ) == [
+        {"end_line": 3, "kind": "component", "name": "Panel", "start_line": 1},
+        {"end_line": 2, "kind": "function", "name": "Panel.render", "start_line": 2},
+        {"end_line": 5, "kind": "function", "name": "Plain.method", "start_line": 5},
+    ]
+
+
+def test_deletion_only_change_maps_surviving_head_and_removed_base_responsibilities() -> None:
+    base = b"def keep():\n    removed = 1\n    return 1\n\ndef obsolete():\n    return 2\n"
     head = b"def keep():\n    return 1\n"
     base_blob, head_blob, contract_blob = map(_blob_sha, (base, head, CONTRACT))
-    patch = "@@ -1,5 +1,2 @@\n def keep():\n     return 1\n-\n-def obsolete():\n-    return 2"
+    patch = (
+        "@@ -1,6 +1,2 @@\n def keep():\n-    removed = 1\n"
+        "     return 1\n-\n-def obsolete():\n-    return 2"
+    )
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         if "/issues/3/comments" in request.full_url:
@@ -599,15 +721,26 @@ def test_deletion_only_surviving_source_uses_base_identity_without_head_boundary
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
 
-    assert packet.evidence["reviewed_sources"] == []
+    assert packet.evidence["reviewed_sources"] == [
+        {
+            "blob_sha": head_blob,
+            "boundaries": [{"end_line": 2, "kind": "function", "name": "keep", "start_line": 1}],
+            "imports": [],
+            "line_count": 2,
+            "lines": [
+                {"line": 1, "text": "def keep():"},
+                {"line": 2, "text": "    return 1"},
+            ],
+            "path": "src/a.py",
+        }
+    ]
     assert packet.evidence["deleted_sources"] == [
         {
             "blob_sha": base_blob,
             "boundaries": [
-                {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
-                {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
+                {"end_line": 6, "kind": "function", "name": "obsolete", "start_line": 5},
             ],
-            "line_count": 5,
+            "line_count": 6,
             "path": "src/a.py",
         }
     ]
@@ -764,9 +897,7 @@ def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibi
     deleted = packet.evidence["deleted_sources"][0]
     assert deleted["blob_sha"] == base_blob
     assert deleted["boundaries"] == [
-        {"end_line": 2, "kind": "function", "name": "keep", "start_line": 1},
         {"end_line": 5, "kind": "function", "name": "obsolete", "start_line": 4},
-        {"end_line": 3, "kind": "module", "name": "src/a.py", "start_line": 3},
     ]
     assert app._completion_sources(
         "mbh-solutions/supportability-gate",

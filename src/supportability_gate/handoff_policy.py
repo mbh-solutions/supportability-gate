@@ -21,6 +21,18 @@ _REQUIRED = {
 _SHA_FIELDS = {"base_sha", "head_sha"}
 _CITATION = re.compile(r"(.+):(\d+)-(\d+)\Z")
 HANDOFF_REPORT_PATH = ".supportability-handoff.toml"
+_REPORT_COMMAND_FIELDS = {"adapter", "arguments", "exit_code"}
+_AUTHORITATIVE_COMMAND_FIELDS = {
+    "adapter",
+    "arguments",
+    "executed",
+    "exit_code",
+}
+_AUTHORITATIVE_OBSERVATION_FIELDS = {
+    "observed_paths",
+    "proof_kind",
+    "zero_statement_paths",
+}
 
 
 class CompletionReportError(ValueError):
@@ -132,13 +144,22 @@ def _claims(
 
 def _commands(
     value: object,
-) -> tuple[dict[str, tuple[tuple[str, ...], int]], frozenset[str]]:
-    commands: dict[str, tuple[tuple[str, ...], int]] = {}
+    *,
+    authoritative: bool,
+) -> tuple[dict[str, tuple[tuple[str, ...], bool, int]], frozenset[str], bool]:
+    commands: dict[str, tuple[tuple[str, ...], bool, int]] = {}
     duplicates: set[str] = set()
+    malformed = not isinstance(value, list)
     if not isinstance(value, list):
-        return commands, frozenset()
+        return commands, frozenset(), malformed
+    expected = _AUTHORITATIVE_COMMAND_FIELDS if authoritative else _REPORT_COMMAND_FIELDS
     for item in value:
-        if not isinstance(item, dict):
+        fields = set(item) if isinstance(item, dict) else set()
+        if not isinstance(item, dict) or (
+            fields != expected
+            and (not authoritative or fields != expected | _AUTHORITATIVE_OBSERVATION_FIELDS)
+        ):
+            malformed = True
             continue
         adapter, arguments, exit_code = (
             item.get("adapter"),
@@ -150,32 +171,64 @@ def _commands(
             and isinstance(arguments, list)
             and all(isinstance(argument, str) for argument in arguments)
             and type(exit_code) is int
+            and (not authoritative or type(item.get("executed")) is bool)
+            and (
+                not authoritative
+                or not fields & _AUTHORITATIVE_OBSERVATION_FIELDS
+                or (
+                    isinstance(item.get("proof_kind"), str)
+                    and isinstance(item.get("observed_paths"), list)
+                    and all(isinstance(path, str) for path in item["observed_paths"])
+                    and isinstance(item.get("zero_statement_paths"), list)
+                    and all(isinstance(path, str) for path in item["zero_statement_paths"])
+                )
+            )
         ):
             if adapter in commands:
                 duplicates.add(adapter)
-            commands[adapter] = (tuple(arguments), exit_code)
-    return commands, frozenset(duplicates)
+            commands[adapter] = (tuple(arguments), bool(item.get("executed", True)), exit_code)
+        else:
+            malformed = True
+    return commands, frozenset(duplicates), malformed
 
 
 def _command_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> list[str]:
     quality = authoritative.get("quality_profile")
-    observed, observed_duplicates = _commands(
-        quality.get("commands") if isinstance(quality, dict) else None
+    observed, observed_duplicates, malformed_observed = _commands(
+        quality.get("commands") if isinstance(quality, dict) else None,
+        authoritative=True,
     )
-    reported, reported_duplicates = _commands(report.get("validation_results"))
+    reported, reported_duplicates, malformed_reported = _commands(
+        report.get("validation_results"), authoritative=False
+    )
     blocks = [
         f"INVENTED_VALIDATION_COMMAND:{adapter}" for adapter in reported if adapter not in observed
     ]
+    if malformed_reported:
+        blocks.append("MALFORMED_VALIDATION_RESULT")
+    if malformed_observed:
+        blocks.append("MALFORMED_AUTHORITATIVE_COMMAND")
     blocks.extend(f"DUPLICATE_VALIDATION_RESULT:{adapter}" for adapter in reported_duplicates)
     blocks.extend(f"DUPLICATE_AUTHORITATIVE_COMMAND:{adapter}" for adapter in observed_duplicates)
     blocks.extend(
         f"CONTRADICTED_VALIDATION_RESULT:{adapter}"
         for adapter in reported.keys() & observed.keys()
-        if reported[adapter] != observed[adapter]
+        if (reported[adapter][0], reported[adapter][2])
+        != (observed[adapter][0], observed[adapter][2])
+    )
+    blocks.extend(
+        f"AUTHORITATIVE_COMMAND_NOT_EXECUTED:{adapter}"
+        for adapter, (_, executed, _) in observed.items()
+        if not executed
+    )
+    blocks.extend(
+        f"AUTHORITATIVE_COMMAND_FAILED:{adapter}"
+        for adapter, (_, _, exit_code) in observed.items()
+        if exit_code != 0
     )
     blocks.extend(
         f"HIDDEN_FAILED_COMMAND:{adapter}"
-        for adapter, (_, exit_code) in observed.items()
+        for adapter, (_, _, exit_code) in observed.items()
         if exit_code != 0 and adapter not in reported
     )
     blocks.extend(
@@ -222,6 +275,8 @@ def _result_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> lis
     sha_field = next(iter(set(report) & _SHA_FIELDS))
     if report[sha_field] != authoritative.get(sha_field):
         blocks.append("STALE_COMPLETION_REPORT_SHA")
+    if authoritative.get("overall_result") != "PASS":
+        blocks.append("AUTHORITATIVE_RESULT_NOT_PASS")
     if report["overall_result"] != authoritative.get("overall_result"):
         blocks.append("CONTRADICTED_COMPLETION_RESULT")
     if report["architecture_judgment"] != _architecture_result(authoritative):

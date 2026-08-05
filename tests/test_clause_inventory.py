@@ -31,6 +31,19 @@ def test_complete_inventory_maps_every_normative_clause() -> None:
     clauses = validate_inventory(STANDARD, INVENTORY)
     assert len(clauses) == 218
     assert {profile for clause in clauses for profile in clause.profiles} == {"python", "frontend"}
+    frontend = {204, 206, 208, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 221, 223}
+    python = {120, 122, 124, 126, 127, 128, 129, 130, 131, 155, 157, 571, 626, 638, 639}
+    for clause in clauses:
+        expected = (
+            {"frontend"}
+            if clause.source_line in frontend
+            else {"python"}
+            if clause.source_line in python
+            else {"python", "frontend"}
+        )
+        assert set(clause.profiles) == expected
+        assert clause.enforcement_owner != "Milestone 1 traceability validator"
+        assert clause.blocking_test.startswith("tests/test_")
 
 
 def test_omitted_normative_clause_blocks() -> None:
@@ -57,7 +70,7 @@ def test_each_clause_blocks_when_required_mapping_is_missing(
 
 def test_unsupported_not_applicable_blocks() -> None:
     data = _data()
-    data["clauses"][0]["applicability"]["profiles"] = []  # type: ignore[index]
+    data["clauses"][0]["applicability"]["profiles"] = ["python"]  # type: ignore[index]
     _assert_block(data, "UNSUPPORTED_NOT_APPLICABLE")
 
 

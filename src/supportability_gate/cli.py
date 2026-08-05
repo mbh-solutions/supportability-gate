@@ -481,6 +481,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             assessments,
             structured_review,
             architecture,
+            quality,
         )
         return _result(
             identity,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from supportability_gate.architecture_policy import ArchitectureResult, ImportEdge
@@ -72,6 +74,21 @@ def _architecture(path: str, *, covered: bool = True, owner_path: str | None = N
     )
 
 
+def _quality(path: str, *, unexecuted: str | None = None):
+    return SimpleNamespace(
+        commands=tuple(
+            SimpleNamespace(
+                adapter=gate.adapter,
+                observed_paths=(path,),
+                zero_statement_paths=(),
+                executed=gate.adapter != unexecuted,
+                exit_code=0,
+            )
+            for gate in _policy().gates
+        )
+    )
+
+
 @pytest.mark.parametrize(
     ("path", "basis"),
     [
@@ -80,8 +97,13 @@ def _architecture(path: str, *, covered: bool = True, owner_path: str | None = N
     ],
 )
 def test_cohesive_owned_location_passes(path: str, basis: str) -> None:
+    owner = str(path.rsplit("/", 1)[0]) + "/owner.py"
     result = evaluate_modularity(
-        _policy(), (_assessment(path),), _review(path, basis), _architecture(path)
+        _policy(),
+        (_assessment(path),),
+        _review(path, basis, owner),
+        _architecture(path, owner_path=owner),
+        _quality(path),
     )
 
     assert result.blocks == ()
@@ -95,7 +117,11 @@ def test_vague_new_location_blocks(name: str) -> None:
     path = f"src/{name}/format.py"
 
     result = evaluate_modularity(
-        _policy(), (_assessment(path),), _review(path, "responsibility"), _architecture(path)
+        _policy(),
+        (_assessment(path),),
+        _review(path, "responsibility", f"src/{name}/owner.py"),
+        _architecture(path, owner_path=f"src/{name}/owner.py"),
+        _quality(path),
     )
 
     assert result.blocks == (f"VAGUE_PRODUCTION_LOCATION:{path}:{name}",)
@@ -110,6 +136,7 @@ def test_unjustified_parallel_package_blocks() -> None:
         (_assessment(path),),
         _review(path, "domain", owner),
         _architecture(path, owner_path=owner),
+        _quality(path),
     )
 
     assert result.blocks == (f"PARALLEL_PACKAGE:{path}:{owner}",)
@@ -118,33 +145,61 @@ def test_unjustified_parallel_package_blocks() -> None:
 
 def test_new_location_without_complete_architecture_coverage_blocks() -> None:
     path = "src/orders/model.py"
+    owner = "src/orders/owner.py"
 
     result = evaluate_modularity(
         _policy(),
         (_assessment(path),),
-        _review(path, "domain"),
-        _architecture(path, covered=False),
+        _review(path, "domain", owner),
+        _architecture(path, owner_path=owner, covered=False),
+        _quality(path),
+    )
+    unexecuted = evaluate_modularity(
+        _policy(),
+        (_assessment(path),),
+        _review(path, "domain", owner),
+        _architecture(path, owner_path=owner),
+        _quality(path, unexecuted="python.pytest.v1"),
     )
 
     assert result.blocks == (f"NEW_LOCATION_GATE_COVERAGE:{path}",)
+    assert unexecuted.blocks == (f"NEW_LOCATION_GATE_COVERAGE:{path}",)
 
 
 def test_missing_or_unresolved_justification_blocks() -> None:
     path = "src/orders/model.py"
-    missing = evaluate_modularity(_policy(), (_assessment(path),), None, _architecture(path))
+    missing = evaluate_modularity(
+        _policy(), (_assessment(path),), None, _architecture(path), _quality(path)
+    )
     unresolved = evaluate_modularity(
         _policy(),
         (_assessment(path),),
         _review(path, "domain", "src/orders/missing.py"),
         _architecture(path),
+        _quality(path),
+    )
+    self_owned = evaluate_modularity(
+        _policy(),
+        (_assessment(path),),
+        _review(path, "domain"),
+        _architecture(path),
+        _quality(path),
     )
 
     assert missing.blocks == (f"MISSING_NEW_LOCATION_JUSTIFICATION:{path}",)
     assert unresolved.blocks == (f"UNRESOLVED_MODULE_OWNER:{path}:src/orders/missing.py",)
+    assert self_owned.blocks == (f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{path}",)
 
 
 def test_modularity_evidence_is_deterministic() -> None:
     path = "src/orders/model.py"
-    arguments = (_policy(), (_assessment(path),), _review(path, "domain"), _architecture(path))
+    owner = "src/orders/owner.py"
+    arguments = (
+        _policy(),
+        (_assessment(path),),
+        _review(path, "domain", owner),
+        _architecture(path, owner_path=owner),
+        _quality(path),
+    )
 
     assert evaluate_modularity(*arguments) == evaluate_modularity(*arguments)

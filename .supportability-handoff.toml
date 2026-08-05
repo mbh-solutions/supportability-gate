@@ -2,7 +2,7 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "aaa7a602819d3a987de722f5a11d517f94af14ef"
+base_sha = "c66d276d17f8c968f6422728a0afeec7de981d8f"
 overall_result = "PASS"
 responsibility_changes = [
     "semantic_contract retains request_payload behavior while the temporary control branch exercises semantic packet replay identity.",
@@ -17,12 +17,12 @@ remaining_risks = [
     "This temporary branch is intentionally unmerged and exists only to compare old and interim reviewer packet identities.",
 ]
 validation_results = [
-    { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
-    { adapter = "python.ruff-format.v1", arguments = ["$PYTHON", "-m", "ruff", "format", "--check", "$SOURCE_FILES", "$TEST_FILES", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
-    { adapter = "python.c901-touched.v1", arguments = ["$PYTHON", "-m", "ruff", "check", "$SOURCE_FILES", "--select", "C901", "--config", "lint.mccabe.max-complexity = 10", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
-    { adapter = "python.mypy-strict.v1", arguments = ["$PYTHON", "-m", "mypy", "--config-file", "$OUTPUT/mypy.ini", "--cache-dir", "$OUTPUT/mypy-cache", "$SOURCE_FILES"], exit_code = 0 },
-    { adapter = "python.pytest.v1", arguments = ["$PYTHON", "-m", "coverage", "run", "--branch", "--source=src", "--data-file=$OUTPUT/.coverage", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini"], exit_code = 0 },
-    { adapter = "python.build-wheel.v1", arguments = ["$PYTHON", "-m", "build", "--wheel", "--no-isolation", "--outdir", "$OUTPUT/wheel"], exit_code = 0 },
+    { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
+    { adapter = "python.ruff-format.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "format", "--check", "$SOURCE_FILES", "$TEST_FILES", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
+    { adapter = "python.c901-touched.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "--select", "C901", "--config", "lint.mccabe.max-complexity = 10", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
+    { adapter = "python.mypy-strict.v1", arguments = ["$PYTHON", "-I", "-m", "mypy", "--config-file", "$OUTPUT/mypy.ini", "--cache-dir", "$OUTPUT/mypy-cache", "$SOURCE_FILES"], exit_code = 0 },
+    { adapter = "python.pytest.v1", arguments = ["$PYTHON", "-I", "-m", "coverage", "run", "--branch", "--source=src", "--data-file=$OUTPUT/.coverage", "-m", "pytest", "-q", "-c", "$OUTPUT/pytest.ini", "--rootdir", "$REPOSITORY"], exit_code = 0 },
+    { adapter = "python.build-wheel.v1", arguments = ["$PYTHON", "-I", "-m", "build", "--wheel", "--no-isolation", "--outdir", "$OUTPUT/wheel"], exit_code = 0 },
     { adapter = "python.import-linter.v1", arguments = ["$LINT_IMPORTS", "--config", "$OUTPUT/importlinter.ini", "--no-cache"], exit_code = 0 },
 ]
 gate_coverage = [
@@ -36,4 +36,4 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-control-request-boundary"
 text = "The control change leaves request construction inside the existing request_payload boundary."
-citations = ["src/supportability_gate/semantic_contract.py:306-342"]
+citations = ["src/supportability_gate/semantic_contract.py:307-343"]
