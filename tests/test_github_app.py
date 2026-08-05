@@ -12,6 +12,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+import supportability_gate.github_app as github_app_module
 from supportability_gate.function_changes import ResponsibilitySpan, responsibility_spans
 from supportability_gate.github_app import CHECK_NAME, REVIEWED_SUFFIXES, GitHubApp, app_jwt
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
@@ -895,6 +896,43 @@ def test_completion_sources_include_large_valid_citation() -> None:
 
     assert len(sources) == 1
     assert len(sources[0]["lines"]) == 2_501
+
+
+def test_completion_source_coalesces_duplicate_ranges_before_expansion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    head = b"value = 1\n" * 2_501
+    head_blob = _blob_sha(head)
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda request, **kwargs: (
+            _Reply({"sha": head_blob})
+            if "/contents/" in request.full_url
+            else _Reply(_blob_payload(head))
+        ),
+    )
+    calls: list[tuple[int, int]] = []
+    builtin_range = range
+
+    def counted_range(start: int, end: int) -> range:
+        calls.append((start, end))
+        return builtin_range(start, end)
+
+    monkeypatch.setattr(github_app_module, "range", counted_range, raising=False)
+
+    source = app._completion_source(
+        "mbh-solutions/supportability-gate",
+        "b" * 40,
+        "src/a.py",
+        [(1, 2_500), (2, 2_501)] * 5_000,
+        "token",
+    )
+
+    assert source is not None
+    assert len(source["lines"]) == 2_501
+    assert calls == [(1, 2_502)]
 
 
 def test_mixed_source_change_reviews_head_and_identifies_deleted_base_responsibilities() -> None:

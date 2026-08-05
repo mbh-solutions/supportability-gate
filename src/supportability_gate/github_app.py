@@ -548,14 +548,15 @@ class GitHubApp:
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
         content = self._blob_content(repository, blob_sha, token)
         lines = content.splitlines()
-        selected = sorted(
-            {
-                number
-                for start, end in ranges
-                if 1 <= start <= end <= len(lines)
-                for number in range(start, end + 1)
-            }
-        )
+        merged: list[tuple[int, int]] = []
+        for start, end in sorted(set(ranges)):
+            if not 1 <= start <= end <= len(lines):
+                continue
+            if merged and start <= merged[-1][1] + 1:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        selected = [number for start, end in merged for number in range(start, end + 1)]
         if not selected:
             return None
         return {
