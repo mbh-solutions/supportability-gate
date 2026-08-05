@@ -2,31 +2,22 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "a8a8ddb15cdaa0a60eb972128433dc478d80d5bd"
+base_sha = "639e45dd490cfd1509a18bcec101b759e48ad523"
 overall_result = "PASS"
 responsibility_changes = [
-    "quality_profile and quality_runner isolate trusted Python module tools from target-controlled import paths while retaining generated source-discovery configuration.",
-    "GitHubApp searches successful exact-head handoff runs newest-first and binds the first artifact matching the packet's current base and head SHAs.",
-    "handoff_policy validates report and authoritative command rows independently and preserves authenticated failures as deterministic blocks.",
-    "refactor_policy collapses duplicate spans to their single bounded target identity.",
+    "GitHubApp retains every resolved production source line instead of rejecting evidence above a fixed total line count.",
+    "GitHubApp validates and coalesces completion citation intervals before line expansion so work is bounded by the fetched blob.",
 ]
 simplified_functions = [
-    "GitHubApp._handoff_evidence",
-    "GitHubApp._handoff_runs",
-    "GitHubApp.m10_evidence_packet",
-    "_command_blocks",
-    "_commands",
-    "_result_blocks",
-    "_target_identities",
-    "_write_python_configs",
-    "command_plans",
-    "fixed_environment",
+    "GitHubApp._completion_source",
+    "GitHubApp._completion_sources",
+    "GitHubApp._source_evidence",
 ]
 boundary_rationale = [
-    "Command isolation remains in the fixed quality profile and runner; artifact identity remains in GitHub evidence collection; semantic fail-closed decisions remain in handoff policy.",
+    "Evidence collection and citation normalization remain in GitHubApp; measured complete packets fit the existing model transport, so no partitioning or progress infrastructure was added.",
 ]
 remaining_risks = [
-    "Quality and handoff evidence still depend on authenticated GitHub workflow availability; missing, stale, malformed, unexecuted, or failed evidence blocks.",
+    "Very large complete packets still depend on model transport latency and the scheduled-task runtime; transport or timeout failures remain deterministic blocks.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -46,21 +37,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-trusted-python-tools"
-text = "Every Python module quality tool uses isolated mode, the fixed target environment omits PYTHONPATH, and generated pytest and mypy configuration supplies intended source discovery."
-citations = ["src/supportability_gate/quality_profile.py:14-118", "src/supportability_gate/quality_runner.py:24-36", "src/supportability_gate/quality_runner.py:125-136"]
+id = "claim-complete-source-collection"
+text = "Resolved production evidence is collected without a fixed total reviewed-line ceiling."
+citations = ["src/supportability_gate/github_app.py:486-530", "src/supportability_gate/github_app.py:762-787"]
 
 [[completion_report.claims]]
-id = "claim-base-head-handoff-binding"
-text = "Handoff collection searches successful exact-head runs newest-first and accepts only an authenticated result whose base and head identities match the current packet."
-citations = ["src/supportability_gate/github_app.py:278-303", "src/supportability_gate/github_app.py:313-339", "src/supportability_gate/github_app.py:429-458"]
-
-[[completion_report.claims]]
-id = "claim-fail-closed-handoff-results"
-text = "Report and authoritative command rows use separate strict shapes and failure codes, while authoritative non-PASS, unexecuted, and nonzero results always produce deterministic blocks."
-citations = ["src/supportability_gate/handoff_policy.py:24-32", "src/supportability_gate/handoff_policy.py:143-230", "src/supportability_gate/handoff_policy.py:273-289"]
-
-[[completion_report.claims]]
-id = "claim-unique-refactor-targets"
-text = "Repeated spans for the same changed responsibility collapse to one exact authorization target."
-citations = ["src/supportability_gate/refactor_policy.py:367-396"]
+id = "claim-bounded-citation-expansion"
+text = "Completion citation intervals are deduplicated, validated against the fetched blob, and coalesced before expansion."
+citations = ["src/supportability_gate/github_app.py:532-567"]
