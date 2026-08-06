@@ -50,4 +50,4 @@ citations = ["src/supportability_gate/semantic_cli.py:24-48"]
 [[completion_report.claims]]
 id = "claim-safe-oversized-finding"
 text = "Invalid surrogate code points are escaped before sizing, and an oversized single finding retains its actionable prefix inside the bounded payload."
-citations = ["src/supportability_gate/github_app.py:134-150", "tests/test_github_app.py:1187-1216"]
+citations = ["src/supportability_gate/github_app.py:134-150"]
