@@ -221,7 +221,7 @@ def test_clean_fixture_passes_and_is_deterministic() -> None:
     assert first == second
     assert first.verdict == "PASS"
     assert first.architecture_citations == ()
-    assert _verdict_summary(first).startswith("PASS\nsrc/sample.py:1-2 function parse_input")
+    assert _verdict_summary(first).startswith("PASS\ndependency direction:")
 
 
 def test_exact_m10_packet_binds_response_model_status_hash_and_parser_result() -> None:

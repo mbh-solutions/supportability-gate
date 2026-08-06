@@ -2,32 +2,23 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "644037bcae8ce334fddf811c1925089e58a427f0"
+base_sha = "d58e41e9898f66b810929f6de68a59b87626d1d9"
 overall_result = "PASS"
 responsibility_changes = [
-    "Responses transport preserves exact received bytes and records each attempt before semantic parsing.",
-    "Semantic CLI publishes only safe diagnostic identity when deterministic parsing rejects a response.",
+    "GitHubApp bounds completed semantic-check summaries by UTF-8 bytes while retaining exact evidence bindings and a deterministic full-summary digest.",
+    "Semantic CLI renders actionable findings and parser identity before exhaustive boundary and architecture detail.",
 ]
 simplified_functions = [
-    "TransportResponse.__getitem__",
-    "TransportResponse.decoded",
-    "_review",
-    "main",
-    "reconcile_open_pulls",
-    "request_response",
-    "_atomic_write",
-    "_attempt_content",
-    "_restricted_directory",
-    "_utc_now",
-    "complete_attempt",
-    "quarantine_response",
-    "start_attempt",
+    "GitHubApp.complete_check",
+    "GitHubApp.publish_check",
+    "_check_summary",
+    "_verdict_summary",
 ]
 boundary_rationale = [
-    "semantic_diagnostics owns restricted atomic local persistence, responses_transport owns HTTP-attempt lifecycle, and semantic_cli owns GitHub publication.",
+    "GitHubApp owns final check-payload safety and evidence binding; semantic_cli owns verdict presentation order without changing parsing or model contracts.",
 ]
 remaining_risks = [
-    "Diagnostic storage failure remains a fail-closed technical failure; retained diagnostics are intentionally not pruned by this repair.",
+    "Exhaustive boundary and architecture detail can be truncated, while findings, parser identity, full-summary SHA-256, response SHA-256, and evidence bindings remain visible.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -47,16 +38,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-exact-response-quarantine"
-text = "Production semantic review atomically quarantines each received response as exact bytes before decoding or semantic parsing."
-citations = ["src/supportability_gate/semantic_cli.py:190-198", "src/supportability_gate/semantic_cli.py:290-300", "src/supportability_gate/responses_transport.py:105-121", "src/supportability_gate/semantic_diagnostics.py:120-126"]
+id = "claim-bounded-check-output"
+text = "Completed semantic checks use one shared UTF-8 byte boundary that preserves exact packet bindings and identifies any omitted detail by full-summary SHA-256."
+citations = ["src/supportability_gate/github_app.py:134-150", "src/supportability_gate/github_app.py:1023-1052", "src/supportability_gate/github_app.py:1098-1129"]
 
 [[completion_report.claims]]
-id = "claim-attempt-lifecycle"
-text = "Each production model call records its check-bound transport attempt and terminal result."
-citations = ["src/supportability_gate/responses_transport.py:88-120", "src/supportability_gate/semantic_diagnostics.py:83-117", "src/supportability_gate/semantic_cli.py:290-300"]
+id = "claim-actionable-verdict-order"
+text = "Semantic verdict summaries place findings and parser identity before exhaustive ownership and architecture evidence."
+citations = ["src/supportability_gate/semantic_cli.py:24-48"]
 
 [[completion_report.claims]]
-id = "claim-safe-parser-diagnostic"
-text = "A deterministic parser rejection publishes only its error code, response SHA-256, and relative diagnostic filename."
-citations = ["src/supportability_gate/semantic_cli.py:195-217"]
+id = "claim-safe-oversized-finding"
+text = "Invalid surrogate code points are escaped before sizing, and an oversized single finding retains its actionable prefix inside the bounded payload."
+citations = ["src/supportability_gate/github_app.py:134-150"]

@@ -24,24 +24,24 @@ from supportability_gate.semantic_review import parse_response
 def _verdict_summary(verdict: SemanticVerdict) -> str:
     """Render resolvable ownership evidence for the GitHub check summary."""
     lines = [verdict.verdict]
+    lines.extend(f"finding: {finding}" for finding in verdict.findings)
+    lines.extend(
+        (
+            f"dependency direction: {verdict.dependency_direction}",
+            f"model: {verdict.returned_model} ({verdict.reasoning_effort})",
+            f"response SHA-256: {verdict.response_sha256}",
+            f"terminal status: {verdict.terminal_status}",
+            f"parser result: {verdict.parser_result}",
+        )
+    )
     for item in verdict.boundaries:
         lines.append(
             f"{item.path}:{item.start_line}-{item.end_line} {item.kind} {item.name} | "
             f"{item.basis} | owns: {item.owns} | does not own: {item.does_not_own} | "
             f"evidence lines: {','.join(str(line) for line in item.evidence_lines)}"
         )
-    lines.append(f"dependency direction: {verdict.dependency_direction}")
     lines.extend(
         f"architecture citation: {citation}" for citation in verdict.architecture_citations
-    )
-    lines.extend(f"finding: {finding}" for finding in verdict.findings)
-    lines.extend(
-        (
-            f"model: {verdict.returned_model} ({verdict.reasoning_effort})",
-            f"response SHA-256: {verdict.response_sha256}",
-            f"terminal status: {verdict.terminal_status}",
-            f"parser result: {verdict.parser_result}",
-        )
     )
     if not verdict.reviewed_paths:
         lines.append("No changed Python or frontend boundary.")

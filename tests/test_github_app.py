@@ -14,7 +14,13 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 import supportability_gate.github_app as github_app_module
 from supportability_gate.function_changes import ResponsibilitySpan, responsibility_spans
-from supportability_gate.github_app import CHECK_NAME, REVIEWED_SUFFIXES, GitHubApp, app_jwt
+from supportability_gate.github_app import (
+    CHECK_NAME,
+    MAX_CHECK_SUMMARY_BYTES,
+    REVIEWED_SUFFIXES,
+    GitHubApp,
+    app_jwt,
+)
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 
 CONTRACT = b"""schema_version = "1.0"
@@ -1176,6 +1182,38 @@ def test_pending_check_is_completed_with_same_evidence_binding() -> None:
     assert packet.instruction_sha256 in pending["output"]["summary"]
     assert requests[2].method == "PATCH"
     assert packet.instruction_sha256 in json.loads(requests[2].data)["output"]["summary"]
+
+
+def test_oversized_valid_block_summary_is_safe_bounded_and_actionable() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    requests: list[Any] = []
+    prefix = "BLOCK\nfinding: src/a.py:1-2 unsupported completion claim \ud800"
+    summary = prefix + "x" * (69_197 - len(prefix))
+    safe_summary = summary.encode("utf-8", errors="backslashreplace").decode()
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        return _Reply(
+            {
+                "app": {"id": 42},
+                "external_id": packet.sha256,
+                "head_sha": packet.head_sha,
+                "id": 99,
+            }
+        )
+
+    GitHubApp(42, 7, b"unused", opener=open_request).complete_check(
+        packet, "token", 99, "failure", summary
+    )
+
+    published = json.loads(requests[0].data)["output"]["summary"]
+    assert len(summary) == 69_197
+    assert len(published.encode()) <= MAX_CHECK_SUMMARY_BYTES
+    assert published.startswith(prefix.replace("\ud800", "\\ud800"))
+    assert "x" * 100 in published
+    assert "GitHub output truncated; full summary SHA-256" in published
+    assert hashlib.sha256(safe_summary.encode()).hexdigest() in published
+    assert packet.sha256 in published
 
 
 def test_existing_pending_check_is_reused_idempotently() -> None:

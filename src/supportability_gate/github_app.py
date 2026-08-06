@@ -50,6 +50,7 @@ HUNK_PATTERN = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 SourceBoundary = dict[str, int | str]
 HANDOFF_WORKFLOW_PATH = ".github/workflows/organization-required.yml"
 MAX_HANDOFF_BYTES = 5_000_000
+MAX_CHECK_SUMMARY_BYTES = 65_535
 REVIEW_THREADS_QUERY = """
 query($owner:String!,$name:String!,$number:Int!,$cursor:String){
   repository(owner:$owner,name:$name){pullRequest(number:$number){
@@ -128,6 +129,25 @@ def _decoded_response(body: bytes) -> Any:
         return json.loads(body)
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise SemanticReviewError("GITHUB_MALFORMED_RESPONSE") from error
+
+
+def _check_summary(packet: EvidencePacket, summary: str) -> str:
+    summary = summary.encode("utf-8", errors="backslashreplace").decode()
+    suffix = (
+        f"\n\nEvidence SHA-256: `{packet.sha256}`\n"
+        f"Instruction SHA-256: `{packet.instruction_sha256}`\n"
+        f"Base: `{packet.base_sha}`\nHead: `{packet.head_sha}`"
+    )
+    full = summary + suffix
+    if len(full.encode()) <= MAX_CHECK_SUMMARY_BYTES:
+        return full
+    marker = (
+        "\n\nGitHub output truncated; full summary SHA-256: "
+        f"`{hashlib.sha256(summary.encode()).hexdigest()}`"
+    )
+    budget = MAX_CHECK_SUMMARY_BYTES - len((marker + suffix).encode())
+    prefix = summary.encode()[:budget].decode("utf-8", errors="ignore")
+    return prefix.rstrip() + marker + suffix
 
 
 @dataclass
@@ -1020,11 +1040,7 @@ class GitHubApp:
                 "conclusion": conclusion,
                 "output": {
                     "title": CHECK_NAME,
-                    "summary": (
-                        f"{summary}\n\nEvidence SHA-256: `{packet.sha256}`\n"
-                        f"Instruction SHA-256: `{packet.instruction_sha256}`\n"
-                        f"Base: `{packet.base_sha}`\nHead: `{packet.head_sha}`"
-                    ),
+                    "summary": _check_summary(packet, summary),
                 },
             },
         )
@@ -1097,11 +1113,7 @@ class GitHubApp:
                 "conclusion": conclusion,
                 "output": {
                     "title": CHECK_NAME,
-                    "summary": (
-                        f"{summary}\n\nEvidence SHA-256: `{packet.sha256}`\n"
-                        f"Instruction SHA-256: `{packet.instruction_sha256}`\n"
-                        f"Base: `{packet.base_sha}`\nHead: `{packet.head_sha}`"
-                    ),
+                    "summary": _check_summary(packet, summary),
                 },
             },
         )
