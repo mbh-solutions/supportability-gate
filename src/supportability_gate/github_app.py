@@ -132,6 +132,7 @@ def _decoded_response(body: bytes) -> Any:
 
 
 def _check_summary(packet: EvidencePacket, summary: str) -> str:
+    summary = summary.encode("utf-8", errors="backslashreplace").decode()
     suffix = (
         f"\n\nEvidence SHA-256: `{packet.sha256}`\n"
         f"Instruction SHA-256: `{packet.instruction_sha256}`\n"
@@ -146,8 +147,6 @@ def _check_summary(packet: EvidencePacket, summary: str) -> str:
     )
     budget = MAX_CHECK_SUMMARY_BYTES - len((marker + suffix).encode())
     prefix = summary.encode()[:budget].decode("utf-8", errors="ignore")
-    if "\n" in prefix:
-        prefix = prefix.rsplit("\n", 1)[0]
     return prefix.rstrip() + marker + suffix
 
 

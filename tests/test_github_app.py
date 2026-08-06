@@ -1184,12 +1184,12 @@ def test_pending_check_is_completed_with_same_evidence_binding() -> None:
     assert packet.instruction_sha256 in json.loads(requests[2].data)["output"]["summary"]
 
 
-def test_oversized_valid_block_summary_is_bounded_with_action_and_identity() -> None:
+def test_oversized_valid_block_summary_is_safe_bounded_and_actionable() -> None:
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
     requests: list[Any] = []
-    prefix = "BLOCK\nfinding: src/a.py:1-2 unsupported completion claim\n"
-    summary = prefix + "boundary evidence\n" * ((69_197 - len(prefix)) // 18)
-    summary += "x" * (69_197 - len(summary))
+    prefix = "BLOCK\nfinding: src/a.py:1-2 unsupported completion claim \ud800"
+    summary = prefix + "x" * (69_197 - len(prefix))
+    safe_summary = summary.encode("utf-8", errors="backslashreplace").decode()
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
@@ -1209,9 +1209,10 @@ def test_oversized_valid_block_summary_is_bounded_with_action_and_identity() -> 
     published = json.loads(requests[0].data)["output"]["summary"]
     assert len(summary) == 69_197
     assert len(published.encode()) <= MAX_CHECK_SUMMARY_BYTES
-    assert published.startswith(prefix)
+    assert published.startswith(prefix.replace("\ud800", "\\ud800"))
+    assert "x" * 100 in published
     assert "GitHub output truncated; full summary SHA-256" in published
-    assert hashlib.sha256(summary.encode()).hexdigest() in published
+    assert hashlib.sha256(safe_summary.encode()).hexdigest() in published
     assert packet.sha256 in published
 
 
