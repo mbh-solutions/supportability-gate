@@ -2,22 +2,32 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "639e45dd490cfd1509a18bcec101b759e48ad523"
+base_sha = "644037bcae8ce334fddf811c1925089e58a427f0"
 overall_result = "PASS"
 responsibility_changes = [
-    "GitHubApp retains every resolved production source line instead of rejecting evidence above a fixed total line count.",
-    "GitHubApp validates and coalesces completion citation intervals before line expansion so work is bounded by the fetched blob.",
+    "Responses transport preserves exact received bytes and records each attempt before semantic parsing.",
+    "Semantic CLI publishes only safe diagnostic identity when deterministic parsing rejects a response.",
 ]
 simplified_functions = [
-    "GitHubApp._completion_source",
-    "GitHubApp._completion_sources",
-    "GitHubApp._source_evidence",
+    "TransportResponse.__getitem__",
+    "TransportResponse.decoded",
+    "_review",
+    "main",
+    "reconcile_open_pulls",
+    "request_response",
+    "_atomic_write",
+    "_attempt_content",
+    "_restricted_directory",
+    "_utc_now",
+    "complete_attempt",
+    "quarantine_response",
+    "start_attempt",
 ]
 boundary_rationale = [
-    "Evidence collection and citation normalization remain in GitHubApp; measured complete packets fit the existing model transport, so no partitioning or progress infrastructure was added.",
+    "semantic_diagnostics owns restricted atomic local persistence, responses_transport owns HTTP-attempt lifecycle, and semantic_cli owns GitHub publication.",
 ]
 remaining_risks = [
-    "Very large complete packets still depend on model transport latency and the scheduled-task runtime; transport or timeout failures remain deterministic blocks.",
+    "Diagnostic storage failure remains a fail-closed technical failure; retained diagnostics are intentionally not pruned by this repair.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -37,11 +47,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-complete-source-collection"
-text = "Resolved production evidence is collected without a fixed total reviewed-line ceiling."
-citations = ["src/supportability_gate/github_app.py:486-530", "src/supportability_gate/github_app.py:762-787"]
+id = "claim-exact-response-quarantine"
+text = "Production semantic review atomically quarantines each received response as exact bytes before decoding or semantic parsing."
+citations = ["src/supportability_gate/semantic_cli.py:190-198", "src/supportability_gate/semantic_cli.py:290-300", "src/supportability_gate/responses_transport.py:105-121", "src/supportability_gate/semantic_diagnostics.py:120-126"]
 
 [[completion_report.claims]]
-id = "claim-bounded-citation-expansion"
-text = "Completion citation intervals are deduplicated, validated against the fetched blob, and coalesced before expansion."
-citations = ["src/supportability_gate/github_app.py:532-567"]
+id = "claim-attempt-lifecycle"
+text = "Each production model call records its check-bound transport attempt and terminal result."
+citations = ["src/supportability_gate/responses_transport.py:88-120", "src/supportability_gate/semantic_diagnostics.py:83-117", "src/supportability_gate/semantic_cli.py:290-300"]
+
+[[completion_report.claims]]
+id = "claim-safe-parser-diagnostic"
+text = "A deterministic parser rejection publishes only its error code, response SHA-256, and relative diagnostic filename."
+citations = ["src/supportability_gate/semantic_cli.py:195-217"]

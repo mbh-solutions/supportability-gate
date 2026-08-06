@@ -11,7 +11,7 @@ from typing import BinaryIO
 
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.handoff_policy import deterministic_completion_blocks
-from supportability_gate.responses_transport import request_response
+from supportability_gate.responses_transport import TransportResponse, request_response
 from supportability_gate.review_events import ReviewEvent, parse_review_event
 from supportability_gate.semantic_contract import (
     EvidencePacket,
@@ -131,7 +131,13 @@ def _evaluation_lock(path: Path) -> Iterator[None]:
             _unlock(handle)
 
 
-def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]) -> bool:
+def _review(
+    app: GitHubApp,
+    repository: str,
+    token: str,
+    pull: dict[str, object],
+    diagnostics_root: Path | None = None,
+) -> bool:
     packet = app.evidence_packet(repository, pull, token)
     evidence = packet.evidence
     review_blocks = unresolved_review_blocks(evidence)
@@ -181,12 +187,24 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
             "BLOCK\n" + "\n".join(preflight),
         )
         return False
-    response = request_response(packet)
+    response = (
+        request_response(packet, diagnostics_root=diagnostics_root, check_id=check_id)
+        if diagnostics_root is not None
+        else request_response(packet)
+    )
     try:
-        verdict = parse_response(packet, response)
+        verdict = parse_response(
+            packet, response.decoded() if isinstance(response, TransportResponse) else response
+        )
     except SemanticReviewError as error:
         if error.code in {"INCOMPLETE_RESPONSE", "MODEL_DRIFT", "REFUSAL"}:
             raise
+        diagnostic = response.diagnostic if isinstance(response, TransportResponse) else None
+        details = f"TECHNICAL_FAILURE\n{error.code}"
+        if diagnostic is not None:
+            details += (
+                f"\nresponse SHA-256: {diagnostic.sha256}\ndiagnostic file: {diagnostic.filename}"
+            )
         _complete_current_check(
             app,
             packet,
@@ -194,7 +212,7 @@ def _review(app: GitHubApp, repository: str, token: str, pull: dict[str, object]
             token,
             check_id,
             "failure",
-            f"TECHNICAL_FAILURE\n{error.code}",
+            details,
         )
         return False
     if verdict.verdict == "PASS":
@@ -256,10 +274,16 @@ def handle_review_event(
     return process_review_event(app, token, event)
 
 
-def reconcile_open_pulls(app: GitHubApp, repository: str, token: str) -> tuple[bool, ...]:
+def reconcile_open_pulls(
+    app: GitHubApp,
+    repository: str,
+    token: str,
+    diagnostics_root: Path | None = None,
+) -> tuple[bool, ...]:
     """Re-evaluate every current open pull request as lost-event recovery."""
     return tuple(
-        _review(app, repository, token, pull) for pull in app.open_pulls(repository, token)
+        _review(app, repository, token, pull, diagnostics_root)
+        for pull in app.open_pulls(repository, token)
     )
 
 
@@ -271,8 +295,9 @@ def main(argv: list[str] | None = None) -> int:
         app = GitHubApp(arguments.app_id, arguments.installation_id, private_key)
         token = app.installation_token()
         lock_path = arguments.private_key.with_name("semantic-review.lock")
+        diagnostics_root = arguments.private_key.with_name("semantic-review-diagnostics")
         with _evaluation_lock(lock_path):
-            results = reconcile_open_pulls(app, arguments.repository, token)
+            results = reconcile_open_pulls(app, arguments.repository, token, diagnostics_root)
     except (OSError, SemanticReviewError):
         print("TECHNICAL_FAILURE")
         return 2

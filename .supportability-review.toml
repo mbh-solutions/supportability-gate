@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Milestones 1-8 remain enforced while fixed Python and TypeScript quality profiles execute only on GitHub-hosted runners and bind exact command, result, coverage, threshold, exclusion, and commit evidence."
-proof = "tests/test_quality_profile.py"
+intended_behavior = "The semantic reviewer preserves exact received response bytes and per-attempt transport evidence before fail-closed parsing while GitHub receives only safe diagnostic identity."
+proof = "tests/test_semantic_review.py::test_unsupported_finding_preserves_exact_rejected_response"
 
 [characterization]
-captured_behavior = "The pre-change 192-test suite and existing Python and TypeScript characterization scenarios remain the immutable runnable base for Milestone 9."
-proof = "tests/test_quality_profile.py"
+captured_behavior = "The fixed localhost Responses transport retains its existing request and decoded-response behavior while diagnostics are added as a separate responsibility."
+proof = "tests/characterization/semantic-diagnostics.characterization.py"
 
 [separation_of_concerns]
-before = "Declared gate adapters proved configured coverage but did not prove every stack-native command actually executed successfully in an isolated hosted job."
-after = "The quality-profile module defines the immutable approved command contract and verifies its exact-head attestation, the quality-runner module materializes no-shell plans from that contract and independently defines their fixed tool configuration, and a disposable hosted job alone executes them."
+before = "The transport decoded and returned a model response without retaining its exact bytes or a durable attempt record, leaving deterministic parser rejection undiagnosable."
+after = "semantic_diagnostics owns restricted atomic persistence, responses_transport owns HTTP attempt lifecycle and the raw envelope, and semantic_cli owns fail-closed parsing and safe GitHub publication."
 
 [architecture]
-dependency_direction = "The organization workflow captures behavior, runs the fixed hosted quality profile, then the existing CLI verifies its immutable attestation before complexity, architecture, modularity, reporting, and semantic-review paths complete."
+dependency_direction = "semantic_cli depends on responses_transport; responses_transport depends on semantic_diagnostics; semantic_diagnostics uses only the standard library and does not depend back on transport or publication."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -25,31 +25,33 @@ reviewed_paths = [
     "src/supportability_gate/quality_runner.py",
     "src/supportability_gate/reporting.py",
     "src/supportability_gate/refactor_policy.py",
+    "src/supportability_gate/responses_transport.py",
     "src/supportability_gate/review_events.py",
     "src/supportability_gate/review_state.py",
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
+    "src/supportability_gate/semantic_diagnostics.py",
     "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/quality_profile.py"
-owns = "The immutable approved quality-profile contract plus API-read artifact metadata, exact result, identity, coverage, and anti-weakening verification."
-does_not_own = "Concrete command-plan materialization, generated tool configuration, target execution, characterization capture, refactor authorization, semantic transport, check publication, or waivers."
+path = "src/supportability_gate/semantic_diagnostics.py"
+owns = "Restricted atomic persistence and safe identities for semantic transport attempts and exact received response bytes."
+does_not_own = "HTTP transport, response decoding, semantic parsing, GitHub check publication, retention policy, prompt construction, or model selection."
 
 [incremental_refactor]
-target = "Require one complete fixed stack-native quality profile and exact attestation before the existing evaluator can pass."
-completed_step = "Added one immutable quality-profile contract and verifier, one concrete plan materializer, and one disposable hosted execution job; no shell, waiver, exclusion, or repository-controlled command path."
+target = "Make deterministic semantic-review failures diagnosable without exposing raw model text or weakening fail-closed parsing."
+completed_step = "Added restricted atomic response quarantine, per-attempt lifecycle records, a raw transport envelope, safe parser-rejection metadata, and one focused regression."
 
 [review_handoff]
-summary = "Review hosted-only execution, immutable command vectors, finite timeouts, captured result hashes, exact identity binding, complete changed/high-risk coverage, anti-weakening, deterministic evidence, and unchanged downstream gates."
-remaining_risks = ["Missing, malformed, unexecuted, failed, uncovered, excluded, weakened, narrowed, moved-outside-scope, or non-hosted quality evidence intentionally fails the required workflow closed."]
+summary = "Review exact-byte preservation before decoding, atomic file replacement, attempt terminal results, safe relative diagnostic metadata, and unchanged parser rules."
+remaining_risks = ["Diagnostic storage failure intentionally fails closed; diagnostics are retained without pruning in this evidence-capture slice."]
 
 [human_review]
-naming = "Quality-profile names directly describe fixed commands, hosted execution, attestation identity, coverage, and anti-weakening."
-cohesion = "The quality-profile module owns approved policy specification and verification; the quality-runner module owns concrete plan and tool-config materialization; the disposable hosted job owns execution."
-intended_behavior = "Existing enforcement remains; Python and TypeScript quality claims now block every missing, failed, unexecuted, uncovered, excluded, weakened, narrowed, moved, malformed, stale, or non-hosted condition."
-reviewability = "Focused fixtures cover both fixed profiles, all required failure classes, exact identities and vectors, workstation refusal, and byte-identical evidence."
+naming = "Attempt, QuarantinedResponse, start_attempt, complete_attempt, and quarantine_response each name one concrete diagnostic responsibility."
+cohesion = "Persistence is isolated from HTTP transport, semantic parsing, and GitHub publication; dependency direction remains one-way."
+intended_behavior = "Every production model call starts an attempt record, every received body is quarantined before parsing, and rejected raw text never reaches GitHub."
+reviewability = "One focused regression binds exact bytes, response hash, filename, attempt lifecycle, atomic cleanup, and safe check output; transport failures retain stable terminal results."
 
 [[module_boundaries]]
 path = "src/supportability_gate/review_events.py"
@@ -98,3 +100,9 @@ path = "src/supportability_gate/handoff_policy.py"
 owner_path = "src/supportability_gate/handoff_policy.py"
 basis = "responsibility"
 justification = "Owns completion-report parsing and exact evidence cross-checking without GitHub transport, target execution, or semantic model judgment."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_diagnostics.py"
+owner_path = "src/supportability_gate/responses_transport.py"
+basis = "responsibility"
+justification = "Owns restricted atomic local persistence for semantic transport attempts and exact response bytes, while the preexisting responses_transport boundary owns HTTP request and response handling and invokes diagnostics without taking persistence ownership."

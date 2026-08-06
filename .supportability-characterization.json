@@ -30,6 +30,13 @@
     },
     {
       "covers": [
+        "src/supportability_gate/semantic_diagnostics.py"
+      ],
+      "id": "semantic-diagnostics",
+      "kind": "regression"
+    },
+    {
+      "covers": [
         "src/supportability_gate/quality_profile.py",
         "src/supportability_gate/reporting.py"
       ],
