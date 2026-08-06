@@ -126,7 +126,7 @@ def _claim_blocks(
             continue
         if claim.owner_path not in nodes:
             blocks.append(f"UNRESOLVED_MODULE_OWNER:{path}:{claim.owner_path}")
-        elif claim.owner_path in new_paths:
+        elif claim.owner_path in new_paths and claim.owner_path != path:
             blocks.append(f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{claim.owner_path}")
         elif _package(claim.owner_path, policy) != _package(path, policy):
             blocks.append(f"PARALLEL_PACKAGE:{path}:{claim.owner_path}")

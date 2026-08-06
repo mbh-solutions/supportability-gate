@@ -178,7 +178,13 @@ def test_missing_or_unresolved_justification_blocks() -> None:
         _architecture(path),
         _quality(path),
     )
-    self_owned = evaluate_modularity(
+    assert missing.blocks == (f"MISSING_NEW_LOCATION_JUSTIFICATION:{path}",)
+    assert unresolved.blocks == (f"UNRESOLVED_MODULE_OWNER:{path}:src/orders/missing.py",)
+
+
+def test_independent_new_location_can_own_itself() -> None:
+    path = "src/orders/model.py"
+    result = evaluate_modularity(
         _policy(),
         (_assessment(path),),
         _review(path, "domain"),
@@ -186,9 +192,21 @@ def test_missing_or_unresolved_justification_blocks() -> None:
         _quality(path),
     )
 
-    assert missing.blocks == (f"MISSING_NEW_LOCATION_JUSTIFICATION:{path}",)
-    assert unresolved.blocks == (f"UNRESOLVED_MODULE_OWNER:{path}:src/orders/missing.py",)
-    assert self_owned.blocks == (f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{path}",)
+    assert result.blocks == ()
+
+
+def test_new_location_cannot_claim_another_new_location_as_owner() -> None:
+    path = "src/orders/model.py"
+    owner = "src/orders/owner.py"
+    result = evaluate_modularity(
+        _policy(),
+        (_assessment(path), _assessment(owner)),
+        _review(path, "domain", owner),
+        _architecture(path, owner_path=owner),
+        _quality(path),
+    )
+
+    assert f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{owner}" in result.blocks
 
 
 def test_modularity_evidence_is_deterministic() -> None:

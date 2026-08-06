@@ -2,23 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "d58e41e9898f66b810929f6de68a59b87626d1d9"
+base_sha = "670c2d0de86ac17b1ebd3fbde588ad1ac656f470"
 overall_result = "PASS"
 responsibility_changes = [
-    "GitHubApp bounds completed semantic-check summaries by UTF-8 bytes while retaining exact evidence bindings and a deterministic full-summary digest.",
-    "Semantic CLI renders actionable findings and parser identity before exhaustive boundary and architecture detail.",
+    "Modularity policy distinguishes exact-path self-ownership for an independent new module from ownership by a different new module.",
 ]
 simplified_functions = [
-    "GitHubApp.complete_check",
-    "GitHubApp.publish_check",
-    "_check_summary",
-    "_verdict_summary",
+    "_claim_blocks",
 ]
 boundary_rationale = [
-    "GitHubApp owns final check-payload safety and evidence binding; semantic_cli owns verdict presentation order without changing parsing or model contracts.",
+    "An independent new module may own its exact cohesive boundary; ownership by a different new module remains blocked until a preexisting source-backed owner exists.",
 ]
 remaining_risks = [
-    "Exhaustive boundary and architecture detail can be truncated, while findings, parser identity, full-summary SHA-256, response SHA-256, and evidence bindings remain visible.",
+    "Semantic Review remains responsible for rejecting unsupported self-ownership, weak cohesion, and unjustified separation claims.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -38,16 +34,6 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-bounded-check-output"
-text = "Completed semantic checks use one shared UTF-8 byte boundary that preserves exact packet bindings and identifies any omitted detail by full-summary SHA-256."
-citations = ["src/supportability_gate/github_app.py:134-150", "src/supportability_gate/github_app.py:1023-1052", "src/supportability_gate/github_app.py:1098-1129"]
-
-[[completion_report.claims]]
-id = "claim-actionable-verdict-order"
-text = "Semantic verdict summaries place findings and parser identity before exhaustive ownership and architecture evidence."
-citations = ["src/supportability_gate/semantic_cli.py:24-48"]
-
-[[completion_report.claims]]
-id = "claim-safe-oversized-finding"
-text = "Invalid surrogate code points are escaped before sizing, and an oversized single finding retains its actionable prefix inside the bounded payload."
-citations = ["src/supportability_gate/github_app.py:134-150"]
+id = "claim-independent-self-ownership"
+text = "A new production path may claim its own exact boundary, while ownership by any different new path remains blocked as non-preexisting."
+citations = ["src/supportability_gate/modularity_policy.py:108-133"]
