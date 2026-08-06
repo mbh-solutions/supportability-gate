@@ -9,12 +9,19 @@ responsibility_changes = [
     "Semantic CLI publishes only safe diagnostic identity when deterministic parsing rejects a response.",
 ]
 simplified_functions = [
+    "TransportResponse.__getitem__",
     "TransportResponse.decoded",
+    "_review",
+    "main",
+    "reconcile_open_pulls",
     "request_response",
-    "start_attempt",
+    "_atomic_write",
+    "_attempt_content",
+    "_restricted_directory",
+    "_utc_now",
     "complete_attempt",
     "quarantine_response",
-    "_review",
+    "start_attempt",
 ]
 boundary_rationale = [
     "semantic_diagnostics owns restricted atomic local persistence, responses_transport owns HTTP-attempt lifecycle, and semantic_cli owns GitHub publication.",
