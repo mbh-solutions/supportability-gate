@@ -39,7 +39,7 @@ def main() -> None:
         timeout_seconds=1.0,
         opener=open_request,
     )
-    observed["response_status"] = response["status"]
+    observed["response_status"] = response.decoded()["status"]
     print(
         json.dumps(
             {"behavior": observed, "scenario": "semantic-transport", "schema_version": "1.0"},

@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import urllib.error
+from pathlib import Path
 
 import pytest
 
@@ -467,6 +468,69 @@ def test_deterministic_response_failure_completes_once_without_recalling_model(
     assert app.completed[0][3:] == ("failure", "TECHNICAL_FAILURE\nMALFORMED_SCHEMA")
 
 
+def test_unsupported_finding_preserves_exact_rejected_response(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    packet = _m10_packet()
+    rejected = _response(packet, "BLOCK", ["missing exact boundary prefix"])
+    reply = _Reply(rejected)
+
+    class App:
+        completed: list[tuple[object, ...]] = []
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            return 92455702993
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
+
+    def transport(current: EvidencePacket, **kwargs: object) -> object:
+        return request_response(
+            current,
+            opener=lambda *args, **opener_kwargs: reply,
+            diagnostics_root=kwargs["diagnostics_root"],  # type: ignore[arg-type]
+            check_id=kwargs["check_id"],  # type: ignore[arg-type]
+        )
+
+    monkeypatch.setattr(semantic_cli, "request_response", transport)
+    app = App()
+
+    assert not semantic_cli._review(  # type: ignore[arg-type]
+        app, packet.repository, "token", {}, tmp_path
+    )
+
+    response_sha256 = hashlib.sha256(reply.body).hexdigest()
+    filename = f"responses/{packet.sha256}-{response_sha256}.response"
+    assert (tmp_path / filename).read_bytes() == reply.body
+    attempts = list((tmp_path / "attempts").glob("*.json"))
+    assert len(attempts) == 1
+    attempt = json.loads(attempts[0].read_text())
+    assert attempt["result"] == "RESPONSE_RECEIVED"
+    assert attempt["response_sha256"] == response_sha256
+    assert attempt["response_file"] == filename
+    assert not list(tmp_path.rglob("*.tmp"))
+    summary = app.completed[0][4]
+    assert summary == (
+        "TECHNICAL_FAILURE\nUNSUPPORTED_FINDING"
+        f"\nresponse SHA-256: {response_sha256}"
+        f"\ndiagnostic file: {filename}"
+    )
+    assert "missing exact boundary prefix" not in summary
+    assert str(tmp_path) not in summary
+
+
 def test_evidence_packet_is_immutable_after_construction() -> None:
     evidence = {"diff": "+safe", "reviewed_sources": []}
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, evidence)
@@ -727,19 +791,33 @@ def test_untrusted_or_unavailable_model_results_block(defect: str, code: str) ->
 
 
 @pytest.mark.parametrize(
-    ("error", "code"),
+    ("error", "code", "result"),
     [
-        (urllib.error.HTTPError("x", 401, "", {}, io.BytesIO()), "AUTHENTICATION_FAILURE"),
-        (urllib.error.URLError("offline"), "PROXY_OUTAGE"),
-        (TimeoutError(), "TIMEOUT"),
+        (
+            urllib.error.HTTPError("x", 401, "", {}, io.BytesIO()),
+            "AUTHENTICATION_FAILURE",
+            "HTTP_FAILURE",
+        ),
+        (urllib.error.URLError("offline"), "PROXY_OUTAGE", "PROXY_OUTAGE"),
+        (TimeoutError(), "TIMEOUT", "TIMEOUT"),
     ],
 )
-def test_transport_failures_block(error: Exception, code: str) -> None:
+def test_transport_failures_block(tmp_path: Path, error: Exception, code: str, result: str) -> None:
     def fail(*args: object, **kwargs: object) -> object:
         raise error
 
     with pytest.raises(SemanticReviewError, match=code):
-        request_response(_packet(), opener=fail)
+        request_response(_packet(), opener=fail, diagnostics_root=tmp_path, check_id=92455702993)
+    records = list((tmp_path / "attempts").glob("*.json"))
+    assert len(records) == 1
+    record = json.loads(records[0].read_text())
+    assert (record["result"], record["error_code"], record["check_id"]) == (
+        result,
+        code,
+        92455702993,
+    )
+    assert record["ended_at"] is not None
+    assert isinstance(record["duration_ms"], int)
 
 
 def test_transport_uses_fixed_480_second_default() -> None:
@@ -870,7 +948,10 @@ def test_bound_vague_helper_verdict_blocks_python_and_typescript(diff: str) -> N
 def test_live_shape_from_transport_passes() -> None:
     packet = _packet()
     verdict = parse_response(
-        packet, request_response(packet, opener=lambda *args, **kwargs: _Reply(_response(packet)))
+        packet,
+        request_response(
+            packet, opener=lambda *args, **kwargs: _Reply(_response(packet))
+        ).decoded(),
     )
     assert verdict.verdict == "PASS"
 
