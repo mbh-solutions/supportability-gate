@@ -38,6 +38,13 @@ class TransportResponse:
         """Decode the quarantined transport body for semantic parsing."""
         return _decoded_response(self.body)
 
+    def __getitem__(self, key: str) -> object:
+        """Keep existing decoded field access while retaining exact bytes."""
+        decoded = self.decoded()
+        if not isinstance(decoded, dict):
+            raise TypeError("response is not an object")
+        return decoded[key]
+
 
 def _request(packet: EvidencePacket) -> urllib.request.Request:
     return urllib.request.Request(

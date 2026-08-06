@@ -39,8 +39,7 @@ def main() -> None:
         timeout_seconds=1.0,
         opener=open_request,
     )
-    decoded = response if isinstance(response, dict) else response.decoded()
-    observed["response_status"] = decoded["status"]
+    observed["response_status"] = response["status"]
     print(
         json.dumps(
             {"behavior": observed, "scenario": "semantic-transport", "schema_version": "1.0"},

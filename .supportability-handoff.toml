@@ -42,12 +42,12 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-exact-response-quarantine"
 text = "Every received response is atomically quarantined as exact bytes before decoding or semantic parsing."
-citations = ["src/supportability_gate/responses_transport.py:98-114", "src/supportability_gate/semantic_cli.py:190-198", "src/supportability_gate/semantic_diagnostics.py:120-126"]
+citations = ["src/supportability_gate/responses_transport.py:105-121", "src/supportability_gate/semantic_cli.py:190-198", "src/supportability_gate/semantic_diagnostics.py:120-126"]
 
 [[completion_report.claims]]
 id = "claim-attempt-lifecycle"
 text = "Each production model call records its check-bound transport attempt and terminal result."
-citations = ["src/supportability_gate/responses_transport.py:81-113", "src/supportability_gate/semantic_diagnostics.py:83-117", "src/supportability_gate/semantic_cli.py:290-300"]
+citations = ["src/supportability_gate/responses_transport.py:88-120", "src/supportability_gate/semantic_diagnostics.py:83-117", "src/supportability_gate/semantic_cli.py:290-300"]
 
 [[completion_report.claims]]
 id = "claim-safe-parser-diagnostic"
