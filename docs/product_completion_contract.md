@@ -922,13 +922,64 @@ workflow, check-run, ruleset, or GitHub state supports them.
   Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; no successor work
   is authorized.
 
+## Critical maintenance — Project #3 issue #95
+
+- Semantic reviewer response diagnostics and bounded verdict publication: `COMPLETE` upon
+  protected merge of this evidence-only ledger change; Evidence `Complete`; Scope `On scope`;
+  Stop confirmed `Yes`.
+- Authority: owner-authorized issue #95 and its required publisher-defect blocker issue #97 under
+  reopened Project #3. No successor maintenance or milestone is authorized.
+- Completion evidence:
+  - Protected diagnostics PR #96 exact head
+    `876c2da4fc8a878f7e5a60a95b4aa5f57c9e1322` normally squash-merged as
+    `d58e41e9898f66b810929f6de68a59b87626d1d9`. Exact responses are atomically retained before
+    decode or parsing; every transport attempt receives a terminal record; GitHub receives only
+    safe response identity. The prompt, parser, schema, model, and effort were unchanged.
+  - PR #96 Source Validation check `92487427895`, organization-required Gate check
+    `92487534781`, and semantic App `4418989` check `92487674988` passed. Exact Python 3.12 lock
+    proof passed Ruff lint and format, C901 at maximum 10, strict mypy, both import contracts,
+    compileall, immutable-Standard tamper detection, wheel build/install, installed CLI help, and
+    308 tests with 2 skips.
+  - The first deployed TWMN PR #62 proof retained a 115,256-byte exact response with SHA-256
+    `1bb5284afa9642f20face84b1582d0e94bdb84697ec207fd4145206c4a9a19a9` and a
+    `RESPONSE_RECEIVED` attempt lasting 432,422 ms. The exact packet parsed as substantive
+    `BLOCK`, but its 69,197-character summary exposed blocker #97 when GitHub rejected publication.
+    Check `92490362064` was safely completed fail-closed; the raw response was not published.
+  - Protected bounded-publication PR #98 exact head
+    `dc2ae12bc13663a12cadd8b40b2896c84a343f07` normally squash-merged as
+    `39da16de352663c1ebc9a9d16ad9705c37ff9c8d`. Its shared publisher limits summaries to 65,535
+    UTF-8 bytes, preserves findings and exact evidence bindings first, safely encodes invalid
+    Unicode, and records a deterministic full-summary SHA when truncation is required.
+  - PR #98 Source Validation check `92577757361`, organization-required Gate check
+    `92577935844`, and semantic App `4418989` check `92578255339` passed. Exact source proof passed
+    the required twelve gates with 309 tests and 2 skips. The immutable Standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Merge `39da16de352663c1ebc9a9d16ad9705c37ff9c8d` produced wheel SHA-256
+    `f456acea9c67e6a5dd87277d53ea1a45e78a35b9038dbfc01f7ab8f9d98f9fdc`. Versioned runtime
+    `runtime-issue97-39da16d` uses Python 3.12 and the exact lock. Both scheduled tasks point to
+    that runtime with unchanged repository, App, installation, and private-key arguments.
+  - One controlled installed-runtime reconciliation of TWMN PR #62 kept exact head
+    `e064b8d0e721c7df967d483f99274536156ed9a0` and automatically completed substantive `BLOCK`
+    check `92580287053`. Evidence SHA-256 was
+    `1a3f9a7bbef94a4886f38ad6b0ad6cfca661066ec668d086286ab6f469db1b2c`; the published summary
+    was exactly 65,535 UTF-8 bytes, retained actionable findings and base/head/evidence bindings,
+    and recorded full safe-summary SHA-256
+    `8e0b2ba193dfbbad4d15094f76ac388edf5a388fee5c4e8f6273749522662e4a` without transport failure.
+  - The attempt completed `RESPONSE_RECEIVED` in 394,141 ms. Its restricted 101,905-byte response
+    file matched SHA-256
+    `adc279a0afbe7ab91a16c4b78517dee86fac6717bd4ef6deb284be00942e3bef`; no temporary diagnostic
+    files remained. TWMN source, base, head, branch, and merge state were not changed.
+- Remaining work: None after this evidence-only ledger PR normally merges, issue #95 closes, and
+  Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; no successor work
+  is authorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #92 maintenance is complete; stop
+Current authorized work: NONE — Project #3 issue #95 maintenance is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
