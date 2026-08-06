@@ -973,13 +973,59 @@ workflow, check-run, ruleset, or GitHub state supports them.
   Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; no successor work
   is authorized.
 
+## Critical maintenance — Project #3 issue #100
+
+- Independent new-module ownership enforcement: `COMPLETE` upon protected merge of this
+  evidence-only ledger change; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #100 under reopened Project #3. This was one focused
+  enforcement contradiction; no successor maintenance or milestone is authorized.
+- Completion evidence:
+  - TWMN PR #62 exact head `5d38361cf853576e50e4e5bb1ec82eef71a77bd8` proved the contradiction.
+    Deterministic Gate check `92585952967` passed a false preexisting owner, while substantive
+    Semantic check `92586308610` rejected that unsupported ownership. Exact-path self-ownership
+    instead triggered deterministic `NEW_MODULE_OWNER_NOT_PREEXISTING`.
+  - Protected implementation PR #101 exact head
+    `56761f0e110aac1d06d1fe4b84b9e0cfd303010c` normally squash-merged as
+    `40341076b5edc3774e33d2f4f48efefa9f6a1d36`. The one-condition repair allows a new path to own
+    itself while continuing to block ownership by any different new path; semantic enforcement
+    still judges cohesion, coupling, separation, and source support.
+  - PR #101 Source Validation run `31106172805`/check `92631808145`, organization-required Gate
+    check `92632005436`, and semantic App `4418989` check `92632232759` passed. Exact Python 3.12
+    lock proof passed Ruff lint and format, C901 at maximum 10, strict mypy, both import contracts,
+    compileall, immutable-Standard tamper detection, wheel build/install, installed CLI help, and
+    311 tests with 2 skips. The immutable Standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Merge `40341076b5edc3774e33d2f4f48efefa9f6a1d36` produced deployment wheel SHA-256
+    `85442939197e8ad7748de4b4eed96125b81320e4c50713d9070641ea4733fbbf`. Versioned runtime
+    `runtime-issue100-4034107` uses Python 3.12 and the exact lock; both scheduled reviewers point
+    to that runtime with their repository, App, installation, and private-key arguments unchanged.
+  - Organization ruleset `19913103` remained active with four rules and zero bypass actors. Its
+    required workflow source kept repository `1312412529` and path
+    `.github/workflows/organization-required.yml`; only the stale SHA changed from
+    `c66d276d17f8c968f6422728a0afeec7de981d8f` to the protected repair merge
+    `40341076b5edc3774e33d2f4f48efefa9f6a1d36`.
+  - TWMN PR #62 evidence-only head `b2972dc731f0c9a996e761c311daf2e7ac84d468` declared exact
+    self-ownership for both independent modules. Fresh attempt-1 workflow run `31106983390` used
+    workflow SHA `40341076b5edc3774e33d2f4f48efefa9f6a1d36`; Gate check `92634775570` passed
+    with zero policy blocks/errors. Artifact `8970013331` had digest
+    `sha256:842f8e4590700630f12814da4d01b0bb24edea09dfd09432431d631129a1edbb`.
+  - Installed Semantic check `92635192993` completed substantive `BLOCK`, not technical failure,
+    with evidence SHA-256
+    `40d35b53fdfbfe5100a068794c14ac9ce4a62681d8336d6e851c7fab0266ca53`. Its findings concerned
+    private cross-workflow imports and an incomplete lock citation; neither ownership finding
+    remained. PR #62 stayed open/unmerged and generation
+    `generation-feb86fb901a3-4d212d298348-5fba20179e38` stayed active and unchanged.
+- Remaining work: None after this evidence-only ledger PR normally merges, issue #100 closes, and
+  Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; TWMN findings are
+  outside this maintenance scope and no successor Supportability work is authorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #95 maintenance is complete; stop
+Current authorized work: NONE — Project #3 issue #100 maintenance is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
