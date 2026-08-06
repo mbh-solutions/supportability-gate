@@ -23,7 +23,8 @@
     },
     {
       "covers": [
-        "src/supportability_gate/responses_transport.py"
+        "src/supportability_gate/responses_transport.py",
+        "src/supportability_gate/semantic_diagnostics.py"
       ],
       "id": "semantic-transport",
       "kind": "regression"
