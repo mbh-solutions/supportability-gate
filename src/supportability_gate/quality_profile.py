@@ -148,6 +148,10 @@ _TYPESCRIPT_COMMANDS = (
         ),
     ),
     (
+        "typescript.target-install.v1",
+        ("$NPM", "ci", "--ignore-scripts", "--no-audit", "--no-fund"),
+    ),
+    (
         "typescript.eslint.v1",
         (
             "$TOOLS/node_modules/.bin/eslint",
@@ -233,6 +237,7 @@ _PROOF_KINDS = {
     "python.build-wheel.v1": "artifact-members",
     "python.import-linter.v1": "parsed-source",
     "typescript.tool-install.v1": "provisioning",
+    "typescript.target-install.v1": "provisioning",
     "typescript.eslint.v1": "explicit-source",
     "typescript.prettier.v1": "explicit-source",
     "typescript.c901-equivalent-touched.v1": "explicit-source",
