@@ -1060,13 +1060,61 @@ workflow, check-run, ruleset, or GitHub state supports them.
   closes, and Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; DC
   application remediation remains outside this agent's responsibility.
 
+## Critical maintenance — Project #3 issue #106
+
+- Long-TSX native parser crash repair: `COMPLETE` upon protected merge of this evidence-only ledger
+  change; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #106 under reopened Project #3. Scope was Gate dependency,
+  regression, runtime, ruleset, and DC proof only; Gate parser changes, DC application changes or
+  merge, TWMN, the immutable Standard, and frozen roadmap were excluded.
+- Completion evidence:
+  - `tree-sitter==0.26.0` had an upstream native reference-count defect in `Point.row` and
+    `Point.column`; coordinates above 256 could corrupt heap state and later crash TSX traversal.
+    DC `src/App.tsx` reached line 399, while the prior TSX fixture remained on line 1. The minimal
+    repair pinned safe release `0.25.2` and moved the existing binding regression to line 301; no
+    production parser code changed.
+  - Protected implementation PR #107 exact head
+    `d8822ea86c287813a43fdc395011a1b157369c09` normally squash-merged as
+    `36365c5df86156e4889e3c0c656f2236d3c25237`. Source Validation check `93139855010`, required
+    Gate check `93139933940`, and semantic App `4418989` check `93139866462` passed.
+    Authoritative evidence artifact `9025944743` had digest
+    `sha256:9a9c7a0f3c3d3cc53316a51320c52da1484bf9e718b3553877f63fc870f45ffa`.
+  - Exact Python 3.12 lock proof passed Ruff lint and format, C901 at maximum 10, strict mypy, both
+    import contracts, compileall, immutable-Standard tamper detection, wheel build/install,
+    installed CLI help, and 311 tests with 2 skips. The focused line-301 TSX regression and directly
+    relevant evaluator suite passed. The immutable Standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Merge `36365c5df86156e4889e3c0c656f2236d3c25237` produced deployment wheel SHA-256
+    `aa7240267bd8f7b469042d2865c3866158397b107d5b1a2536df65ab234ba3f2`. Versioned runtime
+    `runtime-issue106-36365c5` uses Python 3.12, the exact lock, and `tree-sitter==0.25.2`. Source
+    and DC scheduled reviewers read back that runtime; Source returned `0`, while DC returned
+    substantive policy result `1` instead of access violation `3221225477`. TWMN remained on
+    `runtime-issue100-4034107` unchanged.
+  - DC ruleset `20588739` remained active for repository `1326160036` with zero bypass actors. Its
+    workflow kept repository `1312412529` and path `.github/workflows/organization-required.yml`;
+    only source SHA changed from `501938f1f135594c24767fb6d0632590b6ea49b2` to protected repair
+    merge `36365c5df86156e4889e3c0c656f2236d3c25237`.
+  - DC PR #6 retained base `b37f75211a1bf45076a1333f0ee999b41661cf51` and exact head
+    `4802b9bc17c5c1e499fd952a231806f16d96465a`. Fresh attempt-1 run `31272312997` passed Base
+    check `93140234827`, Head check `93140234844`, and Quality Profile check `93140234858`. Gate
+    check `93140357258` parsed the 399-line TSX file and completed deterministic `BLOCK` with
+    `MISSING_OWNER_AUTHORIZATION`, exit `1`, not `139`. Artifact `9025994345` had digest
+    `sha256:8dec337944c0fbef7b925d15a40b51edbebb4b9414b1ad471b07a71a925ab574`.
+    Semantic check `93140393410` completed substantive `BLOCK` for an unresolved review thread,
+    with evidence SHA-256
+    `ce00dc7ee4aab76f357862ccb48bb594e708738538bddbd53b6eb9cac7192f02`.
+    PR #6 remains open and unmerged; no DC application file or commit changed.
+- Remaining work: None after this evidence-only ledger PR normally merges, issue #106 closes, and
+  Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; DC application
+  findings remain with its separate owner and no successor Supportability work is authorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #100 maintenance is complete; stop
+Current authorized work: NONE — Project #3 issue #106 maintenance is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
