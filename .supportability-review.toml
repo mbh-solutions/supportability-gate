@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "TypeScript and TSX source beyond line 256 parses and maps deterministically without native crashes while target code remains unexecuted."
-proof = "tests/test_evaluate_complexity.py::test_typescript_tsx_arrow_function_is_bound"
+intended_behavior = "The fixed TypeScript profile installs dependencies from the committed package lock without running target lifecycle scripts or target package commands before executing unchanged quality checks."
+proof = "tests/test_quality_profile.py::test_typescript_profile_executes_every_fixed_gate_on_hosted_runner"
 
 [characterization]
-captured_behavior = "tree-sitter 0.26.0 corrupts native state when the collector reads Point row or column values above 256; the reduced line-301 TSX fixture and DC Training App.tsx both terminate the process before a verdict."
-proof = "tests/test_evaluate_complexity.py::test_typescript_tsx_arrow_function_is_bound"
+captured_behavior = "The hosted TypeScript profile previously omitted target dependencies, and protected reconciliation proved module-only maintenance had no touched functions while the handoff policy rejected a truthful empty simplified-functions list."
+proof = "tests/test_handoff_policy.py::test_complete_source_backed_handoff_passes"
 
 [separation_of_concerns]
-before = "The dependency contract selected a py-tree-sitter release whose native Point implementation corrupts heap state for real long-file coordinates."
-after = "The dependency contract selects the last safe published binding; parsing, responsibility mapping, and complexity logic remain unchanged."
+before = "The TypeScript profile provisioned fixed Gate tools but evaluated dependency-bearing source without installing dependencies from the target lock."
+after = "quality_profile owns both fixed provisioning vectors: Gate tools remain isolated under the evidence directory and target dependencies install through locked script-disabled npm ci in the disposable checkout."
 
 [architecture]
-dependency_direction = "function_changes continues to depend directly on the locked tree-sitter binding and TypeScript grammar; no new layer, module, command, or dependency edge is introduced."
+dependency_direction = "quality_runner materializes immutable vectors owned by quality_profile; the hosted runner executes them sequentially with its existing fixed environment, timeout, captured output, and no shell."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -36,23 +36,23 @@ reviewed_paths = [
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/function_changes.py"
-owns = "Static Python and TypeScript parsing plus stable function and responsibility mapping without importing or executing target code."
-does_not_own = "Native binding memory management, dependency release selection, target application behavior, or target remediation."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Immutable approved quality command identities, fixed argument vectors, proof kinds, and evidence validation."
+does_not_own = "Command execution, target-defined commands, lifecycle scripts, repository configuration, package resolution policy, or application remediation."
 
 [incremental_refactor]
-target = "Remove the TSX native crash without changing proven parser policy logic."
-completed_step = "Pinned tree-sitter 0.25.2 and moved the existing TSX regression to line 301."
+target = "Remove false TypeScript dependency-resolution failures without adding target-controlled execution."
+completed_step = "Added one fixed script-disabled npm ci provisioning vector and made module-only completion reports accept an empty function list only when authoritative touched functions are also empty."
 
 [review_handoff]
-summary = "Review exact tree-sitter pin and hash-lock delta, then confirm the existing TSX test maps CustomerCard from line 301 with unchanged complexity."
-remaining_risks = ["A future tree-sitter upgrade must retain the line-301 regression; upstream fix PR #466 is merged but not present in a published release."]
+summary = "Review fixed npm ci arguments, script non-execution, bad-lock blocking, dependency-bearing typecheck/build proof, and exact empty/nonempty touched-function handoff matching."
+remaining_risks = ["Targets whose lock requires unapproved npm flags fail closed; target lifecycle scripts and package commands remain intentionally unsupported."]
 
 [human_review]
-naming = "No new symbol or module is introduced; the existing TSX regression remains the direct behavior owner."
-cohesion = "Dependency version selection stays in packaging metadata while parser behavior stays in function_changes."
-intended_behavior = "Long TSX files map stable function identities and complexity without native failure."
-reviewability = "Focused implementation diff: dependency declaration, generated exact lock, one existing test, and required review/handoff evidence."
+naming = "typescript.target-install.v1 identifies one concrete provisioning responsibility distinct from Gate tool installation and quality evaluation."
+cohesion = "The immutable command contract remains in quality_profile; command materialization and hosted execution remain unchanged."
+intended_behavior = "Only exact lock dependencies install, scripts never run, invalid locks block, and fixed TypeScript checks retain their existing meaning."
+reviewability = "One command tuple and one proof-kind entry drive the implementation; the existing hosted regression covers dependency resolution and fail-closed lock cases."
 
 [[module_boundaries]]
 path = "src/supportability_gate/review_events.py"
