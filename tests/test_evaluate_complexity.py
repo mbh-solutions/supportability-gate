@@ -507,7 +507,9 @@ def test_typescript_new_over_limit_extraction_blocks(tmp_path: Path) -> None:
 
 
 def test_typescript_tsx_arrow_function_is_bound(tmp_path: Path) -> None:
-    source = "export const CustomerCard = (active: boolean) => active ? <div /> : null;\n"
+    source = "\n" * 300 + (
+        "export const CustomerCard = (active: boolean) => active ? <div /> : null;\n"
+    )
     repository, base_sha, head_sha = _typescript_repository(
         tmp_path, None, source, extension=".tsx"
     )
@@ -516,6 +518,7 @@ def test_typescript_tsx_arrow_function_is_bound(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert result["touched_qualified_functions"] == ["CustomerCard"]
+    assert result["functions"][0]["head"]["start_line"] == 301
     assert result["functions"][0]["ending_complexity"] == 2
 
 

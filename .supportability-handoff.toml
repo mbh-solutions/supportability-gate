@@ -2,22 +2,19 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "8002b3e2f272539d31e2409e16b136b687b3854c"
+base_sha = "84c67288414d866ab0a8c2f980c1be5aa799677b"
 overall_result = "PASS"
 responsibility_changes = [
-    "The immutable TypeScript quality profile now provisions exact target-lock dependencies separately from Gate tooling.",
-    "Completion handoff matching now represents module-only changes with a truthful empty simplified-functions list.",
+    "The package contract now selects the last safe published py-tree-sitter binding for existing TypeScript and TSX parsing.",
+    "The existing TSX regression now exercises a function coordinate above 256 where tree-sitter 0.26.0 corrupts native state.",
 ]
-simplified_functions = [
-    "_result_blocks",
-    "deterministic_completion_blocks",
-]
+simplified_functions = []
 boundary_rationale = [
-    "quality_profile owns fixed command identities; quality_runner and the hosted runner retain materialization and execution responsibilities.",
-    "handoff_policy owns exact comparison between declared simplified functions and authoritative touched-function evidence.",
+    "Dependency selection changes at the package boundary; proven parsing and policy implementation remains untouched.",
+    "The existing evaluator test directly owns TSX identity and complexity behavior, so no new test module or abstraction is needed.",
 ]
 remaining_risks = [
-    "Targets whose lock requires unapproved npm flags fail closed; target lifecycle scripts and package commands remain unsupported.",
+    "A future tree-sitter upgrade must pass the line-301 regression before replacing the exact 0.25.2 pin.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -37,11 +34,11 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-locked-target-install"
-text = "The TypeScript profile installs exact target-lock dependencies through a fixed script-disabled provisioning command before unchanged quality checks."
-citations = ["src/supportability_gate/quality_profile.py:150-153"]
+id = "claim-safe-tree-sitter-pin"
+text = "The package contract selects tree-sitter 0.25.2 while retaining tree-sitter-typescript 0.23.2."
+citations = ["pyproject.toml:15-16"]
 
 [[completion_report.claims]]
-id = "claim-module-only-handoff"
-text = "An empty simplified-functions list is valid only when authoritative touched-function evidence is also empty; malformed values and mismatches still block."
-citations = ["src/supportability_gate/handoff_policy.py:286-292", "src/supportability_gate/handoff_policy.py:338-345"]
+id = "claim-line-301-regression"
+text = "The existing TSX regression maps CustomerCard from line 301 and retains the expected complexity value."
+citations = ["tests/test_evaluate_complexity.py:509-522"]
