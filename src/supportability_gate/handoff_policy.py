@@ -284,7 +284,11 @@ def _result_blocks(report: dict[str, Any], authoritative: dict[str, Any]) -> lis
     if report["gate_coverage"] != authoritative.get("gate_coverage"):
         blocks.append("CONTRADICTED_GATE_COVERAGE")
     simplified = report["simplified_functions"]
-    if _text_list(simplified) and sorted(simplified) != _function_names(authoritative):
+    if (
+        isinstance(simplified, list)
+        and all(isinstance(item, str) and bool(item.strip()) for item in simplified)
+        and sorted(simplified) != _function_names(authoritative)
+    ):
         blocks.append("CONTRADICTED_SIMPLIFIED_FUNCTIONS")
     return blocks
 
@@ -331,9 +335,14 @@ def deterministic_completion_blocks(
     if unknown:
         return (f"MALFORMED_COMPLETION_SECTION:{unknown[0]}",)
     blocks: list[str] = []
-    for section in ("boundary_rationale", "responsibility_changes", "simplified_functions"):
+    for section in ("boundary_rationale", "responsibility_changes"):
         if not _text_list(report[section]):
             blocks.append(f"MALFORMED_COMPLETION_SECTION:{section}")
+    simplified = report["simplified_functions"]
+    if not isinstance(simplified, list) or any(
+        not isinstance(item, str) or not item.strip() for item in simplified
+    ):
+        blocks.append("MALFORMED_COMPLETION_SECTION:simplified_functions")
     blocks.extend(_result_blocks(report, authoritative))
     blocks.extend(_risk_blocks(report["remaining_risks"]))
     blocks.extend(_command_blocks(report, authoritative))

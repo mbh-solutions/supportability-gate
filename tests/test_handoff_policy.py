@@ -93,6 +93,11 @@ def _blocks(
 
 def test_complete_source_backed_handoff_passes() -> None:
     assert _blocks(_report()) == ()
+    report = _report()
+    authoritative = _authoritative()
+    report["simplified_functions"] = []
+    authoritative["functions"] = []
+    assert _blocks(report, authoritative) == ()
 
 
 def test_completion_report_document_round_trips() -> None:

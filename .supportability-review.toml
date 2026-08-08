@@ -5,8 +5,8 @@ intended_behavior = "The fixed TypeScript profile installs dependencies from the
 proof = "tests/test_quality_profile.py::test_typescript_profile_executes_every_fixed_gate_on_hosted_runner"
 
 [characterization]
-captured_behavior = "The hosted TypeScript profile previously installed only Gate tooling, so dependency-bearing target imports failed typecheck and build despite a valid target lock."
-proof = "tests/test_quality_profile.py::test_typescript_profile_executes_every_fixed_gate_on_hosted_runner"
+captured_behavior = "The hosted TypeScript profile previously omitted target dependencies, and protected reconciliation proved module-only maintenance had no touched functions while the handoff policy rejected a truthful empty simplified-functions list."
+proof = "tests/test_handoff_policy.py::test_complete_source_backed_handoff_passes"
 
 [separation_of_concerns]
 before = "The TypeScript profile provisioned fixed Gate tools but evaluated dependency-bearing source without installing dependencies from the target lock."
@@ -21,6 +21,7 @@ reviewed_paths = [
     "src/supportability_gate/gate_policy.py",
     "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
+    "src/supportability_gate/handoff_policy.py",
     "src/supportability_gate/quality_profile.py",
     "src/supportability_gate/quality_runner.py",
     "src/supportability_gate/reporting.py",
@@ -41,10 +42,10 @@ does_not_own = "Command execution, target-defined commands, lifecycle scripts, r
 
 [incremental_refactor]
 target = "Remove false TypeScript dependency-resolution failures without adding target-controlled execution."
-completed_step = "Added one fixed script-disabled npm ci provisioning vector before the unchanged TypeScript gates and extended the existing hosted regression."
+completed_step = "Added one fixed script-disabled npm ci provisioning vector and made module-only completion reports accept an empty function list only when authoritative touched functions are also empty."
 
 [review_handoff]
-summary = "Review fixed npm ci arguments, provisioning order, script non-execution, lock failure behavior, dependency-bearing typecheck/build proof, and unchanged application ownership."
+summary = "Review fixed npm ci arguments, script non-execution, bad-lock blocking, dependency-bearing typecheck/build proof, and exact empty/nonempty touched-function handoff matching."
 remaining_risks = ["Targets whose lock requires unapproved npm flags fail closed; target lifecycle scripts and package commands remain intentionally unsupported."]
 
 [human_review]
