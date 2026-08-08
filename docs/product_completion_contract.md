@@ -1019,6 +1019,47 @@ workflow, check-run, ruleset, or GitHub state supports them.
   Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; TWMN findings are
   outside this maintenance scope and no successor Supportability work is authorized.
 
+## Critical maintenance — Project #3 issue #103
+
+- Locked TypeScript target dependency provisioning: `COMPLETE` upon protected merge of this
+  evidence-only ledger change; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #103 under reopened Project #3. Scope was Gate-owned runtime,
+  enforcement, and diagnostic work only; DC Training application changes and TWMN were excluded.
+- Completion evidence:
+  - Protected implementation PR #104 exact head
+    `9f6003fe8c49bc297972e0a885b944d15f53e66b` normally squash-merged as
+    `501938f1f135594c24767fb6d0632590b6ea49b2`. The fixed
+    `typescript.target-install.v1` adapter runs locked `npm ci --ignore-scripts` before TypeScript
+    gates; missing, malformed, and stale locks fail closed. The same repair permits a truthful empty
+    simplified-function list only when authoritative evidence contains no changed functions.
+  - PR #104 Source Validation check `93131975210`, required Gate check `93132317939`, and semantic
+    App `4418989` check `93132430445` passed. Authoritative evidence artifact `9025091835` had digest
+    `sha256:4c87773829a617df2d41ad61002b77e644d417f8a57ea55a421586b5ccff8c36`.
+    Exact Python 3.12 proof passed Ruff lint and format, C901 at maximum 10, strict mypy, both import
+    contracts, compileall, immutable-Standard tamper detection, wheel build/install, installed CLI
+    help, and 311 tests with 2 skips. The immutable Standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Merge `501938f1f135594c24767fb6d0632590b6ea49b2` produced deployment wheel SHA-256
+    `4ad97caf77fde0fa022a46598d18d2c58bd8e8176cf6ecaf891b9a73ef02bcc1`. Versioned runtime
+    `runtime-issue103-501938f` uses Python 3.12 and the exact lock. Source and DC Training scheduled
+    reviewers read back that runtime and returned `0`; TWMN remained on
+    `runtime-issue100-4034107` unchanged.
+  - DC Training organization ruleset `20588739` remained active for repository `1326160036` with
+    zero bypass actors. Its workflow kept repository `1312412529` and path
+    `.github/workflows/organization-required.yml`; only source SHA changed from
+    `40341076b5edc3774e33d2f4f48efefa9f6a1d36` to
+    `501938f1f135594c24767fb6d0632590b6ea49b2`.
+  - DC Training PR #5 exact head `1bf25c0d16f0d18597c5c9b49f2804e810ba0f08` supplied the
+    owner-authorized AGENTS responsibility boundary and exercised workflow run `31269424311`.
+    Quality artifact `9025147834` proved `typescript.target-install.v1` executed `npm ci` with
+    lifecycle scripts disabled and exit code `0`; semantic check `93132809121` passed. The run then
+    failed closed on app-owned `MISSING_BLOB` characterization plus existing formatting,
+    type-check/build, and coverage deficiencies. PR #5 remains open and unmerged for a separate app
+    owner; no application file, dependency, formatting, or test was changed by this maintenance.
+- Remaining work: None in Gate scope after this evidence-only ledger PR normally merges, issue #103
+  closes, and Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; DC
+  application remediation remains outside this agent's responsibility.
+
 ## Product status
 
 ```text
