@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import replace
@@ -525,6 +526,61 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
     _run_git(repository, "config", "user.name", "Fixture")
     _run_git(repository, "config", "user.email", "fixture@example.invalid")
     _run_git(repository, "remote", "add", "origin", "https://github.com/example/typescript.git")
+    package = {
+        "name": "typescript-target",
+        "private": True,
+        "version": "1.0.0",
+        "type": "module",
+        "scripts": {
+            "preinstall": "node -e \"require('node:fs').writeFileSync('root-script-ran', '')\"",
+            "test": "node -e \"require('node:fs').writeFileSync('target-command-ran', '')\"",
+        },
+        "dependencies": {"fixture-dependency": "file:vendor/fixture-dependency"},
+    }
+    (repository / "package.json").write_text(
+        json.dumps(package, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    dependency = repository / "vendor" / "fixture-dependency"
+    dependency.mkdir(parents=True)
+    (dependency / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "fixture-dependency",
+                "version": "1.0.0",
+                "type": "module",
+                "main": "index.js",
+                "types": "index.d.ts",
+                "scripts": {
+                    "preinstall": "node -e \"require('node:fs').writeFileSync('dependency-script-ran', '')\""
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (dependency / "index.js").write_text(
+        "export const increment = (value) => value + 1;\n", encoding="utf-8", newline="\n"
+    )
+    (dependency / "index.d.ts").write_text(
+        "export function increment(value: number): number;\n", encoding="utf-8", newline="\n"
+    )
+    lock = subprocess.run(
+        (
+            shutil.which("npm") or "npm",
+            "install",
+            "--package-lock-only",
+            "--ignore-scripts",
+            "--no-audit",
+            "--no-fund",
+        ),
+        cwd=repository,
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    assert lock.returncode == 0, lock.stderr.decode(errors="replace")
     (repository / ".supportability.toml").write_text(
         """schema_version = "1.0"
 language = "typescript"
@@ -549,6 +605,7 @@ maximum = 10
     source = repository / "src" / "domain" / "model.ts"
     source.parent.mkdir(parents=True)
     source.write_text(
+        'import { increment } from "fixture-dependency";\n\n'
         "export function score(value: number): number {\n  return value;\n}\n",
         encoding="utf-8",
         newline="\n",
@@ -567,7 +624,8 @@ maximum = 10
     _run_git(repository, "commit", "-m", "base")
     base_sha = _run_git(repository, "rev-parse", "HEAD")
     source.write_text(
-        "export function score(value: number): number {\n  return value + 1;\n}\n",
+        'import { increment } from "fixture-dependency";\n\n'
+        "export function score(value: number): number {\n  return increment(value);\n}\n",
         encoding="utf-8",
         newline="\n",
     )
@@ -613,7 +671,55 @@ maximum = 10
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
     evidence = quality_profile.load_evidence(output)
 
+    install_result = next(
+        item for item in evidence.commands if item.adapter == "typescript.target-install.v1"
+    )
     test_result = next(item for item in evidence.commands if item.adapter == "typescript.test.v1")
+    assert install_result.exit_code == 0
+    assert not (repository / "root-script-ran").exists()
+    assert not (repository / "target-command-ran").exists()
+    assert not (
+        repository / "node_modules" / "fixture-dependency" / "dependency-script-ran"
+    ).exists()
+
+    source_files = ("src/domain/model.ts", poison)
+    install_plan = next(
+        plan
+        for plan in quality_runner.command_plans(
+            "typescript",
+            repository,
+            output.parent,
+            ("tests/quality.test.mjs",),
+            source_files,
+        )
+        if plan.adapter == "typescript.target-install.v1"
+    )
+    package_text = (repository / "package.json").read_text(encoding="utf-8")
+    lock_text = (repository / "package-lock.json").read_text(encoding="utf-8")
+
+    def install_exit() -> int:
+        return subprocess.run(
+            install_plan.actual,
+            cwd=repository,
+            env=quality_runner.fixed_environment(output.parent, repository),
+            check=False,
+            capture_output=True,
+            timeout=quality_profile.TIMEOUT_SECONDS,
+        ).returncode
+
+    (repository / "package-lock.json").unlink()
+    assert install_exit() != 0
+    (repository / "package-lock.json").write_text("{", encoding="utf-8", newline="\n")
+    assert install_exit() != 0
+    (repository / "package-lock.json").write_text(lock_text, encoding="utf-8", newline="\n")
+    out_of_sync = json.loads(package_text)
+    out_of_sync["dependencies"]["missing-lock-entry"] = "1.0.0"
+    (repository / "package.json").write_text(
+        json.dumps(out_of_sync, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    assert install_exit() != 0
+    (repository / "package.json").write_text(package_text, encoding="utf-8", newline="\n")
+    (repository / "package-lock.json").write_text(lock_text, encoding="utf-8", newline="\n")
     authenticated = replace(
         evidence,
         artifact_id="789",

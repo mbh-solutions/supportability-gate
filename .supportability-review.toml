@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The semantic reviewer preserves exact received response bytes and per-attempt transport evidence before fail-closed parsing while GitHub receives only safe diagnostic identity."
-proof = "tests/test_semantic_review.py::test_unsupported_finding_preserves_exact_rejected_response"
+intended_behavior = "The fixed TypeScript profile installs dependencies from the committed package lock without running target lifecycle scripts or target package commands before executing unchanged quality checks."
+proof = "tests/test_quality_profile.py::test_typescript_profile_executes_every_fixed_gate_on_hosted_runner"
 
 [characterization]
-captured_behavior = "The fixed localhost Responses transport retains its existing request and decoded-response behavior while diagnostics are added as a separate responsibility."
-proof = "tests/characterization/semantic-diagnostics.characterization.py"
+captured_behavior = "The hosted TypeScript profile previously installed only Gate tooling, so dependency-bearing target imports failed typecheck and build despite a valid target lock."
+proof = "tests/test_quality_profile.py::test_typescript_profile_executes_every_fixed_gate_on_hosted_runner"
 
 [separation_of_concerns]
-before = "The transport decoded and returned a model response without retaining its exact bytes or a durable attempt record, leaving deterministic parser rejection undiagnosable."
-after = "semantic_diagnostics owns restricted atomic persistence, responses_transport owns HTTP attempt lifecycle and the raw envelope, and semantic_cli owns fail-closed parsing and safe GitHub publication."
+before = "The TypeScript profile provisioned fixed Gate tools but evaluated dependency-bearing source without installing dependencies from the target lock."
+after = "quality_profile owns both fixed provisioning vectors: Gate tools remain isolated under the evidence directory and target dependencies install through locked script-disabled npm ci in the disposable checkout."
 
 [architecture]
-dependency_direction = "semantic_cli depends on responses_transport; responses_transport depends on semantic_diagnostics; semantic_diagnostics uses only the standard library and does not depend back on transport or publication."
+dependency_direction = "quality_runner materializes immutable vectors owned by quality_profile; the hosted runner executes them sequentially with its existing fixed environment, timeout, captured output, and no shell."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -35,23 +35,23 @@ reviewed_paths = [
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/semantic_diagnostics.py"
-owns = "Restricted atomic persistence and safe identities for semantic transport attempts and exact received response bytes."
-does_not_own = "HTTP transport, response decoding, semantic parsing, GitHub check publication, retention policy, prompt construction, or model selection."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Immutable approved quality command identities, fixed argument vectors, proof kinds, and evidence validation."
+does_not_own = "Command execution, target-defined commands, lifecycle scripts, repository configuration, package resolution policy, or application remediation."
 
 [incremental_refactor]
-target = "Make deterministic semantic-review failures diagnosable without exposing raw model text or weakening fail-closed parsing."
-completed_step = "Added restricted atomic response quarantine, per-attempt lifecycle records, a raw transport envelope, safe parser-rejection metadata, and one focused regression."
+target = "Remove false TypeScript dependency-resolution failures without adding target-controlled execution."
+completed_step = "Added one fixed script-disabled npm ci provisioning vector before the unchanged TypeScript gates and extended the existing hosted regression."
 
 [review_handoff]
-summary = "Review exact-byte preservation before decoding, atomic file replacement, attempt terminal results, safe relative diagnostic metadata, and unchanged parser rules."
-remaining_risks = ["Diagnostic storage failure intentionally fails closed; diagnostics are retained without pruning in this evidence-capture slice."]
+summary = "Review fixed npm ci arguments, provisioning order, script non-execution, lock failure behavior, dependency-bearing typecheck/build proof, and unchanged application ownership."
+remaining_risks = ["Targets whose lock requires unapproved npm flags fail closed; target lifecycle scripts and package commands remain intentionally unsupported."]
 
 [human_review]
-naming = "Attempt, QuarantinedResponse, start_attempt, complete_attempt, and quarantine_response each name one concrete diagnostic responsibility."
-cohesion = "Persistence is isolated from HTTP transport, semantic parsing, and GitHub publication; dependency direction remains one-way."
-intended_behavior = "Every production model call starts an attempt record, every received body is quarantined before parsing, and rejected raw text never reaches GitHub."
-reviewability = "One focused regression binds exact bytes, response hash, filename, attempt lifecycle, atomic cleanup, and safe check output; transport failures retain stable terminal results."
+naming = "typescript.target-install.v1 identifies one concrete provisioning responsibility distinct from Gate tool installation and quality evaluation."
+cohesion = "The immutable command contract remains in quality_profile; command materialization and hosted execution remain unchanged."
+intended_behavior = "Only exact lock dependencies install, scripts never run, invalid locks block, and fixed TypeScript checks retain their existing meaning."
+reviewability = "One command tuple and one proof-kind entry drive the implementation; the existing hosted regression covers dependency resolution and fail-closed lock cases."
 
 [[module_boundaries]]
 path = "src/supportability_gate/review_events.py"
