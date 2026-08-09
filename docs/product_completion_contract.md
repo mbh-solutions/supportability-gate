@@ -1151,11 +1151,13 @@ workflow, check-run, ruleset, or GitHub state supports them.
     `1f153c9…` `c675bab98b452a9ba019ee049676a5ad1eb66bbe64a48441ac06fea003b320f6`,
     PR #18 `9cc23a…` `c58b942f86d5bcb99b864af182e1f5a542d04c4d4024d7efb42ae5af88039c10`,
     and nullable SQL `4fd0c72ecb0452bdc2d4316c847c9f27fc15e20ceb7dca82c94723031fa0d3a0`.
-    The artifact retains all 48 attempt and response hashes. Clean received eight trusted PASS
+    The authenticated issue registry and artifact retain all 48 attempt and response hashes. Clean
+    received eight trusted PASS
     verdicts. Historical and poison packets surfaced every required category, including mixed
     Home ownership, mixed assignment ownership, unchecked Supabase cast, pending-save Back/stale
     completion, nullable SQL, fail-open MJS, and missing acceptance guidance. Historical packets
-    were reconstructed as v2 evidence; no v1 byte-identity claim is made.
+    were reconstructed as v2 evidence, as recorded in authenticated authority; no v1 byte-identity
+    claim is made.
   - Temporary DC issue #21 and never-merged PR #22 exercised defect head
     `ed4b53cc8b99837f4303c71871713f736d6a2b6c` and corrected fresh head
     `543f5121d7322939f50a46236b3d8a98ed2ca7fb`. Defect check `93244697318` blocked with all seven
