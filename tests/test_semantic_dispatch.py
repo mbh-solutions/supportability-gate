@@ -196,6 +196,7 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
     class Process:
         returncode = -9
         killed = False
+        wait_calls = 0
 
         def poll(self) -> None:
             return None
@@ -204,6 +205,9 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
             self.killed = True
 
         def wait(self, timeout: int) -> int:
+            self.wait_calls += 1
+            if self.wait_calls < 3:
+                raise subprocess.TimeoutExpired("worker", timeout)
             return self.returncode
 
     class App:
@@ -226,6 +230,7 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
         "launch_worker",
         lambda *args: ActiveWorker(candidate, process, 0.0, io.StringIO(), io.StringIO()),
     )
+    monkeypatch.setattr(dispatch.time, "monotonic", lambda: 0.0)
     monkeypatch.setattr(dispatch.time, "sleep", lambda seconds: None)
     arguments = argparse.Namespace(
         app_id=42, installation_id=7, private_key=Path("key.pem"), shadow=False
@@ -235,6 +240,7 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
         dispatch.run_dispatch_loop(arguments, App())  # type: ignore[arg-type]
 
     assert process.killed is True
+    assert process.wait_calls == 3
     assert json.loads(capsys.readouterr().out)["timed_out"] is True
 
 
@@ -262,7 +268,11 @@ def test_second_wait_timeout_still_cleans_every_worker(monkeypatch: Any) -> None
     with pytest.raises(subprocess.SubprocessError, match="WORKER_TERMINATION_FAILURE"):
         dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
 
-    assert active == {}
+    assert set(active) == {first.key, second.key}
+    assert all(not worker.stdout.closed and not worker.stderr.closed for worker in active.values())
+    for worker in active.values():
+        worker.stdout.close()
+        worker.stderr.close()
 
 
 def test_shadow_reports_selected_repositories_even_without_candidates(capsys: Any) -> None:

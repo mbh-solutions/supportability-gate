@@ -198,6 +198,7 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
         timed_out = current - worker.started_at > WORKER_TIMEOUT_SECONDS
         if worker.process.poll() is None and not timed_out:
             continue
+        terminated = True
         try:
             if timed_out:
                 worker.process.kill()
@@ -209,6 +210,9 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
                     worker.process.wait(timeout=30)
                 except subprocess.TimeoutExpired:
                     cleanup_failed = True
+                    terminated = False
+            if not terminated:
+                continue
             worker.stdout.seek(0)
             worker.stderr.seek(0)
             print(
@@ -226,9 +230,10 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
                 flush=True,
             )
         finally:
-            worker.stdout.close()
-            worker.stderr.close()
-            del active[key]
+            if terminated:
+                worker.stdout.close()
+                worker.stderr.close()
+                del active[key]
     if cleanup_failed:
         raise subprocess.SubprocessError("WORKER_TERMINATION_FAILURE")
 
@@ -280,7 +285,11 @@ def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
                 last_repository = launched_repository
             time.sleep(POLL_SECONDS)
     finally:
-        reap_workers(active, float("inf"))
+        while active:
+            try:
+                reap_workers(active, float("inf"))
+            except subprocess.SubprocessError:
+                time.sleep(1)
 
 
 def main(argv: list[str] | None = None) -> int:

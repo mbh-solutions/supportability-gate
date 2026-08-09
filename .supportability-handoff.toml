@@ -12,6 +12,7 @@ simplified_functions = [
     "GitHubApp._handoff_runs",
     "GitHubApp.handoff_ready",
     "GitHubApp.installation_repositories",
+    "GitHubApp.open_pulls",
     "_candidate",
     "_parser",
     "_parser",
@@ -57,7 +58,12 @@ citations = ["src/supportability_gate/github_app.py:207-241"]
 [[completion_report.claims]]
 id = "claim-exact-head-readiness"
 text = "A pull becomes eligible only after one successful exact-head organization-required workflow artifact exists."
-citations = ["src/supportability_gate/github_app.py:396-425", "src/supportability_gate/github_app.py:427-442", "src/supportability_gate/semantic_dispatch.py:83-98"]
+citations = ["src/supportability_gate/github_app.py:397-426", "src/supportability_gate/github_app.py:428-443", "src/supportability_gate/semantic_dispatch.py:83-98"]
+
+[[completion_report.claims]]
+id = "claim-open-pull-pagination"
+text = "Every selected repository's open pulls are fully paginated and duplicate pull identities fail closed before queueing."
+citations = ["src/supportability_gate/github_app.py:243-251"]
 
 [[completion_report.claims]]
 id = "claim-fair-bounded-workers"
@@ -67,9 +73,9 @@ citations = ["src/supportability_gate/semantic_dispatch.py:101-126", "src/suppor
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
 text = "Each worker uses a fixed shell-free argument vector with captured output and is killed after the fixed finite timeout."
-citations = ["src/supportability_gate/semantic_dispatch.py:129-169", "src/supportability_gate/semantic_dispatch.py:193-233"]
+citations = ["src/supportability_gate/semantic_dispatch.py:129-169", "src/supportability_gate/semantic_dispatch.py:193-238"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:236-253", "src/supportability_gate/semantic_dispatch.py:256-283"]
+citations = ["src/supportability_gate/semantic_dispatch.py:241-258", "src/supportability_gate/semantic_dispatch.py:261-292"]

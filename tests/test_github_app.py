@@ -620,10 +620,15 @@ def test_wrong_app_identity_blocks() -> None:
         app.installation_token()
 
 
-def test_open_pull_truncation_blocks() -> None:
-    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply([{}] * 100))
-    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
-        app.open_pulls("mbh-solutions/supportability-gate", "token")
+def test_open_pull_discovery_paginates() -> None:
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        page = 2 if "page=2" in request.full_url else 1
+        pulls = [{"number": number} for number in range(100)] if page == 1 else [{"number": 100}]
+        return _Reply(pulls)
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+
+    assert len(app.open_pulls("mbh-solutions/supportability-gate", "token")) == 101
 
 
 def test_closed_exact_pull_blocks_before_evaluation() -> None:

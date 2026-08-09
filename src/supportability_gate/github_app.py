@@ -242,12 +242,13 @@ class GitHubApp:
 
     def open_pulls(self, repository: str, token: str) -> tuple[dict[str, Any], ...]:
         """Return open pull requests from GitHub's immutable SHA metadata."""
-        result = self._request("GET", f"/repos/{repository}/pulls?state=open&per_page=100", token)
-        if not isinstance(result, list) or any(not isinstance(item, dict) for item in result):
+        rows = self._rest_pages(f"/repos/{repository}/pulls?state=open&per_page=100", token)
+        numbers = [item.get("number") for item in rows]
+        if any(type(number) is not int for number in numbers):
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
-        if len(result) >= 100:
+        if len(set(numbers)) != len(rows):
             raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-        return tuple(result)
+        return rows
 
     def pull(self, repository: str, pull_number: int, token: str) -> dict[str, Any]:
         """Return current authenticated pull-request metadata for event reconciliation."""
