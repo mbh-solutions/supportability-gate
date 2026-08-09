@@ -10,7 +10,30 @@ responsibility_changes = [
     "The orchestrator runs all eight calls, retains every trusted finding, byte-deduplicates only identical findings, and requires eight clean trusted PASS results.",
     "Diagnostics and live qualification record eight attempts and cover historical PR 18, poison, and clean convergence cases.",
 ]
-simplified_functions = []
+simplified_functions = [
+    "GitHubApp._authority",
+    "GitHubApp._authority_issue",
+    "GitHubApp.assert_current",
+    "GitHubApp.evidence_packet",
+    "_attempt_content",
+    "_authority_finding_prefixes",
+    "_boundary_evidence",
+    "_diff_finding_prefixes",
+    "_ensemble_summary",
+    "_request",
+    "_response_data",
+    "_review",
+    "_trusted_verdict",
+    "_validate_bindings",
+    "_verdict_summary",
+    "parse_response",
+    "profile_instruction",
+    "profile_instruction_sha256",
+    "request_payload",
+    "request_response",
+    "result_schema",
+    "start_attempt",
+]
 boundary_rationale = [
     "GitHubApp remains the authenticated authority and comparison owner; semantic_contract owns immutable request/result schema; semantic_review validates one response; semantic_cli owns ensemble execution.",
     "Existing transport and diagnostics modules receive only the fixed profile and round bindings needed for one attempt; no new production module or dependency is introduced.",
@@ -49,8 +72,3 @@ citations = ["src/supportability_gate/semantic_cli.py:147-236", "src/supportabil
 id = "claim-attempt-identities"
 text = "Each response and diagnostic binds profile, round, profile instruction SHA, common evidence SHA, fixed model and effort, and response SHA."
 citations = ["src/supportability_gate/semantic_contract.py:149-169", "src/supportability_gate/semantic_diagnostics.py:18-111", "src/supportability_gate/semantic_review.py:388-463"]
-
-[[completion_report.claims]]
-id = "claim-convergence-regressions"
-text = "Focused regressions prove full non-Python diff retention, authority staleness, eight calls after failures, one blocker defeating seven passes, deterministic duplicate findings, diagnostics, and replay."
-citations = ["tests/test_github_app.py:550-657", "tests/test_semantic_review.py:351-630", "tests/qualify_convergent_reviewer.py:1-205"]
