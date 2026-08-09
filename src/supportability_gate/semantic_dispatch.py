@@ -20,6 +20,7 @@ from supportability_gate.semantic_contract import (
     SHA_PATTERN,
     EvidencePacket,
     SemanticReviewError,
+    unresolved_review_blocks,
 )
 
 POLL_SECONDS = 60
@@ -106,9 +107,9 @@ def discover_candidates(
             candidate = _candidate(repository, pull)
             if not app.handoff_ready(name, candidate.head_sha, token):
                 continue
-            packet = app.m10_evidence_packet(
-                name, pull, token, app.evidence_packet(name, pull, token)
-            )
+            packet = app.evidence_packet(name, pull, token)
+            if not unresolved_review_blocks(packet.evidence):
+                packet = app.m10_evidence_packet(name, pull, token, packet)
             if app.replay_result(packet, token) is None:
                 candidates.append(replace(candidate, packet=packet))
     return tuple(candidates)

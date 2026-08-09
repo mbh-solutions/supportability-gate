@@ -20,6 +20,7 @@ from supportability_gate.semantic_contract import (
     EvidencePacket,
     SemanticReviewError,
     SemanticVerdict,
+    unresolved_review_blocks,
 )
 from supportability_gate.semantic_lease import exclusive_lease
 from supportability_gate.semantic_review import parse_response
@@ -80,23 +81,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--private-key", required=True, type=Path)
     parser.add_argument("--result-file", type=Path)
     return parser
-
-
-def unresolved_review_blocks(evidence: dict[str, object]) -> tuple[str, ...]:
-    """Return deterministic blocks for current unresolved GitHub threads."""
-    state = evidence.get("review_state")
-    threads = state.get("threads") if isinstance(state, dict) else None
-    if not isinstance(threads, list):
-        raise SemanticReviewError("MALFORMED_REVIEW_STATE")
-    blocks: list[str] = []
-    for thread in threads:
-        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
-            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
-        if not isinstance(thread.get("is_resolved"), bool):
-            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
-        if not thread["is_resolved"]:
-            blocks.append(f"UNRESOLVED_REVIEW_THREAD:{thread['id']}")
-    return tuple(sorted(blocks))
 
 
 def _complete_current_check(
@@ -216,9 +200,6 @@ def _review(
     if not isinstance(pull_number, int):
         raise SemanticReviewError("MALFORMED_PULL_REQUEST")
     app.assert_current(packet, pull_number, token)
-    packet = app.m10_evidence_packet(repository, pull, token, packet)
-    evidence = packet.evidence
-    app.assert_current(packet, pull_number, token)
     review_blocks = unresolved_review_blocks(evidence)
     if review_blocks:
         check_id = app.start_check(packet, token)
@@ -233,6 +214,9 @@ def _review(
             result_file,
         )
         return False
+    packet = app.m10_evidence_packet(repository, pull, token, packet)
+    evidence = packet.evidence
+    app.assert_current(packet, pull_number, token)
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay

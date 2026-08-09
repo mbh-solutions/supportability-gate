@@ -47,8 +47,16 @@ def test_discovery_is_app_selected_exact_head_and_restart_safe() -> None:
         def handoff_ready(self, repository: str, head_sha: str, token: str) -> bool:
             return repository != "owner/twmn"
 
-        def evidence_packet(self, repository: str, pull: dict[str, Any], token: str) -> object:
-            return pull
+        def evidence_packet(
+            self, repository: str, pull: dict[str, Any], token: str
+        ) -> EvidencePacket:
+            return EvidencePacket(
+                repository,
+                "b" * 40,
+                pull["head"]["sha"],
+                42,
+                {"pull_request": pull["number"], "review_state": {"threads": []}},
+            )
 
         def m10_evidence_packet(self, *args: object) -> object:
             return args[3]
@@ -212,14 +220,20 @@ def test_discovery_skips_completed_exact_generation() -> None:
         def handoff_ready(self, *args: object) -> bool:
             return True
 
-        def evidence_packet(self, *args: object) -> object:
-            return "base"
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return EvidencePacket(
+                "owner/repo",
+                "b" * 40,
+                "a" * 40,
+                42,
+                {"pull_request": 1, "review_state": {"threads": []}},
+            )
 
         def m10_evidence_packet(self, *args: object) -> object:
-            return "exact-generation"
+            return args[3]
 
         def replay_result(self, packet: object, token: str) -> bool | None:
-            assert packet == "exact-generation"
+            assert isinstance(packet, EvidencePacket)
             return True
 
     assert dispatch.discover_candidates(App(), "token") == ()  # type: ignore[arg-type]
