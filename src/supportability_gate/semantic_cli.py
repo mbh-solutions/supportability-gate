@@ -34,16 +34,23 @@ def _ensemble_summary(
     """Render bounded aggregate identities and the unsuppressed finding union."""
     lines = ["PASS" if passed else "BLOCK"]
     lines.extend(f"finding: {finding}" for finding in findings)
-    lines.extend(
-        f"response: {getattr(item, 'profile_id', 'profile')} "
-        f"round {getattr(item, 'round', '?')} | {item.response_sha256} | "
-        f"{item.returned_model} {item.reasoning_effort} | {item.parser_result}"
+    profile_order = {profile_id: index for index, profile_id in enumerate(PROFILE_IDS)}
+    attempts = [
+        (
+            (item.round, profile_order[item.profile_id]),
+            f"response: {item.profile_id} round {item.round} | {item.response_sha256} | "
+            f"{item.returned_model} {item.reasoning_effort} | {item.parser_result}",
+        )
         for item in verdicts
-    )
-    lines.extend(
-        f"attempt failure: {profile_id} round {round_number} | {code}"
+    ]
+    attempts.extend(
+        (
+            (round_number, profile_order[profile_id]),
+            f"attempt failure: {profile_id} round {round_number} | {code}",
+        )
         for profile_id, round_number, code in errors
     )
+    lines.extend(summary for _, summary in sorted(attempts))
     return "\n".join(lines)
 
 
@@ -209,6 +216,8 @@ def _review_round(
             verdicts.append(attempt.result())
         except SemanticReviewError as error:
             errors.append((profile_id, round_number, error.code))
+        except Exception:
+            errors.append((profile_id, round_number, "UNEXPECTED_ATTEMPT_FAILURE"))
     return verdicts, errors
 
 

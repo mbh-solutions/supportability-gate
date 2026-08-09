@@ -554,7 +554,10 @@ def test_production_review_missing_completion_evidence_blocks_before_graders(
     assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
-@pytest.mark.parametrize("code", ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT"])
+@pytest.mark.parametrize(
+    "code",
+    ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT", "UNEXPECTED_ATTEMPT_FAILURE"],
+)
 def test_technical_model_failure_runs_all_graders_without_trusted_completion(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
@@ -591,12 +594,14 @@ def test_technical_model_failure_runs_all_graders_without_trusted_completion(
         calls += 1
         if code == "TIMEOUT":
             raise SemanticReviewError(code)
+        if code == "UNEXPECTED_ATTEMPT_FAILURE" and args[1] == PROFILE_IDS[0]:
+            raise RuntimeError("untrusted attempt failure")
         response = _response(_m10_packet(), profile_id=str(args[1]), round_number=int(args[2]))
         if code == "INCOMPLETE_RESPONSE":
             response["status"] = "incomplete"
         elif code == "REFUSAL":
             response["output"][0]["content"][0] = {"type": "refusal", "refusal": "no"}  # type: ignore[index]
-        else:
+        elif code == "MODEL_DRIFT":
             response["model"] = "other"
         return response
 
@@ -610,6 +615,18 @@ def test_technical_model_failure_runs_all_graders_without_trusted_completion(
     assert len(app.completed) == 1
     assert app.completed[0][3] == "action_required"
     assert code in str(app.completed[0][4])
+    if code == "UNEXPECTED_ATTEMPT_FAILURE":
+        attempts = [
+            line.split(" |", 1)[0]
+            for line in str(app.completed[0][4]).splitlines()
+            if line.startswith(("response:", "attempt failure:"))
+        ]
+        assert attempts == [
+            f"{('attempt failure' if profile == PROFILE_IDS[0] else 'response')}: "
+            f"{profile} round {round_number}"
+            for round_number in (1, 2)
+            for profile in PROFILE_IDS
+        ]
 
 
 def test_deterministic_response_failure_runs_all_without_trusted_completion(

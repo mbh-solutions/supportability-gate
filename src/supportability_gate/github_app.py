@@ -225,7 +225,11 @@ class GitHubApp:
     def assert_current(self, packet: EvidencePacket, pull_number: int, token: str) -> None:
         """Reject evidence if pull-request authority, commits, or review state changed."""
         pull = self._request("GET", f"/repos/{packet.repository}/pulls/{pull_number}", token)
-        if not isinstance(pull, dict) or pull.get("state") != "open":
+        if (
+            not isinstance(pull, dict)
+            or pull.get("number") != pull_number
+            or pull.get("state") != "open"
+        ):
             raise SemanticReviewError("STALE_EVIDENCE")
         try:
             base_sha = pull["base"]["sha"]

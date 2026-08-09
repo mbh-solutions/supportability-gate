@@ -44,19 +44,19 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-concurrent-rounds"
 text = "Each round submits all four fixed specialist profiles concurrently, then collects every result in deterministic profile order before the next round starts."
-citations = ["src/supportability_gate/semantic_cli.py:183-212"]
+citations = ["src/supportability_gate/semantic_cli.py:190-221"]
 
 [[completion_report.claims]]
 id = "claim-exact-pull-isolation"
 text = "Repository identity is case-normalized and combined with the pull number to select one stable per-PR lock."
-citations = ["src/supportability_gate/semantic_cli.py:150-153"]
+citations = ["src/supportability_gate/semantic_cli.py:157-160"]
 
 [[completion_report.claims]]
 id = "claim-fast-deterministic-preflight"
 text = "Deterministic completion-report defects publish action-required and return before any specialist request begins."
-citations = ["src/supportability_gate/semantic_cli.py:248-270"]
+citations = ["src/supportability_gate/semantic_cli.py:257-279"]
 
 [[completion_report.claims]]
 id = "claim-stale-pull-rejection"
 text = "Closed pulls and pull state changes are rejected before evaluation or trusted publication."
-citations = ["src/supportability_gate/github_app.py:216-248"]
+citations = ["src/supportability_gate/github_app.py:216-252"]
