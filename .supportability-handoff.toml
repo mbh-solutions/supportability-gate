@@ -59,14 +59,14 @@ citations = ["src/supportability_gate/github_app.py:419-434", "src/supportabilit
 [[completion_report.claims]]
 id = "claim-fair-bounded-workers"
 text = "Candidates are ordered repository-round-robin with oldest pulls first, then deduplicated and launched only into two fixed worker slots."
-citations = ["src/supportability_gate/semantic_dispatch.py:90-106", "src/supportability_gate/semantic_dispatch.py:143-156"]
+citations = ["src/supportability_gate/semantic_dispatch.py:90-115", "src/supportability_gate/semantic_dispatch.py:152-167"]
 
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
 text = "Each worker uses a fixed shell-free argument vector with captured output and is killed after the fixed finite timeout."
-citations = ["src/supportability_gate/semantic_dispatch.py:109-140", "src/supportability_gate/semantic_dispatch.py:159-183"]
+citations = ["src/supportability_gate/semantic_dispatch.py:118-149", "src/supportability_gate/semantic_dispatch.py:170-194"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:186-203", "src/supportability_gate/semantic_dispatch.py:206-226"]
+citations = ["src/supportability_gate/semantic_dispatch.py:197-214", "src/supportability_gate/semantic_dispatch.py:217-244"]

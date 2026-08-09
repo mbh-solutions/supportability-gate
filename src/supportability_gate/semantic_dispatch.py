@@ -88,12 +88,21 @@ def discover_candidates(
 
 
 def fair_order(
-    candidates: tuple[Candidate, ...], after_repository: int | None = None
+    candidates: tuple[Candidate, ...],
+    after_repository: int | None = None,
+    after_pulls: dict[int, int] | None = None,
 ) -> tuple[Candidate, ...]:
     """Round-robin repositories while preserving oldest-PR order within each."""
     grouped: dict[int, list[Candidate]] = {}
     for candidate in sorted(candidates, key=lambda item: (item.created_at, item.pull_number)):
         grouped.setdefault(candidate.repository_id, []).append(candidate)
+    for repository_id, pull_number in (after_pulls or {}).items():
+        pulls = [item.pull_number for item in grouped.get(repository_id, [])]
+        if pull_number in pulls:
+            offset = pulls.index(pull_number) + 1
+            grouped[repository_id] = (
+                grouped[repository_id][offset:] + grouped[repository_id][:offset]
+            )
     repositories = list(grouped)
     if after_repository in repositories:
         offset = repositories.index(after_repository) + 1
@@ -146,6 +155,7 @@ def fill_slots(
     app_id: int,
     installation_id: int,
     private_key: Path,
+    after_pulls: dict[int, int],
 ) -> int | None:
     """Launch only nonduplicate candidates up to the fixed machine cap."""
     last_repository = None
@@ -153,6 +163,7 @@ def fill_slots(
     for candidate in waiting[: MAX_WORKERS - len(active)]:
         active[candidate.key] = launch_worker(candidate, app_id, installation_id, private_key)
         last_repository = candidate.repository_id
+        after_pulls[candidate.repository_id] = candidate.pull_number
     return last_repository
 
 
@@ -206,24 +217,31 @@ def _shadow(repositories: tuple[dict[str, Any], ...], candidates: tuple[Candidat
 def _run(arguments: argparse.Namespace, app: GitHubApp) -> int:
     active: dict[tuple[int, int], ActiveWorker] = {}
     last_repository: int | None = None
-    while True:
-        reap_workers(active)
-        token = app.installation_token()
-        repositories = app.installation_repositories(token)
-        candidates = fair_order(discover_candidates(app, token, repositories), last_repository)
-        if arguments.shadow:
-            _shadow(repositories, candidates)
-            return 0
-        launched_repository = fill_slots(
-            active,
-            candidates,
-            arguments.app_id,
-            arguments.installation_id,
-            arguments.private_key,
-        )
-        if launched_repository is not None:
-            last_repository = launched_repository
-        time.sleep(POLL_SECONDS)
+    after_pulls: dict[int, int] = {}
+    try:
+        while True:
+            reap_workers(active)
+            token = app.installation_token()
+            repositories = app.installation_repositories(token)
+            candidates = fair_order(
+                discover_candidates(app, token, repositories), last_repository, after_pulls
+            )
+            if arguments.shadow:
+                _shadow(repositories, candidates)
+                return 0
+            launched_repository = fill_slots(
+                active,
+                candidates,
+                arguments.app_id,
+                arguments.installation_id,
+                arguments.private_key,
+                after_pulls,
+            )
+            if launched_repository is not None:
+                last_repository = launched_repository
+            time.sleep(POLL_SECONDS)
+    finally:
+        reap_workers(active, float("inf"))
 
 
 def main(argv: list[str] | None = None) -> int:

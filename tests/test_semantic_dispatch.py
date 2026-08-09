@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 import supportability_gate.semantic_dispatch as dispatch
+from supportability_gate.semantic_contract import SemanticReviewError
 from supportability_gate.semantic_dispatch import ActiveWorker, Candidate
 
 
@@ -58,6 +62,7 @@ def test_fair_order_is_round_robin_oldest_pull_first() -> None:
         (1, 3),
     ]
     assert dispatch.fair_order(candidates, after_repository=1)[0].repository_id == 2
+    assert dispatch.fair_order(candidates, after_pulls={1: 1})[-1].pull_number == 1
 
 
 def test_fill_slots_deduplicates_and_caps_workers(monkeypatch: Any) -> None:
@@ -76,9 +81,11 @@ def test_fill_slots_deduplicates_and_caps_workers(monkeypatch: Any) -> None:
     monkeypatch.setattr(dispatch, "launch_worker", launch)
     active = {running.key: ActiveWorker(running, object(), 0.0)}  # type: ignore[arg-type]
 
-    assert dispatch.fill_slots(active, candidates, 42, 7, Path("key.pem")) == 2
+    after_pulls: dict[int, int] = {}
+    assert dispatch.fill_slots(active, candidates, 42, 7, Path("key.pem"), after_pulls) == 2
     assert launched == [candidates[1]]
     assert len(active) == dispatch.MAX_WORKERS
+    assert after_pulls == {2: 2}
 
 
 def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) -> None:
@@ -140,6 +147,52 @@ def test_reaper_kills_and_removes_timed_out_worker(capsys: Any) -> None:
 
     assert process.killed is True
     assert active == {}
+    assert json.loads(capsys.readouterr().out)["timed_out"] is True
+
+
+def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -> None:
+    class Process:
+        returncode = -9
+        killed = False
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            self.killed = True
+
+        def communicate(self, timeout: int) -> tuple[str, str]:
+            return "", ""
+
+    class App:
+        calls = 0
+
+        def installation_token(self) -> str:
+            self.calls += 1
+            if self.calls == 2:
+                raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE")
+            return "token"
+
+        def installation_repositories(self, token: str) -> tuple[dict[str, Any], ...]:
+            return ({"full_name": "owner/repo-1", "id": 1},)
+
+    process = Process()
+    candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    monkeypatch.setattr(dispatch, "discover_candidates", lambda *args: (candidate,))
+    monkeypatch.setattr(
+        dispatch,
+        "launch_worker",
+        lambda *args: ActiveWorker(candidate, process, 0.0),
+    )
+    monkeypatch.setattr(dispatch.time, "sleep", lambda seconds: None)
+    arguments = argparse.Namespace(
+        app_id=42, installation_id=7, private_key=Path("key.pem"), shadow=False
+    )
+
+    with pytest.raises(SemanticReviewError, match="GITHUB_TRANSPORT_FAILURE"):
+        dispatch._run(arguments, App())  # type: ignore[arg-type]
+
+    assert process.killed is True
     assert json.loads(capsys.readouterr().out)["timed_out"] is True
 
 
