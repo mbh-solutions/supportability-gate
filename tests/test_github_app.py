@@ -23,6 +23,8 @@ from supportability_gate.github_app import (
 )
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 
+AUTHORITY = GitHubApp._authority
+
 CONTRACT = b"""schema_version = "1.0"
 language = "python"
 production_paths = ["src"]
@@ -49,6 +51,21 @@ def _existing_packet_tests_use_empty_review_state(monkeypatch: pytest.MonkeyPatc
             "schema_version": "review-state.v1",
             "threads": [],
             "top_level_comments": [],
+        },
+    )
+    monkeypatch.setattr(
+        GitHubApp,
+        "_authority",
+        lambda self, repository, pull_number, pull, token: {
+            "closing_issues": [],
+            "pull_request": {
+                "body": pull.get("body", ""),
+                "number": pull_number,
+                "repository": repository,
+                "title": pull.get("title", "test pull"),
+                "updated_at": pull.get("updated_at", "2026-08-09T00:00:00Z"),
+                "url": pull.get("html_url", f"https://github.com/{repository}/pull/{pull_number}"),
+            },
         },
     )
 
@@ -536,6 +553,106 @@ def test_stale_review_state_blocks_before_publication(monkeypatch: pytest.Monkey
     monkeypatch.setattr(app, "_review_state", lambda *args: {**captured, "threads": [{}]})
     with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
         app.assert_current(packet, 3, "token")
+
+
+def test_authenticated_pr_and_closing_issue_authority_is_canonical(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    issue = {
+        "body": "Acceptance: save is durable.",
+        "number": 8,
+        "repository": {"nameWithOwner": "mbh-solutions/dc_training"},
+        "title": "Save workout",
+        "updatedAt": "2026-08-09T01:00:00Z",
+        "url": "https://github.com/mbh-solutions/dc_training/issues/8",
+    }
+    result = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "closingIssuesReferences": {
+                        "nodes": [issue],
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    }
+                }
+            }
+        }
+    }
+    app = GitHubApp(42, 7, b"unused")
+    monkeypatch.setattr(app, "_request", lambda *args: result)
+    pull = {
+        "body": "Closes #8",
+        "html_url": "https://github.com/mbh-solutions/dc_training/pull/18",
+        "number": 18,
+        "title": "Workout history",
+        "updated_at": "2026-08-09T02:00:00Z",
+    }
+
+    authority = AUTHORITY(app, "mbh-solutions/dc_training", 18, pull, "token")
+
+    assert authority == {
+        "closing_issues": [
+            {
+                "body": "Acceptance: save is durable.",
+                "number": 8,
+                "repository": "mbh-solutions/dc_training",
+                "title": "Save workout",
+                "updated_at": "2026-08-09T01:00:00Z",
+                "url": "https://github.com/mbh-solutions/dc_training/issues/8",
+            }
+        ],
+        "pull_request": {
+            "body": "Closes #8",
+            "number": 18,
+            "repository": "mbh-solutions/dc_training",
+            "title": "Workout history",
+            "updated_at": "2026-08-09T02:00:00Z",
+            "url": "https://github.com/mbh-solutions/dc_training/pull/18",
+        },
+    }
+
+
+def test_authority_edit_invalidates_evaluation(monkeypatch: pytest.MonkeyPatch) -> None:
+    authority = {"closing_issues": [], "pull_request": {"body": "original"}}
+    packet = EvidencePacket(
+        "mbh-solutions/dc_training",
+        "a" * 40,
+        "b" * 40,
+        42,
+        {"authority": authority, "review_state": {"threads": []}},
+    )
+    current = {"base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
+    monkeypatch.setattr(app, "_authority", lambda *args: {**authority, "edited": True})
+
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.assert_current(packet, 18, "token")
+
+
+def test_validated_full_diff_preserves_sql_mjs_and_markdown() -> None:
+    paths = ("supabase/migration.sql", "scripts/check.mjs", "docs/acceptance.md")
+    files = [
+        {"filename": path, "patch": "@@ -0,0 +1 @@\n+changed", "status": "added"} for path in paths
+    ]
+    diff = "\n".join(
+        f"diff --git a/{path} b/{path}\n--- /dev/null\n+++ b/{path}\n@@ -0,0 +1 @@\n+changed"
+        for path in paths
+    )
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        return (
+            _RawReply(diff)
+            if request.get_header("Accept") == "application/vnd.github.v3.diff"
+            else _Reply({"files": files})
+        )
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+    captured, captured_files = app._comparison_evidence(
+        "mbh-solutions/dc_training", "a" * 40, "b" * 40, "token"
+    )
+
+    assert captured == diff
+    assert tuple(item["filename"] for item in captured_files) == paths
 
 
 def test_exact_evidence_replay_reuses_app_result() -> None:
@@ -1059,7 +1176,7 @@ def test_binary_marker_inside_source_text_is_evidence() -> None:
     app = GitHubApp(42, 7, b"unused", opener=open_request)
     pull = {"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
     packet = app.evidence_packet("mbh-solutions/supportability-gate", pull, "token")
-    assert packet.evidence["diff"] == "No candidate responsibility declaration changed."
+    assert packet.evidence["diff"] == diff
     assert packet.evidence["reviewed_sources"][0]["lines"][0]["text"] == source.decode().strip()
 
 

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import PurePosixPath
 from typing import Any
 
 from supportability_gate.handoff_policy import ClaimReview, evaluate_completion_report
 from supportability_gate.semantic_contract import (
+    PROFILE_IDS,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
     SHA_PATTERN,
@@ -17,8 +19,11 @@ from supportability_gate.semantic_contract import (
     EvidencePacket,
     SemanticReviewError,
     SemanticVerdict,
+    profile_instruction_sha256,
     result_schema,
 )
+
+DIFF_HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
 SourceIndex = tuple[
     int,
@@ -250,10 +255,56 @@ def _boundary_evidence(
         raise SemanticReviewError("MALFORMED_SCHEMA")
     if identities != expected_boundaries:
         raise SemanticReviewError("MISSING_BOUNDARY_EVIDENCE")
-    prefixes = tuple(f"{item.path}:{item.start_line}-{item.end_line}" for item in boundaries)
+    prefixes = (
+        *(f"{item.path}:{item.start_line}-{item.end_line}" for item in boundaries),
+        *_diff_finding_prefixes(packet),
+        *_authority_finding_prefixes(packet),
+    )
     if any(not finding.startswith(prefixes) for finding in findings):
         raise SemanticReviewError("UNSUPPORTED_FINDING")
     return expected_paths, boundaries
+
+
+def _diff_finding_prefixes(packet: EvidencePacket) -> tuple[str, ...]:
+    diff = packet.evidence.get("diff")
+    if not isinstance(diff, str):
+        raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+    path: str | None = None
+    line_number: int | None = None
+    prefixes: set[str] = set()
+    for line in diff.splitlines():
+        if line.startswith("+++ b/"):
+            path = line[6:]
+            line_number = None
+            continue
+        match = DIFF_HUNK.match(line)
+        if match:
+            line_number = int(match.group(1))
+            continue
+        if path is None or line_number is None or line.startswith("\\"):
+            continue
+        if not line.startswith("-"):
+            prefixes.add(f"{path}:{line_number}")
+            line_number += 1
+    return tuple(sorted(prefixes))
+
+
+def _authority_finding_prefixes(packet: EvidencePacket) -> tuple[str, ...]:
+    authority = packet.evidence.get("authority")
+    if authority is None:
+        return ()
+    if not isinstance(authority, dict) or not isinstance(authority.get("closing_issues"), list):
+        raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+    prefixes = ["pull_request:"]
+    for issue in authority["closing_issues"]:
+        if (
+            not isinstance(issue, dict)
+            or not isinstance(issue.get("repository"), str)
+            or type(issue.get("number")) is not int
+        ):
+            raise SemanticReviewError("MALFORMED_REVIEW_EVIDENCE")
+        prefixes.append(f"issue:{issue['repository']}#{issue['number']}:")
+    return tuple(prefixes)
 
 
 def _architecture_evidence(
@@ -309,9 +360,9 @@ def _claim_reviews(value: object) -> tuple[ClaimReview, ...]:
 
 
 def _validate_bindings(data: dict[str, Any], bindings: dict[str, object]) -> None:
-    if type(data.get("app_id")) is not int:
+    if type(data.get("app_id")) is not int or type(data.get("round")) is not int:
         raise SemanticReviewError("MALFORMED_SCHEMA")
-    if any(type(data.get(key)) is not str for key in bindings if key != "app_id"):
+    if any(type(data.get(key)) is not str for key in bindings if key not in {"app_id", "round"}):
         raise SemanticReviewError("MALFORMED_SCHEMA")
     if any(data.get(key) != value for key, value in bindings.items()):
         raise SemanticReviewError("EVIDENCE_BINDING_MISMATCH")
@@ -335,7 +386,11 @@ def _response_data(packet: EvidencePacket, response: object) -> dict[str, Any]:
 
 
 def _trusted_verdict(
-    packet: EvidencePacket, data: dict[str, Any], response: dict[str, Any]
+    packet: EvidencePacket,
+    data: dict[str, Any],
+    response: dict[str, Any],
+    profile_id: str,
+    round_number: int,
 ) -> SemanticVerdict:
     findings = _findings(data)
     reviewed_paths, boundaries = _boundary_evidence(packet, data, findings)
@@ -353,6 +408,9 @@ def _trusted_verdict(
         "standard_sha256": STANDARD_SHA256,
         "model": packet.model,
         "reasoning_effort": packet.reasoning_effort,
+        "profile_id": profile_id,
+        "profile_instruction_sha256": profile_instruction_sha256(profile_id),
+        "round": round_number,
     }
     _validate_bindings(data, bindings)
     verdict = data.get("verdict")
@@ -380,6 +438,9 @@ def _trusted_verdict(
     return SemanticVerdict(
         verdict=final_verdict,
         findings=final_findings,
+        profile_id=profile_id,
+        round=round_number,
+        profile_instruction_sha256=profile_instruction_sha256(profile_id),
         app_id=packet.app_id,
         repository=packet.repository,
         base_sha=packet.base_sha,
@@ -402,9 +463,14 @@ def _trusted_verdict(
     )
 
 
-def parse_response(packet: EvidencePacket, response: object) -> SemanticVerdict:
+def parse_response(
+    packet: EvidencePacket,
+    response: object,
+    profile_id: str = PROFILE_IDS[0],
+    round_number: int = 1,
+) -> SemanticVerdict:
     """Orchestrate response parsing and exact-binding verdict validation."""
     data = _response_data(packet, response)
     if not isinstance(response, dict):
         raise SemanticReviewError("MALFORMED_RESPONSE")
-    return _trusted_verdict(packet, data, response)
+    return _trusted_verdict(packet, data, response, profile_id, round_number)

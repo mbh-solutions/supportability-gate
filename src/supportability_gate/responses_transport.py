@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from supportability_gate.semantic_contract import (
+    PROFILE_IDS,
     EvidencePacket,
     SemanticReviewError,
     request_payload,
@@ -46,10 +47,12 @@ class TransportResponse:
         return decoded[key]
 
 
-def _request(packet: EvidencePacket) -> urllib.request.Request:
+def _request(packet: EvidencePacket, profile_id: str, round_number: int) -> urllib.request.Request:
     return urllib.request.Request(
         ENDPOINT,
-        data=json.dumps(request_payload(packet), separators=(",", ":")).encode(),
+        data=json.dumps(
+            request_payload(packet, profile_id, round_number), separators=(",", ":")
+        ).encode(),
         headers={"Authorization": "Bearer sk-dummy", "Content-Type": "application/json"},
         method="POST",
     )
@@ -78,6 +81,8 @@ def _decoded_response(body: bytes) -> object:
 
 def request_response(
     packet: EvidencePacket,
+    profile_id: str = PROFILE_IDS[0],
+    round_number: int = 1,
     *,
     timeout_seconds: float = 480.0,
     opener: Callable[..., Any] = LOCAL_OPENER,
@@ -88,12 +93,12 @@ def request_response(
     if (diagnostics_root is None) != (check_id is None):
         raise ValueError("diagnostics_root and check_id must be supplied together")
     attempt = (
-        start_attempt(diagnostics_root, packet.sha256, check_id)
+        start_attempt(diagnostics_root, packet.sha256, check_id, profile_id, round_number)
         if diagnostics_root is not None and check_id is not None
         else None
     )
     try:
-        body = _response_bytes(_request(packet), timeout_seconds, opener)
+        body = _response_bytes(_request(packet, profile_id, round_number), timeout_seconds, opener)
     except SemanticReviewError as error:
         if attempt is not None:
             result = {

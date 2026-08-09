@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from supportability_gate.semantic_contract import PROFILE_IDS
+
 
 @dataclass(frozen=True)
 class Attempt:
@@ -18,6 +20,8 @@ class Attempt:
     path: Path
     evidence_sha256: str
     check_id: int
+    profile_id: str
+    round: int
     started_at: str
     started_monotonic_ns: int
 
@@ -70,9 +74,11 @@ def _attempt_content(
             "ended_at": ended_at,
             "error_code": error_code,
             "evidence_sha256": attempt.evidence_sha256,
+            "profile_id": attempt.profile_id,
             "response_file": response.filename if response else None,
             "response_sha256": response.sha256 if response else None,
             "result": result,
+            "round": attempt.round,
             "started_at": attempt.started_at,
         },
         separators=(",", ":"),
@@ -80,14 +86,24 @@ def _attempt_content(
     ).encode()
 
 
-def start_attempt(root: Path, evidence_sha256: str, check_id: int) -> Attempt:
+def start_attempt(
+    root: Path,
+    evidence_sha256: str,
+    check_id: int,
+    profile_id: str = PROFILE_IDS[0],
+    round_number: int = 1,
+) -> Attempt:
     """Persist an in-progress record before starting model transport."""
     _restricted_directory(root)
     start_ns = time.time_ns()
     attempt = Attempt(
-        root / "attempts" / f"{evidence_sha256}-{check_id}-{start_ns}-{os.getpid()}.json",
+        root
+        / "attempts"
+        / f"{evidence_sha256}-{check_id}-r{round_number}-{profile_id}-{start_ns}-{os.getpid()}.json",
         evidence_sha256,
         check_id,
+        profile_id,
+        round_number,
         _utc_now(),
         time.monotonic_ns(),
     )

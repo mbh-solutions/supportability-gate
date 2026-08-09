@@ -14,6 +14,8 @@ from supportability_gate.handoff_policy import deterministic_completion_blocks
 from supportability_gate.responses_transport import TransportResponse, request_response
 from supportability_gate.review_events import ReviewEvent, parse_review_event
 from supportability_gate.semantic_contract import (
+    PROFILE_IDS,
+    ROUNDS,
     EvidencePacket,
     SemanticReviewError,
     SemanticVerdict,
@@ -21,28 +23,39 @@ from supportability_gate.semantic_contract import (
 from supportability_gate.semantic_review import parse_response
 
 
+def _ensemble_summary(
+    passed: bool,
+    verdicts: list[SemanticVerdict],
+    errors: list[tuple[str, int, str]],
+    findings: tuple[str, ...],
+) -> str:
+    """Render bounded aggregate identities and the unsuppressed finding union."""
+    lines = ["PASS" if passed else "BLOCK"]
+    lines.extend(f"finding: {finding}" for finding in findings)
+    lines.extend(
+        f"response: {getattr(item, 'profile_id', 'profile')} "
+        f"round {getattr(item, 'round', '?')} | {item.response_sha256} | "
+        f"{item.returned_model} {item.reasoning_effort} | {item.parser_result}"
+        for item in verdicts
+    )
+    lines.extend(
+        f"attempt failure: {profile_id} round {round_number} | {code}"
+        for profile_id, round_number, code in errors
+    )
+    return "\n".join(lines)
+
+
 def _verdict_summary(verdict: SemanticVerdict) -> str:
-    """Render resolvable ownership evidence for the GitHub check summary."""
-    lines = [verdict.verdict]
-    lines.extend(f"finding: {finding}" for finding in verdict.findings)
-    lines.extend(
-        (
-            f"dependency direction: {verdict.dependency_direction}",
-            f"model: {verdict.returned_model} ({verdict.reasoning_effort})",
-            f"response SHA-256: {verdict.response_sha256}",
-            f"terminal status: {verdict.terminal_status}",
-            f"parser result: {verdict.parser_result}",
-        )
-    )
-    for item in verdict.boundaries:
-        lines.append(
-            f"{item.path}:{item.start_line}-{item.end_line} {item.kind} {item.name} | "
-            f"{item.basis} | owns: {item.owns} | does not own: {item.does_not_own} | "
-            f"evidence lines: {','.join(str(line) for line in item.evidence_lines)}"
-        )
-    lines.extend(
-        f"architecture citation: {citation}" for citation in verdict.architecture_citations
-    )
+    """Keep the focused one-response diagnostic used by qualification tests."""
+    lines = [
+        verdict.verdict,
+        f"dependency direction: {verdict.dependency_direction}",
+        f"model: {verdict.returned_model} ({verdict.reasoning_effort})",
+        f"response SHA-256: {verdict.response_sha256}",
+        f"terminal status: {verdict.terminal_status}",
+        f"parser result: {verdict.parser_result}",
+    ]
+    lines[1:1] = (f"finding: {finding}" for finding in verdict.findings)
     if not verdict.reviewed_paths:
         lines.append("No changed Python or frontend boundary.")
     return "\n".join(lines)
@@ -176,66 +189,51 @@ def _review(
         )
         else ()
     )
-    if preflight:
-        _complete_current_check(
-            app,
-            packet,
-            pull_number,
-            token,
-            check_id,
-            "failure",
-            "BLOCK\n" + "\n".join(preflight),
-        )
-        return False
-    response = (
-        request_response(packet, diagnostics_root=diagnostics_root, check_id=check_id)
-        if diagnostics_root is not None
-        else request_response(packet)
+    verdicts: list[SemanticVerdict] = []
+    errors: list[tuple[str, int, str]] = []
+    for round_number in ROUNDS:
+        for profile_id in PROFILE_IDS:
+            try:
+                response = (
+                    request_response(
+                        packet,
+                        profile_id,
+                        round_number,
+                        diagnostics_root=diagnostics_root,
+                        check_id=check_id,
+                    )
+                    if diagnostics_root is not None
+                    else request_response(packet, profile_id, round_number)
+                )
+                verdicts.append(
+                    parse_response(
+                        packet,
+                        response.decoded() if isinstance(response, TransportResponse) else response,
+                        profile_id,
+                        round_number,
+                    )
+                )
+            except SemanticReviewError as error:
+                errors.append((profile_id, round_number, error.code))
+    findings = tuple(
+        dict.fromkeys((*preflight, *(finding for item in verdicts for finding in item.findings)))
     )
-    try:
-        verdict = parse_response(
-            packet, response.decoded() if isinstance(response, TransportResponse) else response
-        )
-    except SemanticReviewError as error:
-        if error.code in {"INCOMPLETE_RESPONSE", "MODEL_DRIFT", "REFUSAL"}:
-            raise
-        diagnostic = response.diagnostic if isinstance(response, TransportResponse) else None
-        details = f"TECHNICAL_FAILURE\n{error.code}"
-        if diagnostic is not None:
-            details += (
-                f"\nresponse SHA-256: {diagnostic.sha256}\ndiagnostic file: {diagnostic.filename}"
-            )
-        _complete_current_check(
-            app,
-            packet,
-            pull_number,
-            token,
-            check_id,
-            "failure",
-            details,
-        )
-        return False
-    if verdict.verdict == "PASS":
-        _complete_current_check(
-            app,
-            packet,
-            pull_number,
-            token,
-            check_id,
-            "success",
-            _verdict_summary(verdict),
-        )
-        return True
+    passed = (
+        len(verdicts) == len(PROFILE_IDS) * len(ROUNDS)
+        and not errors
+        and not findings
+        and all(item.verdict == "PASS" for item in verdicts)
+    )
     _complete_current_check(
         app,
         packet,
         pull_number,
         token,
         check_id,
-        "failure",
-        _verdict_summary(verdict),
+        "success" if passed else "failure",
+        _ensemble_summary(passed, verdicts, errors, findings),
     )
-    return False
+    return passed
 
 
 def process_review_event(app: GitHubApp, token: str, event: ReviewEvent) -> bool:

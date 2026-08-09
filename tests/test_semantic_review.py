@@ -15,11 +15,14 @@ from supportability_gate.semantic_cli import _verdict_summary
 from supportability_gate.semantic_contract import (
     INSTRUCTION_SHA256,
     INSTRUCTION_TEXT,
+    PROFILE_IDS,
     RUBRIC_VERSION,
     SCHEMA_VERSION,
     STANDARD_SHA256,
     EvidencePacket,
     SemanticReviewError,
+    profile_instruction,
+    profile_instruction_sha256,
     request_payload,
 )
 from supportability_gate.semantic_review import parse_response
@@ -93,6 +96,8 @@ def _response(
     reviewed_paths: list[str] | None = None,
     boundaries: list[dict[str, object]] | None = None,
     claim_reviews: list[dict[str, object]] | None = None,
+    profile_id: str = PROFILE_IDS[0],
+    round_number: int = 1,
 ) -> dict[str, object]:
     sources = packet.evidence.get("reviewed_sources", [])
     citations = [
@@ -116,6 +121,9 @@ def _response(
     content = {
         "verdict": verdict,
         "findings": findings or [],
+        "profile_id": profile_id,
+        "round": round_number,
+        "profile_instruction_sha256": profile_instruction_sha256(profile_id),
         "reviewed_paths": reviewed_paths if reviewed_paths is not None else [PYTHON_PATH],
         "boundaries": boundaries if boundaries is not None else [PYTHON_BOUNDARY],
         "dependency_direction": "Verified structured import graph: "
@@ -292,7 +300,16 @@ def test_m10_deterministic_contradiction_blocks_even_if_model_claims_pass() -> N
 def test_nonproduction_review_skips_completion_preflight(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    packet = _packet({"pull_request": 3, "reviewed_sources": []})
+    packet = _packet(
+        {
+            "diff": (
+                "diff --git a/src/sample.py b/src/sample.py\n"
+                "--- /dev/null\n+++ b/src/sample.py\n@@ -0,0 +1 @@\n+pending = True"
+            ),
+            "pull_request": 3,
+            "reviewed_sources": [],
+        }
+    )
 
     class App:
         published: list[object] = []
@@ -319,7 +336,13 @@ def test_nonproduction_review_skips_completion_preflight(
     monkeypatch.setattr(
         semantic_cli,
         "request_response",
-        lambda *args: _response(packet, reviewed_paths=[], boundaries=[]),
+        lambda *args: _response(
+            packet,
+            reviewed_paths=[],
+            boundaries=[],
+            profile_id=args[1],
+            round_number=args[2],
+        ),
     )
 
     assert semantic_cli._review(  # type: ignore[arg-type]
@@ -328,7 +351,71 @@ def test_nonproduction_review_skips_completion_preflight(
     assert app.published[0][3] == "success"
 
 
-def test_production_review_missing_completion_evidence_blocks_before_model(
+@pytest.mark.parametrize("blocking_profiles", [1, 8])
+def test_ensemble_never_suppresses_and_byte_deduplicates_findings(
+    monkeypatch: pytest.MonkeyPatch, blocking_profiles: int
+) -> None:
+    packet = _packet(
+        {
+            "diff": (
+                "diff --git a/src/sample.py b/src/sample.py\n"
+                "--- /dev/null\n+++ b/src/sample.py\n@@ -0,0 +1 @@\n+pending = True"
+            ),
+            "pull_request": 3,
+            "reviewed_sources": [],
+        }
+    )
+    finding = "src/sample.py:1 Pending save can be lost during navigation."
+
+    class App:
+        completed: list[tuple[object, ...]] = []
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
+
+    calls = 0
+
+    def respond(*args: object) -> object:
+        nonlocal calls
+        calls += 1
+        blocked = calls <= blocking_profiles
+        return _response(
+            packet,
+            "BLOCK" if blocked else "PASS",
+            [finding] if blocked else [],
+            reviewed_paths=[],
+            boundaries=[],
+            profile_id=str(args[1]),
+            round_number=int(args[2]),
+        )
+
+    monkeypatch.setattr(semantic_cli, "request_response", respond)
+    app = App()
+
+    assert not semantic_cli._review(  # type: ignore[arg-type]
+        app, packet.repository, "token", {}
+    )
+    assert calls == 8
+    assert str(app.completed[0][4]).count(f"finding: {finding}") == 1
+    assert str(app.completed[0][4]).count("response:") == 8
+
+
+def test_production_review_missing_completion_evidence_still_runs_all_graders(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     packet = _packet({"pull_request": 3})
@@ -355,20 +442,24 @@ def test_production_review_missing_completion_evidence_blocks_before_model(
             self.published.append(args)
 
     app = App()
-    monkeypatch.setattr(
-        semantic_cli,
-        "request_response",
-        lambda *args: pytest.fail("missing production evidence must block before model transport"),
-    )
+    calls = 0
+
+    def respond(*args: object) -> object:
+        nonlocal calls
+        calls += 1
+        return _response(packet, profile_id=str(args[1]), round_number=int(args[2]))
+
+    monkeypatch.setattr(semantic_cli, "request_response", respond)
 
     assert not semantic_cli._review(  # type: ignore[arg-type]
         app, "mbh-solutions/supportability-gate", "token", {}
     )
+    assert calls == 8
     assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
 @pytest.mark.parametrize("code", ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT"])
-def test_technical_model_failure_publishes_no_semantic_check(
+def test_technical_model_failure_runs_all_graders_and_blocks(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
 ) -> None:
@@ -397,10 +488,14 @@ def test_technical_model_failure_publishes_no_semantic_check(
 
     app = App()
 
+    calls = 0
+
     def fail(*args: object) -> object:
+        nonlocal calls
+        calls += 1
         if code == "TIMEOUT":
             raise SemanticReviewError(code)
-        response = _response(_m10_packet())
+        response = _response(_m10_packet(), profile_id=str(args[1]), round_number=int(args[2]))
         if code == "INCOMPLETE_RESPONSE":
             response["status"] = "incomplete"
         elif code == "REFUSAL":
@@ -410,10 +505,13 @@ def test_technical_model_failure_publishes_no_semantic_check(
         return response
 
     monkeypatch.setattr(semantic_cli, "request_response", fail)
-    with pytest.raises(SemanticReviewError, match=code):
-        semantic_cli._review(app, "mbh-solutions/supportability-gate", "token", {})  # type: ignore[arg-type]
+    assert not semantic_cli._review(  # type: ignore[arg-type]
+        app, "mbh-solutions/supportability-gate", "token", {}
+    )
     assert app.started == 1
-    assert app.completed == []
+    assert calls == 8
+    assert len(app.completed) == 1
+    assert code in str(app.completed[0][-1])
 
 
 def test_deterministic_response_failure_completes_once_without_recalling_model(
@@ -464,8 +562,9 @@ def test_deterministic_response_failure_completes_once_without_recalling_model(
     assert not semantic_cli._review(  # type: ignore[arg-type]
         app, "mbh-solutions/supportability-gate", "token", {}
     )
-    assert (app.started, calls, len(app.completed)) == (1, 1, 1)
-    assert app.completed[0][3:] == ("failure", "TECHNICAL_FAILURE\nMALFORMED_SCHEMA")
+    assert (app.started, calls, len(app.completed)) == (1, 8, 1)
+    assert app.completed[0][3] == "failure"
+    assert str(app.completed[0][4]).count("MALFORMED_SCHEMA") == 8
 
 
 def test_unsupported_finding_preserves_exact_rejected_response(
@@ -496,9 +595,13 @@ def test_unsupported_finding_preserves_exact_rejected_response(
         def complete_check(self, *args: object) -> None:
             self.completed.append(args)
 
-    def transport(current: EvidencePacket, **kwargs: object) -> object:
+    def transport(
+        current: EvidencePacket, profile_id: str, round_number: int, **kwargs: object
+    ) -> object:
         return request_response(
             current,
+            profile_id,
+            round_number,
             opener=lambda *args, **opener_kwargs: reply,
             diagnostics_root=kwargs["diagnostics_root"],  # type: ignore[arg-type]
             check_id=kwargs["check_id"],  # type: ignore[arg-type]
@@ -515,18 +618,15 @@ def test_unsupported_finding_preserves_exact_rejected_response(
     filename = f"responses/{packet.sha256}-{response_sha256}.response"
     assert (tmp_path / filename).read_bytes() == reply.body
     attempts = list((tmp_path / "attempts").glob("*.json"))
-    assert len(attempts) == 1
+    assert len(attempts) == 8
+    assert all(json.loads(path.read_text())["result"] == "RESPONSE_RECEIVED" for path in attempts)
     attempt = json.loads(attempts[0].read_text())
-    assert attempt["result"] == "RESPONSE_RECEIVED"
     assert attempt["response_sha256"] == response_sha256
     assert attempt["response_file"] == filename
     assert not list(tmp_path.rglob("*.tmp"))
     summary = app.completed[0][4]
-    assert summary == (
-        "TECHNICAL_FAILURE\nUNSUPPORTED_FINDING"
-        f"\nresponse SHA-256: {response_sha256}"
-        f"\ndiagnostic file: {filename}"
-    )
+    assert str(summary).startswith("BLOCK")
+    assert str(summary).count("UNSUPPORTED_FINDING") == 8
     assert "missing exact boundary prefix" not in summary
     assert str(tmp_path) not in summary
 
@@ -873,14 +973,15 @@ def test_prompt_injection_stays_untrusted_data(injection: str) -> None:
     assert payload["text"]["format"]["strict"] is True
 
 
-def test_review_handoff_rubric_preserves_prior_controls_and_is_bound() -> None:
+def test_convergent_rubric_preserves_prior_controls_and_is_bound() -> None:
     packet = _packet({"diff": "+def handle_stuff(): pass"})
     payload = request_payload(packet)
 
-    assert RUBRIC_VERSION == "review-handoff.v1"
-    assert SCHEMA_VERSION == "semantic-review.v1"
-    assert payload["instructions"] == INSTRUCTION_TEXT
-    assert INSTRUCTION_SHA256 == hashlib.sha256(INSTRUCTION_TEXT.encode()).hexdigest()
+    assert RUBRIC_VERSION == "convergent-review.v1"
+    assert SCHEMA_VERSION == "semantic-review.v2"
+    assert payload["instructions"] == profile_instruction(PROFILE_IDS[0])
+    assert payload["instructions"].startswith(INSTRUCTION_TEXT)
+    assert payload["input"].count('"profile_instruction_sha256"') == 1
     assert INSTRUCTION_SHA256 in packet.canonical_bytes().decode()
     assert "vaguely named production helpers" in payload["instructions"]
     assert "separation of concerns" in payload["instructions"]
