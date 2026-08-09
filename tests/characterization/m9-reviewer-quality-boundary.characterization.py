@@ -27,6 +27,11 @@ def _semantic_verdict() -> str:
     content: dict[str, object] = {
         "verdict": "PASS",
         "findings": [],
+        "profile_id": semantic_contract.PROFILE_IDS[0],
+        "round": 1,
+        "profile_instruction_sha256": semantic_contract.profile_instruction_sha256(
+            semantic_contract.PROFILE_IDS[0]
+        ),
         "reviewed_paths": [],
         "boundaries": [],
         "dependency_direction": "No source dependencies.",
