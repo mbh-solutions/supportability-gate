@@ -149,7 +149,7 @@ def _evaluation_lock(path: Path) -> Iterator[None]:
 
 def _pull_lock_path(private_key: Path, repository: str, pull_number: int) -> Path:
     """Return one stable, filesystem-safe lock path for an exact pull request."""
-    identity = hashlib.sha256(f"{repository}#{pull_number}".encode()).hexdigest()
+    identity = hashlib.sha256(f"{repository.lower()}#{pull_number}".encode()).hexdigest()
     return private_key.with_name(f"semantic-review-{identity}.lock")
 
 

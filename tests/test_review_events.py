@@ -204,6 +204,7 @@ def test_pull_lock_path_is_exact_and_repository_isolated(tmp_path: Path) -> None
     first = semantic_cli._pull_lock_path(private_key, "owner/first", 7)
 
     assert first == semantic_cli._pull_lock_path(private_key, "owner/first", 7)
+    assert first == semantic_cli._pull_lock_path(private_key, "Owner/First", 7)
     assert first != semantic_cli._pull_lock_path(private_key, "owner/second", 7)
     assert first != semantic_cli._pull_lock_path(private_key, "owner/first", 8)
     assert first.parent == tmp_path
