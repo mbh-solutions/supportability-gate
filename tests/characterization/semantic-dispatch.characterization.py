@@ -33,6 +33,7 @@ def _behavior() -> dict[str, object]:
     ordered = fair_order(candidates)
     arguments = _worker_arguments(ordered[0], 42, 7, Path("key.pem"))
     assert arguments[1:] == [
+        "-I",
         "-m",
         "supportability_gate.semantic_cli",
         "--repository",
