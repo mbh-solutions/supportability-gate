@@ -633,7 +633,7 @@ class GitHubApp:
     ) -> dict[str, object]:
         """Return authenticated PR and every GitHub-linked closing issue."""
         pull_fields = {
-            "body": pull.get("body"),
+            "body": pull.get("body") or "",
             "number": pull.get("number"),
             "repository": repository,
             "title": pull.get("title"),
@@ -681,7 +681,7 @@ class GitHubApp:
     def _authority_issue(self, item: dict[str, Any]) -> dict[str, object]:
         repository = item.get("repository")
         fields: dict[str, object] = {
-            "body": item.get("body"),
+            "body": item.get("body") or "",
             "number": item.get("number"),
             "repository": repository.get("nameWithOwner") if isinstance(repository, dict) else None,
             "title": item.get("title"),

@@ -581,7 +581,7 @@ def test_authenticated_pr_and_closing_issue_authority_is_canonical(
     app = GitHubApp(42, 7, b"unused")
     monkeypatch.setattr(app, "_request", lambda *args: result)
     pull = {
-        "body": "Closes #8",
+        "body": None,
         "html_url": "https://github.com/mbh-solutions/dc_training/pull/18",
         "number": 18,
         "title": "Workout history",
@@ -602,7 +602,7 @@ def test_authenticated_pr_and_closing_issue_authority_is_canonical(
             }
         ],
         "pull_request": {
-            "body": "Closes #8",
+            "body": "",
             "number": 18,
             "repository": "mbh-solutions/dc_training",
             "title": "Workout history",

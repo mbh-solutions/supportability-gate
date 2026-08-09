@@ -260,7 +260,9 @@ def _boundary_evidence(
         *_diff_finding_prefixes(packet),
         *_authority_finding_prefixes(packet),
     )
-    if any(not finding.startswith(prefixes) for finding in findings):
+    if any(
+        not any(finding.startswith(f"{prefix} ") for prefix in prefixes) for finding in findings
+    ):
         raise SemanticReviewError("UNSUPPORTED_FINDING")
     return expected_paths, boundaries
 
@@ -368,7 +370,9 @@ def _validate_bindings(data: dict[str, Any], bindings: dict[str, object]) -> Non
         raise SemanticReviewError("EVIDENCE_BINDING_MISMATCH")
 
 
-def _response_data(packet: EvidencePacket, response: object) -> dict[str, Any]:
+def _response_data(
+    packet: EvidencePacket, response: object, *, legacy_default: bool = False
+) -> dict[str, Any]:
     if not isinstance(response, dict):
         raise SemanticReviewError("MALFORMED_RESPONSE")
     if response.get("model") != packet.model:
@@ -379,6 +383,11 @@ def _response_data(packet: EvidencePacket, response: object) -> dict[str, Any]:
         raise SemanticReviewError("MALFORMED_SCHEMA") from error
     if isinstance(data, dict) and "completion_report" not in packet.evidence:
         data.setdefault("claim_reviews", [])
+    if isinstance(data, dict) and legacy_default:
+        profile_id = PROFILE_IDS[0]
+        data.setdefault("profile_id", profile_id)
+        data.setdefault("profile_instruction_sha256", profile_instruction_sha256(profile_id))
+        data.setdefault("round", 1)
     expected = set(result_schema()["properties"])
     if not isinstance(data, dict) or set(data) != expected:
         raise SemanticReviewError("MALFORMED_SCHEMA")
@@ -466,11 +475,16 @@ def _trusted_verdict(
 def parse_response(
     packet: EvidencePacket,
     response: object,
-    profile_id: str = PROFILE_IDS[0],
-    round_number: int = 1,
+    profile_id: str | None = None,
+    round_number: int | None = None,
 ) -> SemanticVerdict:
     """Orchestrate response parsing and exact-binding verdict validation."""
-    data = _response_data(packet, response)
+    legacy_default = profile_id is None and round_number is None
+    if (profile_id is None) != (round_number is None):
+        raise SemanticReviewError("INVALID_PROFILE_BINDING")
+    profile_id = PROFILE_IDS[0] if profile_id is None else profile_id
+    round_number = 1 if round_number is None else round_number
+    data = _response_data(packet, response, legacy_default=legacy_default)
     if not isinstance(response, dict):
         raise SemanticReviewError("MALFORMED_RESPONSE")
     return _trusted_verdict(packet, data, response, profile_id, round_number)

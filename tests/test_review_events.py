@@ -237,9 +237,10 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
         lambda *args: (_ for _ in ()).throw(SemanticReviewError("MODEL_TIMEOUT")),
     )
 
-    assert not semantic_cli._review(  # type: ignore[arg-type]
-        app, packet.repository, "token", {}
-    )
+    with pytest.raises(SemanticReviewError, match="ENSEMBLE_TECHNICAL_FAILURE"):
+        semantic_cli._review(  # type: ignore[arg-type]
+            app, packet.repository, "token", {}
+        )
     assert app.calls == [
         "review",
         "current",
@@ -247,8 +248,6 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
         "current",
         "replay",
         "pending",
-        "current",
-        "complete",
     ]
 
 

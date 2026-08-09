@@ -218,6 +218,8 @@ def _review(
     findings = tuple(
         dict.fromkeys((*preflight, *(finding for item in verdicts for finding in item.findings)))
     )
+    if errors:
+        raise SemanticReviewError("ENSEMBLE_TECHNICAL_FAILURE")
     passed = (
         len(verdicts) == len(PROFILE_IDS) * len(ROUNDS)
         and not errors

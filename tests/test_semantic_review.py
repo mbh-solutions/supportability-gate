@@ -459,7 +459,7 @@ def test_production_review_missing_completion_evidence_still_runs_all_graders(
 
 
 @pytest.mark.parametrize("code", ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT"])
-def test_technical_model_failure_runs_all_graders_and_blocks(
+def test_technical_model_failure_runs_all_graders_without_trusted_completion(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
 ) -> None:
@@ -505,16 +505,16 @@ def test_technical_model_failure_runs_all_graders_and_blocks(
         return response
 
     monkeypatch.setattr(semantic_cli, "request_response", fail)
-    assert not semantic_cli._review(  # type: ignore[arg-type]
-        app, "mbh-solutions/supportability-gate", "token", {}
-    )
+    with pytest.raises(SemanticReviewError, match="ENSEMBLE_TECHNICAL_FAILURE"):
+        semantic_cli._review(  # type: ignore[arg-type]
+            app, "mbh-solutions/supportability-gate", "token", {}
+        )
     assert app.started == 1
     assert calls == 8
-    assert len(app.completed) == 1
-    assert code in str(app.completed[0][-1])
+    assert app.completed == []
 
 
-def test_deterministic_response_failure_completes_once_without_recalling_model(
+def test_deterministic_response_failure_runs_all_without_trusted_completion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     packet = _m10_packet()
@@ -556,15 +556,11 @@ def test_deterministic_response_failure_completes_once_without_recalling_model(
 
     monkeypatch.setattr(semantic_cli, "request_response", malformed)
 
-    assert not semantic_cli._review(  # type: ignore[arg-type]
-        app, "mbh-solutions/supportability-gate", "token", {}
-    )
-    assert not semantic_cli._review(  # type: ignore[arg-type]
-        app, "mbh-solutions/supportability-gate", "token", {}
-    )
-    assert (app.started, calls, len(app.completed)) == (1, 8, 1)
-    assert app.completed[0][3] == "failure"
-    assert str(app.completed[0][4]).count("MALFORMED_SCHEMA") == 8
+    with pytest.raises(SemanticReviewError, match="ENSEMBLE_TECHNICAL_FAILURE"):
+        semantic_cli._review(  # type: ignore[arg-type]
+            app, "mbh-solutions/supportability-gate", "token", {}
+        )
+    assert (app.started, calls, len(app.completed)) == (1, 8, 0)
 
 
 def test_unsupported_finding_preserves_exact_rejected_response(
@@ -610,9 +606,10 @@ def test_unsupported_finding_preserves_exact_rejected_response(
     monkeypatch.setattr(semantic_cli, "request_response", transport)
     app = App()
 
-    assert not semantic_cli._review(  # type: ignore[arg-type]
-        app, packet.repository, "token", {}, tmp_path
-    )
+    with pytest.raises(SemanticReviewError, match="ENSEMBLE_TECHNICAL_FAILURE"):
+        semantic_cli._review(  # type: ignore[arg-type]
+            app, packet.repository, "token", {}, tmp_path
+        )
 
     response_sha256 = hashlib.sha256(reply.body).hexdigest()
     filename = f"responses/{packet.sha256}-{response_sha256}.response"
@@ -624,11 +621,7 @@ def test_unsupported_finding_preserves_exact_rejected_response(
     assert attempt["response_sha256"] == response_sha256
     assert attempt["response_file"] == filename
     assert not list(tmp_path.rglob("*.tmp"))
-    summary = app.completed[0][4]
-    assert str(summary).startswith("BLOCK")
-    assert str(summary).count("UNSUPPORTED_FINDING") == 8
-    assert "missing exact boundary prefix" not in summary
-    assert str(tmp_path) not in summary
+    assert app.completed == []
 
 
 def test_evidence_packet_is_immutable_after_construction() -> None:
@@ -744,6 +737,43 @@ def test_unjustified_or_excessive_coupling_blocks_with_source_evidence() -> None
     )
 
     assert verdict.verdict == "BLOCK"
+
+
+def test_diff_finding_citation_rejects_numeric_prefix_collision() -> None:
+    packet = _packet(
+        {
+            "diff": (
+                "diff --git a/src/sample.py b/src/sample.py\n"
+                "--- /dev/null\n+++ b/src/sample.py\n@@ -0,0 +1 @@\n+changed"
+            ),
+            "reviewed_sources": [],
+        }
+    )
+
+    with pytest.raises(SemanticReviewError, match="UNSUPPORTED_FINDING"):
+        parse_response(
+            packet,
+            _response(
+                packet,
+                "BLOCK",
+                ["src/sample.py:10 Unsupported collision."],
+                reviewed_paths=[],
+                boundaries=[],
+            ),
+        )
+
+
+def test_legacy_omitted_binding_call_preserves_frozen_characterization_only() -> None:
+    packet = _packet()
+    response = _response(packet)
+    content = json.loads(response["output"][0]["content"][0]["text"])  # type: ignore[index]
+    for key in ("profile_id", "profile_instruction_sha256", "round"):
+        content.pop(key)
+    response["output"][0]["content"][0]["text"] = json.dumps(content)  # type: ignore[index]
+
+    assert parse_response(packet, response).verdict == "PASS"
+    with pytest.raises(SemanticReviewError, match="MALFORMED_SCHEMA"):
+        parse_response(packet, response, PROFILE_IDS[0], 1)
 
 
 def test_ownership_claim_requires_source_lines() -> None:
