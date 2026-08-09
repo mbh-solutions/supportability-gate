@@ -37,6 +37,7 @@ from supportability_gate.handoff_policy import (
 )
 from supportability_gate.review_state import normalize_review_state
 from supportability_gate.semantic_contract import (
+    REPOSITORY_PATTERN,
     SHA_PATTERN,
     TRUSTED_OWNER_ID,
     EvidencePacket,
@@ -230,7 +231,10 @@ class GitHubApp:
                 raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
             page += 1
         if any(
-            type(item.get("id")) is not int or not isinstance(item.get("full_name"), str)
+            type(item.get("id")) is not int
+            or item["id"] <= 0
+            or not isinstance(item.get("full_name"), str)
+            or REPOSITORY_PATTERN.fullmatch(item["full_name"]) is None
             for item in rows
         ):
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")

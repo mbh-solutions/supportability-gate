@@ -17,7 +17,9 @@ SCHEMA_VERSION = "semantic-review.v2"
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 TRUSTED_OWNER_ID = 229662739
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
-REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
+REPOSITORY_PATTERN = re.compile(
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/(?!\.{1,2}\Z)[A-Za-z0-9_.-]+\Z"
+)
 PROFILE_INSTRUCTIONS = {
     "contract-correctness": (
         "Build a complete acceptance-criteria matrix from PR and closing-issue authority, then "

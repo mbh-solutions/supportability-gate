@@ -494,9 +494,9 @@ def test_installation_repository_discovery_paginates_every_selected_repository()
         urls.append(request.full_url)
         page = 2 if "page=2" in request.full_url else 1
         repositories = (
-            [{"full_name": f"owner/repo-{number}", "id": number} for number in range(100)]
+            [{"full_name": f"owner/repo-{number}", "id": number} for number in range(1, 101)]
             if page == 1
-            else [{"full_name": "owner/repo-100", "id": 100}]
+            else [{"full_name": "owner/repo-101", "id": 101}]
         )
         return _Reply({"repositories": repositories, "total_count": 101})
 
@@ -537,6 +537,26 @@ def test_duplicate_installation_repository_identity_blocks() -> None:
     )
 
     with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.installation_repositories("token")
+
+
+@pytest.mark.parametrize(
+    "repository",
+    [
+        {"full_name": "../repo", "id": 1},
+        {"full_name": "owner/repo?query", "id": 1},
+        {"full_name": "owner/repo", "id": 0},
+    ],
+)
+def test_invalid_installation_repository_identity_blocks(repository: dict[str, Any]) -> None:
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply({"repositories": [repository], "total_count": 1}),
+    )
+
+    with pytest.raises(SemanticReviewError, match="MALFORMED_GITHUB_RESPONSE"):
         app.installation_repositories("token")
 
 

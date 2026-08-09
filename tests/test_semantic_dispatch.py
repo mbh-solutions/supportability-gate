@@ -65,6 +65,22 @@ def test_candidate_rejects_noncanonical_github_timestamp() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("repository", "pull"),
+    [
+        ({"full_name": "../repo", "id": 1}, {"number": 1}),
+        ({"full_name": "owner/repo", "id": 0}, {"number": 1}),
+        ({"full_name": "owner/repo", "id": 1}, {"number": 0}),
+    ],
+)
+def test_candidate_rejects_invalid_external_identity(
+    repository: dict[str, Any], pull: dict[str, Any]
+) -> None:
+    pull.update(created_at="2026-08-09T00:00:00Z", head={"sha": "a" * 40})
+    with pytest.raises(SemanticReviewError, match="MALFORMED_PULL_REQUEST"):
+        dispatch._candidate(repository, pull)
+
+
 def test_fair_order_is_round_robin_oldest_pull_first() -> None:
     candidates = (
         _candidate(1, 3, "2026-08-09T03:00:00Z"),
@@ -140,9 +156,11 @@ def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) 
 
     assert worker.started_at == 12.0
     assert captured["shell"] is False
+    assert captured["cwd"] == Path(dispatch.sys.executable).resolve().parent
     assert captured["stdout"] is not subprocess.PIPE
     assert captured["stderr"] is not subprocess.PIPE
     assert captured["arguments"][1:] == [
+        "-I",
         "-m",
         "supportability_gate.semantic_cli",
         "--repository",
@@ -190,6 +208,30 @@ def test_reaper_kills_and_removes_timed_out_worker(capsys: Any) -> None:
     assert process.killed is True
     assert active == {}
     assert json.loads(capsys.readouterr().out)["timed_out"] is True
+
+
+def test_reaper_tolerates_kill_after_worker_exit(capsys: Any) -> None:
+    class Process:
+        returncode = 0
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            raise ProcessLookupError
+
+        def wait(self, timeout: int) -> int:
+            return self.returncode
+
+    candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    active = {
+        candidate.key: ActiveWorker(candidate, Process(), 0.0, io.StringIO(), io.StringIO())  # type: ignore[arg-type]
+    }
+
+    dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
+
+    assert active == {}
+    assert json.loads(capsys.readouterr().out)["returncode"] == 0
 
 
 def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -> None:
@@ -291,12 +333,7 @@ def test_shutdown_fails_after_two_bounded_waits(monkeypatch: Any) -> None:
             raise subprocess.TimeoutExpired("worker", timeout)
 
     class App:
-        calls = 0
-
         def installation_token(self) -> str:
-            self.calls += 1
-            if self.calls == 2:
-                raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE")
             return "token"
 
         def installation_repositories(self, token: str) -> tuple[dict[str, Any], ...]:
@@ -307,7 +344,7 @@ def test_shutdown_fails_after_two_bounded_waits(monkeypatch: Any) -> None:
     worker = ActiveWorker(candidate, process, 0.0, io.StringIO(), io.StringIO())
     monkeypatch.setattr(dispatch, "discover_candidates", lambda *args: (candidate,))
     monkeypatch.setattr(dispatch, "launch_worker", lambda *args: worker)
-    monkeypatch.setattr(dispatch.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(dispatch.time, "monotonic", lambda: dispatch.WORKER_TIMEOUT_SECONDS + 1)
     monkeypatch.setattr(dispatch.time, "sleep", lambda seconds: None)
     monkeypatch.setattr("builtins.print", lambda *args, **kwargs: None)
     arguments = argparse.Namespace(

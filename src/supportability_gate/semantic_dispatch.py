@@ -15,7 +15,11 @@ from pathlib import Path
 from typing import IO, Any
 
 from supportability_gate.github_app import GitHubApp
-from supportability_gate.semantic_contract import SHA_PATTERN, SemanticReviewError
+from supportability_gate.semantic_contract import (
+    REPOSITORY_PATTERN,
+    SHA_PATTERN,
+    SemanticReviewError,
+)
 
 POLL_SECONDS = 60
 MAX_WORKERS = 2
@@ -65,8 +69,11 @@ def _candidate(repository: dict[str, Any], pull: dict[str, Any]) -> Candidate:
     head_sha = head.get("sha") if isinstance(head, dict) else None
     if (
         type(repository_id) is not int
+        or repository_id <= 0
         or not isinstance(name, str)
+        or REPOSITORY_PATTERN.fullmatch(name) is None
         or type(pull_number) is not int
+        or pull_number <= 0
         or not isinstance(created_at, str)
         or CREATED_AT_PATTERN.fullmatch(created_at) is None
         or not isinstance(head_sha, str)
@@ -131,6 +138,7 @@ def _worker_arguments(
 ) -> list[str]:
     return [
         sys.executable,
+        "-I",
         "-m",
         "supportability_gate.semantic_cli",
         "--repository",
@@ -161,6 +169,7 @@ def launch_worker(
             stderr=stderr,
             text=True,
             shell=False,
+            cwd=Path(sys.executable).resolve().parent,
         )
     except Exception:
         stdout.close()
@@ -193,11 +202,17 @@ def fill_slots(
 def _terminate_worker(worker: ActiveWorker, timed_out: bool) -> bool:
     """Return only after one worker terminates or two bounded kill waits fail."""
     if timed_out:
-        worker.process.kill()
+        try:
+            worker.process.kill()
+        except OSError:
+            pass
     try:
         worker.process.wait(timeout=30)
     except subprocess.TimeoutExpired:
-        worker.process.kill()
+        try:
+            worker.process.kill()
+        except OSError:
+            pass
         try:
             worker.process.wait(timeout=30)
         except subprocess.TimeoutExpired:
@@ -271,9 +286,14 @@ def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
     active: dict[tuple[int, int], ActiveWorker] = {}
     last_repository: int | None = None
     after_pulls: dict[int, int] = {}
+    reap_failed = False
     try:
         while True:
-            reap_workers(active)
+            try:
+                reap_workers(active)
+            except subprocess.SubprocessError:
+                reap_failed = True
+                raise
             token = app.installation_token()
             repositories = app.installation_repositories(token)
             candidates = fair_order(
@@ -294,7 +314,7 @@ def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
                 last_repository = launched_repository
             time.sleep(POLL_SECONDS)
     finally:
-        if active:
+        if active and not reap_failed:
             reap_workers(active, float("inf"))
 
 
