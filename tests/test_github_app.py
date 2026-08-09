@@ -510,6 +510,22 @@ def test_closed_exact_pull_blocks_before_evaluation() -> None:
         app.pull("mbh-solutions/supportability-gate", 3, "token")
 
 
+def test_boolean_pull_number_cannot_impersonate_integer_identity() -> None:
+    current = {
+        "base": {"sha": "a" * 40},
+        "head": {"sha": "b" * 40},
+        "number": True,
+        "state": "open",
+    }
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
+
+    with pytest.raises(SemanticReviewError, match="MALFORMED_PULL_REQUEST"):
+        app.pull("mbh-solutions/supportability-gate", 1, "token")
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.assert_current(packet, 1, "token")
+
+
 def test_semantic_source_collection_has_no_total_line_ceiling(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

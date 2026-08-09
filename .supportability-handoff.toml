@@ -60,4 +60,4 @@ citations = ["src/supportability_gate/semantic_cli.py:257-279"]
 [[completion_report.claims]]
 id = "claim-stale-pull-rejection"
 text = "Closed pulls and pull state changes are rejected before evaluation or trusted publication."
-citations = ["src/supportability_gate/github_app.py:216-252"]
+citations = ["src/supportability_gate/github_app.py:216-258"]
