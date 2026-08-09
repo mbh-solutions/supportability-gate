@@ -19,6 +19,7 @@ from typing import Any
 from mccabe import PathGraphingAstVisitor  # type: ignore[import-untyped]
 from tree_sitter import Node
 
+from supportability_gate import __version__
 from supportability_gate.function_changes import FunctionDefinition, FunctionSpan
 
 RUFF_TIMEOUT_SECONDS = 60
@@ -298,7 +299,7 @@ def tool_versions() -> dict[str, str]:
         "mccabe": importlib.metadata.version("mccabe"),
         "python": platform.python_version(),
         "ruff": importlib.metadata.version("ruff"),
-        "supportability_gate": "0.1.0",
+        "supportability_gate": __version__,
         "tree_sitter": importlib.metadata.version("tree-sitter"),
         "tree_sitter_typescript": importlib.metadata.version("tree-sitter-typescript"),
     }

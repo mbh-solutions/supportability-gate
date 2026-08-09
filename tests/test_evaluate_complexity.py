@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from supportability_gate import (
+    __version__,
     cli,
     complexity_metrics,
     complexity_policy,
@@ -17,6 +18,11 @@ from supportability_gate import (
     quality_profile,
     reporting,
 )
+
+
+def test_reported_package_version_matches_distribution_version() -> None:
+    assert complexity_metrics.tool_versions()["supportability_gate"] == __version__ == "0.2.0"
+
 
 WORKFLOW_SHA = "f" * 40
 
