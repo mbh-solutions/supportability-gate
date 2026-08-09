@@ -767,6 +767,31 @@ def test_diff_finding_citation_rejects_numeric_prefix_collision() -> None:
         )
 
 
+def test_diff_finding_accepts_exact_line_with_colon_delimiter() -> None:
+    packet = _packet(
+        {
+            "diff": (
+                "diff --git a/README.md b/README.md\n"
+                "--- /dev/null\n+++ b/README.md\n@@ -0,0 +1 @@\n+changed"
+            ),
+            "reviewed_sources": [],
+        }
+    )
+
+    verdict = parse_response(
+        packet,
+        _response(
+            packet,
+            "BLOCK",
+            ["README.md:1: Acceptance criteria are missing."],
+            reviewed_paths=[],
+            boundaries=[],
+        ),
+    )
+
+    assert verdict.verdict == "BLOCK"
+
+
 def test_legacy_omitted_binding_call_preserves_frozen_characterization_only() -> None:
     packet = _packet()
     response = _response(packet)
