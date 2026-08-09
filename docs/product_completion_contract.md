@@ -1196,13 +1196,84 @@ workflow, check-run, ruleset, or GitHub state supports them.
   `Complete / Complete / On scope / Yes` and closes the Project. No implementation, evidence,
   runtime, canary, or cleanup work remains. Stop afterward; no successor work is authorized.
 
+## Critical maintenance — Project #3 issue #116
+
+- TWMN convergent semantic-review deployment: `COMPLETE` when this protected ledger commit enters
+  `main`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: owner-authorized issue #116 under reopened Project #3, including its authenticated
+  completion-evidence registry and closure-transaction semantics. Scope was TWMN scheduled-task
+  runtime/timeout cutover plus one temporary never-merged canary. Reviewer source, TWMN main,
+  product/runtime code, workflow pin, rulesets, and other repository tasks were excluded. The
+  issue registry is the self-contained owner acceptance oracle for these exact deployment facts;
+  this ledger transcribes that authority rather than introducing new operational claims.
+- Completion evidence:
+  - TWMN main remained `4960c784e099ee675cae098024e957b54598033a`. Scheduled task
+    `Supportability Semantic Review - TWMN` now uses executable
+    `runtime-issue109-92d90bf\Scripts\pythonw.exe`, working directory
+    `runtime-issue109-92d90bf`, package `0.2.0`, and limit `PT1H30M`. Repository, App `4418989`,
+    installation `149688216`, key argument, enabled state, one-minute interval, `IgnoreNew`, and
+    start boundary `2026-07-28T16:00:04-05:00` remained unchanged. Source retains start boundary
+    `2026-07-28T15:59:34-05:00`, preserving the 30-second offset. The installed shared exclusive
+    evaluation lock remained unchanged. Authenticated final task state was `Ready`; task XML
+    SHA-256 was
+    `8cf00c195ff97fc3fcad67e7aebc74bab68bf1d1bb0dc2d05946c6d52efaffd2`.
+  - Temporary TWMN issue #64 and never-merged PR #65 used base
+    `4960c784e099ee675cae098024e957b54598033a`. Initial defect head
+    `1078c5d1c2dc0fe4b7ba9e9ade18e69675120009` passed deterministic workflow checks; semantic
+    check `93251643126` then blocked on seven unresolved automated-review threads with evidence
+    SHA-256 `ddb4d673d5948693beb75a43f0112a873db5943f251d6c851c3e0958b80b41c6`.
+    Deliberate-canary findings were captured and resolved solely to exercise the ensemble on a
+    fresh head.
+  - Fresh defect head `187b1f95ecfd44fa5aaf1be2cd329ef2f509ee1a` kept all seven seeded
+    categories. Check `93252874141` completed all eight attempts and reported together mixed Home
+    ownership, mixed Assignment ownership, unchecked Supabase cast, pending-save Back/stale
+    completion, nullable SQL ownership, fail-open MJS handling, and missing acceptance guidance.
+    Evidence SHA-256 was `a92948b9ba2749ace3e6c1c5f88c43b9c6a13553a6966f4f3c8fbf953895081a`.
+    Its five trusted response SHA-256 identities were
+    `643a7767ab60802306ddaf1e39e4ca089b15ab9978a9d873dc659ab539bce1b9`,
+    `c2e2f4899e85a6023201cf1d11beef4a495e05b70a042edb8cf2d10fa1a3cc02`,
+    `c16ad2ec39c4b97c959ff8daa41aa94c68754fc0f84e5c76213b973b97717e2e`,
+    `950e3c4183f477b94169d0cba2d0505703ad027452dad0e9e7954eeca1b6dccd`, and
+    `c26003ff2482ab46357c24199de8237eb8fbe22a2c1f26f63d5af8d3165d2c3d`; three remaining
+    attempts failed parser support checks and stayed untrusted.
+  - `action_required` technical aggregates are intentionally retryable. Scheduled reconciliation
+    therefore produced check `93253658496` on the same evidence SHA before the task could be
+    disabled at natural idle. It again completed eight attempts, retained every category, and
+    remained fail-closed; this was technical recovery, not trusted success/failure replay.
+  - Every canary head was a distinct fresh commit. No completed passing or failed job was manually
+    rerun: initial defect `1078c5d1c2dc0fe4b7ba9e9ade18e69675120009`, ensemble defect
+    `187b1f95ecfd44fa5aaf1be2cd329ef2f509ee1a`, and corrected
+    `5b4a1c4827e0467246d9c5a2a6f449eb3b8e52d6`. Check `93253658496` was an automatic retry of
+    an `action_required` technical aggregate, not a trusted `success` or `failure` rerun.
+  - Corrected fresh head `5b4a1c4827e0467246d9c5a2a6f449eb3b8e52d6` contained one truthful
+    Markdown sentence. Check `93254665236` passed all eight graders with evidence SHA-256
+    `1bd162b42a7d561b3ffb664ef0fff48a9e51e68b6e80dfce80ef7f9d35c0eeaf`. Its response
+    SHA-256 identities were `13ea6166a9effabf4254ac106331aad31c6d3581d9fedf91abca2dca6b8ff0c5`,
+    `f79755d073053ea81f8ca1a6438af97086b00b07d7c2edcc4841eab33088118b`,
+    `cd3e0fb0339ec64b52f810a9977796d619997a1aba40cd2072b48a15c0abc676`,
+    `49dd86677292519f7c53c080b90e24428da4543e552fa64b96b082f92a62ef78`,
+    `a8e216e7833d4a65adfba41d28668ec7be0ca491187ade106d0b5533bd18260b`,
+    `c05b0580c1e4a51f4225f0a89593c385287013d586d84c8e7961ceaa8d11fc6e`,
+    `145c3effbd9c6243595b864130222c9817b7bc92f8bdaa25ff0328ff1ceddcc0`, and
+    `0bae40e7d2463ccb43f369315815ed95881009c197675b84c54d19ce53e88024`.
+  - Ruleset `19913103` remained active with zero bypass actors and workflow pin
+    `40341076b5edc3774e33d2f4f48efefa9f6a1d36`. Ruleset `20081233` remained active with zero
+    bypass actors and requires Gate App `15368` plus Semantic App `4418989`. PR #65 closed
+    unmerged, issue #64 closed, temporary branch deleted, and no open TWMN PR remained.
+- Remaining limitations: two clean rounds reduce latent detection but do not mathematically prove
+  every unknown defect absent. Parser/transport failures remain fail-closed and retryable, so an
+  `action_required` head may make new calls until a technically complete result or fresh head.
+- Closure transaction: protected merge makes this ledger canonical and closes issue #116; immediate
+  synchronization then sets Project #3 to `Complete / Complete / On scope / Yes` and closes the
+  Project. No successor work is authorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #109 maintenance is complete; stop
+Current authorized work: NONE — Project #3 issue #116 maintenance is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
