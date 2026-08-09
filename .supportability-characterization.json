@@ -87,6 +87,13 @@
       ],
       "id": "architecture-modularity-baseline",
       "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/__init__.py"
+      ],
+      "id": "package-version",
+      "kind": "regression"
     }
   ],
   "schema_version": "1.0"
