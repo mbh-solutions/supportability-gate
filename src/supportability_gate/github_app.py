@@ -204,6 +204,38 @@ class GitHubApp:
             raise SemanticReviewError("INSTALLATION_AUTHENTICATION_FAILURE")
         return token
 
+    def installation_repositories(self, token: str) -> tuple[dict[str, Any], ...]:
+        """Return every repository selected for this App installation."""
+        rows: list[dict[str, Any]] = []
+        page = 1
+        total: int | None = None
+        while total is None or len(rows) < total:
+            result = self._request(
+                "GET", f"/installation/repositories?per_page=100&page={page}", token
+            )
+            repositories = result.get("repositories") if isinstance(result, dict) else None
+            current_total = result.get("total_count") if isinstance(result, dict) else None
+            if (
+                type(current_total) is not int
+                or current_total < 0
+                or not isinstance(repositories, list)
+                or any(not isinstance(item, dict) for item in repositories)
+            ):
+                raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+            if total is not None and current_total != total:
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+            total = current_total
+            rows.extend(repositories)
+            if len(rows) > total or (len(repositories) < 100 and len(rows) != total):
+                raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
+            page += 1
+        if any(
+            type(item.get("id")) is not int or not isinstance(item.get("full_name"), str)
+            for item in rows
+        ):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        return tuple(rows)
+
     def open_pulls(self, repository: str, token: str) -> tuple[dict[str, Any], ...]:
         """Return open pull requests from GitHub's immutable SHA metadata."""
         result = self._request("GET", f"/repos/{repository}/pulls?state=open&per_page=100", token)
@@ -383,6 +415,23 @@ class GitHubApp:
         if ordered[0].get("conclusion") != "success":
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
         return tuple(run for run in ordered if run.get("conclusion") == "success")
+
+    def handoff_ready(self, repository: str, head_sha: str, token: str) -> bool:
+        """Report whether one successful exact-head prerequisite artifact exists."""
+        try:
+            runs = self._handoff_runs(repository, head_sha, token)
+        except SemanticReviewError as error:
+            if error.code == "HANDOFF_EVIDENCE_UNAVAILABLE":
+                return False
+            raise
+        for run in runs:
+            try:
+                self._handoff_artifact(repository, run, token)
+                return True
+            except SemanticReviewError as error:
+                if error.code != "HANDOFF_EVIDENCE_UNAVAILABLE":
+                    raise
+        return False
 
     @staticmethod
     def _handoff_run_order(run: dict[str, Any]) -> tuple[datetime, int]:

@@ -487,6 +487,74 @@ def test_installation_auth_verifies_app_identity() -> None:
     assert app.installation_token() == "installation-token"
 
 
+def test_installation_repository_discovery_paginates_every_selected_repository() -> None:
+    urls: list[str] = []
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        urls.append(request.full_url)
+        page = 2 if "page=2" in request.full_url else 1
+        repositories = (
+            [{"full_name": f"owner/repo-{number}", "id": number} for number in range(100)]
+            if page == 1
+            else [{"full_name": "owner/repo-100", "id": 100}]
+        )
+        return _Reply({"repositories": repositories, "total_count": 101})
+
+    app = GitHubApp(42, 7, b"unused", opener=open_request)
+
+    assert len(app.installation_repositories("token")) == 101
+    assert urls[-1].endswith("/installation/repositories?per_page=100&page=2")
+
+
+def test_incomplete_installation_repository_page_blocks() -> None:
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply(
+            {"repositories": [{"full_name": "owner/repo", "id": 1}], "total_count": 2}
+        ),
+    )
+
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.installation_repositories("token")
+
+
+def test_handoff_ready_requires_successful_exact_head_artifact() -> None:
+    head_sha = "b" * 40
+    replies = iter(
+        [
+            {
+                "workflow_runs": [
+                    {
+                        "conclusion": "success",
+                        "event": "pull_request",
+                        "head_sha": head_sha,
+                        "id": 123,
+                        "path": ".github/workflows/organization-required.yml",
+                        "run_attempt": 1,
+                        "status": "completed",
+                        "updated_at": "2026-08-09T17:00:00Z",
+                    }
+                ]
+            },
+            {
+                "artifacts": [
+                    {
+                        "digest": f"sha256:{'c' * 64}",
+                        "expired": False,
+                        "id": 456,
+                        "name": "supportability-evidence-123-1",
+                    }
+                ]
+            },
+        ]
+    )
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(next(replies)))
+
+    assert app.handoff_ready("owner/repo", head_sha, "token") is True
+
+
 def test_wrong_app_identity_blocks() -> None:
     app = GitHubApp(42, 7, _private_key(), opener=lambda *args, **kwargs: _Reply({"id": 41}))
     with pytest.raises(SemanticReviewError, match="APP_IDENTITY_MISMATCH"):

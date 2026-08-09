@@ -2,28 +2,32 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "377528d08fcc3a251512f3cff402be5d19751835"
+base_sha = "d6c17ce518a1e2e3b4ff5a7642ee5b6b266ec660"
 overall_result = "PASS"
 responsibility_changes = [
-    "One exact pull worker owns its repository/PR lock, runs four specialists concurrently per round, preserves the round barrier, and rejects deterministic completion defects before model transport.",
+    "semantic_dispatch owns App-selected repository discovery, exact-head eligibility, fair queueing, fixed worker launch, and bounded process monitoring; the existing exact-pull worker retains evidence, review, replay, and check publication.",
 ]
 simplified_functions = [
-    "GitHubApp.assert_current",
-    "GitHubApp.pull",
-    "_ensemble_summary",
-    "_evaluation_lock",
+    "Candidate.key",
+    "GitHubApp.handoff_ready",
+    "GitHubApp.installation_repositories",
+    "_candidate",
     "_parser",
-    "_pull_lock_path",
-    "_review",
-    "_review_attempt",
-    "_review_round",
+    "_run",
+    "_shadow",
+    "_worker_arguments",
+    "discover_candidates",
+    "fair_order",
+    "fill_slots",
+    "launch_worker",
     "main",
+    "reap_workers",
 ]
 boundary_rationale = [
-    "semantic_cli owns exact-pull execution and concurrency; GitHubApp owns authenticated pull state; existing transport, evidence, parsing, replay, and check publication remain unchanged.",
+    "semantic_dispatch depends on GitHubApp and launches semantic_cli by fixed module argument vector; neither GitHubApp nor the exact-pull worker depends on dispatcher orchestration.",
 ]
 remaining_risks = [
-    "Throughput remains capped by gateway latency and future dispatcher capacity; transport or parser failure still prevents PASS.",
+    "Production remains on legacy per-repository tasks until separately authorized S02 cutover; dispatcher throughput is intentionally capped at two active pull workers.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -43,21 +47,26 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-concurrent-rounds"
-text = "Each round submits all four fixed specialist profiles concurrently, then collects every result in deterministic profile order before the next round starts."
-citations = ["src/supportability_gate/semantic_cli.py:190-221"]
+id = "claim-app-selected-pagination"
+text = "Repository discovery paginates until the authenticated installation total is complete and rejects malformed or incomplete pages."
+citations = ["src/supportability_gate/github_app.py:207-237"]
 
 [[completion_report.claims]]
-id = "claim-exact-pull-isolation"
-text = "Repository identity is case-normalized and combined with the pull number to select one stable per-PR lock."
-citations = ["src/supportability_gate/semantic_cli.py:157-160"]
+id = "claim-exact-head-readiness"
+text = "A pull becomes eligible only after one successful exact-head organization-required workflow artifact exists."
+citations = ["src/supportability_gate/github_app.py:419-434", "src/supportability_gate/semantic_dispatch.py:72-87"]
 
 [[completion_report.claims]]
-id = "claim-fast-deterministic-preflight"
-text = "Deterministic completion-report defects publish action-required and return before any specialist request begins."
-citations = ["src/supportability_gate/semantic_cli.py:257-279"]
+id = "claim-fair-bounded-workers"
+text = "Candidates are ordered repository-round-robin with oldest pulls first, then deduplicated and launched only into two fixed worker slots."
+citations = ["src/supportability_gate/semantic_dispatch.py:90-106", "src/supportability_gate/semantic_dispatch.py:143-156"]
 
 [[completion_report.claims]]
-id = "claim-stale-pull-rejection"
-text = "Closed pulls and pull state changes are rejected before evaluation or trusted publication."
-citations = ["src/supportability_gate/github_app.py:216-257"]
+id = "claim-safe-process-boundary"
+text = "Each worker uses a fixed shell-free argument vector with captured output and is killed after the fixed finite timeout."
+citations = ["src/supportability_gate/semantic_dispatch.py:109-140", "src/supportability_gate/semantic_dispatch.py:159-183"]
+
+[[completion_report.claims]]
+id = "claim-shadow-no-publish"
+text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
+citations = ["src/supportability_gate/semantic_dispatch.py:186-203", "src/supportability_gate/semantic_dispatch.py:206-226"]
