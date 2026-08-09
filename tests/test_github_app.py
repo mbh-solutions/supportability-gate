@@ -499,6 +499,33 @@ def test_open_pull_truncation_blocks() -> None:
         app.open_pulls("mbh-solutions/supportability-gate", "token")
 
 
+def test_closed_exact_pull_blocks_before_evaluation() -> None:
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply({"number": 3, "state": "closed"}),
+    )
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.pull("mbh-solutions/supportability-gate", 3, "token")
+
+
+def test_boolean_pull_number_cannot_impersonate_integer_identity() -> None:
+    current = {
+        "base": {"sha": "a" * 40},
+        "head": {"sha": "b" * 40},
+        "number": True,
+        "state": "open",
+    }
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
+
+    with pytest.raises(SemanticReviewError, match="MALFORMED_PULL_REQUEST"):
+        app.pull("mbh-solutions/supportability-gate", 1, "token")
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.assert_current(packet, 1, "token")
+
+
 def test_semantic_source_collection_has_no_total_line_ceiling(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -526,7 +553,25 @@ def test_semantic_source_collection_has_no_total_line_ceiling(
 
 def test_stale_pull_evidence_blocks_before_publication() -> None:
     packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
-    current = {"base": {"sha": "c" * 40}, "head": {"sha": "b" * 40}}
+    current = {
+        "base": {"sha": "c" * 40},
+        "head": {"sha": "b" * 40},
+        "number": 3,
+        "state": "open",
+    }
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
+    with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
+        app.assert_current(packet, 3, "token")
+
+
+def test_wrong_pull_number_blocks_before_publication() -> None:
+    packet = EvidencePacket("mbh-solutions/supportability-gate", "a" * 40, "b" * 40, 42, {})
+    current = {
+        "base": {"sha": "a" * 40},
+        "head": {"sha": "b" * 40},
+        "number": 4,
+        "state": "open",
+    }
     app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
     with pytest.raises(SemanticReviewError, match="STALE_EVIDENCE"):
         app.assert_current(packet, 3, "token")
@@ -547,7 +592,12 @@ def test_stale_review_state_blocks_before_publication(monkeypatch: pytest.Monkey
         42,
         {"review_state": captured},
     )
-    current = {"base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    current = {
+        "base": {"sha": "a" * 40},
+        "head": {"sha": "b" * 40},
+        "number": 3,
+        "state": "open",
+    }
     app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
     monkeypatch.setattr(app, "issue_comments", lambda *args: ())
     monkeypatch.setattr(app, "_review_state", lambda *args: {**captured, "threads": [{}]})
@@ -621,7 +671,12 @@ def test_authority_edit_invalidates_evaluation(monkeypatch: pytest.MonkeyPatch) 
         42,
         {"authority": authority, "review_state": {"threads": []}},
     )
-    current = {"base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}
+    current = {
+        "base": {"sha": "a" * 40},
+        "head": {"sha": "b" * 40},
+        "number": 18,
+        "state": "open",
+    }
     app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(current))
     monkeypatch.setattr(app, "_authority", lambda *args: {**authority, "edited": True})
 

@@ -216,13 +216,26 @@ class GitHubApp:
     def pull(self, repository: str, pull_number: int, token: str) -> dict[str, Any]:
         """Return current authenticated pull-request metadata for event reconciliation."""
         result = self._request("GET", f"/repos/{repository}/pulls/{pull_number}", token)
-        if not isinstance(result, dict) or result.get("number") != pull_number:
+        if (
+            not isinstance(result, dict)
+            or type(result.get("number")) is not int
+            or result["number"] != pull_number
+        ):
             raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+        if result.get("state") != "open":
+            raise SemanticReviewError("STALE_EVIDENCE")
         return result
 
     def assert_current(self, packet: EvidencePacket, pull_number: int, token: str) -> None:
         """Reject evidence if pull-request authority, commits, or review state changed."""
         pull = self._request("GET", f"/repos/{packet.repository}/pulls/{pull_number}", token)
+        if (
+            not isinstance(pull, dict)
+            or type(pull.get("number")) is not int
+            or pull["number"] != pull_number
+            or pull.get("state") != "open"
+        ):
+            raise SemanticReviewError("STALE_EVIDENCE")
         try:
             base_sha = pull["base"]["sha"]
             head_sha = pull["head"]["sha"]

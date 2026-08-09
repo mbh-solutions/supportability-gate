@@ -2,19 +2,28 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "3e942e7a546537776eac538fb0a15c39cb28d687"
+base_sha = "377528d08fcc3a251512f3cff402be5d19751835"
 overall_result = "PASS"
 responsibility_changes = [
-    "Specialist prompts now require exhaustive acceptance, async-interleaving, and trust-boundary analysis, while exact diff citations accept the model's standard colon delimiter.",
+    "One exact pull worker owns its repository/PR lock, runs four specialists concurrently per round, preserves the round barrier, and rejects deterministic completion defects before model transport.",
 ]
 simplified_functions = [
-    "_boundary_evidence",
+    "GitHubApp.assert_current",
+    "GitHubApp.pull",
+    "_ensemble_summary",
+    "_evaluation_lock",
+    "_parser",
+    "_pull_lock_path",
+    "_review",
+    "_review_attempt",
+    "_review_round",
+    "main",
 ]
 boundary_rationale = [
-    "semantic_contract owns fixed grader instructions; semantic_review alone validates exact evidence citations; the qualification harness owns oracle fixtures and matching.",
+    "semantic_cli owns exact-pull execution and concurrency; GitHubApp owns authenticated pull state; existing transport, evidence, parsing, replay, and check publication remain unchanged.",
 ]
 remaining_risks = [
-    "Two rounds materially reduce latent detection but cannot prove absence of every unknown defect; transport or parser failure still prevents PASS.",
+    "Throughput remains capped by gateway latency and future dispatcher capacity; transport or parser failure still prevents PASS.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -34,11 +43,21 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-convergent-oracle"
-text = "The fixed specialists explicitly trace acceptance actions, pending async navigation, stale completion, and untrusted external values, while diff-only evidence remains outside parser boundary claims."
-citations = ["src/supportability_gate/semantic_contract.py:23-23", "src/supportability_gate/semantic_contract.py:28-28", "src/supportability_gate/semantic_contract.py:38-38", "src/supportability_gate/semantic_contract.py:336-337"]
+id = "claim-concurrent-rounds"
+text = "Each round submits all four fixed specialist profiles concurrently, then collects every result in deterministic profile order before the next round starts."
+citations = ["src/supportability_gate/semantic_cli.py:190-221"]
 
 [[completion_report.claims]]
-id = "claim-exact-citation-delimiter"
-text = "Exact diff line citations accept either a space or colon-space delimiter without accepting numeric prefix collisions."
-citations = ["src/supportability_gate/semantic_review.py:265-266"]
+id = "claim-exact-pull-isolation"
+text = "Repository identity is case-normalized and combined with the pull number to select one stable per-PR lock."
+citations = ["src/supportability_gate/semantic_cli.py:157-160"]
+
+[[completion_report.claims]]
+id = "claim-fast-deterministic-preflight"
+text = "Deterministic completion-report defects publish action-required and return before any specialist request begins."
+citations = ["src/supportability_gate/semantic_cli.py:257-279"]
+
+[[completion_report.claims]]
+id = "claim-stale-pull-rejection"
+text = "Closed pulls and pull state changes are rejected before evaluation or trusted publication."
+citations = ["src/supportability_gate/github_app.py:216-257"]

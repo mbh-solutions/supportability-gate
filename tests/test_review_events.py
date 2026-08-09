@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -53,6 +55,8 @@ def _pass_verdict() -> object:
             "dependency_direction": "preserved",
             "architecture_citations": (),
             "findings": (),
+            "profile_id": "contract-correctness",
+            "round": 1,
             "returned_model": "model",
             "reasoning_effort": "medium",
             "response_sha256": "c" * 64,
@@ -191,12 +195,114 @@ def test_new_event_invalidates_without_concurrent_model_evaluation() -> None:
     assert app.pending == [packet.sha256]
 
 
-def test_only_one_scheduled_evaluator_can_hold_the_runtime_lock(tmp_path: Path) -> None:
+def test_only_one_exact_pull_worker_can_hold_its_lock(tmp_path: Path) -> None:
     lock = tmp_path / "semantic-review.lock"
     with semantic_cli._evaluation_lock(lock):
         with pytest.raises(SemanticReviewError, match="EVALUATION_IN_PROGRESS"):
             with semantic_cli._evaluation_lock(lock):
                 pytest.fail("concurrent evaluator acquired the runtime lock")
+
+
+def test_pull_lock_path_is_exact_and_repository_isolated(tmp_path: Path) -> None:
+    private_key = tmp_path / "key.pem"
+    first = semantic_cli._pull_lock_path(private_key, "owner/first", 7)
+
+    assert first == semantic_cli._pull_lock_path(private_key, "owner/first", 7)
+    assert first == semantic_cli._pull_lock_path(private_key, "Owner/First", 7)
+    assert first != semantic_cli._pull_lock_path(private_key, "owner/second", 7)
+    assert first != semantic_cli._pull_lock_path(private_key, "owner/first", 8)
+    assert first.parent == tmp_path
+
+
+def test_main_reviews_only_the_requested_pull(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_key = tmp_path / "key.pem"
+    private_key.write_bytes(b"key")
+    observed: list[object] = []
+
+    class App:
+        def installation_token(self) -> str:
+            return "token"
+
+        def pull(self, repository: str, pull_number: int, token: str) -> dict[str, object]:
+            observed.append((repository, pull_number, token))
+            return {"number": pull_number}
+
+    monkeypatch.setattr(semantic_cli, "GitHubApp", lambda *args: App())
+
+    def review(*args: object) -> bool:
+        observed.append(args[3])
+        return True
+
+    monkeypatch.setattr(semantic_cli, "_review", review)
+
+    assert (
+        semantic_cli.main(
+            [
+                "--repository",
+                "owner/repository",
+                "--pull-number",
+                "17",
+                "--app-id",
+                "42",
+                "--installation-id",
+                "7",
+                "--private-key",
+                str(private_key),
+            ]
+        )
+        == 0
+    )
+    assert observed == [("owner/repository", 17, "token"), {"number": 17}]
+    assert capsys.readouterr().out == "PASS\n"
+    assert semantic_cli._pull_lock_path(private_key, "owner/repository", 17).exists()
+
+
+def test_duplicate_exact_main_invocation_runs_one_ensemble(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    private_key = tmp_path / "key.pem"
+    private_key.write_bytes(b"private")
+    entered, release = threading.Event(), threading.Event()
+    reviews = 0
+
+    class App:
+        def installation_token(self) -> str:
+            return "token"
+
+        def pull(self, *args: object) -> dict[str, object]:
+            return {"number": 17}
+
+    def review(*args: object) -> bool:
+        nonlocal reviews
+        reviews += 1
+        entered.set()
+        assert release.wait(timeout=2)
+        return True
+
+    arguments = [
+        "--repository",
+        "owner/repository",
+        "--pull-number",
+        "17",
+        "--app-id",
+        "42",
+        "--installation-id",
+        "7",
+        "--private-key",
+        str(private_key),
+    ]
+    monkeypatch.setattr(semantic_cli, "GitHubApp", lambda *args: App())
+    monkeypatch.setattr(semantic_cli, "_review", review)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(semantic_cli.main, arguments)
+        assert entered.wait(timeout=1)
+        assert semantic_cli.main(arguments) == 2
+        release.set()
+        assert first.result(timeout=1) == 0
+    assert reviews == 1
 
 
 def test_same_head_change_becomes_pending_before_fresh_evaluation(

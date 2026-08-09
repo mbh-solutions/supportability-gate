@@ -100,9 +100,9 @@ Stop condition:
 
 Before editing:
 
-1. Identify the single milestone marked `In progress` in the
-   [Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3)
-   project. Project #2 is historical and must not be changed.
+1. Identify the single slice marked `In progress` in the
+   [Repository-Isolated Semantic Review Runtime](https://github.com/orgs/mbh-solutions/projects/8)
+   project. Projects #2, #3, and #6 are historical and must not be changed.
 2. Read its milestone issue completely.
 3. State:
    - terminal capability;

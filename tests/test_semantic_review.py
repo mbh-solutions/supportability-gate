@@ -4,6 +4,8 @@ import copy
 import hashlib
 import io
 import json
+import threading
+import time
 import urllib.error
 from pathlib import Path
 
@@ -297,6 +299,49 @@ def test_m10_deterministic_contradiction_blocks_even_if_model_claims_pass() -> N
     assert "CONTRADICTED_COMPLETION_RESULT" in verdict.findings
 
 
+def test_deterministic_completion_defect_blocks_before_model_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _m10_packet()
+    evidence = packet.evidence
+    evidence["completion_report"]["overall_result"] = "BLOCK"  # type: ignore[index]
+    packet = EvidencePacket(
+        packet.repository, packet.base_sha, packet.head_sha, packet.app_id, evidence
+    )
+
+    class App:
+        completed: list[tuple[object, ...]] = []
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
+
+    monkeypatch.setattr(
+        semantic_cli,
+        "request_response",
+        lambda *args: pytest.fail("deterministic defect reached model transport"),
+    )
+    app = App()
+
+    assert not semantic_cli._review(app, packet.repository, "token", {})  # type: ignore[arg-type]
+    assert app.completed[0][3] == "action_required"
+    assert "CONTRADICTED_COMPLETION_RESULT" in str(app.completed[0][4])
+
+
 def test_nonproduction_review_skips_completion_preflight(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -415,7 +460,57 @@ def test_ensemble_never_suppresses_and_byte_deduplicates_findings(
     assert str(app.completed[0][4]).count("response:") == 8
 
 
-def test_production_review_missing_completion_evidence_still_runs_all_graders(
+def test_each_round_runs_four_profiles_concurrently_with_a_round_barrier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _m10_packet()
+    active = {1: 0, 2: 0}
+    maximum = {1: 0, 2: 0}
+    completed = {1: 0, 2: 0}
+    lock = threading.Lock()
+    barriers = {1: threading.Barrier(4), 2: threading.Barrier(4)}
+
+    def respond(*args: object) -> object:
+        profile_id = str(args[1])
+        round_number = int(args[2])
+        with lock:
+            assert round_number == 1 or completed[1] == 4
+            active[round_number] += 1
+            maximum[round_number] = max(maximum[round_number], active[round_number])
+        barriers[round_number].wait(timeout=2)
+        time.sleep(0.01)
+        with lock:
+            active[round_number] -= 1
+            completed[round_number] += 1
+        return _response(packet, profile_id=profile_id, round_number=round_number)
+
+    class App:
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def assert_current(self, *args: object) -> None:
+            pass
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            pass
+
+    monkeypatch.setattr(semantic_cli, "request_response", respond)
+
+    semantic_cli._review(App(), packet.repository, "token", {})  # type: ignore[arg-type]
+    assert maximum == {1: 4, 2: 4}
+    assert completed == {1: 4, 2: 4}
+
+
+def test_production_review_missing_completion_evidence_blocks_before_graders(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     packet = _packet({"pull_request": 3})
@@ -454,11 +549,15 @@ def test_production_review_missing_completion_evidence_still_runs_all_graders(
     assert not semantic_cli._review(  # type: ignore[arg-type]
         app, "mbh-solutions/supportability-gate", "token", {}
     )
-    assert calls == 8
+    assert calls == 0
+    assert app.published[0][3] == "action_required"
     assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
-@pytest.mark.parametrize("code", ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT"])
+@pytest.mark.parametrize(
+    "code",
+    ["TIMEOUT", "INCOMPLETE_RESPONSE", "REFUSAL", "MODEL_DRIFT", "UNEXPECTED_ATTEMPT_FAILURE"],
+)
 def test_technical_model_failure_runs_all_graders_without_trusted_completion(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
@@ -495,12 +594,14 @@ def test_technical_model_failure_runs_all_graders_without_trusted_completion(
         calls += 1
         if code == "TIMEOUT":
             raise SemanticReviewError(code)
+        if code == "UNEXPECTED_ATTEMPT_FAILURE" and args[1] == PROFILE_IDS[0]:
+            raise RuntimeError("untrusted attempt failure")
         response = _response(_m10_packet(), profile_id=str(args[1]), round_number=int(args[2]))
         if code == "INCOMPLETE_RESPONSE":
             response["status"] = "incomplete"
         elif code == "REFUSAL":
             response["output"][0]["content"][0] = {"type": "refusal", "refusal": "no"}  # type: ignore[index]
-        else:
+        elif code == "MODEL_DRIFT":
             response["model"] = "other"
         return response
 
@@ -514,6 +615,18 @@ def test_technical_model_failure_runs_all_graders_without_trusted_completion(
     assert len(app.completed) == 1
     assert app.completed[0][3] == "action_required"
     assert code in str(app.completed[0][4])
+    if code == "UNEXPECTED_ATTEMPT_FAILURE":
+        attempts = [
+            line.split(" |", 1)[0]
+            for line in str(app.completed[0][4]).splitlines()
+            if line.startswith(("response:", "attempt failure:"))
+        ]
+        assert attempts == [
+            f"{('attempt failure' if profile == PROFILE_IDS[0] else 'response')}: "
+            f"{profile} round {round_number}"
+            for round_number in (1, 2)
+            for profile in PROFILE_IDS
+        ]
 
 
 def test_deterministic_response_failure_runs_all_without_trusted_completion(
