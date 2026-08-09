@@ -190,6 +190,21 @@ def fill_slots(
     return last_repository
 
 
+def _terminate_worker(worker: ActiveWorker, timed_out: bool) -> bool:
+    """Return only after one worker terminates or two bounded kill waits fail."""
+    if timed_out:
+        worker.process.kill()
+    try:
+        worker.process.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        worker.process.kill()
+        try:
+            worker.process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            return False
+    return True
+
+
 def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None = None) -> None:
     """Capture completed output and terminate workers beyond the fixed timeout."""
     current = time.monotonic() if now is None else now
@@ -198,21 +213,11 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
         timed_out = current - worker.started_at > WORKER_TIMEOUT_SECONDS
         if worker.process.poll() is None and not timed_out:
             continue
-        terminated = True
+        terminated = _terminate_worker(worker, timed_out)
+        if not terminated:
+            cleanup_failed = True
+            continue
         try:
-            if timed_out:
-                worker.process.kill()
-            try:
-                worker.process.wait(timeout=30)
-            except subprocess.TimeoutExpired:
-                worker.process.kill()
-                try:
-                    worker.process.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    cleanup_failed = True
-                    terminated = False
-            if not terminated:
-                continue
             worker.stdout.seek(0)
             worker.stderr.seek(0)
             print(
@@ -230,10 +235,9 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
                 flush=True,
             )
         finally:
-            if terminated:
-                worker.stdout.close()
-                worker.stderr.close()
-                del active[key]
+            worker.stdout.close()
+            worker.stderr.close()
+            del active[key]
     if cleanup_failed:
         raise subprocess.SubprocessError("WORKER_TERMINATION_FAILURE")
 

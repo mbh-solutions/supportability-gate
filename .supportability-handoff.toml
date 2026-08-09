@@ -17,6 +17,7 @@ simplified_functions = [
     "_parser",
     "_parser",
     "_shadow",
+    "_terminate_worker",
     "_worker_arguments",
     "discover_candidates",
     "fair_order",
@@ -73,9 +74,9 @@ citations = ["src/supportability_gate/semantic_dispatch.py:101-126", "src/suppor
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
 text = "Each worker uses a fixed shell-free argument vector with captured output and is killed after the fixed finite timeout."
-citations = ["src/supportability_gate/semantic_dispatch.py:129-169", "src/supportability_gate/semantic_dispatch.py:193-238"]
+citations = ["src/supportability_gate/semantic_dispatch.py:129-169", "src/supportability_gate/semantic_dispatch.py:193-242"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:241-258", "src/supportability_gate/semantic_dispatch.py:261-292"]
+citations = ["src/supportability_gate/semantic_dispatch.py:245-262", "src/supportability_gate/semantic_dispatch.py:265-296"]
