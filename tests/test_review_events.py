@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -255,6 +257,52 @@ def test_main_reviews_only_the_requested_pull(
     assert observed == [("owner/repository", 17, "token"), {"number": 17}]
     assert capsys.readouterr().out == "PASS\n"
     assert semantic_cli._pull_lock_path(private_key, "owner/repository", 17).exists()
+
+
+def test_duplicate_exact_main_invocation_runs_one_ensemble(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    private_key = tmp_path / "key.pem"
+    private_key.write_bytes(b"private")
+    entered, release = threading.Event(), threading.Event()
+    reviews = 0
+
+    class App:
+        def installation_token(self) -> str:
+            return "token"
+
+        def pull(self, *args: object) -> dict[str, object]:
+            return {"number": 17}
+
+    def review(*args: object) -> bool:
+        nonlocal reviews
+        reviews += 1
+        entered.set()
+        assert release.wait(timeout=2)
+        return True
+
+    arguments = [
+        "--repository",
+        "owner/repository",
+        "--pull-number",
+        "17",
+        "--app-id",
+        "42",
+        "--installation-id",
+        "7",
+        "--private-key",
+        str(private_key),
+    ]
+    monkeypatch.setattr(semantic_cli, "GitHubApp", lambda *args: App())
+    monkeypatch.setattr(semantic_cli, "_review", review)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(semantic_cli.main, arguments)
+        assert entered.wait(timeout=1)
+        assert semantic_cli.main(arguments) == 2
+        release.set()
+        assert first.result(timeout=1) == 0
+    assert reviews == 1
 
 
 def test_same_head_change_becomes_pending_before_fresh_evaluation(
