@@ -102,7 +102,12 @@ def discover_candidates(
         name = repository["full_name"]
         for pull in app.open_pulls(name, token):
             candidate = _candidate(repository, pull)
-            if app.handoff_ready(name, candidate.head_sha, token):
+            if not app.handoff_ready(name, candidate.head_sha, token):
+                continue
+            packet = app.m10_evidence_packet(
+                name, pull, token, app.evidence_packet(name, pull, token)
+            )
+            if app.replay_result(packet, token) is None:
                 candidates.append(candidate)
     return tuple(candidates)
 
@@ -172,7 +177,11 @@ def launch_worker(
     stderr = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
     trusted_directory = Path(sys.executable).resolve().parent
     lease = tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", dir=trusted_directory, prefix="semantic-worker-", delete=False
+        mode="w",
+        encoding="utf-8",
+        dir=private_key.resolve().parent,
+        prefix="semantic-worker-",
+        delete=False,
     )
     lease.write("active")
     lease.close()
@@ -256,10 +265,15 @@ def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
     )
 
 
-def _revoke_worker(worker: ActiveWorker) -> None:
+def _revoke_worker(worker: ActiveWorker) -> bool:
     """Revoke final-check publication before abandoning an unconfirmed process."""
-    if worker.lease_file is not None:
+    if worker.lease_file is None:
+        return True
+    try:
         revoke_publication_lease(worker.lease_file)
+    except (OSError, SemanticReviewError):
+        return False
+    return True
 
 
 def _finish_worker(
@@ -268,11 +282,10 @@ def _finish_worker(
     worker: ActiveWorker,
     timed_out: bool,
 ) -> bool:
-    if timed_out:
-        _revoke_worker(worker)
+    revoked = not timed_out or _revoke_worker(worker)
     if not _terminate_worker(worker, timed_out):
         if not timed_out:
-            _revoke_worker(worker)
+            revoked = _revoke_worker(worker)
         return False
     try:
         _report_worker(worker, timed_out)
@@ -282,7 +295,7 @@ def _finish_worker(
         if worker.lease_file is not None:
             worker.lease_file.unlink(missing_ok=True)
         del active[key]
-    return True
+    return revoked
 
 
 def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None = None) -> None:
@@ -299,7 +312,6 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
             cleanup_failed = True
     if cleanup_failed:
         for key, worker in tuple(active.items()):
-            _revoke_worker(worker)
             if key not in attempted:
                 _finish_worker(active, key, worker, True)
         raise subprocess.SubprocessError("WORKER_TERMINATION_FAILURE")

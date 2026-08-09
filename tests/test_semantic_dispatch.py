@@ -47,6 +47,15 @@ def test_discovery_is_app_selected_exact_head_and_restart_safe() -> None:
         def handoff_ready(self, repository: str, head_sha: str, token: str) -> bool:
             return repository != "owner/twmn"
 
+        def evidence_packet(self, repository: str, pull: dict[str, Any], token: str) -> object:
+            return pull
+
+        def m10_evidence_packet(self, *args: object) -> object:
+            return args[3]
+
+        def replay_result(self, packet: object, token: str) -> bool | None:
+            return None
+
     first = dispatch.discover_candidates(App(), "token")  # type: ignore[arg-type]
     restarted = dispatch.discover_candidates(App(), "token")  # type: ignore[arg-type]
 
@@ -179,10 +188,41 @@ def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) 
         str(worker.lease_file),
     ]
     assert worker.lease_file is not None
+    assert worker.lease_file.parent == Path("key.pem").resolve().parent
     assert worker.lease_file.read_text(encoding="utf-8") == "active"
     worker.stdout.close()
     worker.stderr.close()
     worker.lease_file.unlink()
+
+
+def test_discovery_skips_completed_exact_generation() -> None:
+    class App:
+        def installation_repositories(self, token: str) -> tuple[dict[str, Any], ...]:
+            return ({"full_name": "owner/repo", "id": 1},)
+
+        def open_pulls(self, repository: str, token: str) -> tuple[dict[str, Any], ...]:
+            return (
+                {
+                    "created_at": "2026-08-09T00:00:00Z",
+                    "head": {"sha": "a" * 40},
+                    "number": 1,
+                },
+            )
+
+        def handoff_ready(self, *args: object) -> bool:
+            return True
+
+        def evidence_packet(self, *args: object) -> object:
+            return "base"
+
+        def m10_evidence_packet(self, *args: object) -> object:
+            return "exact-generation"
+
+        def replay_result(self, packet: object, token: str) -> bool | None:
+            assert packet == "exact-generation"
+            return True
+
+    assert dispatch.discover_candidates(App(), "token") == ()  # type: ignore[arg-type]
 
 
 def test_reaper_kills_and_removes_timed_out_worker(capsys: Any) -> None:
@@ -423,6 +463,53 @@ def test_failed_cleanup_revokes_stuck_worker_and_terminates_sibling(
     assert not second_lease.exists()
     active[first.key].stdout.close()
     active[first.key].stderr.close()
+
+
+def test_revocation_failure_still_terminates_worker_and_sibling(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    class Process:
+        returncode = -9
+        killed = False
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            self.killed = True
+
+        def wait(self, timeout: int) -> int:
+            return self.returncode
+
+    first = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    second = _candidate(2, 2, "2026-08-09T00:00:00Z")
+    processes = (Process(), Process())
+    active = {
+        item.key: ActiveWorker(
+            item,
+            process,
+            0.0 if item is first else dispatch.WORKER_TIMEOUT_SECONDS + 1,
+            io.StringIO(),
+            io.StringIO(),
+            tmp_path / f"lease-{item.repository_id}",
+        )
+        for item, process in zip((first, second), processes, strict=True)
+    }  # type: ignore[arg-type]
+    for worker in active.values():
+        assert worker.lease_file is not None
+        worker.lease_file.write_text("active", encoding="utf-8")
+    monkeypatch.setattr(
+        dispatch,
+        "revoke_publication_lease",
+        lambda path: (_ for _ in ()).throw(SemanticReviewError("WORKER_LEASE_BUSY")),
+    )
+    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: None)
+
+    with pytest.raises(subprocess.SubprocessError, match="WORKER_TERMINATION_FAILURE"):
+        dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
+
+    assert active == {}
+    assert all(process.killed for process in processes)
 
 
 def test_shadow_reports_selected_repositories_even_without_candidates(capsys: Any) -> None:
