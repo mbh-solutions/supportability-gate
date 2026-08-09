@@ -1108,13 +1108,101 @@ workflow, check-run, ruleset, or GitHub state supports them.
   Project #3 reads back `Complete / Complete / On scope / Yes` and closed. Stop; DC application
   findings remain with its separate owner and no successor Supportability work is authorized.
 
+## Critical maintenance — Project #3 issue #109
+
+- Convergent semantic review implementation, qualification, runtime, and canary: `COMPLETE`.
+  This ledger status becomes `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed
+  `Yes` only when this protected commit enters `main`.
+- Authority: owner-authorized issue #109 under reopened Project #3, including its authenticated
+  completion-evidence registry and closure-transaction semantics. Scope was full validated GitHub
+  comparison evidence, canonical PR/closing-issue authority, four fixed specialist profiles across
+  two rounds, runtime qualification, and one temporary DC canary. The immutable Standard, frozen
+  roadmap, DC main and PR #20, and TWMN runtime were excluded and remained unchanged.
+- Completion evidence:
+  - Protected implementation PRs #110, #112, #113, and #114 normally merged as
+    `5d90481c05553011ea4f23f0401e1a3408db6a68`,
+    `a093930d2aeee855c772805d67f1b98d766136e0`,
+    `3e942e7a546537776eac538fb0a15c39cb28d687`, and
+    `92d90bf4b14a9070d20c2f617d25b9b693ed6f03`. Their Gate/Source/Semantic checks were
+    `93223083485`/`93223017474`/`93223178646`,
+    `93225111204`/`93225038295`/`93225209144`,
+    `93225779600`/`93225707751`/`93225813313`, and
+    `93237455016`/`93237393441`/`93237560442`; all succeeded.
+  - `semantic-review.v2` and `convergent-review.v1` bind the complete validated comparison diff,
+    authenticated PR and closing-issue authority, profile, round, instruction/evidence/response
+    hashes, exact `gpt-5.6-sol` model, and `medium` effort. Four fixed profiles run sequentially in
+    each of two rounds. All eight calls run; any finding, uncertainty, stale evidence, parser or
+    transport failure prevents PASS; exact replay is bound to the complete aggregate identity.
+  - Exact Python 3.12 lock proof passed Ruff lint and format, C901 maximum 10, strict mypy, both
+    import contracts, compileall, wheel build/fresh install/help, immutable-Standard tamper
+    detection, exact-range whitespace validation, and 321 tests with 2 skips. The immutable
+    Standard SHA-256 remained
+    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+  - Final versioned runtime `runtime-issue109-92d90bf` uses Python 3.12, package `0.2.0`, and the
+    exact lock. Source and DC tasks read back enabled with 90-minute limits, one-minute cadence,
+    `IgnoreNew`, the exclusive evaluation lock, and unchanged repository/App/install/key
+    arguments. TWMN remained on `runtime-issue100-4034107` with its unchanged ten-minute limit.
+  - Exact production qualification completed all 48 calls. Evidence artifact SHA-256 was
+    `9758d249c0fbf14347f8b84a8ed8c4c42d26882dbb91bdbc9891f2099e750e46`; its six packet
+    SHA-256 values were clean
+    `f565344a45481d1c2b6f858902bd10f317298fe2f3ef687b92b861745fda6548`, missing-acceptance
+    `c26b85c24ccfd7fb634effa567a77aa119ff36bbf31f343cf036b3f74b8b0840`, fail-open MJS
+    `05af4053d5824c8764994e3b700d44a1179047b012d775d38e2b52d6b5b7eeba`, PR #18
+    `1f153c9…` `c675bab98b452a9ba019ee049676a5ad1eb66bbe64a48441ac06fea003b320f6`,
+    PR #18 `9cc23a…` `c58b942f86d5bcb99b864af182e1f5a542d04c4d4024d7efb42ae5af88039c10`,
+    and nullable SQL `4fd0c72ecb0452bdc2d4316c847c9f27fc15e20ceb7dca82c94723031fa0d3a0`.
+    The authenticated issue registry and artifact retain all 48 attempt and response hashes. Clean
+    received eight trusted PASS
+    verdicts. Historical and poison packets surfaced every required category, including mixed
+    Home ownership, mixed assignment ownership, unchecked Supabase cast, pending-save Back/stale
+    completion, nullable SQL, fail-open MJS, and missing acceptance guidance. Historical packets
+    were reconstructed as v2 evidence, as recorded in authenticated authority; no v1 byte-identity
+    claim is made.
+  - Temporary DC issue #21 and never-merged PR #22 exercised defect head
+    `ed4b53cc8b99837f4303c71871713f736d6a2b6c` and corrected fresh head
+    `543f5121d7322939f50a46236b3d8a98ed2ca7fb`. Defect check `93244697318` blocked with all seven
+    seeded categories together; evidence SHA-256 was
+    `ba811aff9ec462c743ee2f8611d126df32d0908e4782d53a8ea539d5a99bd06e`. Its eight response
+    hashes were `736dc917b9b1845047ba625f1576de20c740e28155fd12816daa917938557e49`,
+    `00d6e63b18ff826ab284d397351f739ad0b143ea8153171774aef3fd8eb5071e`,
+    `7e12f5238c60355d8c3c17c4e469c22b4ffcb1e32074026ca783a6e3029fd636`,
+    `f102e0d7049a802ec643f0eeea9306e3b99b3f5596513ab4e27e0cf75ac89728`,
+    `d2e62b6e783649e12c887d090b166e2f2c1adf827cd4689a65403ecdc6919f53`,
+    `31ff49235761d0151558a2d0d985bf12155e8897ea8a17a3fe75eb2975c4d5e8`,
+    `e3ef97a91830ea1e1d70fac1e197cb8047e479ddc7f7e670c7c67c8607bfbc67`, and
+    `77e670001005cc0d8a46ddea5ba623cd9d21ba14337b27205ba9c47d1a2b4fc2`.
+  - Corrected check `93245527057` passed eight of eight with evidence SHA-256
+    `bf53a1b6f1e0475c9afa74ad5846641d22abe328860cd86baba9a66decde733b`. Its eight response
+    identities were `5093223ab4b49111fbc06d701c5a3768c23c6ce4628c1bb062cc7a509472bfaa`,
+    `30eddaad8789ab7790a18cea32d24ce12da42705070ef25bc9d7bf8b21413e88`,
+    `17188fee235389fb71c7e2f3291724adfcf4ea0ec0be1d0085931872265a68c9`,
+    `e5f03d1e298a1ce68927606d3826ca20893ab34d89a9e04577254cd61360134a`,
+    `c5001eadf92e624f3585334a087a0e9d20cae0dd4c6a04600c925de5de93ddea`,
+    `4ea99d6813575b4aaf00d191af8fb4b65caf9f64648167f03d1be2d23cfb3266`,
+    `e89c7efa344d529815d9bc4b66baf837334c6c91285d09d4b2a08ed400c71aec`, and
+    `cc15f9709ff2dcad867af137d9511b98d01ff38362c5347c7bd0268f56c377ff`.
+    Issue #21 and PR #22 were closed, the temporary branch and clone were deleted, DC main remained
+    `3913cb0b7da7da73641db3d6e868d76fc24afaed`, and PR #20 remained merged at that exact commit.
+  - DC ruleset `20588739` remained active, requires `Supportability Semantic Review` from App
+    `4418989`, has zero bypass actors, and retains workflow pin
+    `36365c5df86156e4889e3c0c656f2236d3c25237`.
+- Remaining limitations: two clean rounds materially reduce latent detection but cannot prove every
+  unknown defect absent. Any transport or parser failure still blocks trusted PASS. The defect
+  canary had seven parser-format failures, yet all eight attempts ran and the aggregate retained
+  all seven seeded categories. The shared exclusive lock can delay colliding one-minute tasks;
+  `IgnoreNew` prevents overlap.
+- Closure transaction: protected merge makes this prospective ledger state canonical and closes
+  issue #109; immediate synchronization then sets Project #3 to
+  `Complete / Complete / On scope / Yes` and closes the Project. No implementation, evidence,
+  runtime, canary, or cleanup work remains. Stop afterward; no successor work is authorized.
+
 ## Product status
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #106 maintenance is complete; stop
+Current authorized work: NONE — Project #3 issue #109 maintenance is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
