@@ -36,4 +36,4 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-version-identity"
 text = "Package CLI and deterministic tool evidence share the 0.2.0 package version constant."
-citations = ["src/supportability_gate/__init__.py:1-3", "src/supportability_gate/complexity_metrics.py:19-24", "src/supportability_gate/complexity_metrics.py:295-306"]
+citations = ["src/supportability_gate/__init__.py:3-3", "src/supportability_gate/complexity_metrics.py:22-22", "src/supportability_gate/complexity_metrics.py:302-302"]
