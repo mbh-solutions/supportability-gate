@@ -53,6 +53,10 @@ def _historical_packet(
     app: GitHubApp, token: str, pull_number: int, head_sha: str
 ) -> EvidencePacket:
     pull = dict(app.pull(REPOSITORY, pull_number, token))
+    run = app._handoff_runs(REPOSITORY, head_sha, token)[0]
+    artifact = app._handoff_artifact(REPOSITORY, run, token)
+    files = app._artifact_json(app._artifact_bytes(REPOSITORY, artifact["id"], token))
+    pull["base"] = {**pull["base"], "sha": files["complexity-result.json"]["base_sha"]}
     pull["head"] = {**pull["head"], "sha": head_sha}
     packet = app.evidence_packet(REPOSITORY, pull, token)
     return app.m10_evidence_packet(REPOSITORY, pull, token, packet)
