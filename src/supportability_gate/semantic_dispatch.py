@@ -17,13 +17,13 @@ from typing import IO, Any
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.review_state import unresolved_review_blocks
 from supportability_gate.semantic_contract import (
-    MAX_WORKER_RESULT_BYTES,
     REPOSITORY_PATTERN,
     SHA_PATTERN,
     EvidencePacket,
     SemanticReviewError,
 )
-from supportability_gate.semantic_lease import exclusive_lease, pull_lock_path
+from supportability_gate.semantic_lease import pull_lock_path
+from supportability_gate.semantic_result import publish_worker_result
 
 POLL_SECONDS = 60
 MAX_WORKERS = 2
@@ -277,38 +277,6 @@ def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
     )
 
 
-def _publish_worker_result(app: GitHubApp, worker: ActiveWorker) -> None:
-    """Publish one bounded worker result only after confirmed process exit."""
-    packet, path, lock_file = worker.candidate.packet, worker.result_file, worker.lock_file
-    if (
-        packet is None
-        or path is None
-        or lock_file is None
-        or path.stat().st_size > MAX_WORKER_RESULT_BYTES
-    ):
-        raise SemanticReviewError("MALFORMED_WORKER_RESULT")
-    try:
-        result = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
-        raise SemanticReviewError("MALFORMED_WORKER_RESULT") from error
-    if (
-        not isinstance(result, dict)
-        or set(result) != {"check_id", "conclusion", "evidence_sha256", "summary"}
-        or type(result["check_id"]) is not int
-        or result["check_id"] <= 0
-        or result["conclusion"] not in {"success", "failure", "action_required"}
-        or result["evidence_sha256"] != packet.sha256
-        or not isinstance(result["summary"], str)
-    ):
-        raise SemanticReviewError("MALFORMED_WORKER_RESULT")
-    with exclusive_lease(lock_file):
-        token = app.installation_token()
-        app.assert_current(packet, worker.candidate.pull_number, token)
-        app.complete_check(
-            packet, token, result["check_id"], result["conclusion"], result["summary"]
-        )
-
-
 def _finish_worker(
     active: dict[tuple[int, int], ActiveWorker],
     key: tuple[int, int],
@@ -320,8 +288,14 @@ def _finish_worker(
         return False
     try:
         _report_worker(worker, timed_out)
-        if not timed_out and app is not None:
-            _publish_worker_result(app, worker)
+        if not timed_out and worker.process.returncode == 0 and app is not None:
+            publish_worker_result(
+                app,
+                worker.candidate.packet,
+                worker.candidate.pull_number,
+                worker.result_file,
+                worker.lock_file,
+            )
     finally:
         worker.stdout.close()
         worker.stderr.close()

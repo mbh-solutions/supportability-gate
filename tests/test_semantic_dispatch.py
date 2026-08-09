@@ -11,8 +11,10 @@ from typing import Any
 import pytest
 
 import supportability_gate.semantic_dispatch as dispatch
+import supportability_gate.semantic_result as semantic_result
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 from supportability_gate.semantic_dispatch import ActiveWorker, Candidate
+from supportability_gate.semantic_lease import exclusive_lease
 
 
 def _candidate(repository_id: int, pull: int, created_at: str) -> Candidate:
@@ -345,15 +347,56 @@ def test_dispatcher_alone_publishes_confirmed_worker_result(tmp_path: Path) -> N
         )
     }  # type: ignore[arg-type]
 
-    with dispatch.exclusive_lease(lock):
+    with exclusive_lease(lock):
         with pytest.raises(SemanticReviewError, match="EVALUATION_IN_PROGRESS"):
-            dispatch._publish_worker_result(app, active[candidate.key])  # type: ignore[arg-type]
+            semantic_result.publish_worker_result(app, packet, 1, result, lock)  # type: ignore[arg-type]
     assert app.completed == []
 
     dispatch.reap_workers(active, now=0.0, app=app)  # type: ignore[arg-type]
 
     assert active == {}
     assert app.completed == [(packet, "token", 9, "success", "PASS")]
+    assert not result.exists()
+
+
+def test_nonzero_worker_exit_cannot_publish_valid_result(tmp_path: Path) -> None:
+    packet = EvidencePacket("owner/repo-1", "b" * 40, "a" * 40, 42, {"pull_request": 1})
+    candidate = Candidate(1, packet.repository, 1, packet.head_sha, datetime.now(), packet)
+    result = tmp_path / "result"
+    result.write_text(
+        json.dumps(
+            {
+                "check_id": 9,
+                "conclusion": "success",
+                "evidence_sha256": packet.sha256,
+                "summary": "PASS",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class Process:
+        returncode = 1
+
+        def poll(self) -> int:
+            return 1
+
+        def wait(self, timeout: int) -> int:
+            return 1
+
+    class App:
+        def complete_check(self, *args: object) -> None:
+            pytest.fail("nonzero worker result published")
+
+    active = {
+        candidate.key: ActiveWorker(
+            candidate, Process(), 0.0, io.StringIO(), io.StringIO(), result, tmp_path / "lock"
+        )
+    }  # type: ignore[arg-type]
+
+    dispatch.reap_workers(active, now=0.0, app=App())  # type: ignore[arg-type]
+
+    assert active == {}
     assert not result.exists()
 
 

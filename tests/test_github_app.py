@@ -595,6 +595,34 @@ def test_handoff_ready_requires_successful_exact_head_artifact() -> None:
     assert app.handoff_ready("owner/repo", head_sha, "token") is True
 
 
+def test_handoff_ready_rejects_mixed_malformed_run_collection() -> None:
+    head_sha = "b" * 40
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply(
+            {
+                "workflow_runs": [
+                    "malformed",
+                    {
+                        "conclusion": "success",
+                        "event": "pull_request",
+                        "head_sha": head_sha,
+                        "id": 123,
+                        "path": ".github/workflows/organization-required.yml",
+                        "run_attempt": 1,
+                        "status": "completed",
+                        "updated_at": "2026-08-09T17:00:00Z",
+                    },
+                ]
+            }
+        ),
+    )
+
+    assert app.handoff_ready("owner/repo", head_sha, "token") is False
+
+
 def test_handoff_ready_accepts_older_success_when_newer_attempt_failed() -> None:
     head_sha = "b" * 40
     replies = iter(

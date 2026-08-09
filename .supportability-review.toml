@@ -1,7 +1,7 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "One dispatcher discovers every App-selected repository, fairly launches at most two ephemeral exact-pull workers, and publishes only a complete valid deferred ensemble after confirmed worker exit."
+intended_behavior = "One dispatcher discovers every App-selected repository and fairly launches at most two ephemeral exact-pull workers; semantic_result publishes only a complete valid deferred ensemble after confirmed successful worker exit."
 proof = "tests/test_semantic_dispatch.py::test_fill_slots_deduplicates_and_caps_workers"
 
 [characterization]
@@ -10,10 +10,10 @@ proof = "tests/characterization/semantic-dispatch.characterization.py"
 
 [separation_of_concerns]
 before = "Three scheduled repository workers contended on one machine-wide lock and each reconciled an entire repository."
-after = "semantic_dispatch owns installation discovery, bounded process scheduling, deferred-result validation, and final publication; semantic_cli owns one exact-pull evaluation; GitHubApp retains authenticated evidence and check transport."
+after = "semantic_dispatch owns installation discovery and bounded process scheduling; semantic_result owns deferred-result validation and final publication; semantic_cli owns one exact-pull evaluation; GitHubApp retains authenticated evidence and check transport."
 
 [architecture]
-dependency_direction = "semantic_dispatch depends on GitHubApp, review_state, and semantic_lease while invoking semantic_cli by fixed process arguments; semantic_cli retains GitHubApp and responses_transport dependencies."
+dependency_direction = "semantic_dispatch depends on GitHubApp, review_state, semantic_lease, and semantic_result while invoking semantic_cli by fixed process arguments; semantic_result depends on GitHubApp and semantic_lease; semantic_cli retains GitHubApp and responses_transport dependencies."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -33,25 +33,26 @@ reviewed_paths = [
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_diagnostics.py",
     "src/supportability_gate/semantic_dispatch.py",
+    "src/supportability_gate/semantic_result.py",
     "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
 path = "src/supportability_gate/semantic_dispatch.py"
-owns = "App-selected repository discovery, prerequisite eligibility, repository-fair queueing, two-worker launch, active-job deduplication, timeout, process cleanup, deferred-result validation, and final current-check publication."
-does_not_own = "Model transport, verdict aggregation, target execution, or per-repository configuration."
+owns = "App-selected repository discovery, prerequisite eligibility, repository-fair queueing, two-worker launch, active-job deduplication, timeout, bounded process reporting, and process cleanup."
+does_not_own = "Deferred-result validation, final publication, model transport, verdict aggregation, target execution, or per-repository configuration."
 
 [incremental_refactor]
 target = "Replace machine-wide serialization and per-repository reconciliation with one installation-wide on-demand dispatcher."
-completed_step = "Added shadow-proven App pagination, exact-head artifact eligibility, fair max-two worker scheduling, restart rediscovery, worker cleanup, and parent-owned publication without production cutover."
+completed_step = "Added shadow-proven App pagination, exact-head artifact eligibility, fair max-two worker scheduling, restart rediscovery, worker cleanup, and parent-gated publication without production cutover."
 
 [review_handoff]
-summary = "Review App pagination, exact-head readiness, repository/pull rotation, duplicate suppression, fixed subprocess arguments, timeout, forced cleanup, and parent-owned publication under the exact-pull lock."
+summary = "Review App pagination, strict workflow-run validation, repository/pull rotation, duplicate suppression, fixed subprocess arguments, timeout/nonzero rejection, forced cleanup, and semantic_result publication under the exact-pull lock."
 remaining_risks = ["Production remains on legacy per-repository scheduled tasks until S02 cutover."]
 
 [human_review]
 naming = "semantic_dispatch names installation discovery and ephemeral pull-worker supervision without a generic manager or engine."
-cohesion = "Dispatcher owns discovery, eligibility, queueing, worker supervision, deferred-result validation, and final publication; workers own evidence and model evaluation."
+cohesion = "Dispatcher owns discovery, eligibility, queueing, and worker supervision; semantic_result owns the deferred-result trust boundary and final publication; workers own evidence and model evaluation."
 intended_behavior = "No repository reserves agents; at most two exact-pull jobs run, and queued repositories cannot starve."
 reviewability = "Four hard-coded policy constants and focused pure queue functions expose capacity, cadence, timeout, and fairness directly."
 
@@ -143,7 +144,13 @@ justification = "Owns one exact-pull evaluation, fixed concurrent rounds, aggreg
 path = "src/supportability_gate/semantic_dispatch.py"
 owner_path = "src/supportability_gate/semantic_dispatch.py"
 basis = "responsibility"
-justification = "Owns installation-wide discovery, exact-head eligibility, fair two-worker scheduling, active-job suppression, bounded supervision, deferred-result validation, and current-check publication under the exact-pull lock, without model evaluation."
+justification = "Owns installation-wide discovery, exact-head eligibility, fair two-worker scheduling, active-job suppression, and bounded process supervision, without result validation, publication, or model evaluation."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_result.py"
+owner_path = "src/supportability_gate/semantic_result.py"
+basis = "responsibility"
+justification = "Owns bounded deferred-result validation and current-check publication under the exact-pull lock, without discovery, queueing, process supervision, or model evaluation."
 
 [[module_boundaries]]
 path = "src/supportability_gate/semantic_lease.py"

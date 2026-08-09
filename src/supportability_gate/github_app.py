@@ -407,13 +407,16 @@ class GitHubApp:
             token,
         )
         rows = result.get("workflow_runs") if isinstance(result, dict) else None
-        if not isinstance(rows, list) or len(rows) >= 100:
+        if (
+            not isinstance(rows, list)
+            or len(rows) >= 100
+            or any(not isinstance(row, dict) for row in rows)
+        ):
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
         runs = [
             row
             for row in rows
-            if isinstance(row, dict)
-            and row.get("path") == HANDOFF_WORKFLOW_PATH
+            if row.get("path") == HANDOFF_WORKFLOW_PATH
             and row.get("head_sha") == head_sha
             and row.get("event") == "pull_request"
             and row.get("status") == "completed"

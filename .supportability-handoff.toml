@@ -5,7 +5,7 @@ architecture_judgment = "PASS"
 base_sha = "d6c17ce518a1e2e3b4ff5a7642ee5b6b266ec660"
 overall_result = "PASS"
 responsibility_changes = [
-    "semantic_dispatch owns App-selected repository discovery, exact-generation replay suppression, fair queueing, isolated trusted worker launch, bounded process monitoring, and final check publication after confirmed worker exit; exact-pull workers can only write bounded deferred results.",
+    "semantic_dispatch owns App-selected repository discovery, exact-generation replay suppression, fair queueing, isolated trusted worker launch, and bounded process monitoring; semantic_result owns deferred-result validation and final check publication after confirmed successful worker exit.",
 ]
 simplified_functions = [
     "Candidate.key",
@@ -35,14 +35,14 @@ simplified_functions = [
     "launch_worker",
     "main",
     "main",
-    "_publish_worker_result",
+    "publish_worker_result",
     "pull_lock_path",
     "reap_workers",
     "run_dispatch_loop",
     "unresolved_review_blocks",
 ]
 boundary_rationale = [
-    "semantic_cli and semantic_dispatch share the focused semantic_lease exact-pull identity; workers write bounded deferred results and the dispatcher alone validates and publishes them under that lock after confirmed exit.",
+    "semantic_cli and semantic_result share the focused semantic_lease exact-pull identity; workers write bounded deferred results, while semantic_result validates and publishes them under that lock only after the dispatcher confirms a successful exit.",
 ]
 remaining_risks = [
     "Production remains on legacy per-repository tasks until separately authorized S02 cutover; dispatcher throughput is intentionally capped at two active pull workers.",
@@ -72,7 +72,7 @@ citations = ["src/supportability_gate/semantic_contract.py:20-22", "src/supporta
 [[completion_report.claims]]
 id = "claim-exact-head-readiness"
 text = "A pull becomes eligible only after one successful exact-head organization-required workflow artifact exists."
-citations = ["src/supportability_gate/github_app.py:401-430", "src/supportability_gate/github_app.py:432-447", "src/supportability_gate/semantic_dispatch.py:97-117"]
+citations = ["src/supportability_gate/github_app.py:401-433", "src/supportability_gate/github_app.py:435-450", "src/supportability_gate/semantic_dispatch.py:97-117"]
 
 [[completion_report.claims]]
 id = "claim-exact-generation-deduplication"
@@ -91,10 +91,10 @@ citations = ["src/supportability_gate/semantic_dispatch.py:120-145", "src/suppor
 
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
-text = "Each worker uses isolated Python, an absolute key path, a trusted working directory, and captured output. Workers size-bound deferred results but cannot complete checks; only the dispatcher validates the exact evidence digest, reacquires the exact-pull lock, reasserts current state, and publishes after confirmed process exit. A timed-out or unconfirmed surviving worker therefore has no final-check publication path."
-citations = ["src/supportability_gate/semantic_cli.py:97-133", "src/supportability_gate/semantic_lease.py:47-63", "src/supportability_gate/semantic_dispatch.py:148-215", "src/supportability_gate/semantic_dispatch.py:280-354", "src/supportability_gate/semantic_dispatch.py:377-410"]
+text = "Each worker uses isolated Python, an absolute key path, a trusted working directory, and captured output. Workers size-bound deferred results but cannot complete checks; the dispatcher rejects timeout and nonzero exits, then semantic_result validates the exact evidence digest, reacquires the exact-pull lock, reasserts current state, and publishes. A timed-out, failed, or unconfirmed surviving worker therefore has no final-check publication path."
+citations = ["src/supportability_gate/semantic_cli.py:97-133", "src/supportability_gate/semantic_lease.py:47-63", "src/supportability_gate/semantic_dispatch.py:148-215", "src/supportability_gate/semantic_dispatch.py:239-328", "src/supportability_gate/semantic_result.py:18-52"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:357-374", "src/supportability_gate/semantic_dispatch.py:377-410"]
+citations = ["src/supportability_gate/semantic_dispatch.py:331-348", "src/supportability_gate/semantic_dispatch.py:351-384"]
