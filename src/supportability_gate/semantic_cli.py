@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
@@ -14,15 +13,16 @@ from supportability_gate.github_app import GitHubApp
 from supportability_gate.handoff_policy import deterministic_completion_blocks
 from supportability_gate.responses_transport import TransportResponse, request_response
 from supportability_gate.review_events import ReviewEvent, parse_review_event
+from supportability_gate.review_state import unresolved_review_blocks
 from supportability_gate.semantic_contract import (
+    MAX_WORKER_RESULT_BYTES,
     PROFILE_IDS,
     ROUNDS,
     EvidencePacket,
     SemanticReviewError,
     SemanticVerdict,
-    unresolved_review_blocks,
 )
-from supportability_gate.semantic_lease import exclusive_lease
+from supportability_gate.semantic_lease import exclusive_lease, pull_lock_path
 from supportability_gate.semantic_review import parse_response
 
 
@@ -86,30 +86,51 @@ def _parser() -> argparse.ArgumentParser:
 def _complete_current_check(
     app: GitHubApp,
     packet: EvidencePacket,
+    token: str,
+    check_id: int,
+    conclusion: str,
+    summary: str,
+) -> None:
+    app.complete_check(packet, token, check_id, conclusion, summary)
+
+
+def _write_deferred_result(
+    packet: EvidencePacket,
+    check_id: int,
+    conclusion: str,
+    summary: str,
+    result_file: Path,
+) -> None:
+    payload = json.dumps(
+        {
+            "check_id": check_id,
+            "conclusion": conclusion,
+            "evidence_sha256": packet.sha256,
+            "summary": summary,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    if len(payload.encode("utf-8")) > MAX_WORKER_RESULT_BYTES:
+        raise SemanticReviewError("WORKER_RESULT_TOO_LARGE")
+    result_file.write_text(payload, encoding="utf-8")
+
+
+def _conclude_current_check(
+    app: GitHubApp,
+    packet: EvidencePacket,
     pull_number: int,
     token: str,
     check_id: int,
     conclusion: str,
     summary: str,
-    result_file: Path | None = None,
+    result_file: Path | None,
 ) -> None:
     app.assert_current(packet, pull_number, token)
     if result_file is None:
-        app.complete_check(packet, token, check_id, conclusion, summary)
-        return
-    result_file.write_text(
-        json.dumps(
-            {
-                "check_id": check_id,
-                "conclusion": conclusion,
-                "evidence_sha256": packet.sha256,
-                "summary": summary,
-            },
-            separators=(",", ":"),
-            sort_keys=True,
-        ),
-        encoding="utf-8",
-    )
+        _complete_current_check(app, packet, token, check_id, conclusion, summary)
+    else:
+        _write_deferred_result(packet, check_id, conclusion, summary, result_file)
 
 
 @contextmanager
@@ -121,8 +142,7 @@ def _evaluation_lock(path: Path) -> Iterator[None]:
 
 def _pull_lock_path(private_key: Path, repository: str, pull_number: int) -> Path:
     """Return one stable, filesystem-safe lock path for an exact pull request."""
-    identity = hashlib.sha256(f"{repository.lower()}#{pull_number}".encode()).hexdigest()
-    return private_key.with_name(f"semantic-review-{identity}.lock")
+    return pull_lock_path(private_key, repository, pull_number)
 
 
 def _review_attempt(
@@ -203,7 +223,7 @@ def _review(
     review_blocks = unresolved_review_blocks(evidence)
     if review_blocks:
         check_id = app.start_check(packet, token)
-        _complete_current_check(
+        _conclude_current_check(
             app,
             packet,
             pull_number,
@@ -234,7 +254,7 @@ def _review(
         else ()
     )
     if preflight:
-        _complete_current_check(
+        _conclude_current_check(
             app,
             packet,
             pull_number,
@@ -257,7 +277,7 @@ def _review(
         dict.fromkeys((*preflight, *(finding for item in verdicts for finding in item.findings)))
     )
     if errors:
-        _complete_current_check(
+        _conclude_current_check(
             app,
             packet,
             pull_number,
@@ -274,7 +294,7 @@ def _review(
         and not findings
         and all(item.verdict == "PASS" for item in verdicts)
     )
-    _complete_current_check(
+    _conclude_current_check(
         app,
         packet,
         pull_number,

@@ -1,4 +1,4 @@
-"""Coordinate cross-process semantic-worker publication leases."""
+"""Coordinate cross-process exact-pull evaluation leases."""
 
 from __future__ import annotations
 
@@ -53,3 +53,11 @@ def exclusive_lease(path: Path) -> Iterator[None]:
             yield
         finally:
             _unlock(handle)
+
+
+def pull_lock_path(private_key: Path, repository: str, pull_number: int) -> Path:
+    """Return one stable, filesystem-safe lock path for an exact pull request."""
+    import hashlib
+
+    identity = hashlib.sha256(f"{repository.lower()}#{pull_number}".encode()).hexdigest()
+    return private_key.with_name(f"semantic-review-{identity}.lock")

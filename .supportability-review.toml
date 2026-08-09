@@ -1,7 +1,7 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "One dispatcher discovers every App-selected repository, fairly launches at most two ephemeral exact-pull workers, and each worker publishes only a complete valid semantic ensemble."
+intended_behavior = "One dispatcher discovers every App-selected repository, fairly launches at most two ephemeral exact-pull workers, and publishes only a complete valid deferred ensemble after confirmed worker exit."
 proof = "tests/test_semantic_dispatch.py::test_fill_slots_deduplicates_and_caps_workers"
 
 [characterization]
@@ -10,10 +10,10 @@ proof = "tests/characterization/semantic-dispatch.characterization.py"
 
 [separation_of_concerns]
 before = "Three scheduled repository workers contended on one machine-wide lock and each reconciled an entire repository."
-after = "semantic_dispatch owns installation discovery and bounded process scheduling; semantic_cli owns one exact pull; GitHubApp retains authenticated evidence and check transport."
+after = "semantic_dispatch owns installation discovery, bounded process scheduling, deferred-result validation, and final publication; semantic_cli owns one exact-pull evaluation; GitHubApp retains authenticated evidence and check transport."
 
 [architecture]
-dependency_direction = "semantic_dispatch depends on GitHubApp and invokes semantic_cli by fixed process arguments; semantic_cli retains its existing GitHubApp and responses_transport dependencies."
+dependency_direction = "semantic_dispatch depends on GitHubApp, review_state, and semantic_lease while invoking semantic_cli by fixed process arguments; semantic_cli retains GitHubApp and responses_transport dependencies."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -38,20 +38,20 @@ reviewed_paths = [
 
 [responsibility_boundary]
 path = "src/supportability_gate/semantic_dispatch.py"
-owns = "App-selected repository discovery, prerequisite eligibility, repository-fair queueing, two-worker launch, active-job deduplication, timeout, process cleanup, and publication-lease revocation."
-does_not_own = "Evidence construction, model transport, verdict aggregation, replay, check publication, target execution, or per-repository configuration."
+owns = "App-selected repository discovery, prerequisite eligibility, repository-fair queueing, two-worker launch, active-job deduplication, timeout, process cleanup, deferred-result validation, and final current-check publication."
+does_not_own = "Model transport, verdict aggregation, target execution, or per-repository configuration."
 
 [incremental_refactor]
 target = "Replace machine-wide serialization and per-repository reconciliation with one installation-wide on-demand dispatcher."
-completed_step = "Added shadow-proven App pagination, exact-head artifact eligibility, fair max-two worker scheduling, restart rediscovery, and worker cleanup without production cutover."
+completed_step = "Added shadow-proven App pagination, exact-head artifact eligibility, fair max-two worker scheduling, restart rediscovery, worker cleanup, and parent-owned publication without production cutover."
 
 [review_handoff]
-summary = "Review App pagination, exact-head readiness, repository/pull rotation, duplicate suppression, fixed subprocess arguments, timeout, and forced cleanup."
+summary = "Review App pagination, exact-head readiness, repository/pull rotation, duplicate suppression, fixed subprocess arguments, timeout, forced cleanup, and parent-owned publication under the exact-pull lock."
 remaining_risks = ["Production remains on legacy per-repository scheduled tasks until S02 cutover."]
 
 [human_review]
 naming = "semantic_dispatch names installation discovery and ephemeral pull-worker supervision without a generic manager or engine."
-cohesion = "Dispatcher owns only discovery, eligibility, queueing, worker launch, and process monitoring; review semantics remain unchanged."
+cohesion = "Dispatcher owns discovery, eligibility, queueing, worker supervision, deferred-result validation, and final publication; workers own evidence and model evaluation."
 intended_behavior = "No repository reserves agents; at most two exact-pull jobs run, and queued repositories cannot starve."
 reviewability = "Four hard-coded policy constants and focused pure queue functions expose capacity, cadence, timeout, and fairness directly."
 
@@ -65,7 +65,7 @@ justification = "Owns HMAC authentication and strict identity normalization for 
 path = "src/supportability_gate/review_state.py"
 owner_path = "src/supportability_gate/review_state.py"
 basis = "responsibility"
-justification = "Owns normalization and cross-checking of authenticated GitHub review snapshots, but not API transport, unresolved-thread policy, model evaluation, check publication, or event invalidation."
+justification = "Owns normalization, cross-checking, and unresolved-thread blocking policy for authenticated GitHub review snapshots, but not API transport, model evaluation, check publication, or event invalidation."
 
 [[module_boundaries]]
 path = "src/supportability_gate/quality_profile.py"
@@ -137,16 +137,16 @@ justification = "Owns fail-closed trust validation of one structured response ag
 path = "src/supportability_gate/semantic_cli.py"
 owner_path = "src/supportability_gate/semantic_cli.py"
 basis = "responsibility"
-justification = "Owns one exact pull, per-pull lock, fixed concurrent rounds, aggregate result, and one current check conclusion without installation discovery, queueing, HTTP implementation, or single-response trust rules."
+justification = "Owns one exact-pull evaluation, fixed concurrent rounds, aggregate result, legacy direct completion, and bounded deferred-result writing without installation discovery, queueing, or deferred-result publication."
 
 [[module_boundaries]]
 path = "src/supportability_gate/semantic_dispatch.py"
 owner_path = "src/supportability_gate/semantic_dispatch.py"
 basis = "responsibility"
-justification = "Owns installation-wide repository discovery, exact-head prerequisite eligibility, fair two-worker scheduling, active-job duplicate suppression, and bounded process supervision with publication-lease revocation, without semantic evaluation or check publication."
+justification = "Owns installation-wide discovery, exact-head eligibility, fair two-worker scheduling, active-job suppression, bounded supervision, deferred-result validation, and current-check publication under the exact-pull lock, without model evaluation."
 
 [[module_boundaries]]
 path = "src/supportability_gate/semantic_lease.py"
 owner_path = "src/supportability_gate/semantic_lease.py"
 basis = "responsibility"
-justification = "Owns cross-process evaluation and publication lease locking without GitHub access, process launch, semantic evaluation, or check publication."
+justification = "Owns cross-process exact-pull evaluation locking and stable lock identity without GitHub access, process launch, semantic evaluation, or check publication."

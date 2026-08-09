@@ -338,9 +338,17 @@ def test_dispatcher_alone_publishes_confirmed_worker_result(tmp_path: Path) -> N
             self.completed.append(args)
 
     app = App()
+    lock = tmp_path / "lock"
     active = {
-        candidate.key: ActiveWorker(candidate, Process(), 0.0, io.StringIO(), io.StringIO(), result)
+        candidate.key: ActiveWorker(
+            candidate, Process(), 0.0, io.StringIO(), io.StringIO(), result, lock
+        )
     }  # type: ignore[arg-type]
+
+    with dispatch.exclusive_lease(lock):
+        with pytest.raises(SemanticReviewError, match="EVALUATION_IN_PROGRESS"):
+            dispatch._publish_worker_result(app, active[candidate.key])  # type: ignore[arg-type]
+    assert app.completed == []
 
     dispatch.reap_workers(active, now=0.0, app=app)  # type: ignore[arg-type]
 

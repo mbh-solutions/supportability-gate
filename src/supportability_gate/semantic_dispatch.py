@@ -15,18 +15,19 @@ from pathlib import Path
 from typing import IO, Any
 
 from supportability_gate.github_app import GitHubApp
+from supportability_gate.review_state import unresolved_review_blocks
 from supportability_gate.semantic_contract import (
+    MAX_WORKER_RESULT_BYTES,
     REPOSITORY_PATTERN,
     SHA_PATTERN,
     EvidencePacket,
     SemanticReviewError,
-    unresolved_review_blocks,
 )
+from supportability_gate.semantic_lease import exclusive_lease, pull_lock_path
 
 POLL_SECONDS = 60
 MAX_WORKERS = 2
 WORKER_TIMEOUT_SECONDS = 90 * 60
-MAX_RESULT_BYTES = 100_000
 CREATED_AT_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\Z")
 
 
@@ -56,6 +57,7 @@ class ActiveWorker:
     stdout: IO[str]
     stderr: IO[str]
     result_file: Path | None = None
+    lock_file: Path | None = None
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -202,7 +204,15 @@ def launch_worker(
         stderr.close()
         result_file.unlink(missing_ok=True)
         raise
-    return ActiveWorker(candidate, process, time.monotonic(), stdout, stderr, result_file)
+    return ActiveWorker(
+        candidate,
+        process,
+        time.monotonic(),
+        stdout,
+        stderr,
+        result_file,
+        pull_lock_path(private_key, candidate.repository, candidate.pull_number),
+    )
 
 
 def fill_slots(
@@ -269,8 +279,13 @@ def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
 
 def _publish_worker_result(app: GitHubApp, worker: ActiveWorker) -> None:
     """Publish one bounded worker result only after confirmed process exit."""
-    packet, path = worker.candidate.packet, worker.result_file
-    if packet is None or path is None or path.stat().st_size > MAX_RESULT_BYTES:
+    packet, path, lock_file = worker.candidate.packet, worker.result_file, worker.lock_file
+    if (
+        packet is None
+        or path is None
+        or lock_file is None
+        or path.stat().st_size > MAX_WORKER_RESULT_BYTES
+    ):
         raise SemanticReviewError("MALFORMED_WORKER_RESULT")
     try:
         result = json.loads(path.read_text(encoding="utf-8"))
@@ -286,9 +301,12 @@ def _publish_worker_result(app: GitHubApp, worker: ActiveWorker) -> None:
         or not isinstance(result["summary"], str)
     ):
         raise SemanticReviewError("MALFORMED_WORKER_RESULT")
-    token = app.installation_token()
-    app.assert_current(packet, worker.candidate.pull_number, token)
-    app.complete_check(packet, token, result["check_id"], result["conclusion"], result["summary"])
+    with exclusive_lease(lock_file):
+        token = app.installation_token()
+        app.assert_current(packet, worker.candidate.pull_number, token)
+        app.complete_check(
+            packet, token, result["check_id"], result["conclusion"], result["summary"]
+        )
 
 
 def _finish_worker(

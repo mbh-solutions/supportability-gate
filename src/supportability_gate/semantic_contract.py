@@ -14,6 +14,7 @@ MODEL = "gpt-5.6-sol"
 REASONING_EFFORT = "medium"
 RUBRIC_VERSION = "convergent-review.v1"
 SCHEMA_VERSION = "semantic-review.v2"
+MAX_WORKER_RESULT_BYTES = 100_000
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 TRUSTED_OWNER_ID = 229662739
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
@@ -53,23 +54,6 @@ class SemanticReviewError(ValueError):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
-
-
-def unresolved_review_blocks(evidence: dict[str, object]) -> tuple[str, ...]:
-    """Return deterministic blocks for current unresolved GitHub threads."""
-    state = evidence.get("review_state")
-    threads = state.get("threads") if isinstance(state, dict) else None
-    if not isinstance(threads, list):
-        raise SemanticReviewError("MALFORMED_REVIEW_STATE")
-    blocks: list[str] = []
-    for thread in threads:
-        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
-            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
-        if not isinstance(thread.get("is_resolved"), bool):
-            raise SemanticReviewError("MALFORMED_REVIEW_STATE")
-        if not thread["is_resolved"]:
-            blocks.append(f"UNRESOLVED_REVIEW_THREAD:{thread['id']}")
-    return tuple(sorted(blocks))
 
 
 @dataclass(frozen=True, init=False)

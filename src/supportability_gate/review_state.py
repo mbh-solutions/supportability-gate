@@ -12,6 +12,23 @@ def _malformed() -> SemanticReviewError:
     return SemanticReviewError("MALFORMED_REVIEW_STATE")
 
 
+def unresolved_review_blocks(evidence: dict[str, object]) -> tuple[str, ...]:
+    """Return deterministic blocks for current unresolved GitHub threads."""
+    state = evidence.get("review_state")
+    threads = state.get("threads") if isinstance(state, dict) else None
+    if not isinstance(threads, list):
+        raise _malformed()
+    blocks: list[str] = []
+    for thread in threads:
+        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
+            raise _malformed()
+        if not isinstance(thread.get("is_resolved"), bool):
+            raise _malformed()
+        if not thread["is_resolved"]:
+            blocks.append(f"UNRESOLVED_REVIEW_THREAD:{thread['id']}")
+    return tuple(sorted(blocks))
+
+
 def _text(item: dict[str, Any], key: str) -> str:
     value = item.get(key)
     if not isinstance(value, str) or not value:

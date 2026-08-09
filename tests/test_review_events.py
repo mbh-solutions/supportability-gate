@@ -225,7 +225,7 @@ def test_worker_defers_final_check_publication(tmp_path: Path) -> None:
             pytest.fail("worker published a final check")
 
     packet = _packet("deferred")
-    semantic_cli._complete_current_check(
+    semantic_cli._conclude_current_check(
         App(),
         packet,
         67,
@@ -242,6 +242,18 @@ def test_worker_defers_final_check_publication(tmp_path: Path) -> None:
         "evidence_sha256": packet.sha256,
         "summary": "PASS",
     }
+
+
+def test_worker_result_size_is_bounded_before_write(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    result = tmp_path / "result"
+    monkeypatch.setattr(semantic_cli, "MAX_WORKER_RESULT_BYTES", 1)
+
+    with pytest.raises(SemanticReviewError, match="WORKER_RESULT_TOO_LARGE"):
+        semantic_cli._write_deferred_result(_packet("bounded"), 2, "success", "PASS", result)
+
+    assert not result.exists()
 
 
 def test_main_reviews_only_the_requested_pull(
