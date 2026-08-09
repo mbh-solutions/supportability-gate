@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "One required semantic check evaluates complete authenticated PR evidence through four fixed specialist profiles in two rounds and passes only eight trusted clean results."
-proof = "tests/test_semantic_review.py::test_ensemble_never_suppresses_and_byte_deduplicates_findings"
+intended_behavior = "One dispatcher discovers every App-selected repository, fairly launches at most two ephemeral exact-pull workers, and each worker publishes only a complete valid semantic ensemble."
+proof = "tests/test_semantic_dispatch.py::test_fill_slots_deduplicates_and_caps_workers"
 
 [characterization]
-captured_behavior = "The prior single-call semantic reviewer could pass a head that a later call blocked, while the packet discarded non-configuration diff text and did not bind closing-issue authority."
-proof = "tests/qualify_convergent_reviewer.py"
+captured_behavior = "Dispatcher policy fixes the 60-second poll, two-worker cap, per-repository pull rotation, fixed worker command, and finite worker timeout."
+proof = "tests/characterization/semantic-dispatch.characterization.py"
 
 [separation_of_concerns]
-before = "One model response evaluated parser-selected source plus only the semantic configuration patch and could stop discovery after one verdict."
-after = "GitHubApp supplies full canonical authority and diff evidence; semantic_contract fixes the rubric; semantic_review validates one response; semantic_cli aggregates eight unsuppressed attempts."
+before = "Three scheduled repository workers contended on one machine-wide lock and each reconciled an entire repository."
+after = "semantic_dispatch owns installation discovery and bounded process scheduling; semantic_cli owns one exact pull; GitHubApp retains authenticated evidence and check transport."
 
 [architecture]
-dependency_direction = "semantic_cli orchestrates GitHubApp and responses_transport; transport invokes semantic_diagnostics; semantic_review validates semantic_contract evidence without GitHub or transport ownership."
+dependency_direction = "semantic_dispatch depends on GitHubApp and invokes semantic_cli by fixed process arguments; semantic_cli retains its existing GitHubApp and responses_transport dependencies."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -32,27 +32,28 @@ reviewed_paths = [
     "src/supportability_gate/semantic_cli.py",
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_diagnostics.py",
+    "src/supportability_gate/semantic_dispatch.py",
     "src/supportability_gate/semantic_review.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/semantic_cli.py"
-owns = "Fixed eight-attempt sequencing, deterministic union aggregation, replay use, and one current GitHub check conclusion."
-does_not_own = "GitHub evidence acquisition, HTTP transport, diagnostic persistence, response trust validation, target execution, or application remediation."
+path = "src/supportability_gate/semantic_dispatch.py"
+owns = "App-selected repository discovery, prerequisite eligibility, repository-fair queueing, two-worker launch, deduplication, timeout, and process cleanup."
+does_not_own = "Evidence construction, model transport, verdict aggregation, replay, check publication, target execution, or per-repository configuration."
 
 [incremental_refactor]
-target = "Replace single-trip latent discovery with fail-closed eight-response convergence without changing the required check identity."
-completed_step = "Bound full authority and diff evidence, fixed four profiles across two rounds, retained all findings, and required eight trusted PASS verdicts."
+target = "Replace machine-wide serialization and per-repository reconciliation with one installation-wide on-demand dispatcher."
+completed_step = "Added shadow-proven App pagination, exact-head artifact eligibility, fair max-two worker scheduling, restart rediscovery, and worker cleanup without production cutover."
 
 [review_handoff]
-summary = "Review full authority freshness, exact profile/round bindings, all-eight execution, unsuppressed finding union, diagnostics, replay identity, and historical/poison/clean qualification."
-remaining_risks = ["Two rounds materially reduce latent detection but cannot mathematically prove absence of every unknown defect."]
+summary = "Review App pagination, exact-head readiness, repository/pull rotation, duplicate suppression, fixed subprocess arguments, timeout, and forced cleanup."
+remaining_risks = ["Production remains on legacy per-repository scheduled tasks until S02 cutover."]
 
 [human_review]
-naming = "semantic-review.v2 and convergent-review.v1 name the response schema and fixed ensemble rubric without configurable variants."
-cohesion = "Each existing module retains one responsibility: authority, contract, transport, diagnostics, one-response validation, or ensemble orchestration."
-intended_behavior = "All eight calls run; any finding, uncertainty, stale authority, or technical failure prevents PASS."
-reviewability = "Fixed profile and round constants drive one nested sequence; focused tests cover continuation, aggregation, diagnostics, and replay."
+naming = "semantic_dispatch names installation discovery and ephemeral pull-worker supervision without a generic manager or engine."
+cohesion = "Dispatcher owns only discovery, eligibility, queueing, worker launch, and process monitoring; review semantics remain unchanged."
+intended_behavior = "No repository reserves agents; at most two exact-pull jobs run, and queued repositories cannot starve."
+reviewability = "Four hard-coded policy constants and focused pure queue functions expose capacity, cadence, timeout, and fairness directly."
 
 [[module_boundaries]]
 path = "src/supportability_gate/review_events.py"
@@ -136,4 +137,10 @@ justification = "Owns fail-closed trust validation of one structured response ag
 path = "src/supportability_gate/semantic_cli.py"
 owner_path = "src/supportability_gate/semantic_cli.py"
 basis = "responsibility"
-justification = "Owns fixed sequential ensemble execution, aggregate result, scheduled lock, and one current check conclusion without evidence acquisition, HTTP implementation, or single-response trust rules."
+justification = "Owns one exact pull, per-pull lock, fixed concurrent rounds, aggregate result, and one current check conclusion without installation discovery, queueing, HTTP implementation, or single-response trust rules."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_dispatch.py"
+owner_path = "src/supportability_gate/semantic_dispatch.py"
+basis = "responsibility"
+justification = "Owns installation-wide repository discovery, exact-head prerequisite eligibility, fair two-worker scheduling, duplicate suppression, finite process monitoring, and shutdown cleanup without semantic evaluation or check publication."
