@@ -5,7 +5,7 @@ architecture_judgment = "PASS"
 base_sha = "d6c17ce518a1e2e3b4ff5a7642ee5b6b266ec660"
 overall_result = "PASS"
 responsibility_changes = [
-    "semantic_dispatch owns App-selected repository discovery, exact-head eligibility, fair queueing, isolated trusted worker launch, and bounded process monitoring; the existing exact-pull worker retains evidence, review, replay, and check publication.",
+    "semantic_dispatch owns App-selected repository discovery, exact-head eligibility, fair queueing, isolated trusted worker launch, bounded process monitoring, and publication-lease revocation; the existing exact-pull worker validates that lease before check publication.",
 ]
 simplified_functions = [
     "Candidate.key",
@@ -14,10 +14,13 @@ simplified_functions = [
     "GitHubApp.installation_repositories",
     "GitHubApp.open_pulls",
     "_candidate",
+    "_finish_worker",
     "_parser",
     "_parser",
     "_shadow",
     "_report_worker",
+    "_require_lease",
+    "_revoke_worker",
     "_terminate_worker",
     "_worker_arguments",
     "discover_candidates",
@@ -60,7 +63,7 @@ citations = ["src/supportability_gate/semantic_contract.py:20-22", "src/supporta
 [[completion_report.claims]]
 id = "claim-exact-head-readiness"
 text = "A pull becomes eligible only after one successful exact-head organization-required workflow artifact exists."
-citations = ["src/supportability_gate/github_app.py:401-430", "src/supportability_gate/github_app.py:432-447", "src/supportability_gate/semantic_dispatch.py:90-105"]
+citations = ["src/supportability_gate/github_app.py:401-430", "src/supportability_gate/github_app.py:432-447", "src/supportability_gate/semantic_dispatch.py:91-106"]
 
 [[completion_report.claims]]
 id = "claim-open-pull-pagination"
@@ -70,14 +73,14 @@ citations = ["src/supportability_gate/github_app.py:247-255"]
 [[completion_report.claims]]
 id = "claim-fair-bounded-workers"
 text = "Candidates rotate repository-round-robin after each served pull, duplicate active keys are suppressed, and no more than two fixed worker slots launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:108-133", "src/supportability_gate/semantic_dispatch.py:181-199"]
+citations = ["src/supportability_gate/semantic_dispatch.py:109-134", "src/supportability_gate/semantic_dispatch.py:196-215"]
 
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
-text = "Each worker uses isolated Python, a trusted working directory, a fixed shell-free argument vector, and captured output; timeout cleanup requests termination and fails closed after two bounded waits when the OS does not confirm exit."
-citations = ["src/supportability_gate/semantic_dispatch.py:136-178", "src/supportability_gate/semantic_dispatch.py:202-262", "src/supportability_gate/semantic_dispatch.py:285-318"]
+text = "Each worker uses isolated Python, an absolute key path, a trusted working directory, captured output, and a publication lease. An unconfirmed exit revokes that lease, gives every sibling one bounded termination sequence, and returns a technical failure; a revoked worker cannot publish a verdict."
+citations = ["src/supportability_gate/semantic_cli.py:102-120", "src/supportability_gate/semantic_dispatch.py:137-194", "src/supportability_gate/semantic_dispatch.py:217-302", "src/supportability_gate/semantic_dispatch.py:324-357"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:265-282", "src/supportability_gate/semantic_dispatch.py:285-318"]
+citations = ["src/supportability_gate/semantic_dispatch.py:304-321", "src/supportability_gate/semantic_dispatch.py:324-357"]

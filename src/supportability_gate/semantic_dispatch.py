@@ -44,13 +44,14 @@ class Candidate:
 
 @dataclass
 class ActiveWorker:
-    """One launched worker plus its finite runtime boundary."""
+    """One launched worker plus bounded supervision and publication lease."""
 
     candidate: Candidate
     process: subprocess.Popen[str]
     started_at: float
     stdout: IO[str]
     stderr: IO[str]
+    lease_file: Path | None = None
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -134,7 +135,11 @@ def fair_order(
 
 
 def _worker_arguments(
-    candidate: Candidate, app_id: int, installation_id: int, private_key: Path
+    candidate: Candidate,
+    app_id: int,
+    installation_id: int,
+    private_key: Path,
+    lease_file: Path,
 ) -> list[str]:
     return [
         sys.executable,
@@ -152,7 +157,9 @@ def _worker_arguments(
         "--installation-id",
         str(installation_id),
         "--private-key",
-        str(private_key),
+        str(private_key.resolve()),
+        "--lease-file",
+        str(lease_file),
     ]
 
 
@@ -162,20 +169,28 @@ def launch_worker(
     """Launch one fixed worker command without a shell."""
     stdout = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
     stderr = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
+    trusted_directory = Path(sys.executable).resolve().parent
+    lease = tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=trusted_directory, prefix="semantic-worker-", delete=False
+    )
+    lease.write("active")
+    lease.close()
+    lease_file = Path(lease.name)
     try:
         process = subprocess.Popen(
-            _worker_arguments(candidate, app_id, installation_id, private_key),
+            _worker_arguments(candidate, app_id, installation_id, private_key, lease_file),
             stdout=stdout,
             stderr=stderr,
             text=True,
             shell=False,
-            cwd=Path(sys.executable).resolve().parent,
+            cwd=trusted_directory,
         )
     except Exception:
         stdout.close()
         stderr.close()
+        lease_file.unlink(missing_ok=True)
         raise
-    return ActiveWorker(candidate, process, time.monotonic(), stdout, stderr)
+    return ActiveWorker(candidate, process, time.monotonic(), stdout, stderr, lease_file)
 
 
 def fill_slots(
@@ -240,25 +255,49 @@ def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
     )
 
 
+def _revoke_worker(worker: ActiveWorker) -> None:
+    """Revoke final-check publication before abandoning an unconfirmed process."""
+    if worker.lease_file is not None:
+        worker.lease_file.write_text("revoked", encoding="utf-8")
+
+
+def _finish_worker(
+    active: dict[tuple[int, int], ActiveWorker],
+    key: tuple[int, int],
+    worker: ActiveWorker,
+    timed_out: bool,
+) -> bool:
+    if not _terminate_worker(worker, timed_out):
+        _revoke_worker(worker)
+        return False
+    try:
+        _report_worker(worker, timed_out)
+    finally:
+        worker.stdout.close()
+        worker.stderr.close()
+        if worker.lease_file is not None:
+            worker.lease_file.unlink(missing_ok=True)
+        del active[key]
+    return True
+
+
 def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None = None) -> None:
     """Capture completed output and terminate workers beyond the fixed timeout."""
     current = time.monotonic() if now is None else now
+    attempted: set[tuple[int, int]] = set()
     cleanup_failed = False
     for key, worker in tuple(active.items()):
         timed_out = current - worker.started_at > WORKER_TIMEOUT_SECONDS
         if worker.process.poll() is None and not timed_out:
             continue
-        terminated = _terminate_worker(worker, timed_out)
-        if not terminated:
+        attempted.add(key)
+        if not _finish_worker(active, key, worker, timed_out):
             cleanup_failed = True
-            continue
-        try:
-            _report_worker(worker, timed_out)
-        finally:
-            worker.stdout.close()
-            worker.stderr.close()
-            del active[key]
     if cleanup_failed:
+        for key, worker in tuple(active.items()):
+            _revoke_worker(worker)
+            if key not in attempted:
+                _finish_worker(active, key, worker, True)
         raise subprocess.SubprocessError("WORKER_TERMINATION_FAILURE")
 
 

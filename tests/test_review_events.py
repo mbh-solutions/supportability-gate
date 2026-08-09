@@ -214,6 +214,16 @@ def test_pull_lock_path_is_exact_and_repository_isolated(tmp_path: Path) -> None
     assert first.parent == tmp_path
 
 
+def test_revoked_worker_lease_blocks_publication(tmp_path: Path) -> None:
+    lease = tmp_path / "lease"
+    lease.write_text("active", encoding="utf-8")
+    semantic_cli._require_lease(lease)
+
+    lease.write_text("revoked", encoding="utf-8")
+    with pytest.raises(SemanticReviewError, match="WORKER_LEASE_REVOKED"):
+        semantic_cli._require_lease(lease)
+
+
 def test_main_reviews_only_the_requested_pull(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

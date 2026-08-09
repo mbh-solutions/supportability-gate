@@ -31,7 +31,7 @@ def _behavior() -> dict[str, object]:
         Candidate(2, "owner/two", 2, "c" * 40, datetime.fromisoformat("2026-08-09T02:00:00+00:00")),
     )
     ordered = fair_order(candidates)
-    arguments = _worker_arguments(ordered[0], 42, 7, Path("key.pem"))
+    arguments = _worker_arguments(ordered[0], 42, 7, Path("key.pem"), Path("lease"))
     assert arguments[1:] == [
         "-I",
         "-m",
@@ -47,7 +47,9 @@ def _behavior() -> dict[str, object]:
         "--installation-id",
         "7",
         "--private-key",
-        "key.pem",
+        str(Path("key.pem").resolve()),
+        "--lease-file",
+        "lease",
     ]
     return {
         "fair_order": [[item.repository_id, item.pull_number] for item in ordered],

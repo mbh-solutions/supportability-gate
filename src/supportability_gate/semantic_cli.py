@@ -78,6 +78,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--app-id", required=True, type=int)
     parser.add_argument("--installation-id", required=True, type=int)
     parser.add_argument("--private-key", required=True, type=Path)
+    parser.add_argument("--lease-file", type=Path)
     return parser
 
 
@@ -98,6 +99,11 @@ def unresolved_review_blocks(evidence: dict[str, object]) -> tuple[str, ...]:
     return tuple(sorted(blocks))
 
 
+def _require_lease(lease_file: Path | None) -> None:
+    if lease_file is not None and lease_file.read_text(encoding="utf-8") != "active":
+        raise SemanticReviewError("WORKER_LEASE_REVOKED")
+
+
 def _complete_current_check(
     app: GitHubApp,
     packet: EvidencePacket,
@@ -106,7 +112,9 @@ def _complete_current_check(
     check_id: int,
     conclusion: str,
     summary: str,
+    lease_file: Path | None = None,
 ) -> None:
+    _require_lease(lease_file)
     app.assert_current(packet, pull_number, token)
     app.complete_check(packet, token, check_id, conclusion, summary)
 
@@ -228,6 +236,7 @@ def _review(
     token: str,
     pull: dict[str, object],
     diagnostics_root: Path | None = None,
+    lease_file: Path | None = None,
 ) -> bool:
     packet = app.evidence_packet(repository, pull, token)
     evidence = packet.evidence
@@ -237,6 +246,7 @@ def _review(
         raise SemanticReviewError("MALFORMED_PULL_REQUEST")
     app.assert_current(packet, pull_number, token)
     if review_blocks:
+        _require_lease(lease_file)
         check_id = app.start_check(packet, token)
         _complete_current_check(
             app,
@@ -246,6 +256,7 @@ def _review(
             check_id,
             "failure",
             "BLOCK\n" + "\n".join(review_blocks),
+            lease_file,
         )
         return False
     packet = app.m10_evidence_packet(repository, pull, token, packet)
@@ -254,6 +265,7 @@ def _review(
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
+    _require_lease(lease_file)
     check_id = app.start_check(packet, token)
     preflight = (
         deterministic_completion_blocks(
@@ -276,6 +288,7 @@ def _review(
             check_id,
             "action_required",
             "PREFLIGHT_BLOCK\n" + "\n".join(preflight),
+            lease_file,
         )
         return False
     verdicts: list[SemanticVerdict] = []
@@ -298,6 +311,7 @@ def _review(
             check_id,
             "action_required",
             _ensemble_summary(False, verdicts, errors, findings),
+            lease_file,
         )
         raise SemanticReviewError("ENSEMBLE_TECHNICAL_FAILURE")
     passed = (
@@ -314,6 +328,7 @@ def _review(
         check_id,
         "success" if passed else "failure",
         _ensemble_summary(passed, verdicts, errors, findings),
+        lease_file,
     )
     return passed
 
@@ -383,7 +398,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         diagnostics_root = arguments.private_key.with_name("semantic-review-diagnostics")
         with _evaluation_lock(lock_path):
-            result = _review(app, arguments.repository, token, pull, diagnostics_root)
+            review_arguments = (app, arguments.repository, token, pull, diagnostics_root)
+            result = (
+                _review(*review_arguments, arguments.lease_file)
+                if arguments.lease_file is not None
+                else _review(*review_arguments)
+            )
     except (OSError, SemanticReviewError):
         print("TECHNICAL_FAILURE")
         return 2
