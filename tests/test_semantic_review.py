@@ -4,6 +4,8 @@ import copy
 import hashlib
 import io
 import json
+import threading
+import time
 import urllib.error
 from pathlib import Path
 
@@ -413,6 +415,56 @@ def test_ensemble_never_suppresses_and_byte_deduplicates_findings(
     assert calls == 8
     assert str(app.completed[0][4]).count(f"finding: {finding}") == 1
     assert str(app.completed[0][4]).count("response:") == 8
+
+
+def test_each_round_runs_four_profiles_concurrently_with_a_round_barrier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _packet({"completion_sources": [], "pull_request": 67})
+    active = {1: 0, 2: 0}
+    maximum = {1: 0, 2: 0}
+    completed = {1: 0, 2: 0}
+    lock = threading.Lock()
+    barriers = {1: threading.Barrier(4), 2: threading.Barrier(4)}
+
+    def respond(*args: object) -> object:
+        profile_id = str(args[1])
+        round_number = int(args[2])
+        with lock:
+            assert round_number == 1 or completed[1] == 4
+            active[round_number] += 1
+            maximum[round_number] = max(maximum[round_number], active[round_number])
+        barriers[round_number].wait(timeout=2)
+        time.sleep(0.01)
+        with lock:
+            active[round_number] -= 1
+            completed[round_number] += 1
+        return _response(packet, profile_id=profile_id, round_number=round_number)
+
+    class App:
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def assert_current(self, *args: object) -> None:
+            pass
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            pass
+
+    monkeypatch.setattr(semantic_cli, "request_response", respond)
+
+    semantic_cli._review(App(), packet.repository, "token", {})  # type: ignore[arg-type]
+    assert maximum == {1: 4, 2: 4}
+    assert completed == {1: 4, 2: 4}
 
 
 def test_production_review_missing_completion_evidence_still_runs_all_graders(

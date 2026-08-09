@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 from typing import BinaryIO
@@ -64,6 +66,7 @@ def _verdict_summary(verdict: SemanticVerdict) -> str:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="supportability-semantic-review")
     parser.add_argument("--repository", required=True)
+    parser.add_argument("--pull-number", required=True, type=int)
     parser.add_argument("--app-id", required=True, type=int)
     parser.add_argument("--installation-id", required=True, type=int)
     parser.add_argument("--private-key", required=True, type=Path)
@@ -135,13 +138,78 @@ def _unlock(handle: BinaryIO) -> None:
 
 @contextmanager
 def _evaluation_lock(path: Path) -> Iterator[None]:
-    """Give one scheduled process exclusive model and verdict ownership."""
+    """Give one pull-request worker exclusive verdict ownership."""
     with path.open("a+b") as handle:
         _lock(handle)
         try:
             yield
         finally:
             _unlock(handle)
+
+
+def _pull_lock_path(private_key: Path, repository: str, pull_number: int) -> Path:
+    """Return one stable, filesystem-safe lock path for an exact pull request."""
+    identity = hashlib.sha256(f"{repository}#{pull_number}".encode()).hexdigest()
+    return private_key.with_name(f"semantic-review-{identity}.lock")
+
+
+def _review_attempt(
+    packet: EvidencePacket,
+    profile_id: str,
+    round_number: int,
+    diagnostics_root: Path | None,
+    check_id: int,
+) -> SemanticVerdict:
+    """Run and parse one specialist attempt."""
+    response = (
+        request_response(
+            packet,
+            profile_id,
+            round_number,
+            diagnostics_root=diagnostics_root,
+            check_id=check_id,
+        )
+        if diagnostics_root is not None
+        else request_response(packet, profile_id, round_number)
+    )
+    return parse_response(
+        packet,
+        response.decoded() if isinstance(response, TransportResponse) else response,
+        profile_id,
+        round_number,
+    )
+
+
+def _review_round(
+    packet: EvidencePacket,
+    round_number: int,
+    diagnostics_root: Path | None,
+    check_id: int,
+) -> tuple[list[SemanticVerdict], list[tuple[str, int, str]]]:
+    """Run four specialists concurrently and retain deterministic profile order."""
+    with ThreadPoolExecutor(max_workers=len(PROFILE_IDS)) as executor:
+        attempts = [
+            (
+                profile_id,
+                executor.submit(
+                    _review_attempt,
+                    packet,
+                    profile_id,
+                    round_number,
+                    diagnostics_root,
+                    check_id,
+                ),
+            )
+            for profile_id in PROFILE_IDS
+        ]
+    verdicts: list[SemanticVerdict] = []
+    errors: list[tuple[str, int, str]] = []
+    for profile_id, attempt in attempts:
+        try:
+            verdicts.append(attempt.result())
+        except SemanticReviewError as error:
+            errors.append((profile_id, round_number, error.code))
+    return verdicts, errors
 
 
 def _review(
@@ -192,29 +260,11 @@ def _review(
     verdicts: list[SemanticVerdict] = []
     errors: list[tuple[str, int, str]] = []
     for round_number in ROUNDS:
-        for profile_id in PROFILE_IDS:
-            try:
-                response = (
-                    request_response(
-                        packet,
-                        profile_id,
-                        round_number,
-                        diagnostics_root=diagnostics_root,
-                        check_id=check_id,
-                    )
-                    if diagnostics_root is not None
-                    else request_response(packet, profile_id, round_number)
-                )
-                verdicts.append(
-                    parse_response(
-                        packet,
-                        response.decoded() if isinstance(response, TransportResponse) else response,
-                        profile_id,
-                        round_number,
-                    )
-                )
-            except SemanticReviewError as error:
-                errors.append((profile_id, round_number, error.code))
+        round_verdicts, round_errors = _review_round(
+            packet, round_number, diagnostics_root, check_id
+        )
+        verdicts.extend(round_verdicts)
+        errors.extend(round_errors)
     findings = tuple(
         dict.fromkeys((*preflight, *(finding for item in verdicts for finding in item.findings)))
     )
@@ -297,18 +347,21 @@ def reconcile_open_pulls(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Review every currently open pull request once."""
+    """Review one exact pull request once."""
     arguments = _parser().parse_args(argv)
     try:
         private_key = arguments.private_key.read_bytes()
         app = GitHubApp(arguments.app_id, arguments.installation_id, private_key)
         token = app.installation_token()
-        lock_path = arguments.private_key.with_name("semantic-review.lock")
+        pull = app.pull(arguments.repository, arguments.pull_number, token)
+        lock_path = _pull_lock_path(
+            arguments.private_key, arguments.repository, arguments.pull_number
+        )
         diagnostics_root = arguments.private_key.with_name("semantic-review-diagnostics")
         with _evaluation_lock(lock_path):
-            results = reconcile_open_pulls(app, arguments.repository, token, diagnostics_root)
+            result = _review(app, arguments.repository, token, pull, diagnostics_root)
     except (OSError, SemanticReviewError):
         print("TECHNICAL_FAILURE")
         return 2
-    print("PASS" if all(results) else "BLOCK")
-    return 0 if all(results) else 1
+    print("PASS" if result else "BLOCK")
+    return 0 if result else 1
