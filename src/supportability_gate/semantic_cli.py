@@ -257,6 +257,17 @@ def _review(
         )
         else ()
     )
+    if preflight:
+        _complete_current_check(
+            app,
+            packet,
+            pull_number,
+            token,
+            check_id,
+            "action_required",
+            "PREFLIGHT_BLOCK\n" + "\n".join(preflight),
+        )
+        return False
     verdicts: list[SemanticVerdict] = []
     errors: list[tuple[str, int, str]] = []
     for round_number in ROUNDS:

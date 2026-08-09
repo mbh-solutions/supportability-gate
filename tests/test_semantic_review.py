@@ -299,6 +299,49 @@ def test_m10_deterministic_contradiction_blocks_even_if_model_claims_pass() -> N
     assert "CONTRADICTED_COMPLETION_RESULT" in verdict.findings
 
 
+def test_deterministic_completion_defect_blocks_before_model_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _m10_packet()
+    evidence = packet.evidence
+    evidence["completion_report"]["overall_result"] = "BLOCK"  # type: ignore[index]
+    packet = EvidencePacket(
+        packet.repository, packet.base_sha, packet.head_sha, packet.app_id, evidence
+    )
+
+    class App:
+        completed: list[tuple[object, ...]] = []
+
+        def evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def m10_evidence_packet(self, *args: object) -> EvidencePacket:
+            return packet
+
+        def replay_result(self, *args: object) -> None:
+            return None
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def start_check(self, *args: object) -> int:
+            return 99
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
+
+    monkeypatch.setattr(
+        semantic_cli,
+        "request_response",
+        lambda *args: pytest.fail("deterministic defect reached model transport"),
+    )
+    app = App()
+
+    assert not semantic_cli._review(app, packet.repository, "token", {})  # type: ignore[arg-type]
+    assert app.completed[0][3] == "action_required"
+    assert "CONTRADICTED_COMPLETION_RESULT" in str(app.completed[0][4])
+
+
 def test_nonproduction_review_skips_completion_preflight(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
