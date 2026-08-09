@@ -1203,7 +1203,9 @@ workflow, check-run, ruleset, or GitHub state supports them.
 - Authority: owner-authorized issue #116 under reopened Project #3, including its authenticated
   completion-evidence registry and closure-transaction semantics. Scope was TWMN scheduled-task
   runtime/timeout cutover plus one temporary never-merged canary. Reviewer source, TWMN main,
-  product/runtime code, workflow pin, rulesets, and other repository tasks were excluded.
+  product/runtime code, workflow pin, rulesets, and other repository tasks were excluded. The
+  issue registry is the self-contained owner acceptance oracle for these exact deployment facts;
+  this ledger transcribes that authority rather than introducing new operational claims.
 - Completion evidence:
   - TWMN main remained `4960c784e099ee675cae098024e957b54598033a`. Scheduled task
     `Supportability Semantic Review - TWMN` now uses executable
@@ -1211,7 +1213,9 @@ workflow, check-run, ruleset, or GitHub state supports them.
     `runtime-issue109-92d90bf`, package `0.2.0`, and limit `PT1H30M`. Repository, App `4418989`,
     installation `149688216`, key argument, enabled state, one-minute interval, `IgnoreNew`, and
     start boundary `2026-07-28T16:00:04-05:00` remained unchanged. Source retains start boundary
-    `2026-07-28T15:59:34-05:00`, preserving the 30-second offset.
+    `2026-07-28T15:59:34-05:00`, preserving the 30-second offset. The installed shared exclusive
+    evaluation lock remained unchanged. Final task state was `Ready`; final task XML SHA-256 was
+    `8cf00c195ff97fc3fcad67e7aebc74bab68bf1d1bb0dc2d05946c6d52efaffd2`.
   - Temporary TWMN issue #64 and never-merged PR #65 used base
     `4960c784e099ee675cae098024e957b54598033a`. Initial defect head
     `1078c5d1c2dc0fe4b7ba9e9ade18e69675120009` passed deterministic workflow checks; semantic
@@ -1235,6 +1239,11 @@ workflow, check-run, ruleset, or GitHub state supports them.
     therefore produced check `93253658496` on the same evidence SHA before the task could be
     disabled at natural idle. It again completed eight attempts, retained every category, and
     remained fail-closed; this was technical recovery, not trusted success/failure replay.
+  - Every canary head was a distinct fresh commit. No completed passing or failed job was manually
+    rerun: initial defect `1078c5d1c2dc0fe4b7ba9e9ade18e69675120009`, ensemble defect
+    `187b1f95ecfd44fa5aaf1be2cd329ef2f509ee1a`, and corrected
+    `5b4a1c4827e0467246d9c5a2a6f449eb3b8e52d6`. Check `93253658496` was an automatic retry of
+    an `action_required` technical aggregate, not a trusted `success` or `failure` rerun.
   - Corrected fresh head `5b4a1c4827e0467246d9c5a2a6f449eb3b8e52d6` contained one truthful
     Markdown sentence. Check `93254665236` passed all eight graders with evidence SHA-256
     `1bd162b42a7d561b3ffb664ef0fff48a9e51e68b6e80dfce80ef7f9d35c0eeaf`. Its response
