@@ -73,7 +73,7 @@ citations = ["src/supportability_gate/github_app.py:401-430", "src/supportabilit
 
 [[completion_report.claims]]
 id = "claim-exact-generation-deduplication"
-text = "Discovery excludes a completed current evidence generation, while changed head, authority, or review state produces a different generation eligible for review."
+text = "Discovery excludes a completed exact evidence generation before worker launch."
 citations = ["src/supportability_gate/semantic_dispatch.py:92-112"]
 
 [[completion_report.claims]]
@@ -84,14 +84,14 @@ citations = ["src/supportability_gate/github_app.py:247-255"]
 [[completion_report.claims]]
 id = "claim-fair-bounded-workers"
 text = "Candidates rotate repository-round-robin after each served pull, duplicate active keys are suppressed, and no more than two fixed worker slots launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:110-135", "src/supportability_gate/semantic_dispatch.py:197-215"]
+citations = ["src/supportability_gate/semantic_dispatch.py:115-140", "src/supportability_gate/semantic_dispatch.py:206-224"]
 
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
-text = "Each worker uses isolated Python, an absolute key path, a trusted working directory, captured output, and a writable credential-directory publication lease. An unconfirmed exit attempts lease revocation, gives every process one bounded termination sequence even when revocation fails, and returns a technical failure; a revoked worker cannot publish a verdict."
-citations = ["src/supportability_gate/semantic_cli.py:101-114", "src/supportability_gate/semantic_lease.py:60-95", "src/supportability_gate/semantic_dispatch.py:143-203", "src/supportability_gate/semantic_dispatch.py:227-317", "src/supportability_gate/semantic_dispatch.py:340-373"]
+text = "Each worker uses isolated Python, an absolute key path, a trusted working directory, captured output, and a writable credential-directory publication lease. An unconfirmed exit independently marks future publication revoked before one bounded termination sequence, so even a surviving process cannot reacquire publication authority."
+citations = ["src/supportability_gate/semantic_cli.py:101-114", "src/supportability_gate/semantic_lease.py:59-80", "src/supportability_gate/semantic_dispatch.py:143-203", "src/supportability_gate/semantic_dispatch.py:227-320", "src/supportability_gate/semantic_dispatch.py:343-376"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:320-337", "src/supportability_gate/semantic_dispatch.py:340-373"]
+citations = ["src/supportability_gate/semantic_dispatch.py:321-338", "src/supportability_gate/semantic_dispatch.py:341-374"]

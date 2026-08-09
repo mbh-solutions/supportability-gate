@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -58,7 +57,7 @@ def exclusive_lease(path: Path) -> Iterator[None]:
 
 @contextmanager
 def publication_lease(path: Path | None) -> Iterator[None]:
-    """Make active-lease validation atomic with final-check publication."""
+    """Hold one validated worker lease through final-check publication."""
     if path is None:
         yield
         return
@@ -66,7 +65,7 @@ def publication_lease(path: Path | None) -> Iterator[None]:
         _lock(handle)
         try:
             handle.seek(0)
-            if handle.read() != b"active":
+            if path.with_name(path.name + ".revoked").exists() or handle.read() != b"active":
                 raise SemanticReviewError("WORKER_LEASE_REVOKED")
             yield
         finally:
@@ -74,22 +73,9 @@ def publication_lease(path: Path | None) -> Iterator[None]:
 
 
 def revoke_publication_lease(path: Path) -> None:
-    """Revoke one worker after any in-flight publication finishes."""
-    deadline = time.monotonic() + 35
-    while True:
-        with path.open("r+b") as handle:
-            try:
-                _lock(handle)
-            except SemanticReviewError as error:
-                if error.code != "EVALUATION_IN_PROGRESS" or time.monotonic() >= deadline:
-                    raise SemanticReviewError("WORKER_LEASE_BUSY") from error
-            else:
-                try:
-                    handle.seek(0)
-                    handle.truncate()
-                    handle.write(b"revoked")
-                    handle.flush()
-                finally:
-                    _unlock(handle)
-                return
-        time.sleep(0.1)
+    """Prevent every future publication acquisition by one worker."""
+    marker = path.with_name(path.name + ".revoked")
+    try:
+        marker.touch(exist_ok=False)
+    except FileExistsError:
+        pass

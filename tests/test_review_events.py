@@ -222,12 +222,13 @@ def test_revoked_worker_lease_blocks_publication(tmp_path: Path) -> None:
         pass
 
     revoke_publication_lease(lease)
+    assert lease.with_name("lease.revoked").exists()
     with pytest.raises(SemanticReviewError, match="WORKER_LEASE_REVOKED"):
         with publication_lease(lease):
             pytest.fail("revoked worker acquired publication lease")
 
 
-def test_publication_and_lease_revocation_are_atomic(tmp_path: Path) -> None:
+def test_revocation_blocks_reacquisition_during_current_publication(tmp_path: Path) -> None:
     lease = tmp_path / "lease"
     lease.write_text("active", encoding="utf-8")
     entered, release, revoked = threading.Event(), threading.Event(), threading.Event()
@@ -260,12 +261,15 @@ def test_publication_and_lease_revocation_are_atomic(tmp_path: Path) -> None:
         publication = executor.submit(publish)
         assert entered.wait(timeout=1)
         revocation = executor.submit(revoke)
-        assert not revoked.wait(timeout=0.1)
+        assert revoked.wait(timeout=1)
         release.set()
         publication.result(timeout=1)
         revocation.result(timeout=1)
 
-    assert lease.read_text(encoding="utf-8") == "revoked"
+    assert lease.with_name("lease.revoked").exists()
+    with pytest.raises(SemanticReviewError, match="WORKER_LEASE_REVOKED"):
+        with publication_lease(lease):
+            pytest.fail("surviving worker reacquired revoked publication authority")
 
 
 def test_main_reviews_only_the_requested_pull(

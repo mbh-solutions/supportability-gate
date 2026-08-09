@@ -402,7 +402,7 @@ def test_shutdown_fails_after_two_bounded_waits(monkeypatch: Any, tmp_path: Path
         dispatch.run_dispatch_loop(arguments, App())  # type: ignore[arg-type]
 
     assert process.wait_calls == 2
-    assert lease.read_text(encoding="utf-8") == "revoked"
+    assert lease.with_name("lease.revoked").exists()
     worker.stdout.close()
     worker.stderr.close()
 
@@ -458,7 +458,7 @@ def test_failed_cleanup_revokes_stuck_worker_and_terminates_sibling(
         dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
 
     assert set(active) == {first.key}
-    assert first_lease.read_text(encoding="utf-8") == "revoked"
+    assert first_lease.with_name("first.revoked").exists()
     assert pending.killed is True
     assert not second_lease.exists()
     active[first.key].stdout.close()
@@ -510,6 +510,32 @@ def test_revocation_failure_still_terminates_worker_and_sibling(
 
     assert active == {}
     assert all(process.killed for process in processes)
+
+
+def test_termination_failure_leaves_publication_revoked(tmp_path: Path) -> None:
+    class Process:
+        returncode = None
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            return None
+
+        def wait(self, timeout: int) -> int:
+            raise subprocess.TimeoutExpired("worker", timeout)
+
+    candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    lease = tmp_path / "lease"
+    lease.write_text("active", encoding="utf-8")
+    worker = ActiveWorker(candidate, Process(), 0.0, io.StringIO(), io.StringIO(), lease)  # type: ignore[arg-type]
+    active = {candidate.key: worker}
+
+    assert not dispatch._finish_worker(active, candidate.key, worker, True)
+    assert candidate.key in active
+    assert lease.with_name("lease.revoked").exists()
+    worker.stdout.close()
+    worker.stderr.close()
 
 
 def test_shadow_reports_selected_repositories_even_without_candidates(capsys: Any) -> None:

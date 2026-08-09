@@ -294,6 +294,7 @@ def _finish_worker(
         worker.stderr.close()
         if worker.lease_file is not None:
             worker.lease_file.unlink(missing_ok=True)
+            worker.lease_file.with_name(worker.lease_file.name + ".revoked").unlink(missing_ok=True)
         del active[key]
     return revoked
 
