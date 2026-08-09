@@ -10,6 +10,7 @@ responsibility_changes = [
 simplified_functions = [
     "GitHubApp.assert_current",
     "GitHubApp.pull",
+    "_ensemble_summary",
     "_evaluation_lock",
     "_parser",
     "_pull_lock_path",
