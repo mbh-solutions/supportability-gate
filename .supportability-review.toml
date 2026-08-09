@@ -144,3 +144,9 @@ path = "src/supportability_gate/semantic_dispatch.py"
 owner_path = "src/supportability_gate/semantic_dispatch.py"
 basis = "responsibility"
 justification = "Owns installation-wide repository discovery, exact-head prerequisite eligibility, fair two-worker scheduling, active-job duplicate suppression, and bounded process supervision with publication-lease revocation, without semantic evaluation or check publication."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_lease.py"
+owner_path = "src/supportability_gate/semantic_lease.py"
+basis = "responsibility"
+justification = "Owns cross-process evaluation and publication lease locking without GitHub access, process launch, semantic evaluation, or check publication."

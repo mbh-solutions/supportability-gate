@@ -20,6 +20,7 @@ from supportability_gate.semantic_contract import (
     SHA_PATTERN,
     SemanticReviewError,
 )
+from supportability_gate.semantic_lease import revoke_publication_lease
 
 POLL_SECONDS = 60
 MAX_WORKERS = 2
@@ -258,7 +259,7 @@ def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
 def _revoke_worker(worker: ActiveWorker) -> None:
     """Revoke final-check publication before abandoning an unconfirmed process."""
     if worker.lease_file is not None:
-        worker.lease_file.write_text("revoked", encoding="utf-8")
+        revoke_publication_lease(worker.lease_file)
 
 
 def _finish_worker(
@@ -267,8 +268,11 @@ def _finish_worker(
     worker: ActiveWorker,
     timed_out: bool,
 ) -> bool:
-    if not _terminate_worker(worker, timed_out):
+    if timed_out:
         _revoke_worker(worker)
+    if not _terminate_worker(worker, timed_out):
+        if not timed_out:
+            _revoke_worker(worker)
         return False
     try:
         _report_worker(worker, timed_out)

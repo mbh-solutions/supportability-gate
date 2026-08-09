@@ -12,6 +12,7 @@ import pytest
 from supportability_gate import semantic_cli
 from supportability_gate.review_events import ReviewEvent, parse_review_event
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
+from supportability_gate.semantic_lease import publication_lease, revoke_publication_lease
 
 
 def _body(action: str = "submitted") -> bytes:
@@ -217,11 +218,54 @@ def test_pull_lock_path_is_exact_and_repository_isolated(tmp_path: Path) -> None
 def test_revoked_worker_lease_blocks_publication(tmp_path: Path) -> None:
     lease = tmp_path / "lease"
     lease.write_text("active", encoding="utf-8")
-    semantic_cli._require_lease(lease)
+    with publication_lease(lease):
+        pass
 
-    lease.write_text("revoked", encoding="utf-8")
+    revoke_publication_lease(lease)
     with pytest.raises(SemanticReviewError, match="WORKER_LEASE_REVOKED"):
-        semantic_cli._require_lease(lease)
+        with publication_lease(lease):
+            pytest.fail("revoked worker acquired publication lease")
+
+
+def test_publication_and_lease_revocation_are_atomic(tmp_path: Path) -> None:
+    lease = tmp_path / "lease"
+    lease.write_text("active", encoding="utf-8")
+    entered, release, revoked = threading.Event(), threading.Event(), threading.Event()
+
+    class App:
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def complete_check(self, *args: object) -> None:
+            entered.set()
+            assert release.wait(timeout=2)
+
+    def publish() -> None:
+        semantic_cli._complete_current_check(
+            App(),
+            object(),
+            1,
+            "token",
+            2,
+            "success",
+            "PASS",
+            lease,  # type: ignore[arg-type]
+        )
+
+    def revoke() -> None:
+        revoke_publication_lease(lease)
+        revoked.set()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        publication = executor.submit(publish)
+        assert entered.wait(timeout=1)
+        revocation = executor.submit(revoke)
+        assert not revoked.wait(timeout=0.1)
+        release.set()
+        publication.result(timeout=1)
+        revocation.result(timeout=1)
+
+    assert lease.read_text(encoding="utf-8") == "revoked"
 
 
 def test_main_reviews_only_the_requested_pull(

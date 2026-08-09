@@ -37,7 +37,8 @@
     },
     {
       "covers": [
-        "src/supportability_gate/semantic_dispatch.py"
+        "src/supportability_gate/semantic_dispatch.py",
+        "src/supportability_gate/semantic_lease.py"
       ],
       "id": "semantic-dispatch",
       "kind": "regression"

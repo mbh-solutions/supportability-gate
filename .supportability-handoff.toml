@@ -14,26 +14,32 @@ simplified_functions = [
     "GitHubApp.installation_repositories",
     "GitHubApp.open_pulls",
     "_candidate",
+    "_complete_current_check",
+    "_evaluation_lock",
     "_finish_worker",
+    "_lock",
     "_parser",
     "_parser",
-    "_shadow",
     "_report_worker",
-    "_require_lease",
     "_revoke_worker",
+    "_shadow",
     "_terminate_worker",
+    "_unlock",
     "_worker_arguments",
     "discover_candidates",
+    "exclusive_lease",
     "fair_order",
     "fill_slots",
     "launch_worker",
     "main",
     "main",
+    "publication_lease",
     "reap_workers",
+    "revoke_publication_lease",
     "run_dispatch_loop",
 ]
 boundary_rationale = [
-    "semantic_dispatch depends on GitHubApp and launches semantic_cli by fixed module argument vector; neither GitHubApp nor the exact-pull worker depends on dispatcher orchestration.",
+    "semantic_dispatch and semantic_cli depend on the focused semantic_lease primitive; neither GitHubApp nor the exact-pull worker depends on dispatcher orchestration.",
 ]
 remaining_risks = [
     "Production remains on legacy per-repository tasks until separately authorized S02 cutover; dispatcher throughput is intentionally capped at two active pull workers.",
@@ -63,7 +69,7 @@ citations = ["src/supportability_gate/semantic_contract.py:20-22", "src/supporta
 [[completion_report.claims]]
 id = "claim-exact-head-readiness"
 text = "A pull becomes eligible only after one successful exact-head organization-required workflow artifact exists."
-citations = ["src/supportability_gate/github_app.py:401-430", "src/supportability_gate/github_app.py:432-447", "src/supportability_gate/semantic_dispatch.py:91-106"]
+citations = ["src/supportability_gate/github_app.py:401-430", "src/supportability_gate/github_app.py:432-447", "src/supportability_gate/semantic_dispatch.py:92-107"]
 
 [[completion_report.claims]]
 id = "claim-open-pull-pagination"
@@ -73,14 +79,14 @@ citations = ["src/supportability_gate/github_app.py:247-255"]
 [[completion_report.claims]]
 id = "claim-fair-bounded-workers"
 text = "Candidates rotate repository-round-robin after each served pull, duplicate active keys are suppressed, and no more than two fixed worker slots launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:109-134", "src/supportability_gate/semantic_dispatch.py:196-215"]
+citations = ["src/supportability_gate/semantic_dispatch.py:110-135", "src/supportability_gate/semantic_dispatch.py:197-215"]
 
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
 text = "Each worker uses isolated Python, an absolute key path, a trusted working directory, captured output, and a publication lease. An unconfirmed exit revokes that lease, gives every sibling one bounded termination sequence, and returns a technical failure; a revoked worker cannot publish a verdict."
-citations = ["src/supportability_gate/semantic_cli.py:102-120", "src/supportability_gate/semantic_dispatch.py:137-194", "src/supportability_gate/semantic_dispatch.py:217-302", "src/supportability_gate/semantic_dispatch.py:324-357"]
+citations = ["src/supportability_gate/semantic_cli.py:101-114", "src/supportability_gate/semantic_lease.py:60-95", "src/supportability_gate/semantic_dispatch.py:138-194", "src/supportability_gate/semantic_dispatch.py:218-305", "src/supportability_gate/semantic_dispatch.py:328-361"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:304-321", "src/supportability_gate/semantic_dispatch.py:324-357"]
+citations = ["src/supportability_gate/semantic_dispatch.py:308-325", "src/supportability_gate/semantic_dispatch.py:328-361"]
