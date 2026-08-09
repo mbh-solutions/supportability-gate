@@ -269,10 +269,11 @@ class GitHubApp:
             and isinstance(run.get("app"), dict)
             and run["app"].get("id") == self.app_id
             and run.get("status") == "completed"
+            and run.get("conclusion") in {"success", "failure"}
         }
         if not conclusions:
             return None
-        if len(conclusions) != 1 or not conclusions <= {"success", "failure"}:
+        if len(conclusions) != 1:
             raise SemanticReviewError("CONFLICTING_REPLAY")
         return conclusions.pop() == "success"
 

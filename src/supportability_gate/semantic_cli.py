@@ -219,6 +219,15 @@ def _review(
         dict.fromkeys((*preflight, *(finding for item in verdicts for finding in item.findings)))
     )
     if errors:
+        _complete_current_check(
+            app,
+            packet,
+            pull_number,
+            token,
+            check_id,
+            "action_required",
+            _ensemble_summary(False, verdicts, errors, findings),
+        )
         raise SemanticReviewError("ENSEMBLE_TECHNICAL_FAILURE")
     passed = (
         len(verdicts) == len(PROFILE_IDS) * len(ROUNDS)

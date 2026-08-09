@@ -511,7 +511,9 @@ def test_technical_model_failure_runs_all_graders_without_trusted_completion(
         )
     assert app.started == 1
     assert calls == 8
-    assert app.completed == []
+    assert len(app.completed) == 1
+    assert app.completed[0][3] == "action_required"
+    assert code in str(app.completed[0][4])
 
 
 def test_deterministic_response_failure_runs_all_without_trusted_completion(
@@ -560,7 +562,8 @@ def test_deterministic_response_failure_runs_all_without_trusted_completion(
         semantic_cli._review(  # type: ignore[arg-type]
             app, "mbh-solutions/supportability-gate", "token", {}
         )
-    assert (app.started, calls, len(app.completed)) == (1, 8, 0)
+    assert (app.started, calls, len(app.completed)) == (1, 8, 1)
+    assert app.completed[0][3] == "action_required"
 
 
 def test_unsupported_finding_preserves_exact_rejected_response(
@@ -621,7 +624,8 @@ def test_unsupported_finding_preserves_exact_rejected_response(
     assert attempt["response_sha256"] == response_sha256
     assert attempt["response_file"] == filename
     assert not list(tmp_path.rglob("*.tmp"))
-    assert app.completed == []
+    assert len(app.completed) == 1
+    assert app.completed[0][3] == "action_required"
 
 
 def test_evidence_packet_is_immutable_after_construction() -> None:

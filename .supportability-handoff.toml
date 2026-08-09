@@ -15,6 +15,7 @@ simplified_functions = [
     "GitHubApp._authority_issue",
     "GitHubApp.assert_current",
     "GitHubApp.evidence_packet",
+    "GitHubApp.replay_result",
     "_attempt_content",
     "_authority_finding_prefixes",
     "_boundary_evidence",
@@ -70,5 +71,5 @@ citations = ["src/supportability_gate/semantic_cli.py:147-236", "src/supportabil
 
 [[completion_report.claims]]
 id = "claim-attempt-identities"
-text = "Each response and diagnostic binds profile, round, profile instruction SHA, common evidence SHA, fixed model and effort, and response SHA."
+text = "Each response binds profile, round, profile instruction SHA, common evidence SHA, fixed model and effort, and response SHA; each diagnostic attempt records profile, round, evidence, and response identity."
 citations = ["src/supportability_gate/semantic_contract.py:149-169", "src/supportability_gate/semantic_diagnostics.py:18-111", "src/supportability_gate/semantic_review.py:388-463"]

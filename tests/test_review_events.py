@@ -248,6 +248,8 @@ def test_same_head_change_becomes_pending_before_fresh_evaluation(
         "current",
         "replay",
         "pending",
+        "current",
+        "complete",
     ]
 
 
