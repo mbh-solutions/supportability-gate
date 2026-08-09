@@ -1110,9 +1110,11 @@ workflow, check-run, ruleset, or GitHub state supports them.
 
 ## Critical maintenance — Project #3 issue #109
 
-- Convergent semantic review: `COMPLETE` upon protected merge of this evidence-only ledger change;
-  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
-- Authority: owner-authorized issue #109 under reopened Project #3. Scope was full validated GitHub
+- Convergent semantic review implementation, qualification, runtime, and canary: `COMPLETE`.
+  This ledger status becomes `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed
+  `Yes` only when this protected commit enters `main`.
+- Authority: owner-authorized issue #109 under reopened Project #3, including its authenticated
+  completion-evidence registry and closure-transaction semantics. Scope was full validated GitHub
   comparison evidence, canonical PR/closing-issue authority, four fixed specialist profiles across
   two rounds, runtime qualification, and one temporary DC canary. The immutable Standard, frozen
   roadmap, DC main and PR #20, and TWMN runtime were excluded and remained unchanged.
@@ -1187,9 +1189,10 @@ workflow, check-run, ruleset, or GitHub state supports them.
   canary had seven parser-format failures, yet all eight attempts ran and the aggregate retained
   all seven seeded categories. The shared exclusive lock can delay colliding one-minute tasks;
   `IgnoreNew` prevents overlap.
-- Remaining work: None after this ledger PR normally merges, issue #109 closes, Project #3 reads
-  `Complete / Complete / On scope / Yes`, and Project #3 closes. Stop; no successor work is
-  authorized.
+- Closure transaction: protected merge makes this prospective ledger state canonical and closes
+  issue #109; immediate synchronization then sets Project #3 to
+  `Complete / Complete / On scope / Yes` and closes the Project. No implementation, evidence,
+  runtime, canary, or cleanup work remains. Stop afterward; no successor work is authorized.
 
 ## Product status
 
