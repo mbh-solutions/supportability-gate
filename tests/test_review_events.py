@@ -53,6 +53,8 @@ def _pass_verdict() -> object:
             "dependency_direction": "preserved",
             "architecture_citations": (),
             "findings": (),
+            "profile_id": "contract-correctness",
+            "round": 1,
             "returned_model": "model",
             "reasoning_effort": "medium",
             "response_sha256": "c" * 64,
