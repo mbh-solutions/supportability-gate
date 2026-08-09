@@ -53,29 +53,3 @@ def exclusive_lease(path: Path) -> Iterator[None]:
             yield
         finally:
             _unlock(handle)
-
-
-@contextmanager
-def publication_lease(path: Path | None) -> Iterator[None]:
-    """Hold one validated worker lease through final-check publication."""
-    if path is None:
-        yield
-        return
-    with path.open("r+b") as handle:
-        _lock(handle)
-        try:
-            handle.seek(0)
-            if path.with_name(path.name + ".revoked").exists() or handle.read() != b"active":
-                raise SemanticReviewError("WORKER_LEASE_REVOKED")
-            yield
-        finally:
-            _unlock(handle)
-
-
-def revoke_publication_lease(path: Path) -> None:
-    """Prevent every future publication acquisition by one worker."""
-    marker = path.with_name(path.name + ".revoked")
-    try:
-        marker.touch(exist_ok=False)
-    except FileExistsError:
-        pass

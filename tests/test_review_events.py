@@ -12,7 +12,6 @@ import pytest
 from supportability_gate import semantic_cli
 from supportability_gate.review_events import ReviewEvent, parse_review_event
 from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
-from supportability_gate.semantic_lease import publication_lease, revoke_publication_lease
 
 
 def _body(action: str = "submitted") -> bytes:
@@ -215,61 +214,34 @@ def test_pull_lock_path_is_exact_and_repository_isolated(tmp_path: Path) -> None
     assert first.parent == tmp_path
 
 
-def test_revoked_worker_lease_blocks_publication(tmp_path: Path) -> None:
-    lease = tmp_path / "lease"
-    lease.write_text("active", encoding="utf-8")
-    with publication_lease(lease):
-        pass
-
-    revoke_publication_lease(lease)
-    assert lease.with_name("lease.revoked").exists()
-    with pytest.raises(SemanticReviewError, match="WORKER_LEASE_REVOKED"):
-        with publication_lease(lease):
-            pytest.fail("revoked worker acquired publication lease")
-
-
-def test_revocation_blocks_reacquisition_during_current_publication(tmp_path: Path) -> None:
-    lease = tmp_path / "lease"
-    lease.write_text("active", encoding="utf-8")
-    entered, release, revoked = threading.Event(), threading.Event(), threading.Event()
+def test_worker_defers_final_check_publication(tmp_path: Path) -> None:
+    result = tmp_path / "result"
 
     class App:
         def assert_current(self, *args: object) -> None:
             return None
 
         def complete_check(self, *args: object) -> None:
-            entered.set()
-            assert release.wait(timeout=2)
+            pytest.fail("worker published a final check")
 
-    def publish() -> None:
-        semantic_cli._complete_current_check(
-            App(),
-            object(),
-            1,
-            "token",
-            2,
-            "success",
-            "PASS",
-            lease,  # type: ignore[arg-type]
-        )
+    packet = _packet("deferred")
+    semantic_cli._complete_current_check(
+        App(),
+        packet,
+        67,
+        "token",
+        2,
+        "success",
+        "PASS",
+        result,  # type: ignore[arg-type]
+    )
 
-    def revoke() -> None:
-        revoke_publication_lease(lease)
-        revoked.set()
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        publication = executor.submit(publish)
-        assert entered.wait(timeout=1)
-        revocation = executor.submit(revoke)
-        assert revoked.wait(timeout=1)
-        release.set()
-        publication.result(timeout=1)
-        revocation.result(timeout=1)
-
-    assert lease.with_name("lease.revoked").exists()
-    with pytest.raises(SemanticReviewError, match="WORKER_LEASE_REVOKED"):
-        with publication_lease(lease):
-            pytest.fail("surviving worker reacquired revoked publication authority")
+    assert json.loads(result.read_text(encoding="utf-8")) == {
+        "check_id": 2,
+        "conclusion": "success",
+        "evidence_sha256": packet.sha256,
+        "summary": "PASS",
+    }
 
 
 def test_main_reviews_only_the_requested_pull(

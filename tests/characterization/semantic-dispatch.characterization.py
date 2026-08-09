@@ -48,7 +48,7 @@ def _behavior() -> dict[str, object]:
         "7",
         "--private-key",
         str(Path("key.pem").resolve()),
-        "--lease-file",
+        "--result-file",
         "lease",
     ]
     return {

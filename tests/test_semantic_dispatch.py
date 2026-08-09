@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 import supportability_gate.semantic_dispatch as dispatch
-from supportability_gate.semantic_contract import SemanticReviewError
+from supportability_gate.semantic_contract import EvidencePacket, SemanticReviewError
 from supportability_gate.semantic_dispatch import ActiveWorker, Candidate
 
 
@@ -184,15 +184,15 @@ def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) 
         "7",
         "--private-key",
         str(Path("key.pem").resolve()),
-        "--lease-file",
-        str(worker.lease_file),
+        "--result-file",
+        str(worker.result_file),
     ]
-    assert worker.lease_file is not None
-    assert worker.lease_file.parent == Path("key.pem").resolve().parent
-    assert worker.lease_file.read_text(encoding="utf-8") == "active"
+    assert worker.result_file is not None
+    assert worker.result_file.parent == Path("key.pem").resolve().parent
+    assert worker.result_file.read_text(encoding="utf-8") == ""
     worker.stdout.close()
     worker.stderr.close()
-    worker.lease_file.unlink()
+    worker.result_file.unlink()
 
 
 def test_discovery_skips_completed_exact_generation() -> None:
@@ -277,6 +277,62 @@ def test_reaper_tolerates_kill_after_worker_exit(capsys: Any) -> None:
 
     assert active == {}
     assert json.loads(capsys.readouterr().out)["returncode"] == 0
+
+
+def test_dispatcher_alone_publishes_confirmed_worker_result(tmp_path: Path) -> None:
+    packet = EvidencePacket("owner/repo-1", "b" * 40, "a" * 40, 42, {"pull_request": 1})
+    candidate = Candidate(
+        1,
+        packet.repository,
+        1,
+        packet.head_sha,
+        datetime.fromisoformat("2026-08-09T00:00:00+00:00"),
+        packet,
+    )
+    result = tmp_path / "result"
+    result.write_text(
+        json.dumps(
+            {
+                "check_id": 9,
+                "conclusion": "success",
+                "evidence_sha256": packet.sha256,
+                "summary": "PASS",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class Process:
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+        def wait(self, timeout: int) -> int:
+            return 0
+
+    class App:
+        completed: list[tuple[object, ...]] = []
+
+        def installation_token(self) -> str:
+            return "token"
+
+        def assert_current(self, *args: object) -> None:
+            return None
+
+        def complete_check(self, *args: object) -> None:
+            self.completed.append(args)
+
+    app = App()
+    active = {
+        candidate.key: ActiveWorker(candidate, Process(), 0.0, io.StringIO(), io.StringIO(), result)
+    }  # type: ignore[arg-type]
+
+    dispatch.reap_workers(active, now=0.0, app=app)  # type: ignore[arg-type]
+
+    assert active == {}
+    assert app.completed == [(packet, "token", 9, "success", "PASS")]
+    assert not result.exists()
 
 
 def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -> None:
@@ -386,9 +442,9 @@ def test_shutdown_fails_after_two_bounded_waits(monkeypatch: Any, tmp_path: Path
 
     candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
     process = Process()
-    lease = tmp_path / "lease"
-    lease.write_text("active", encoding="utf-8")
-    worker = ActiveWorker(candidate, process, 0.0, io.StringIO(), io.StringIO(), lease)
+    result = tmp_path / "result"
+    result.write_text("", encoding="utf-8")
+    worker = ActiveWorker(candidate, process, 0.0, io.StringIO(), io.StringIO(), result)
     monkeypatch.setattr(dispatch, "discover_candidates", lambda *args: (candidate,))
     monkeypatch.setattr(dispatch, "launch_worker", lambda *args: worker)
     monkeypatch.setattr(dispatch.time, "monotonic", lambda: dispatch.WORKER_TIMEOUT_SECONDS + 1)
@@ -402,12 +458,12 @@ def test_shutdown_fails_after_two_bounded_waits(monkeypatch: Any, tmp_path: Path
         dispatch.run_dispatch_loop(arguments, App())  # type: ignore[arg-type]
 
     assert process.wait_calls == 2
-    assert lease.with_name("lease.revoked").exists()
+    assert result.exists()
     worker.stdout.close()
     worker.stderr.close()
 
 
-def test_failed_cleanup_revokes_stuck_worker_and_terminates_sibling(
+def test_failed_cleanup_retains_stuck_worker_and_terminates_sibling(
     monkeypatch: Any, tmp_path: Path
 ) -> None:
     class Stuck:
@@ -437,19 +493,19 @@ def test_failed_cleanup_revokes_stuck_worker_and_terminates_sibling(
 
     first = _candidate(1, 1, "2026-08-09T00:00:00Z")
     second = _candidate(2, 2, "2026-08-09T00:00:00Z")
-    first_lease, second_lease = tmp_path / "first", tmp_path / "second"
-    first_lease.write_text("active", encoding="utf-8")
-    second_lease.write_text("active", encoding="utf-8")
+    first_result, second_result = tmp_path / "first", tmp_path / "second"
+    first_result.write_text("", encoding="utf-8")
+    second_result.write_text("", encoding="utf-8")
     pending = Pending()
     active = {
-        first.key: ActiveWorker(first, Stuck(), 0.0, io.StringIO(), io.StringIO(), first_lease),  # type: ignore[arg-type]
+        first.key: ActiveWorker(first, Stuck(), 0.0, io.StringIO(), io.StringIO(), first_result),  # type: ignore[arg-type]
         second.key: ActiveWorker(
             second,
             pending,
             dispatch.WORKER_TIMEOUT_SECONDS + 1,
             io.StringIO(),
             io.StringIO(),
-            second_lease,
+            second_result,
         ),  # type: ignore[arg-type]
     }
     monkeypatch.setattr("builtins.print", lambda *args, **kwargs: None)
@@ -458,61 +514,14 @@ def test_failed_cleanup_revokes_stuck_worker_and_terminates_sibling(
         dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
 
     assert set(active) == {first.key}
-    assert first_lease.with_name("first.revoked").exists()
+    assert first_result.exists()
     assert pending.killed is True
-    assert not second_lease.exists()
+    assert not second_result.exists()
     active[first.key].stdout.close()
     active[first.key].stderr.close()
 
 
-def test_revocation_failure_still_terminates_worker_and_sibling(
-    monkeypatch: Any, tmp_path: Path
-) -> None:
-    class Process:
-        returncode = -9
-        killed = False
-
-        def poll(self) -> None:
-            return None
-
-        def kill(self) -> None:
-            self.killed = True
-
-        def wait(self, timeout: int) -> int:
-            return self.returncode
-
-    first = _candidate(1, 1, "2026-08-09T00:00:00Z")
-    second = _candidate(2, 2, "2026-08-09T00:00:00Z")
-    processes = (Process(), Process())
-    active = {
-        item.key: ActiveWorker(
-            item,
-            process,
-            0.0 if item is first else dispatch.WORKER_TIMEOUT_SECONDS + 1,
-            io.StringIO(),
-            io.StringIO(),
-            tmp_path / f"lease-{item.repository_id}",
-        )
-        for item, process in zip((first, second), processes, strict=True)
-    }  # type: ignore[arg-type]
-    for worker in active.values():
-        assert worker.lease_file is not None
-        worker.lease_file.write_text("active", encoding="utf-8")
-    monkeypatch.setattr(
-        dispatch,
-        "revoke_publication_lease",
-        lambda path: (_ for _ in ()).throw(SemanticReviewError("WORKER_LEASE_BUSY")),
-    )
-    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: None)
-
-    with pytest.raises(subprocess.SubprocessError, match="WORKER_TERMINATION_FAILURE"):
-        dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
-
-    assert active == {}
-    assert all(process.killed for process in processes)
-
-
-def test_termination_failure_leaves_publication_revoked(tmp_path: Path) -> None:
+def test_termination_failure_cannot_publish_result(tmp_path: Path) -> None:
     class Process:
         returncode = None
 
@@ -526,14 +535,14 @@ def test_termination_failure_leaves_publication_revoked(tmp_path: Path) -> None:
             raise subprocess.TimeoutExpired("worker", timeout)
 
     candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
-    lease = tmp_path / "lease"
-    lease.write_text("active", encoding="utf-8")
-    worker = ActiveWorker(candidate, Process(), 0.0, io.StringIO(), io.StringIO(), lease)  # type: ignore[arg-type]
+    result = tmp_path / "result"
+    result.write_text("ready but untrusted", encoding="utf-8")
+    worker = ActiveWorker(candidate, Process(), 0.0, io.StringIO(), io.StringIO(), result)  # type: ignore[arg-type]
     active = {candidate.key: worker}
 
     assert not dispatch._finish_worker(active, candidate.key, worker, True)
     assert candidate.key in active
-    assert lease.with_name("lease.revoked").exists()
+    assert result.exists()
     worker.stdout.close()
     worker.stderr.close()
 

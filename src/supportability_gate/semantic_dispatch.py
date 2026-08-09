@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import IO, Any
@@ -18,13 +18,14 @@ from supportability_gate.github_app import GitHubApp
 from supportability_gate.semantic_contract import (
     REPOSITORY_PATTERN,
     SHA_PATTERN,
+    EvidencePacket,
     SemanticReviewError,
 )
-from supportability_gate.semantic_lease import revoke_publication_lease
 
 POLL_SECONDS = 60
 MAX_WORKERS = 2
 WORKER_TIMEOUT_SECONDS = 90 * 60
+MAX_RESULT_BYTES = 100_000
 CREATED_AT_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\Z")
 
 
@@ -37,6 +38,7 @@ class Candidate:
     pull_number: int
     head_sha: str
     created_at: datetime
+    packet: EvidencePacket | None = None
 
     @property
     def key(self) -> tuple[int, int]:
@@ -45,14 +47,14 @@ class Candidate:
 
 @dataclass
 class ActiveWorker:
-    """One launched worker plus bounded supervision and publication lease."""
+    """One launched worker plus bounded supervision and deferred result."""
 
     candidate: Candidate
     process: subprocess.Popen[str]
     started_at: float
     stdout: IO[str]
     stderr: IO[str]
-    lease_file: Path | None = None
+    result_file: Path | None = None
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -108,7 +110,7 @@ def discover_candidates(
                 name, pull, token, app.evidence_packet(name, pull, token)
             )
             if app.replay_result(packet, token) is None:
-                candidates.append(candidate)
+                candidates.append(replace(candidate, packet=packet))
     return tuple(candidates)
 
 
@@ -145,7 +147,7 @@ def _worker_arguments(
     app_id: int,
     installation_id: int,
     private_key: Path,
-    lease_file: Path,
+    result_file: Path,
 ) -> list[str]:
     return [
         sys.executable,
@@ -164,8 +166,8 @@ def _worker_arguments(
         str(installation_id),
         "--private-key",
         str(private_key.resolve()),
-        "--lease-file",
-        str(lease_file),
+        "--result-file",
+        str(result_file),
     ]
 
 
@@ -176,19 +178,18 @@ def launch_worker(
     stdout = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
     stderr = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
     trusted_directory = Path(sys.executable).resolve().parent
-    lease = tempfile.NamedTemporaryFile(
+    result = tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
         dir=private_key.resolve().parent,
-        prefix="semantic-worker-",
+        prefix="semantic-result-",
         delete=False,
     )
-    lease.write("active")
-    lease.close()
-    lease_file = Path(lease.name)
+    result.close()
+    result_file = Path(result.name)
     try:
         process = subprocess.Popen(
-            _worker_arguments(candidate, app_id, installation_id, private_key, lease_file),
+            _worker_arguments(candidate, app_id, installation_id, private_key, result_file),
             stdout=stdout,
             stderr=stderr,
             text=True,
@@ -198,9 +199,9 @@ def launch_worker(
     except Exception:
         stdout.close()
         stderr.close()
-        lease_file.unlink(missing_ok=True)
+        result_file.unlink(missing_ok=True)
         raise
-    return ActiveWorker(candidate, process, time.monotonic(), stdout, stderr, lease_file)
+    return ActiveWorker(candidate, process, time.monotonic(), stdout, stderr, result_file)
 
 
 def fill_slots(
@@ -265,15 +266,28 @@ def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
     )
 
 
-def _revoke_worker(worker: ActiveWorker) -> bool:
-    """Revoke final-check publication before abandoning an unconfirmed process."""
-    if worker.lease_file is None:
-        return True
+def _publish_worker_result(app: GitHubApp, worker: ActiveWorker) -> None:
+    """Publish one bounded worker result only after confirmed process exit."""
+    packet, path = worker.candidate.packet, worker.result_file
+    if packet is None or path is None or path.stat().st_size > MAX_RESULT_BYTES:
+        raise SemanticReviewError("MALFORMED_WORKER_RESULT")
     try:
-        revoke_publication_lease(worker.lease_file)
-    except (OSError, SemanticReviewError):
-        return False
-    return True
+        result = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise SemanticReviewError("MALFORMED_WORKER_RESULT") from error
+    if (
+        not isinstance(result, dict)
+        or set(result) != {"check_id", "conclusion", "evidence_sha256", "summary"}
+        or type(result["check_id"]) is not int
+        or result["check_id"] <= 0
+        or result["conclusion"] not in {"success", "failure", "action_required"}
+        or result["evidence_sha256"] != packet.sha256
+        or not isinstance(result["summary"], str)
+    ):
+        raise SemanticReviewError("MALFORMED_WORKER_RESULT")
+    token = app.installation_token()
+    app.assert_current(packet, worker.candidate.pull_number, token)
+    app.complete_check(packet, token, result["check_id"], result["conclusion"], result["summary"])
 
 
 def _finish_worker(
@@ -281,25 +295,28 @@ def _finish_worker(
     key: tuple[int, int],
     worker: ActiveWorker,
     timed_out: bool,
+    app: GitHubApp | None = None,
 ) -> bool:
-    revoked = not timed_out or _revoke_worker(worker)
     if not _terminate_worker(worker, timed_out):
-        if not timed_out:
-            revoked = _revoke_worker(worker)
         return False
     try:
         _report_worker(worker, timed_out)
+        if not timed_out and app is not None:
+            _publish_worker_result(app, worker)
     finally:
         worker.stdout.close()
         worker.stderr.close()
-        if worker.lease_file is not None:
-            worker.lease_file.unlink(missing_ok=True)
-            worker.lease_file.with_name(worker.lease_file.name + ".revoked").unlink(missing_ok=True)
+        if worker.result_file is not None:
+            worker.result_file.unlink(missing_ok=True)
         del active[key]
-    return revoked
+    return True
 
 
-def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None = None) -> None:
+def reap_workers(
+    active: dict[tuple[int, int], ActiveWorker],
+    now: float | None = None,
+    app: GitHubApp | None = None,
+) -> None:
     """Capture completed output and terminate workers beyond the fixed timeout."""
     current = time.monotonic() if now is None else now
     attempted: set[tuple[int, int]] = set()
@@ -309,12 +326,12 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
         if worker.process.poll() is None and not timed_out:
             continue
         attempted.add(key)
-        if not _finish_worker(active, key, worker, timed_out):
+        if not _finish_worker(active, key, worker, timed_out, app):
             cleanup_failed = True
     if cleanup_failed:
         for key, worker in tuple(active.items()):
             if key not in attempted:
-                _finish_worker(active, key, worker, True)
+                _finish_worker(active, key, worker, True, app)
         raise subprocess.SubprocessError("WORKER_TERMINATION_FAILURE")
 
 
@@ -346,7 +363,7 @@ def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
     try:
         while True:
             try:
-                reap_workers(active)
+                reap_workers(active, app=app)
             except subprocess.SubprocessError:
                 reap_failed = True
                 raise
@@ -371,7 +388,7 @@ def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
             time.sleep(POLL_SECONDS)
     finally:
         if active and not reap_failed:
-            reap_workers(active, float("inf"))
+            reap_workers(active, float("inf"), app)
 
 
 def main(argv: list[str] | None = None) -> int:

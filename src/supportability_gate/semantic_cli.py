@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -20,7 +21,7 @@ from supportability_gate.semantic_contract import (
     SemanticReviewError,
     SemanticVerdict,
 )
-from supportability_gate.semantic_lease import exclusive_lease, publication_lease
+from supportability_gate.semantic_lease import exclusive_lease
 from supportability_gate.semantic_review import parse_response
 
 
@@ -77,7 +78,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--app-id", required=True, type=int)
     parser.add_argument("--installation-id", required=True, type=int)
     parser.add_argument("--private-key", required=True, type=Path)
-    parser.add_argument("--lease-file", type=Path)
+    parser.add_argument("--result-file", type=Path)
     return parser
 
 
@@ -106,11 +107,25 @@ def _complete_current_check(
     check_id: int,
     conclusion: str,
     summary: str,
-    lease_file: Path | None = None,
+    result_file: Path | None = None,
 ) -> None:
     app.assert_current(packet, pull_number, token)
-    with publication_lease(lease_file):
+    if result_file is None:
         app.complete_check(packet, token, check_id, conclusion, summary)
+        return
+    result_file.write_text(
+        json.dumps(
+            {
+                "check_id": check_id,
+                "conclusion": conclusion,
+                "evidence_sha256": packet.sha256,
+                "summary": summary,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
 
 @contextmanager
@@ -193,15 +208,18 @@ def _review(
     token: str,
     pull: dict[str, object],
     diagnostics_root: Path | None = None,
-    lease_file: Path | None = None,
+    result_file: Path | None = None,
 ) -> bool:
     packet = app.evidence_packet(repository, pull, token)
     evidence = packet.evidence
-    review_blocks = unresolved_review_blocks(evidence)
     pull_number = evidence.get("pull_request")
     if not isinstance(pull_number, int):
         raise SemanticReviewError("MALFORMED_PULL_REQUEST")
     app.assert_current(packet, pull_number, token)
+    packet = app.m10_evidence_packet(repository, pull, token, packet)
+    evidence = packet.evidence
+    app.assert_current(packet, pull_number, token)
+    review_blocks = unresolved_review_blocks(evidence)
     if review_blocks:
         check_id = app.start_check(packet, token)
         _complete_current_check(
@@ -212,12 +230,9 @@ def _review(
             check_id,
             "failure",
             "BLOCK\n" + "\n".join(review_blocks),
-            lease_file,
+            result_file,
         )
         return False
-    packet = app.m10_evidence_packet(repository, pull, token, packet)
-    evidence = packet.evidence
-    app.assert_current(packet, pull_number, token)
     replay = app.replay_result(packet, token)
     if replay is not None:
         return replay
@@ -243,7 +258,7 @@ def _review(
             check_id,
             "action_required",
             "PREFLIGHT_BLOCK\n" + "\n".join(preflight),
-            lease_file,
+            result_file,
         )
         return False
     verdicts: list[SemanticVerdict] = []
@@ -266,7 +281,7 @@ def _review(
             check_id,
             "action_required",
             _ensemble_summary(False, verdicts, errors, findings),
-            lease_file,
+            result_file,
         )
         raise SemanticReviewError("ENSEMBLE_TECHNICAL_FAILURE")
     passed = (
@@ -283,7 +298,7 @@ def _review(
         check_id,
         "success" if passed else "failure",
         _ensemble_summary(passed, verdicts, errors, findings),
-        lease_file,
+        result_file,
     )
     return passed
 
@@ -355,8 +370,8 @@ def main(argv: list[str] | None = None) -> int:
         with _evaluation_lock(lock_path):
             review_arguments = (app, arguments.repository, token, pull, diagnostics_root)
             result = (
-                _review(*review_arguments, arguments.lease_file)
-                if arguments.lease_file is not None
+                _review(*review_arguments, arguments.result_file)
+                if arguments.result_file is not None
                 else _review(*review_arguments)
             )
     except (OSError, SemanticReviewError):
