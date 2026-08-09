@@ -1,0 +1,19 @@
+{
+  "fair_order": [
+    [
+      1,
+      1
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      1,
+      3
+    ]
+  ],
+  "max_workers": 2,
+  "poll_seconds": 60,
+  "worker_timeout_seconds": 5400
+}
