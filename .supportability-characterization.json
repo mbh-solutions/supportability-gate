@@ -2,7 +2,6 @@
   "scenarios": [
     {
       "covers": [
-        "src/supportability_gate/__init__.py",
         "src/supportability_gate/characterization.py",
         "src/supportability_gate/cli.py",
         "src/supportability_gate/complexity_metrics.py",
@@ -87,6 +86,13 @@
         "src/supportability_gate/modularity_policy.py"
       ],
       "id": "architecture-modularity-baseline",
+      "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/__init__.py"
+      ],
+      "id": "package-version",
       "kind": "regression"
     }
   ],
