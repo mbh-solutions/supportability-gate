@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The fixed TypeScript profile installs dependencies from the committed package lock without running target lifecycle scripts or target package commands before executing unchanged quality checks."
-proof = "tests/test_quality_profile.py::test_typescript_profile_executes_every_fixed_gate_on_hosted_runner"
+intended_behavior = "One required semantic check evaluates complete authenticated PR evidence through four fixed specialist profiles in two rounds and passes only eight trusted clean results."
+proof = "tests/test_semantic_review.py::test_ensemble_never_suppresses_and_byte_deduplicates_findings"
 
 [characterization]
-captured_behavior = "The hosted TypeScript profile previously omitted target dependencies, and protected reconciliation proved module-only maintenance had no touched functions while the handoff policy rejected a truthful empty simplified-functions list."
-proof = "tests/test_handoff_policy.py::test_complete_source_backed_handoff_passes"
+captured_behavior = "The prior single-call semantic reviewer could pass a head that a later call blocked, while the packet discarded non-configuration diff text and did not bind closing-issue authority."
+proof = "tests/qualify_convergent_reviewer.py"
 
 [separation_of_concerns]
-before = "The TypeScript profile provisioned fixed Gate tools but evaluated dependency-bearing source without installing dependencies from the target lock."
-after = "quality_profile owns both fixed provisioning vectors: Gate tools remain isolated under the evidence directory and target dependencies install through locked script-disabled npm ci in the disposable checkout."
+before = "One model response evaluated parser-selected source plus only the semantic configuration patch and could stop discovery after one verdict."
+after = "GitHubApp supplies full canonical authority and diff evidence; semantic_contract fixes the rubric; semantic_review validates one response; semantic_cli aggregates eight unsuppressed attempts."
 
 [architecture]
-dependency_direction = "quality_runner materializes immutable vectors owned by quality_profile; the hosted runner executes them sequentially with its existing fixed environment, timeout, captured output, and no shell."
+dependency_direction = "semantic_cli orchestrates GitHubApp and responses_transport; transport invokes semantic_diagnostics; semantic_review validates semantic_contract evidence without GitHub or transport ownership."
 reviewed_paths = [
     "src/supportability_gate/characterization.py",
     "src/supportability_gate/architecture_policy.py",
@@ -36,23 +36,23 @@ reviewed_paths = [
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/quality_profile.py"
-owns = "Immutable approved quality command identities, fixed argument vectors, proof kinds, and evidence validation."
-does_not_own = "Command execution, target-defined commands, lifecycle scripts, repository configuration, package resolution policy, or application remediation."
+path = "src/supportability_gate/semantic_cli.py"
+owns = "Fixed eight-attempt sequencing, deterministic union aggregation, replay use, and one current GitHub check conclusion."
+does_not_own = "GitHub evidence acquisition, HTTP transport, diagnostic persistence, response trust validation, target execution, or application remediation."
 
 [incremental_refactor]
-target = "Remove false TypeScript dependency-resolution failures without adding target-controlled execution."
-completed_step = "Added one fixed script-disabled npm ci provisioning vector and made module-only completion reports accept an empty function list only when authoritative touched functions are also empty."
+target = "Replace single-trip latent discovery with fail-closed eight-response convergence without changing the required check identity."
+completed_step = "Bound full authority and diff evidence, fixed four profiles across two rounds, retained all findings, and required eight trusted PASS verdicts."
 
 [review_handoff]
-summary = "Review fixed npm ci arguments, script non-execution, bad-lock blocking, dependency-bearing typecheck/build proof, and exact empty/nonempty touched-function handoff matching."
-remaining_risks = ["Targets whose lock requires unapproved npm flags fail closed; target lifecycle scripts and package commands remain intentionally unsupported."]
+summary = "Review full authority freshness, exact profile/round bindings, all-eight execution, unsuppressed finding union, diagnostics, replay identity, and historical/poison/clean qualification."
+remaining_risks = ["Two rounds materially reduce latent detection but cannot mathematically prove absence of every unknown defect."]
 
 [human_review]
-naming = "typescript.target-install.v1 identifies one concrete provisioning responsibility distinct from Gate tool installation and quality evaluation."
-cohesion = "The immutable command contract remains in quality_profile; command materialization and hosted execution remain unchanged."
-intended_behavior = "Only exact lock dependencies install, scripts never run, invalid locks block, and fixed TypeScript checks retain their existing meaning."
-reviewability = "One command tuple and one proof-kind entry drive the implementation; the existing hosted regression covers dependency resolution and fail-closed lock cases."
+naming = "semantic-review.v2 and convergent-review.v1 name the response schema and fixed ensemble rubric without configurable variants."
+cohesion = "Each existing module retains one responsibility: authority, contract, transport, diagnostics, one-response validation, or ensemble orchestration."
+intended_behavior = "All eight calls run; any finding, uncertainty, stale authority, or technical failure prevents PASS."
+reviewability = "Fixed profile and round constants drive one nested sequence; focused tests cover continuation, aggregation, diagnostics, and replay."
 
 [[module_boundaries]]
 path = "src/supportability_gate/review_events.py"
@@ -104,6 +104,36 @@ justification = "Owns completion-report parsing and exact evidence cross-checkin
 
 [[module_boundaries]]
 path = "src/supportability_gate/semantic_diagnostics.py"
-owner_path = "src/supportability_gate/responses_transport.py"
+owner_path = "src/supportability_gate/semantic_diagnostics.py"
 basis = "responsibility"
 justification = "Owns restricted atomic local persistence for semantic transport attempts and exact response bytes, while the preexisting responses_transport boundary owns HTTP request and response handling and invokes diagnostics without taking persistence ownership."
+
+[[module_boundaries]]
+path = "src/supportability_gate/github_app.py"
+owner_path = "src/supportability_gate/github_app.py"
+basis = "responsibility"
+justification = "Owns authenticated GitHub comparison, PR and closing-issue authority, currentness, replay lookup, and check publication without model transport or verdict interpretation."
+
+[[module_boundaries]]
+path = "src/supportability_gate/responses_transport.py"
+owner_path = "src/supportability_gate/responses_transport.py"
+basis = "responsibility"
+justification = "Owns one fixed localhost Responses request and exact response bytes without ensemble sequencing, GitHub access, persistence implementation, or semantic judgment."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_contract.py"
+owner_path = "src/supportability_gate/semantic_contract.py"
+basis = "responsibility"
+justification = "Owns immutable semantic evidence, profile, rubric, request, and result contracts without transport, GitHub access, response interpretation, or orchestration."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_review.py"
+owner_path = "src/supportability_gate/semantic_review.py"
+basis = "responsibility"
+justification = "Owns fail-closed trust validation of one structured response against exact evidence without transport, GitHub access, diagnostics persistence, or ensemble suppression."
+
+[[module_boundaries]]
+path = "src/supportability_gate/semantic_cli.py"
+owner_path = "src/supportability_gate/semantic_cli.py"
+basis = "responsibility"
+justification = "Owns fixed sequential ensemble execution, aggregate result, scheduled lock, and one current check conclusion without evidence acquisition, HTTP implementation, or single-response trust rules."

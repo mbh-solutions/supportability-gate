@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "supportability-gate"
-version = "0.1.0"
+version = "0.2.0"
 description = "Deterministic supportability policy evidence for pull-request changes"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

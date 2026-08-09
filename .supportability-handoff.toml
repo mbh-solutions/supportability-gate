@@ -2,19 +2,45 @@ schema_version = "1.0"
 
 [completion_report]
 architecture_judgment = "PASS"
-base_sha = "84c67288414d866ab0a8c2f980c1be5aa799677b"
+base_sha = "9f597afc7f9b1fc585c59f6a6e969e5e474e7d22"
 overall_result = "PASS"
 responsibility_changes = [
-    "The package contract now selects the last safe published py-tree-sitter binding for existing TypeScript and TSX parsing.",
-    "The existing TSX regression now exercises a function coordinate above 256 where tree-sitter 0.26.0 corrupts native state.",
+    "GitHub evidence now binds the complete validated comparison diff and authenticated PR plus closing-issue authority, with freshness revalidation.",
+    "The semantic contract now fixes four profiles across two rounds and binds every profile, round, instruction, evidence, model, effort, and response identity.",
+    "The orchestrator runs all eight calls, retains every trusted finding, byte-deduplicates only identical findings, and requires eight clean trusted PASS results.",
+    "Diagnostics and live qualification record eight attempts and cover historical PR 18, poison, and clean convergence cases.",
 ]
-simplified_functions = []
+simplified_functions = [
+    "GitHubApp._authority",
+    "GitHubApp._authority_issue",
+    "GitHubApp.assert_current",
+    "GitHubApp.evidence_packet",
+    "GitHubApp.replay_result",
+    "_attempt_content",
+    "_authority_finding_prefixes",
+    "_boundary_evidence",
+    "_diff_finding_prefixes",
+    "_ensemble_summary",
+    "_request",
+    "_response_data",
+    "_review",
+    "_trusted_verdict",
+    "_validate_bindings",
+    "_verdict_summary",
+    "parse_response",
+    "profile_instruction",
+    "profile_instruction_sha256",
+    "request_payload",
+    "request_response",
+    "result_schema",
+    "start_attempt",
+]
 boundary_rationale = [
-    "Dependency selection changes at the package boundary; proven parsing and policy implementation remains untouched.",
-    "The existing evaluator test directly owns TSX identity and complexity behavior, so no new test module or abstraction is needed.",
+    "GitHubApp remains the authenticated authority and comparison owner; semantic_contract owns immutable request/result schema; semantic_review validates one response; semantic_cli owns ensemble execution.",
+    "Existing transport and diagnostics modules receive only the fixed profile and round bindings needed for one attempt; no new production module or dependency is introduced.",
 ]
 remaining_risks = [
-    "A future tree-sitter upgrade must pass the line-301 regression before replacing the exact 0.25.2 pin.",
+    "Two clean rounds materially reduce latent detection but cannot mathematically prove absence of every unknown defect.",
 ]
 validation_results = [
     { adapter = "python.ruff-lint.v1", arguments = ["$PYTHON", "-I", "-m", "ruff", "check", "$SOURCE_FILES", "$TEST_FILES", "--select", "E4,E7,E9,F,I,UP", "--line-length", "100", "--target-version", "py312", "--isolated", "--no-cache"], exit_code = 0 },
@@ -34,11 +60,16 @@ gate_coverage = [
 ]
 
 [[completion_report.claims]]
-id = "claim-safe-tree-sitter-pin"
-text = "The package contract selects tree-sitter 0.25.2 while retaining tree-sitter-typescript 0.23.2."
-citations = ["pyproject.toml:15-16"]
+id = "claim-full-authority-evidence"
+text = "The production packet contains the complete validated GitHub comparison diff and authenticated PR and closing-issue authority, and authority edits invalidate currentness."
+citations = ["src/supportability_gate/github_app.py:223-244", "src/supportability_gate/github_app.py:279-309", "src/supportability_gate/github_app.py:631-696"]
 
 [[completion_report.claims]]
-id = "claim-line-301-regression"
-text = "The existing TSX regression maps CustomerCard from line 301 and retains the expected complexity value."
-citations = ["tests/test_evaluate_complexity.py:509-522"]
+id = "claim-eight-fixed-attempts"
+text = "The orchestrator executes the four fixed profiles in each of two rounds, does not stop on a failed response, and passes only eight trusted clean verdicts."
+citations = ["src/supportability_gate/semantic_cli.py:147-236", "src/supportability_gate/semantic_contract.py:21-34"]
+
+[[completion_report.claims]]
+id = "claim-attempt-identities"
+text = "Each response binds profile, round, profile instruction SHA, common evidence SHA, fixed model and effort, and response SHA; each diagnostic attempt records profile, round, evidence, and response identity."
+citations = ["src/supportability_gate/semantic_contract.py:149-169", "src/supportability_gate/semantic_diagnostics.py:18-111", "src/supportability_gate/semantic_review.py:388-463"]

@@ -66,6 +66,15 @@ query($thread:ID!,$cursor:String){node(id:$thread){... on PullRequestReviewThrea
   comments(first:100,after:$cursor){nodes{id databaseId}pageInfo{hasNextPage endCursor}}
 }}}
 """
+CLOSING_ISSUES_QUERY = """
+query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+  repository(owner:$owner,name:$name){pullRequest(number:$number){
+    closingIssuesReferences(first:100,after:$cursor){nodes{
+      number title body url updatedAt repository{nameWithOwner}
+    }pageInfo{hasNextPage endCursor}}
+  }}
+}
+"""
 
 
 class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
@@ -212,7 +221,7 @@ class GitHubApp:
         return result
 
     def assert_current(self, packet: EvidencePacket, pull_number: int, token: str) -> None:
-        """Reject evidence if pull-request commits or review state changed."""
+        """Reject evidence if pull-request authority, commits, or review state changed."""
         pull = self._request("GET", f"/repos/{packet.repository}/pulls/{pull_number}", token)
         try:
             base_sha = pull["base"]["sha"]
@@ -220,6 +229,10 @@ class GitHubApp:
         except (KeyError, TypeError) as error:
             raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
         if base_sha != packet.base_sha or head_sha != packet.head_sha:
+            raise SemanticReviewError("STALE_EVIDENCE")
+        if "authority" in packet.evidence and self._authority(
+            packet.repository, pull_number, pull, token
+        ) != packet.evidence.get("authority"):
             raise SemanticReviewError("STALE_EVIDENCE")
         current = self._review_state(
             packet.repository,
@@ -256,10 +269,11 @@ class GitHubApp:
             and isinstance(run.get("app"), dict)
             and run["app"].get("id") == self.app_id
             and run.get("status") == "completed"
+            and run.get("conclusion") in {"success", "failure"}
         }
         if not conclusions:
             return None
-        if len(conclusions) != 1 or not conclusions <= {"success", "failure"}:
+        if len(conclusions) != 1:
             raise SemanticReviewError("CONFLICTING_REPLAY")
         return conclusions.pop() == "success"
 
@@ -273,11 +287,10 @@ class GitHubApp:
             raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
         if not isinstance(number, int):
             raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-        _, files = self._comparison_evidence(repository, str(base_sha), str(head_sha), token)
+        diff, files = self._comparison_evidence(repository, str(base_sha), str(head_sha), token)
         reviewed_sources, deleted_sources = self._source_evidence(
             repository, str(base_sha), files, token
         )
-        review_diff = self._review_diff(files)
         comments = self.issue_comments(repository, number, token)
         review_state = self._review_state(repository, number, comments, token)
         return EvidencePacket(
@@ -286,7 +299,8 @@ class GitHubApp:
             str(head_sha),
             self.app_id,
             {
-                "diff": review_diff,
+                "authority": self._authority(repository, number, pull, token),
+                "diff": diff,
                 "deleted_sources": deleted_sources,
                 "pull_request": number,
                 "refactor_context": self._refactor_context(pull, files, comments),
@@ -614,6 +628,73 @@ class GitHubApp:
             ],
             "trusted_owner_id": TRUSTED_OWNER_ID,
         }
+
+    def _authority(
+        self, repository: str, pull_number: int, pull: dict[str, Any], token: str
+    ) -> dict[str, object]:
+        """Return authenticated PR and every GitHub-linked closing issue."""
+        pull_fields = {
+            "body": pull.get("body") or "",
+            "number": pull.get("number"),
+            "repository": repository,
+            "title": pull.get("title"),
+            "updated_at": pull.get("updated_at"),
+            "url": pull.get("html_url"),
+        }
+        if pull_fields["number"] != pull_number or any(
+            not isinstance(pull_fields[key], str) for key in ("body", "title", "updated_at", "url")
+        ):
+            raise SemanticReviewError("MALFORMED_PULL_REQUEST")
+        owner, name = repository.split("/", 1)
+        cursor: str | None = None
+        issues: list[dict[str, object]] = []
+        while True:
+            result = self._request(
+                "POST",
+                "/graphql",
+                token,
+                {
+                    "query": CLOSING_ISSUES_QUERY,
+                    "variables": {
+                        "cursor": cursor,
+                        "name": name,
+                        "number": pull_number,
+                        "owner": owner,
+                    },
+                },
+            )
+            page, has_next, cursor = self._graphql_connection(
+                result, ("data", "repository", "pullRequest", "closingIssuesReferences")
+            )
+            issues.extend(self._authority_issue(item) for item in page)
+            if not has_next:
+                return {
+                    "closing_issues": sorted(
+                        issues,
+                        key=lambda item: (
+                            str(item["repository"]),
+                            cast(int, item["number"]),
+                        ),
+                    ),
+                    "pull_request": pull_fields,
+                }
+
+    def _authority_issue(self, item: dict[str, Any]) -> dict[str, object]:
+        repository = item.get("repository")
+        fields: dict[str, object] = {
+            "body": item.get("body") or "",
+            "number": item.get("number"),
+            "repository": repository.get("nameWithOwner") if isinstance(repository, dict) else None,
+            "title": item.get("title"),
+            "updated_at": item.get("updatedAt"),
+            "url": item.get("url"),
+        }
+        if type(fields["number"]) is not int or any(
+            not isinstance(fields[key], str)
+            for key in ("body", "repository", "title", "updated_at", "url")
+        ):
+            raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        return fields
 
     def issue_comments(
         self, repository: str, pull_number: int, token: str
@@ -979,15 +1060,6 @@ class GitHubApp:
             {"line": number, "text": source_lines[number - 1]}
             for number in range(min(selected), max(selected) + 1)
         ]
-
-    def _review_diff(self, files: tuple[dict[str, Any], ...]) -> str:
-        for item in sorted(files, key=lambda value: str(value.get("filename"))):
-            path, patch = item.get("filename"), item.get("patch")
-            if path == ".supportability-review.toml":
-                if not isinstance(patch, str) or not patch:
-                    raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
-                return f"path: {path}\n{patch}"
-        return "No candidate responsibility declaration changed."
 
     def _production_paths(self, repository: str, base_sha: str, token: str) -> tuple[str, ...]:
         path = f"/repos/{repository}/contents/.supportability.toml?ref={base_sha}"
