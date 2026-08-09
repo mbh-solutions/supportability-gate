@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +16,13 @@ from supportability_gate.semantic_dispatch import ActiveWorker, Candidate
 
 
 def _candidate(repository_id: int, pull: int, created_at: str) -> Candidate:
-    return Candidate(repository_id, f"owner/repo-{repository_id}", pull, "a" * 40, created_at)
+    return Candidate(
+        repository_id,
+        f"owner/repo-{repository_id}",
+        pull,
+        "a" * 40,
+        datetime.fromisoformat(created_at.replace("Z", "+00:00")),
+    )
 
 
 def test_discovery_is_app_selected_exact_head_and_restart_safe() -> None:
@@ -49,6 +57,14 @@ def test_discovery_is_app_selected_exact_head_and_restart_safe() -> None:
     assert restarted == first
 
 
+def test_candidate_rejects_noncanonical_github_timestamp() -> None:
+    with pytest.raises(SemanticReviewError, match="MALFORMED_PULL_REQUEST"):
+        dispatch._candidate(
+            {"full_name": "owner/repo", "id": 1},
+            {"created_at": "tomorrow", "head": {"sha": "a" * 40}, "number": 1},
+        )
+
+
 def test_fair_order_is_round_robin_oldest_pull_first() -> None:
     candidates = (
         _candidate(1, 3, "2026-08-09T03:00:00Z"),
@@ -76,10 +92,12 @@ def test_fill_slots_deduplicates_and_caps_workers(monkeypatch: Any) -> None:
 
     def launch(candidate: Candidate, *args: object) -> ActiveWorker:
         launched.append(candidate)
-        return ActiveWorker(candidate, object(), 0.0)  # type: ignore[arg-type]
+        return ActiveWorker(candidate, object(), 0.0, io.StringIO(), io.StringIO())  # type: ignore[arg-type]
 
     monkeypatch.setattr(dispatch, "launch_worker", launch)
-    active = {running.key: ActiveWorker(running, object(), 0.0)}  # type: ignore[arg-type]
+    active = {
+        running.key: ActiveWorker(running, object(), 0.0, io.StringIO(), io.StringIO())  # type: ignore[arg-type]
+    }
 
     after_pulls: dict[int, int] = {}
     assert dispatch.fill_slots(active, candidates, 42, 7, Path("key.pem"), after_pulls) == 2
@@ -88,11 +106,27 @@ def test_fill_slots_deduplicates_and_caps_workers(monkeypatch: Any) -> None:
     assert after_pulls == {2: 2}
 
 
+def test_fill_slots_deduplicates_same_scan_candidates(monkeypatch: Any) -> None:
+    candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    launched: list[Candidate] = []
+
+    def launch(item: Candidate, *args: object) -> ActiveWorker:
+        launched.append(item)
+        return ActiveWorker(item, object(), 0.0, io.StringIO(), io.StringIO())  # type: ignore[arg-type]
+
+    monkeypatch.setattr(dispatch, "launch_worker", launch)
+    active: dict[tuple[int, int], ActiveWorker] = {}
+
+    dispatch.fill_slots(active, (candidate, candidate), 42, 7, Path("key.pem"), {})
+
+    assert launched == [candidate]
+
+
 def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) -> None:
     captured: dict[str, object] = {}
 
     class Process:
-        pass
+        returncode = None
 
     def popen(arguments: list[str], **kwargs: object) -> Process:
         captured.update(arguments=arguments, **kwargs)
@@ -106,15 +140,17 @@ def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) 
 
     assert worker.started_at == 12.0
     assert captured["shell"] is False
-    assert captured["stdout"] is subprocess.PIPE
-    assert captured["stderr"] is subprocess.PIPE
-    assert captured["arguments"][-12:] == [
+    assert captured["stdout"] is not subprocess.PIPE
+    assert captured["stderr"] is not subprocess.PIPE
+    assert captured["arguments"][1:] == [
         "-m",
         "supportability_gate.semantic_cli",
         "--repository",
         "owner/repo-9",
         "--pull-number",
         "24",
+        "--head-sha",
+        "a" * 40,
         "--app-id",
         "42",
         "--installation-id",
@@ -122,6 +158,8 @@ def test_worker_launch_uses_fixed_shell_free_captured_command(monkeypatch: Any) 
         "--private-key",
         "key.pem",
     ]
+    worker.stdout.close()
+    worker.stderr.close()
 
 
 def test_reaper_kills_and_removes_timed_out_worker(capsys: Any) -> None:
@@ -135,13 +173,17 @@ def test_reaper_kills_and_removes_timed_out_worker(capsys: Any) -> None:
         def kill(self) -> None:
             self.killed = True
 
-        def communicate(self, timeout: int) -> tuple[str, str]:
+        def wait(self, timeout: int) -> int:
             assert timeout == 30
-            return "partial output", "timeout"
+            return self.returncode
 
     process = Process()
     candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
-    active = {candidate.key: ActiveWorker(candidate, process, 0.0)}  # type: ignore[arg-type]
+    active = {
+        candidate.key: ActiveWorker(
+            candidate, process, 0.0, io.StringIO("partial output"), io.StringIO("timeout")
+        )  # type: ignore[arg-type]
+    }
 
     dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
 
@@ -161,8 +203,8 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
         def kill(self) -> None:
             self.killed = True
 
-        def communicate(self, timeout: int) -> tuple[str, str]:
-            return "", ""
+        def wait(self, timeout: int) -> int:
+            return self.returncode
 
     class App:
         calls = 0
@@ -182,7 +224,7 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
     monkeypatch.setattr(
         dispatch,
         "launch_worker",
-        lambda *args: ActiveWorker(candidate, process, 0.0),
+        lambda *args: ActiveWorker(candidate, process, 0.0, io.StringIO(), io.StringIO()),
     )
     monkeypatch.setattr(dispatch.time, "sleep", lambda seconds: None)
     arguments = argparse.Namespace(
@@ -190,10 +232,37 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
     )
 
     with pytest.raises(SemanticReviewError, match="GITHUB_TRANSPORT_FAILURE"):
-        dispatch._run(arguments, App())  # type: ignore[arg-type]
+        dispatch.run_dispatch_loop(arguments, App())  # type: ignore[arg-type]
 
     assert process.killed is True
     assert json.loads(capsys.readouterr().out)["timed_out"] is True
+
+
+def test_second_wait_timeout_still_cleans_every_worker(monkeypatch: Any) -> None:
+    class Process:
+        returncode = None
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            return None
+
+        def wait(self, timeout: int) -> int:
+            raise subprocess.TimeoutExpired("worker", timeout)
+
+    first = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    second = _candidate(2, 2, "2026-08-09T00:00:00Z")
+    active = {
+        item.key: ActiveWorker(item, Process(), 0.0, io.StringIO(), io.StringIO())
+        for item in (first, second)
+    }  # type: ignore[arg-type]
+    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: None)
+
+    with pytest.raises(subprocess.SubprocessError, match="WORKER_TERMINATION_FAILURE"):
+        dispatch.reap_workers(active, dispatch.WORKER_TIMEOUT_SECONDS + 1)
+
+    assert active == {}
 
 
 def test_shadow_reports_selected_repositories_even_without_candidates(capsys: Any) -> None:

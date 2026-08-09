@@ -234,6 +234,10 @@ class GitHubApp:
             for item in rows
         ):
             raise SemanticReviewError("MALFORMED_GITHUB_RESPONSE")
+        if len({item["id"] for item in rows}) != len(rows) or len(
+            {item["full_name"] for item in rows}
+        ) != len(rows):
+            raise SemanticReviewError("INCOMPLETE_GITHUB_EVIDENCE")
         return tuple(rows)
 
     def open_pulls(self, repository: str, token: str) -> tuple[dict[str, Any], ...]:
@@ -411,10 +415,14 @@ class GitHubApp:
         ]
         if not runs:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        ordered = tuple(sorted(runs, key=self._handoff_run_order, reverse=True))
-        if ordered[0].get("conclusion") != "success":
+        ordered = tuple(
+            run
+            for run in sorted(runs, key=self._handoff_run_order, reverse=True)
+            if run.get("conclusion") == "success"
+        )
+        if not ordered:
             raise SemanticReviewError("HANDOFF_EVIDENCE_UNAVAILABLE")
-        return tuple(run for run in ordered if run.get("conclusion") == "success")
+        return ordered
 
     def handoff_ready(self, repository: str, head_sha: str, token: str) -> bool:
         """Report whether one successful exact-head prerequisite artifact exists."""

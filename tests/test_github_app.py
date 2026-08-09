@@ -520,6 +520,26 @@ def test_incomplete_installation_repository_page_blocks() -> None:
         app.installation_repositories("token")
 
 
+def test_duplicate_installation_repository_identity_blocks() -> None:
+    app = GitHubApp(
+        42,
+        7,
+        b"unused",
+        opener=lambda *args, **kwargs: _Reply(
+            {
+                "repositories": [
+                    {"full_name": "owner/one", "id": 1},
+                    {"full_name": "owner/two", "id": 1},
+                ],
+                "total_count": 2,
+            }
+        ),
+    )
+
+    with pytest.raises(SemanticReviewError, match="INCOMPLETE_GITHUB_EVIDENCE"):
+        app.installation_repositories("token")
+
+
 def test_handoff_ready_requires_successful_exact_head_artifact() -> None:
     head_sha = "b" * 40
     replies = iter(
@@ -536,6 +556,45 @@ def test_handoff_ready_requires_successful_exact_head_artifact() -> None:
                         "status": "completed",
                         "updated_at": "2026-08-09T17:00:00Z",
                     }
+                ]
+            },
+            {
+                "artifacts": [
+                    {
+                        "digest": f"sha256:{'c' * 64}",
+                        "expired": False,
+                        "id": 456,
+                        "name": "supportability-evidence-123-1",
+                    }
+                ]
+            },
+        ]
+    )
+    app = GitHubApp(42, 7, b"unused", opener=lambda *args, **kwargs: _Reply(next(replies)))
+
+    assert app.handoff_ready("owner/repo", head_sha, "token") is True
+
+
+def test_handoff_ready_accepts_older_success_when_newer_attempt_failed() -> None:
+    head_sha = "b" * 40
+    replies = iter(
+        [
+            {
+                "workflow_runs": [
+                    {
+                        "conclusion": conclusion,
+                        "event": "pull_request",
+                        "head_sha": head_sha,
+                        "id": run_id,
+                        "path": ".github/workflows/organization-required.yml",
+                        "run_attempt": attempt,
+                        "status": "completed",
+                        "updated_at": updated,
+                    }
+                    for conclusion, run_id, attempt, updated in (
+                        ("failure", 124, 2, "2026-08-09T18:00:00Z"),
+                        ("success", 123, 1, "2026-08-09T17:00:00Z"),
+                    )
                 ]
             },
             {

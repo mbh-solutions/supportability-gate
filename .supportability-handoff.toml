@@ -9,11 +9,12 @@ responsibility_changes = [
 ]
 simplified_functions = [
     "Candidate.key",
+    "GitHubApp._handoff_runs",
     "GitHubApp.handoff_ready",
     "GitHubApp.installation_repositories",
     "_candidate",
     "_parser",
-    "_run",
+    "_parser",
     "_shadow",
     "_worker_arguments",
     "discover_candidates",
@@ -21,7 +22,9 @@ simplified_functions = [
     "fill_slots",
     "launch_worker",
     "main",
+    "main",
     "reap_workers",
+    "run_dispatch_loop",
 ]
 boundary_rationale = [
     "semantic_dispatch depends on GitHubApp and launches semantic_cli by fixed module argument vector; neither GitHubApp nor the exact-pull worker depends on dispatcher orchestration.",
@@ -49,24 +52,24 @@ gate_coverage = [
 [[completion_report.claims]]
 id = "claim-app-selected-pagination"
 text = "Repository discovery paginates until the authenticated installation total is complete and rejects malformed or incomplete pages."
-citations = ["src/supportability_gate/github_app.py:207-237"]
+citations = ["src/supportability_gate/github_app.py:207-241"]
 
 [[completion_report.claims]]
 id = "claim-exact-head-readiness"
 text = "A pull becomes eligible only after one successful exact-head organization-required workflow artifact exists."
-citations = ["src/supportability_gate/github_app.py:419-434", "src/supportability_gate/semantic_dispatch.py:72-87"]
+citations = ["src/supportability_gate/github_app.py:396-425", "src/supportability_gate/github_app.py:427-442", "src/supportability_gate/semantic_dispatch.py:83-98"]
 
 [[completion_report.claims]]
 id = "claim-fair-bounded-workers"
-text = "Candidates are ordered repository-round-robin with oldest pulls first, then deduplicated and launched only into two fixed worker slots."
-citations = ["src/supportability_gate/semantic_dispatch.py:90-115", "src/supportability_gate/semantic_dispatch.py:152-167"]
+text = "Candidates rotate repository-round-robin after each served pull, duplicate active keys are suppressed, and no more than two fixed worker slots launch."
+citations = ["src/supportability_gate/semantic_dispatch.py:101-126", "src/supportability_gate/semantic_dispatch.py:172-190"]
 
 [[completion_report.claims]]
 id = "claim-safe-process-boundary"
 text = "Each worker uses a fixed shell-free argument vector with captured output and is killed after the fixed finite timeout."
-citations = ["src/supportability_gate/semantic_dispatch.py:118-149", "src/supportability_gate/semantic_dispatch.py:170-194"]
+citations = ["src/supportability_gate/semantic_dispatch.py:129-169", "src/supportability_gate/semantic_dispatch.py:193-233"]
 
 [[completion_report.claims]]
 id = "claim-shadow-no-publish"
 text = "Shadow mode reports every App-selected repository and eligible pull, then returns before any worker launch."
-citations = ["src/supportability_gate/semantic_dispatch.py:197-214", "src/supportability_gate/semantic_dispatch.py:217-244"]
+citations = ["src/supportability_gate/semantic_dispatch.py:236-253", "src/supportability_gate/semantic_dispatch.py:256-283"]

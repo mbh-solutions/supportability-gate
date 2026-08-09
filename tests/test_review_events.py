@@ -227,7 +227,7 @@ def test_main_reviews_only_the_requested_pull(
 
         def pull(self, repository: str, pull_number: int, token: str) -> dict[str, object]:
             observed.append((repository, pull_number, token))
-            return {"number": pull_number}
+            return {"head": {"sha": "a" * 40}, "number": pull_number}
 
     monkeypatch.setattr(semantic_cli, "GitHubApp", lambda *args: App())
 
@@ -244,6 +244,8 @@ def test_main_reviews_only_the_requested_pull(
                 "owner/repository",
                 "--pull-number",
                 "17",
+                "--head-sha",
+                "a" * 40,
                 "--app-id",
                 "42",
                 "--installation-id",
@@ -254,7 +256,10 @@ def test_main_reviews_only_the_requested_pull(
         )
         == 0
     )
-    assert observed == [("owner/repository", 17, "token"), {"number": 17}]
+    assert observed == [
+        ("owner/repository", 17, "token"),
+        {"head": {"sha": "a" * 40}, "number": 17},
+    ]
     assert capsys.readouterr().out == "PASS\n"
     assert semantic_cli._pull_lock_path(private_key, "owner/repository", 17).exists()
 
@@ -272,7 +277,7 @@ def test_duplicate_exact_main_invocation_runs_one_ensemble(
             return "token"
 
         def pull(self, *args: object) -> dict[str, object]:
-            return {"number": 17}
+            return {"head": {"sha": "a" * 40}, "number": 17}
 
     def review(*args: object) -> bool:
         nonlocal reviews
@@ -286,6 +291,8 @@ def test_duplicate_exact_main_invocation_runs_one_ensemble(
         "owner/repository",
         "--pull-number",
         "17",
+        "--head-sha",
+        "a" * 40,
         "--app-id",
         "42",
         "--installation-id",
@@ -303,6 +310,47 @@ def test_duplicate_exact_main_invocation_runs_one_ensemble(
         release.set()
         assert first.result(timeout=1) == 0
     assert reviews == 1
+
+
+def test_main_rejects_head_changed_after_dispatch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_key = tmp_path / "key.pem"
+    private_key.write_bytes(b"private")
+
+    class App:
+        def installation_token(self) -> str:
+            return "token"
+
+        def pull(self, *args: object) -> dict[str, object]:
+            return {"head": {"sha": "b" * 40}, "number": 17}
+
+    monkeypatch.setattr(semantic_cli, "GitHubApp", lambda *args: App())
+    monkeypatch.setattr(
+        semantic_cli,
+        "_review",
+        lambda *args: pytest.fail("stale dispatch reached semantic review"),
+    )
+
+    result = semantic_cli.main(
+        [
+            "--repository",
+            "owner/repository",
+            "--pull-number",
+            "17",
+            "--head-sha",
+            "a" * 40,
+            "--app-id",
+            "42",
+            "--installation-id",
+            "7",
+            "--private-key",
+            str(private_key),
+        ]
+    )
+
+    assert result == 2
+    assert capsys.readouterr().out == "TECHNICAL_FAILURE\n"
 
 
 def test_same_head_change_becomes_pending_before_fresh_evaluation(

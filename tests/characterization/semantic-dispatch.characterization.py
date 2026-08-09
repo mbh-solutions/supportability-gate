@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+from datetime import datetime
 from pathlib import Path
 
 
@@ -25,9 +26,9 @@ def _behavior() -> dict[str, object]:
     )
 
     candidates = (
-        Candidate(1, "owner/one", 3, "a" * 40, "2026-08-09T03:00:00Z"),
-        Candidate(1, "owner/one", 1, "b" * 40, "2026-08-09T01:00:00Z"),
-        Candidate(2, "owner/two", 2, "c" * 40, "2026-08-09T02:00:00Z"),
+        Candidate(1, "owner/one", 3, "a" * 40, datetime.fromisoformat("2026-08-09T03:00:00+00:00")),
+        Candidate(1, "owner/one", 1, "b" * 40, datetime.fromisoformat("2026-08-09T01:00:00+00:00")),
+        Candidate(2, "owner/two", 2, "c" * 40, datetime.fromisoformat("2026-08-09T02:00:00+00:00")),
     )
     ordered = fair_order(candidates)
     arguments = _worker_arguments(ordered[0], 42, 7, Path("key.pem"))
@@ -38,6 +39,8 @@ def _behavior() -> dict[str, object]:
         "owner/one",
         "--pull-number",
         "1",
+        "--head-sha",
+        "b" * 40,
         "--app-id",
         "42",
         "--installation-id",

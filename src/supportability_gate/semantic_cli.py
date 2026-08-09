@@ -74,6 +74,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="supportability-semantic-review")
     parser.add_argument("--repository", required=True)
     parser.add_argument("--pull-number", required=True, type=int)
+    parser.add_argument("--head-sha", required=True)
     parser.add_argument("--app-id", required=True, type=int)
     parser.add_argument("--installation-id", required=True, type=int)
     parser.add_argument("--private-key", required=True, type=Path)
@@ -374,6 +375,9 @@ def main(argv: list[str] | None = None) -> int:
         app = GitHubApp(arguments.app_id, arguments.installation_id, private_key)
         token = app.installation_token()
         pull = app.pull(arguments.repository, arguments.pull_number, token)
+        head = pull.get("head")
+        if not isinstance(head, dict) or head.get("sha") != arguments.head_sha:
+            raise SemanticReviewError("STALE_EVIDENCE")
         lock_path = _pull_lock_path(
             arguments.private_key, arguments.repository, arguments.pull_number
         )

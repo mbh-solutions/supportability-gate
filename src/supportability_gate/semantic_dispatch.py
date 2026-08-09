@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from supportability_gate.github_app import GitHubApp
 from supportability_gate.semantic_contract import SHA_PATTERN, SemanticReviewError
@@ -17,6 +20,7 @@ from supportability_gate.semantic_contract import SHA_PATTERN, SemanticReviewErr
 POLL_SECONDS = 60
 MAX_WORKERS = 2
 WORKER_TIMEOUT_SECONDS = 90 * 60
+CREATED_AT_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\Z")
 
 
 @dataclass(frozen=True)
@@ -27,7 +31,7 @@ class Candidate:
     repository: str
     pull_number: int
     head_sha: str
-    created_at: str
+    created_at: datetime
 
     @property
     def key(self) -> tuple[int, int]:
@@ -41,6 +45,8 @@ class ActiveWorker:
     candidate: Candidate
     process: subprocess.Popen[str]
     started_at: float
+    stdout: IO[str]
+    stderr: IO[str]
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -62,11 +68,16 @@ def _candidate(repository: dict[str, Any], pull: dict[str, Any]) -> Candidate:
         or not isinstance(name, str)
         or type(pull_number) is not int
         or not isinstance(created_at, str)
+        or CREATED_AT_PATTERN.fullmatch(created_at) is None
         or not isinstance(head_sha, str)
         or SHA_PATTERN.fullmatch(head_sha) is None
     ):
         raise SemanticReviewError("MALFORMED_PULL_REQUEST")
-    return Candidate(repository_id, name, pull_number, head_sha, created_at)
+    try:
+        created = datetime.fromisoformat(created_at[:-1] + "+00:00")
+    except ValueError as error:
+        raise SemanticReviewError("MALFORMED_PULL_REQUEST") from error
+    return Candidate(repository_id, name, pull_number, head_sha, created)
 
 
 def discover_candidates(
@@ -126,6 +137,8 @@ def _worker_arguments(
         candidate.repository,
         "--pull-number",
         str(candidate.pull_number),
+        "--head-sha",
+        candidate.head_sha,
         "--app-id",
         str(app_id),
         "--installation-id",
@@ -139,14 +152,21 @@ def launch_worker(
     candidate: Candidate, app_id: int, installation_id: int, private_key: Path
 ) -> ActiveWorker:
     """Launch one fixed worker command without a shell."""
-    process = subprocess.Popen(
-        _worker_arguments(candidate, app_id, installation_id, private_key),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        shell=False,
-    )
-    return ActiveWorker(candidate, process, time.monotonic())
+    stdout = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
+    stderr = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
+    try:
+        process = subprocess.Popen(
+            _worker_arguments(candidate, app_id, installation_id, private_key),
+            stdout=stdout,
+            stderr=stderr,
+            text=True,
+            shell=False,
+        )
+    except Exception:
+        stdout.close()
+        stderr.close()
+        raise
+    return ActiveWorker(candidate, process, time.monotonic(), stdout, stderr)
 
 
 def fill_slots(
@@ -159,8 +179,11 @@ def fill_slots(
 ) -> int | None:
     """Launch only nonduplicate candidates up to the fixed machine cap."""
     last_repository = None
-    waiting = tuple(item for item in candidates if item.key not in active)
-    for candidate in waiting[: MAX_WORKERS - len(active)]:
+    waiting: dict[tuple[int, int], Candidate] = {}
+    for item in candidates:
+        if item.key not in active:
+            waiting.setdefault(item.key, item)
+    for candidate in tuple(waiting.values())[: MAX_WORKERS - len(active)]:
         active[candidate.key] = launch_worker(candidate, app_id, installation_id, private_key)
         last_repository = candidate.repository_id
         after_pulls[candidate.repository_id] = candidate.pull_number
@@ -170,28 +193,44 @@ def fill_slots(
 def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None = None) -> None:
     """Capture completed output and terminate workers beyond the fixed timeout."""
     current = time.monotonic() if now is None else now
+    cleanup_failed = False
     for key, worker in tuple(active.items()):
         timed_out = current - worker.started_at > WORKER_TIMEOUT_SECONDS
         if worker.process.poll() is None and not timed_out:
             continue
-        if timed_out:
-            worker.process.kill()
-        stdout, stderr = worker.process.communicate(timeout=30)
-        print(
-            json.dumps(
-                {
-                    "pull": worker.candidate.pull_number,
-                    "repository": worker.candidate.repository,
-                    "returncode": worker.process.returncode,
-                    "stderr": stderr[-2000:],
-                    "stdout": stdout[-2000:],
-                    "timed_out": timed_out,
-                },
-                sort_keys=True,
-            ),
-            flush=True,
-        )
-        del active[key]
+        try:
+            if timed_out:
+                worker.process.kill()
+            try:
+                worker.process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                worker.process.kill()
+                try:
+                    worker.process.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    cleanup_failed = True
+            worker.stdout.seek(0)
+            worker.stderr.seek(0)
+            print(
+                json.dumps(
+                    {
+                        "pull": worker.candidate.pull_number,
+                        "repository": worker.candidate.repository,
+                        "returncode": worker.process.returncode,
+                        "stderr": worker.stderr.read()[-2000:],
+                        "stdout": worker.stdout.read()[-2000:],
+                        "timed_out": timed_out,
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+        finally:
+            worker.stdout.close()
+            worker.stderr.close()
+            del active[key]
+    if cleanup_failed:
+        raise subprocess.SubprocessError("WORKER_TERMINATION_FAILURE")
 
 
 def _shadow(repositories: tuple[dict[str, Any], ...], candidates: tuple[Candidate, ...]) -> None:
@@ -214,7 +253,7 @@ def _shadow(repositories: tuple[dict[str, Any], ...], candidates: tuple[Candidat
     )
 
 
-def _run(arguments: argparse.Namespace, app: GitHubApp) -> int:
+def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
     active: dict[tuple[int, int], ActiveWorker] = {}
     last_repository: int | None = None
     after_pulls: dict[int, int] = {}
@@ -249,7 +288,7 @@ def main(argv: list[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     try:
         private_key = arguments.private_key.read_bytes()
-        return _run(
+        return run_dispatch_loop(
             arguments,
             GitHubApp(arguments.app_id, arguments.installation_id, private_key),
         )
