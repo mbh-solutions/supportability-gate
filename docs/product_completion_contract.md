@@ -1214,7 +1214,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
     installation `149688216`, key argument, enabled state, one-minute interval, `IgnoreNew`, and
     start boundary `2026-07-28T16:00:04-05:00` remained unchanged. Source retains start boundary
     `2026-07-28T15:59:34-05:00`, preserving the 30-second offset. The installed shared exclusive
-    evaluation lock remained unchanged. Final task state was `Ready`; final task XML SHA-256 was
+    evaluation lock remained unchanged. Authenticated final task state was `Ready`; task XML
+    SHA-256 was
     `8cf00c195ff97fc3fcad67e7aebc74bab68bf1d1bb0dc2d05946c6d52efaffd2`.
   - Temporary TWMN issue #64 and never-merged PR #65 used base
     `4960c784e099ee675cae098024e957b54598033a`. Initial defect head
