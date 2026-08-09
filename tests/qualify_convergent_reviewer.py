@@ -24,9 +24,21 @@ HISTORICAL_CASES = {
         "1f153c9f20b00ebc1c53d4ef9b30108a34a6291f",
         (
             ("home ownership", "home owner", "foundationhome"),
-            ("assignment ownership", "assignment owner", "rotationassignment"),
-            ("supabase cast", "unchecked cast", "as rotationassignment"),
-            ("pending save", "save in progress", "back navigation"),
+            ("assignment ownership", "assignment owner", "rotationsetup", "assignment state"),
+            (
+                "supabase cast",
+                "unchecked cast",
+                "as rotationassignment",
+                "cast directly",
+                "asserts it directly",
+            ),
+            (
+                "pending save",
+                "save in progress",
+                "save is pending",
+                "pending navigation",
+                "back control",
+            ),
         ),
     ),
     "pr18-9cc23a": (
@@ -90,9 +102,9 @@ def _fixture_packet(name: str) -> EvidencePacket:
         ),
         "missing-acceptance": ("Closes #999", "README.md", "Adds the requested behavior."),
         "clean": (
-            "Acceptance: document the fixed A1 contract; no runtime behavior changes.",
+            'Acceptance: README must add the exact sentence "A1 is the fixed chest assignment slot."',
             "README.md",
-            "The fixed A1 contract is documented; runtime behavior is unchanged.",
+            "A1 is the fixed chest assignment slot.",
         ),
     }
     body, path, line = fixtures[name]

@@ -261,7 +261,12 @@ def _boundary_evidence(
         *_authority_finding_prefixes(packet),
     )
     if any(
-        not any(finding.startswith(f"{prefix} ") for prefix in prefixes) for finding in findings
+        not any(
+            finding.startswith(f"{prefix} ")
+            or (not prefix.endswith(":") and finding.startswith(f"{prefix}: "))
+            for prefix in prefixes
+        )
+        for finding in findings
     ):
         raise SemanticReviewError("UNSUPPORTED_FINDING")
     return expected_paths, boundaries

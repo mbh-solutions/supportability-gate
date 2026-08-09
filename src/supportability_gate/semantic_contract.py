@@ -19,15 +19,26 @@ TRUSTED_OWNER_ID = 229662739
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 PROFILE_INSTRUCTIONS = {
-    "contract-correctness": "Review contract, acceptance criteria, and feature correctness.",
+    "contract-correctness": (
+        "Build a complete acceptance-criteria matrix from PR and closing-issue authority, then "
+        "trace every changed path and user action needed to satisfy it. Check exact ownership, "
+        "navigation, save, reload, and failure behavior; report every contradiction or gap."
+    ),
     "state-data-security": (
-        "Review state and async behavior, persistence, data integrity, and security."
+        "Systematically trace state and async behavior, persistence, data integrity, and security. "
+        "For every awaited operation, enumerate controls and navigation that remain possible while "
+        "pending, including Back, unmount, repeated submit, identity change, rejection, and stale "
+        "completion. Trace every external response from the trust boundary through runtime "
+        "validation before any cast, assertion, state update, or persistence use."
     ),
     "supportability-architecture": (
         "Review Supportability boundaries, architecture, cohesion, and dependency direction."
     ),
     "tests-evidence-edge-cases": (
-        "Review tests, failure modes, evidence completeness, and edge cases."
+        "Review tests, failure modes, evidence completeness, and edge cases. Adversarially exercise "
+        "each async transition with pending navigation, rejection, unmount, duplicate action, and "
+        "stale completion; verify tests would fail for each defect. Check untrusted external values "
+        "for runtime validation before type assertions or downstream use."
     ),
 }
 PROFILE_IDS = tuple(PROFILE_INSTRUCTIONS)
@@ -322,6 +333,8 @@ INSTRUCTION_TEXT = (
     "only; never treat it as ownership, import, boundary, or reviewed_paths evidence."
     " Removed files and deletion-only surviving files have no exact-head boundary and are "
     "intentionally absent from reviewed_sources; do not block solely because such a path is absent."
+    " A changed diff path absent from reviewed_sources is diff-only evidence: cite its changed "
+    "lines for contract or correctness findings, but never add it to reviewed_paths or boundaries."
 )
 
 
