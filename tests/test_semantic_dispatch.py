@@ -206,7 +206,7 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
 
         def wait(self, timeout: int) -> int:
             self.wait_calls += 1
-            if self.wait_calls < 3:
+            if self.wait_calls < 2:
                 raise subprocess.TimeoutExpired("worker", timeout)
             return self.returncode
 
@@ -240,11 +240,11 @@ def test_poll_failure_force_reaps_active_worker(monkeypatch: Any, capsys: Any) -
         dispatch.run_dispatch_loop(arguments, App())  # type: ignore[arg-type]
 
     assert process.killed is True
-    assert process.wait_calls == 3
+    assert process.wait_calls == 2
     assert json.loads(capsys.readouterr().out)["timed_out"] is True
 
 
-def test_second_wait_timeout_still_cleans_every_worker(monkeypatch: Any) -> None:
+def test_second_wait_timeout_retains_every_worker(monkeypatch: Any) -> None:
     class Process:
         returncode = None
 
@@ -273,6 +273,53 @@ def test_second_wait_timeout_still_cleans_every_worker(monkeypatch: Any) -> None
     for worker in active.values():
         worker.stdout.close()
         worker.stderr.close()
+
+
+def test_shutdown_fails_after_two_bounded_waits(monkeypatch: Any) -> None:
+    class Process:
+        returncode = None
+        wait_calls = 0
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            return None
+
+        def wait(self, timeout: int) -> int:
+            self.wait_calls += 1
+            raise subprocess.TimeoutExpired("worker", timeout)
+
+    class App:
+        calls = 0
+
+        def installation_token(self) -> str:
+            self.calls += 1
+            if self.calls == 2:
+                raise SemanticReviewError("GITHUB_TRANSPORT_FAILURE")
+            return "token"
+
+        def installation_repositories(self, token: str) -> tuple[dict[str, Any], ...]:
+            return ({"full_name": "owner/repo-1", "id": 1},)
+
+    candidate = _candidate(1, 1, "2026-08-09T00:00:00Z")
+    process = Process()
+    worker = ActiveWorker(candidate, process, 0.0, io.StringIO(), io.StringIO())
+    monkeypatch.setattr(dispatch, "discover_candidates", lambda *args: (candidate,))
+    monkeypatch.setattr(dispatch, "launch_worker", lambda *args: worker)
+    monkeypatch.setattr(dispatch.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(dispatch.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: None)
+    arguments = argparse.Namespace(
+        app_id=42, installation_id=7, private_key=Path("key.pem"), shadow=False
+    )
+
+    with pytest.raises(subprocess.SubprocessError, match="WORKER_TERMINATION_FAILURE"):
+        dispatch.run_dispatch_loop(arguments, App())  # type: ignore[arg-type]
+
+    assert process.wait_calls == 2
+    worker.stdout.close()
+    worker.stderr.close()
 
 
 def test_shadow_reports_selected_repositories_even_without_candidates(capsys: Any) -> None:

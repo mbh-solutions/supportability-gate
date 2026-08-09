@@ -205,6 +205,26 @@ def _terminate_worker(worker: ActiveWorker, timed_out: bool) -> bool:
     return True
 
 
+def _report_worker(worker: ActiveWorker, timed_out: bool) -> None:
+    """Emit bounded worker output after confirmed process termination."""
+    worker.stdout.seek(0)
+    worker.stderr.seek(0)
+    print(
+        json.dumps(
+            {
+                "pull": worker.candidate.pull_number,
+                "repository": worker.candidate.repository,
+                "returncode": worker.process.returncode,
+                "stderr": worker.stderr.read()[-2000:],
+                "stdout": worker.stdout.read()[-2000:],
+                "timed_out": timed_out,
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+
+
 def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None = None) -> None:
     """Capture completed output and terminate workers beyond the fixed timeout."""
     current = time.monotonic() if now is None else now
@@ -218,22 +238,7 @@ def reap_workers(active: dict[tuple[int, int], ActiveWorker], now: float | None 
             cleanup_failed = True
             continue
         try:
-            worker.stdout.seek(0)
-            worker.stderr.seek(0)
-            print(
-                json.dumps(
-                    {
-                        "pull": worker.candidate.pull_number,
-                        "repository": worker.candidate.repository,
-                        "returncode": worker.process.returncode,
-                        "stderr": worker.stderr.read()[-2000:],
-                        "stdout": worker.stdout.read()[-2000:],
-                        "timed_out": timed_out,
-                    },
-                    sort_keys=True,
-                ),
-                flush=True,
-            )
+            _report_worker(worker, timed_out)
         finally:
             worker.stdout.close()
             worker.stderr.close()
@@ -289,11 +294,8 @@ def run_dispatch_loop(arguments: argparse.Namespace, app: GitHubApp) -> int:
                 last_repository = launched_repository
             time.sleep(POLL_SECONDS)
     finally:
-        while active:
-            try:
-                reap_workers(active, float("inf"))
-            except subprocess.SubprocessError:
-                time.sleep(1)
+        if active:
+            reap_workers(active, float("inf"))
 
 
 def main(argv: list[str] | None = None) -> int:

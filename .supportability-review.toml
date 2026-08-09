@@ -143,4 +143,4 @@ justification = "Owns one exact pull, per-pull lock, fixed concurrent rounds, ag
 path = "src/supportability_gate/semantic_dispatch.py"
 owner_path = "src/supportability_gate/semantic_dispatch.py"
 basis = "responsibility"
-justification = "Owns installation-wide repository discovery, exact-head prerequisite eligibility, fair two-worker scheduling, active-job duplicate suppression, finite process monitoring, and shutdown cleanup without semantic evaluation or check publication."
+justification = "Owns installation-wide repository discovery, exact-head prerequisite eligibility, fair two-worker scheduling, active-job duplicate suppression, and bounded fail-closed process supervision without semantic evaluation or check publication."
