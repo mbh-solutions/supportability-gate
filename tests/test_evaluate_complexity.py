@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,9 @@ from supportability_gate import (
 
 
 def test_reported_package_version_matches_distribution_version() -> None:
-    assert complexity_metrics.tool_versions()["supportability_gate"] == __version__ == "0.2.0"
+    metadata = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text("utf-8"))
+    assert complexity_metrics.tool_versions()["supportability_gate"] == __version__
+    assert __version__ == metadata["project"]["version"]
 
 
 WORKFLOW_SHA = "f" * 40
