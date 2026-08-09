@@ -463,7 +463,7 @@ def test_ensemble_never_suppresses_and_byte_deduplicates_findings(
 def test_each_round_runs_four_profiles_concurrently_with_a_round_barrier(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    packet = _packet({"completion_sources": [], "pull_request": 67})
+    packet = _m10_packet()
     active = {1: 0, 2: 0}
     maximum = {1: 0, 2: 0}
     completed = {1: 0, 2: 0}
@@ -510,7 +510,7 @@ def test_each_round_runs_four_profiles_concurrently_with_a_round_barrier(
     assert completed == {1: 4, 2: 4}
 
 
-def test_production_review_missing_completion_evidence_still_runs_all_graders(
+def test_production_review_missing_completion_evidence_blocks_before_graders(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     packet = _packet({"pull_request": 3})
@@ -549,7 +549,8 @@ def test_production_review_missing_completion_evidence_still_runs_all_graders(
     assert not semantic_cli._review(  # type: ignore[arg-type]
         app, "mbh-solutions/supportability-gate", "token", {}
     )
-    assert calls == 8
+    assert calls == 0
+    assert app.published[0][3] == "action_required"
     assert "MALFORMED_COMPLETION_REPORT" in app.published[0][4]
 
 
