@@ -14,26 +14,10 @@
     },
     {
       "covers": [
-        "src/supportability_gate/github_app.py",
-        "src/supportability_gate/refactor_policy.py",
-        "src/supportability_gate/semantic_contract.py"
+        "src/supportability_gate/refactor_policy.py"
       ],
-      "id": "refactor-policy",
+      "id": "refactor-policy-retained",
       "kind": "cli"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/responses_transport.py"
-      ],
-      "id": "semantic-transport",
-      "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/semantic_diagnostics.py"
-      ],
-      "id": "semantic-diagnostics",
-      "kind": "regression"
     },
     {
       "covers": [
@@ -45,32 +29,9 @@
     },
     {
       "covers": [
-        "src/supportability_gate/quality_runner.py",
-        "src/supportability_gate/semantic_review.py"
+        "src/supportability_gate/quality_runner.py"
       ],
-      "id": "m9-reviewer-quality-boundary",
-      "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/handoff_policy.py",
-        "src/supportability_gate/semantic_cli.py"
-      ],
-      "id": "m10-review-handoff",
-      "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/review_state.py"
-      ],
-      "id": "s01-review-state",
-      "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/review_events.py"
-      ],
-      "id": "s02-review-events",
+      "id": "quality-runner-boundary",
       "kind": "regression"
     },
     {

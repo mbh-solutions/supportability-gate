@@ -1,31 +1,22 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "One required semantic check evaluates complete authenticated PR evidence through four fixed specialist profiles in two rounds and passes only eight trusted clean results."
-proof = "tests/test_semantic_review.py::test_ensemble_never_suppresses_and_byte_deduplicates_findings"
+intended_behavior = "The supported package exposes only supportability-gate and enforces deterministic policy plus required structured author evidence."
+proof = "tests/test_evaluate_complexity.py::test_valid_milestone_three_evidence_passes_and_reports_judgment"
 
 [characterization]
-captured_behavior = "The prior single-call semantic reviewer could pass a head that a later call blocked, while the packet discarded non-configuration diff text and did not bind closing-issue authority."
-proof = "tests/qualify_convergent_reviewer.py"
+captured_behavior = "Semantic-only scenarios are removed while retained Gate, quality, clause-inventory, architecture, modularity, and package scenarios remain."
+proof = "tests/test_characterization.py::test_deleted_source_uses_retained_characterization_only"
 
 [separation_of_concerns]
-before = "One model response evaluated parser-selected source plus only the semantic configuration patch and could stop discovery after one verdict."
-after = "GitHubApp supplies full canonical authority and diff evidence; semantic_contract fixes the rubric; semantic_review validates one response; semantic_cli aggregates eight unsuppressed attempts."
+before = "A second package entry point owned model transport, GitHub App publication, review events, replay, diagnostics, and model verdict parsing."
+after = "Only the deterministic Gate entry point remains; machine and App resource cleanup stays isolated to S04."
 
 [architecture]
-dependency_direction = "semantic_cli orchestrates GitHubApp and responses_transport; transport invokes semantic_diagnostics; semantic_review validates semantic_contract evidence without GitHub or transport ownership."
+dependency_direction = "The retained package follows the existing deterministic Gate layers; the disconnected semantic dependency graph is removed."
 reviewed_paths = [
-    "src/supportability_gate/characterization.py",
-    "src/supportability_gate/architecture_policy.py",
-    "src/supportability_gate/cli.py",
-    "src/supportability_gate/gate_policy.py",
-    "src/supportability_gate/git_changes.py",
     "src/supportability_gate/github_app.py",
     "src/supportability_gate/handoff_policy.py",
-    "src/supportability_gate/quality_profile.py",
-    "src/supportability_gate/quality_runner.py",
-    "src/supportability_gate/reporting.py",
-    "src/supportability_gate/refactor_policy.py",
     "src/supportability_gate/responses_transport.py",
     "src/supportability_gate/review_events.py",
     "src/supportability_gate/review_state.py",
@@ -33,38 +24,31 @@ reviewed_paths = [
     "src/supportability_gate/semantic_contract.py",
     "src/supportability_gate/semantic_diagnostics.py",
     "src/supportability_gate/semantic_review.py",
+    "src/supportability_gate/clause_inventory.py",
+    "src/supportability_gate/review_evidence.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/semantic_cli.py"
-owns = "Fixed eight-attempt sequencing, deterministic union aggregation, replay use, and one current GitHub check conclusion."
-does_not_own = "GitHub evidence acquisition, HTTP transport, diagnostic persistence, response trust validation, target execution, or application remediation."
+path = "src/supportability_gate/clause_inventory.py"
+owns = "Immutable Standard clause traceability to retained deterministic blocking tests."
+does_not_own = "Independent qualitative truth judgment, model review, machine cleanup, or target execution."
 
 [incremental_refactor]
-target = "Replace single-trip latent discovery with fail-closed eight-response convergence without changing the required check identity."
-completed_step = "Bound full authority and diff evidence, fixed four profiles across two rounds, retained all findings, and required eight trusted PASS verdicts."
+target = "Retire custom semantic source without weakening deterministic enforcement."
+completed_step = "Removed semantic-only source, entry point, tests, qualification paths, and stale mappings while retaining structured review validation."
 
 [review_handoff]
-summary = "Review full authority freshness, exact profile/round bindings, all-eight execution, unsuppressed finding union, diagnostics, replay identity, and historical/poison/clean qualification."
-remaining_risks = ["Two rounds materially reduce latent detection but cannot mathematically prove absence of every unknown defect."]
+summary = "Deterministic enforcement and author-provided qualitative review evidence passed; no independent or exhaustive semantic assurance is claimed."
+remaining_risks = [
+    "Author-provided qualitative evidence is structurally validated, but its prose truth is not mechanically established.",
+    "Disabled tasks, App, key, runtimes, and diagnostics remain for S04.",
+]
 
 [human_review]
-naming = "semantic-review.v2 and convergent-review.v1 name the response schema and fixed ensemble rubric without configurable variants."
-cohesion = "Each existing module retains one responsibility: authority, contract, transport, diagnostics, one-response validation, or ensemble orchestration."
-intended_behavior = "All eight calls run; any finding, uncertainty, stale authority, or technical failure prevents PASS."
-reviewability = "Fixed profile and round constants drive one nested sequence; focused tests cover continuation, aggregation, diagnostics, and replay."
-
-[[module_boundaries]]
-path = "src/supportability_gate/review_events.py"
-owner_path = "src/supportability_gate/review_events.py"
-basis = "responsibility"
-justification = "Owns HMAC authentication and strict identity normalization for supported GitHub review-state deliveries, but not GitHub API transport, current-state acquisition, semantic evaluation, reconciliation scheduling, or check publication."
-
-[[module_boundaries]]
-path = "src/supportability_gate/review_state.py"
-owner_path = "src/supportability_gate/review_state.py"
-basis = "responsibility"
-justification = "Owns normalization and cross-checking of authenticated GitHub review snapshots, but not API transport, unresolved-thread policy, model evaluation, check publication, or event invalidation."
+naming = "The retained supportability-gate name identifies the sole supported deterministic enforcement entry point."
+cohesion = "Semantic transport, orchestration, publication, replay, and verdict parsing leave together as one disconnected capability island."
+intended_behavior = "Deterministic policy and required structured author evidence remain; custom model judgment is retired."
+reviewability = "The source graph, manifest, blocking-test pointers, package metadata, and fresh wheel provide direct bounded proof."
 
 [[module_boundaries]]
 path = "src/supportability_gate/quality_profile.py"
@@ -95,45 +79,3 @@ path = "src/supportability_gate/modularity_policy.py"
 owner_path = "src/supportability_gate/modularity_policy.py"
 basis = "responsibility"
 justification = "Owns deterministic new-location justification, vague-location, coupling-edge, and complete-coverage evidence required by Enforcement Milestone 6."
-
-[[module_boundaries]]
-path = "src/supportability_gate/handoff_policy.py"
-owner_path = "src/supportability_gate/handoff_policy.py"
-basis = "responsibility"
-justification = "Owns completion-report parsing and exact evidence cross-checking without GitHub transport, target execution, or semantic model judgment."
-
-[[module_boundaries]]
-path = "src/supportability_gate/semantic_diagnostics.py"
-owner_path = "src/supportability_gate/semantic_diagnostics.py"
-basis = "responsibility"
-justification = "Owns restricted atomic local persistence for semantic transport attempts and exact response bytes, while the preexisting responses_transport boundary owns HTTP request and response handling and invokes diagnostics without taking persistence ownership."
-
-[[module_boundaries]]
-path = "src/supportability_gate/github_app.py"
-owner_path = "src/supportability_gate/github_app.py"
-basis = "responsibility"
-justification = "Owns authenticated GitHub comparison, PR and closing-issue authority, currentness, replay lookup, and check publication without model transport or verdict interpretation."
-
-[[module_boundaries]]
-path = "src/supportability_gate/responses_transport.py"
-owner_path = "src/supportability_gate/responses_transport.py"
-basis = "responsibility"
-justification = "Owns one fixed localhost Responses request and exact response bytes without ensemble sequencing, GitHub access, persistence implementation, or semantic judgment."
-
-[[module_boundaries]]
-path = "src/supportability_gate/semantic_contract.py"
-owner_path = "src/supportability_gate/semantic_contract.py"
-basis = "responsibility"
-justification = "Owns immutable semantic evidence, profile, rubric, request, and result contracts without transport, GitHub access, response interpretation, or orchestration."
-
-[[module_boundaries]]
-path = "src/supportability_gate/semantic_review.py"
-owner_path = "src/supportability_gate/semantic_review.py"
-basis = "responsibility"
-justification = "Owns fail-closed trust validation of one structured response against exact evidence without transport, GitHub access, diagnostics persistence, or ensemble suppression."
-
-[[module_boundaries]]
-path = "src/supportability_gate/semantic_cli.py"
-owner_path = "src/supportability_gate/semantic_cli.py"
-basis = "responsibility"
-justification = "Owns fixed sequential ensemble execution, aggregate result, scheduled lock, and one current check conclusion without evidence acquisition, HTTP implementation, or single-response trust rules."

@@ -1298,3 +1298,25 @@ in Project #3 are `Complete`, their Evidence is `Complete`, Scope is `On scope`,
 `Yes`, and their required direct proof is recorded.
 
 Do not create a new terminal label not authorized by an active milestone directive.
+
+## Project #9 S03 retirement assurance
+
+- Authority: Project #9 issue #129. This append-only assurance is canonical only through its
+  protected merge; the issue and Project fields record the terminal transaction and exact hashes.
+- Supported enforcement: the deterministic `supportability-gate` entry point, including required
+  `.supportability-review.toml` structure and existing architecture, modularity, complexity,
+  quality, characterization, and source-policy checks.
+- Retired source boundary: the custom semantic-review entry point, model transport, response
+  contract and parser, GitHub App publication path, review-event/state handling, replay, lock,
+  diagnostics, handoff policy, semantic qualification, and semantic-only test or characterization
+  oracles have no retained production caller.
+- Clause traceability: active responsibility-boundary and review-handoff mappings point to retained
+  deterministic Gate tests that block insufficient or missing structured review evidence.
+- Assurance limit: deterministic enforcement and author-provided qualitative review evidence
+  passed; no independent or exhaustive semantic assurance is claimed.
+- Operational boundary: scheduled tasks, GitHub App and key, installed runtimes, locks, and
+  diagnostics remain untouched for Project #9 S04.
+- Durable evidence pointer: issue #129 records the protected PR, exact-head checks, merge and main
+  identities, immutable Standard hash, fresh-wheel entry points, and cleanup readback.
+- Stop: after S03 reaches `Done / Complete / On scope / Yes`, only S04 may be `Ready`; no S04
+  operation is part of this assurance.

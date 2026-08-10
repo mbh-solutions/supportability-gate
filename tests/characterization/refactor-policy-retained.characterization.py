@@ -27,7 +27,11 @@ def main() -> None:
     }
     print(
         json.dumps(
-            {"behavior": behavior, "scenario": "refactor-policy", "schema_version": "1.0"},
+            {
+                "behavior": behavior,
+                "scenario": "refactor-policy-retained",
+                "schema_version": "1.0",
+            },
             separators=(",", ":"),
             sort_keys=True,
         )
