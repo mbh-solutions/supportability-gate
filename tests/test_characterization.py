@@ -24,17 +24,14 @@ def _hosted_runner(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RUNNER_ENVIRONMENT", "github-hosted")
 
 
-def test_m9_new_boundaries_have_characterization() -> None:
+def test_retained_quality_runner_has_characterization() -> None:
     root = Path(__file__).parents[1]
     manifest = characterization.parse_manifest(
         (root / ".supportability-characterization.json").read_bytes(), "0" * 40
     )
     covered = {path for scenario in manifest.scenarios for path in scenario.covers}
 
-    assert {
-        "src/supportability_gate/quality_runner.py",
-        "src/supportability_gate/semantic_review.py",
-    } <= covered
+    assert "src/supportability_gate/quality_runner.py" in covered
 
 
 PYTHON_CONTRACT = """\

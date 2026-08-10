@@ -754,7 +754,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 165.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0167",
@@ -769,7 +769,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 167.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0175",
@@ -784,7 +784,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 175.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0177",
@@ -799,7 +799,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 177.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0178",
@@ -814,7 +814,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 178.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0179",
@@ -829,7 +829,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 179.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0180",
@@ -844,7 +844,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 180.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0181",
@@ -859,7 +859,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 181.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0182",
@@ -874,7 +874,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 182.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0183",
@@ -889,7 +889,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 183.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0184",
@@ -904,7 +904,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 184.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0185",
@@ -919,7 +919,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 185.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0186",
@@ -934,7 +934,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 186.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0187",
@@ -949,7 +949,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 187.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0188",
@@ -964,7 +964,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 188.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0192",
@@ -979,7 +979,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 192.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0195",
@@ -994,7 +994,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 195.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0196",
@@ -1009,7 +1009,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 196.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0197",
@@ -1024,7 +1024,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 197.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0200",
@@ -1039,7 +1039,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 200.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0204",
@@ -1053,7 +1053,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 204.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0206",
@@ -1067,7 +1067,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 206.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0208",
@@ -1081,7 +1081,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 208.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0210",
@@ -1095,7 +1095,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 210.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0211",
@@ -1109,7 +1109,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 211.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0212",
@@ -1123,7 +1123,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 212.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0213",
@@ -1137,7 +1137,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 213.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0214",
@@ -1151,7 +1151,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 214.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0215",
@@ -1165,7 +1165,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 215.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0216",
@@ -1179,7 +1179,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 216.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0217",
@@ -1193,7 +1193,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 217.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0218",
@@ -1207,7 +1207,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 218.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0219",
@@ -1221,7 +1221,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 219.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0221",
@@ -1235,7 +1235,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 221.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0223",
@@ -1249,7 +1249,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 223.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0231",
@@ -1984,7 +1984,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 452.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0454",
@@ -1999,7 +1999,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 454.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0462",
@@ -2014,7 +2014,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 462.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0464",
@@ -2029,7 +2029,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 464.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0465",
@@ -2044,7 +2044,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 465.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0466",
@@ -2059,7 +2059,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 466.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0467",
@@ -2074,7 +2074,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 467.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0468",
@@ -2089,7 +2089,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 468.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0469",
@@ -2104,7 +2104,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 469.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0470",
@@ -2119,7 +2119,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 470.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0471",
@@ -2134,7 +2134,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 471.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0475",
@@ -2149,7 +2149,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 475.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0481",
@@ -2179,7 +2179,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 485.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0501",
@@ -2314,7 +2314,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 541.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0566",
@@ -2418,7 +2418,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 602.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0607",
@@ -2433,7 +2433,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 607.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0614",
@@ -2552,7 +2552,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 627.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0628",
@@ -2700,7 +2700,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 641.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0642",
@@ -2715,7 +2715,7 @@
       },
       "enforcement_owner": "Milestone 4 responsibility-boundary enforcement",
       "evidence_requirement": "Milestone 4 responsibility evidence tied to immutable inputs and source line 642.",
-      "blocking_test": "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0643",
@@ -2880,7 +2880,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 660.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0662",
@@ -2895,7 +2895,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 662.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0663",
@@ -2910,7 +2910,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 663.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0664",
@@ -2925,7 +2925,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 664.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0665",
@@ -2940,7 +2940,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 665.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0666",
@@ -2955,7 +2955,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 666.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0667",
@@ -2970,7 +2970,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 667.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0668",
@@ -2985,7 +2985,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 668.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0669",
@@ -3000,7 +3000,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 669.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0676",
@@ -3060,7 +3060,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 688.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0690",
@@ -3075,7 +3075,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 690.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0692",
@@ -3090,7 +3090,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 692.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0693",
@@ -3105,7 +3105,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 693.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0694",
@@ -3120,7 +3120,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 694.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0695",
@@ -3135,7 +3135,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 695.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0696",
@@ -3150,7 +3150,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 696.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0697",
@@ -3165,7 +3165,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 697.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0698",
@@ -3180,7 +3180,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 698.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0699",
@@ -3195,7 +3195,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 699.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0700",
@@ -3210,7 +3210,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 700.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0701",
@@ -3225,7 +3225,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 701.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     },
     {
       "clause_id": "SS-0703",
@@ -3240,7 +3240,7 @@
       },
       "enforcement_owner": "Milestone 10 review-handoff enforcement",
       "evidence_requirement": "Milestone 10 review-handoff evidence tied to immutable inputs and source line 703.",
-      "blocking_test": "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+      "blocking_test": "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     }
   ]
 }

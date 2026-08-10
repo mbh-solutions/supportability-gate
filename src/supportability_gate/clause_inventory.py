@@ -54,7 +54,7 @@ OWNER_BLOCKING_TEST = {
         "tests/test_evaluate_complexity.py::test_new_complexity_11_blocks"
     ),
     "Milestone 4 responsibility-boundary enforcement": (
-        "tests/test_semantic_review.py::test_mixed_responsibilities_block_with_line_evidence"
+        "tests/test_evaluate_complexity.py::test_insufficient_milestone_three_evidence_blocks"
     ),
     "Milestone 5 dependency-direction enforcement": (
         "tests/test_architecture_policy.py::test_cross_layer_inversion_blocks"
@@ -72,7 +72,7 @@ OWNER_BLOCKING_TEST = {
         "tests/test_quality_profile.py::test_missing_required_command_blocks"
     ),
     "Milestone 10 review-handoff enforcement": (
-        "tests/test_handoff_policy.py::test_missing_required_report_section_blocks"
+        "tests/test_evaluate_complexity.py::test_missing_milestone_three_evidence_blocks"
     ),
 }
 EXPECTED_SOURCE_LINES = (

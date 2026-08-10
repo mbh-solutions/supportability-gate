@@ -101,8 +101,8 @@ Stop condition:
 Before editing:
 
 1. Identify the single slice marked `In progress` in the
-   [Repository-Isolated Semantic Review Runtime](https://github.com/orgs/mbh-solutions/projects/8)
-   project. Projects #2, #3, and #6 are historical and must not be changed.
+   [Semantic Review Retirement and Gate Simplification](https://github.com/orgs/mbh-solutions/projects/9)
+   project. Projects #2, #3, #6, and #8 are historical and must not be changed.
 2. Read its milestone issue completely.
 3. State:
    - terminal capability;

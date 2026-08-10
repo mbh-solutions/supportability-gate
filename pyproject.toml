@@ -28,7 +28,6 @@ dev = [
 
 [project.scripts]
 supportability-gate = "supportability_gate.cli:main"
-supportability-semantic-review = "supportability_gate.semantic_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -74,17 +73,4 @@ layers = [
     "supportability_gate.function_changes",
     "supportability_gate.characterization",
     "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.git_changes | supportability_gate.review_evidence",
-]
-
-[[tool.importlinter.contracts]]
-name = "Semantic verifier dependency direction"
-type = "layers"
-layers = [
-    "supportability_gate.semantic_cli",
-    "supportability_gate.github_app | supportability_gate.responses_transport",
-    "supportability_gate.semantic_diagnostics",
-    "supportability_gate.review_events | supportability_gate.review_state",
-    "supportability_gate.architecture_policy",
-    "supportability_gate.semantic_review | supportability_gate.function_changes",
-    "supportability_gate.semantic_contract | supportability_gate.contract",
 ]
