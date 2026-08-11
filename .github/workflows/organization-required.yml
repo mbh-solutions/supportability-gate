@@ -303,19 +303,19 @@ jobs:
       - name: Download authenticated base behavior
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: characterization-base-${{ github.run_id }}-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.characterize-base.outputs.artifact-id }}
           path: ${{ runner.temp }}/base
 
       - name: Download authenticated head behavior
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: characterization-head-${{ github.run_id }}-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.characterize-head.outputs.artifact-id }}
           path: ${{ runner.temp }}/head
 
       - name: Download authenticated quality evidence
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: quality-profile-${{ github.run_id }}-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.quality-profile.outputs.artifact-id }}
           path: ${{ runner.temp }}/quality
 
       - name: Read back GitHub artifact metadata
