@@ -17,6 +17,7 @@ HEAD_PREFIX = "Codex-Review-Head: "
 RUN_PREFIX = "Codex-Review-Run: "
 CLEAN_PREFIX = "Codex Review: Didn't find any major issues."
 OBSERVER_JOB = "Observe Codex Review"
+OBSERVER_MARKER = "CODEX_REVIEW_ACKNOWLEDGED:"
 WORKFLOW_NAME = "Organization Required Supportability Gate"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
@@ -88,39 +89,85 @@ def _pages(endpoint: str, token: str, opener: Any) -> tuple[dict[str, Any], ...]
     raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
 
 
-def _observer_complete(
-    repository: str, run_id: int, head_sha: str, token: str, opener: Any
-) -> bool:
+def _job_page(
+    repository: str, run_id: int, token: str, page: int, opener: Any
+) -> list[dict[str, Any]]:
     root = f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs?filter=all"
+    request = urllib.request.Request(
+        f"{root}&per_page=100&page={page}",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with opener(request, timeout=30) as response:
+            value: object = json.loads(response.read())
+    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
+    jobs = value.get("jobs") if isinstance(value, dict) else None
+    if not isinstance(jobs, list) or any(not isinstance(job, dict) for job in jobs):
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+    return jobs
+
+
+def _observer_jobs(
+    repository: str, run_id: int, head_sha: str, token: str, opener: Any
+) -> tuple[dict[str, Any], ...]:
+    matches: list[dict[str, Any]] = []
     for page in range(1, MAX_PAGES + 1):
-        request = urllib.request.Request(
-            f"{root}&per_page=100&page={page}",
-            headers={
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {token}",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-        )
-        try:
-            with opener(request, timeout=30) as response:
-                value: object = json.loads(response.read())
-        except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
-            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
-        jobs = value.get("jobs") if isinstance(value, dict) else None
-        if not isinstance(jobs, list) or any(not isinstance(job, dict) for job in jobs):
-            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
-        if any(
-            job.get("run_id") == run_id
+        jobs = _job_page(repository, run_id, token, page, opener)
+        matches.extend(
+            job
+            for job in jobs
+            if job.get("run_id") == run_id
             and job.get("head_sha") == head_sha
             and job.get("workflow_name") == WORKFLOW_NAME
             and job.get("name") == OBSERVER_JOB
             and job.get("conclusion") == "success"
-            for job in jobs
-        ):
-            return True
+        )
         if len(jobs) < 100:
-            return False
+            return tuple(matches)
     raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+
+
+def _observer_log(repository: str, job_id: int, token: str, opener: Any) -> str:
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repository}/actions/jobs/{job_id}/logs",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with opener(request, timeout=30) as response:
+            content: bytes = response.read()
+    except (OSError, TimeoutError, urllib.error.URLError) as error:
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
+
+
+def _observer_comment_id(
+    repository: str, run_id: int, head_sha: str, token: str, opener: Any
+) -> int | None:
+    identifiers: set[int] = set()
+    pattern = re.compile(rf"(?m)^\S+ {OBSERVER_MARKER}([1-9][0-9]*)\r?$")
+    for job in _observer_jobs(repository, run_id, head_sha, token, opener):
+        job_id = job.get("id")
+        if type(job_id) is not int:
+            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+        matches = pattern.findall(_observer_log(repository, job_id, token, opener))
+        if len(matches) != 1:
+            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+        identifiers.add(int(matches[0]))
+    if len(identifiers) > 1:
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+    return next(iter(identifiers), None)
 
 
 def _request_values(body: object) -> tuple[str, int] | None:
@@ -242,7 +289,7 @@ def _state(
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
     request = _review_request(comments, head_sha, run_id)
     reactions = _pages(f"{root}/issues/comments/{request.comment_id}/reactions", token, opener)
-    acknowledged = _observer_complete(repository, run_id, head_sha, token, opener)
+    acknowledged_comment = _observer_comment_id(repository, run_id, head_sha, token, opener)
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
     complete = _completed(
         request,
@@ -250,7 +297,7 @@ def _state(
         comments,
         reactions,
         reviews,
-        acknowledged,
+        acknowledged_comment == request.comment_id,
     )
     return None if complete else "CODEX_REVIEW_PENDING"
 
@@ -266,14 +313,15 @@ def require_acknowledgement(
     delay: int = POLL_SECONDS,
     opener: Any = urllib.request.urlopen,
     sleeper: Any = time.sleep,
-) -> None:
+) -> int:
     """Observe trusted connector acknowledgement on the exact request."""
     root = f"https://api.github.com/repos/{repository}"
     last_code = "CODEX_REVIEW_PENDING"
     for attempt in range(attempts):
         try:
-            if _observer_complete(repository, run_id, head_sha, token, opener):
-                return
+            acknowledged_comment = _observer_comment_id(repository, run_id, head_sha, token, opener)
+            if acknowledged_comment is not None:
+                return acknowledged_comment
             comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
             request = _review_request(comments, head_sha, run_id)
             endpoint = f"{root}/issues/comments/{request.comment_id}/reactions"
@@ -282,7 +330,7 @@ def require_acknowledgement(
                 _trusted_user(reaction) and reaction.get("content") == "eyes"
                 for reaction in reactions
             ):
-                return
+                return request.comment_id
         except CodexReviewError as error:
             if error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE":
                 raise

@@ -25,6 +25,8 @@ class Reply:
         return None
 
     def read(self) -> bytes:
+        if isinstance(self.value, bytes):
+            return self.value
         return json.dumps(self.value).encode()
 
 
@@ -99,6 +101,7 @@ def main() -> None:
                         {
                             "conclusion": "success",
                             "head_sha": HEAD,
+                            "id": 10,
                             "name": module.OBSERVER_JOB,
                             "run_id": RUN_ID,
                             "workflow_name": module.WORKFLOW_NAME,
@@ -107,6 +110,8 @@ def main() -> None:
                     "total_count": 1,
                 }
             )
+        if path.endswith("logs"):
+            return Reply(f"2026-08-11T12:00:00Z {module.OBSERVER_MARKER}1\n".encode())
         if path.endswith("reviews"):
             return Reply([])
         raise RuntimeError("unexpected endpoint")

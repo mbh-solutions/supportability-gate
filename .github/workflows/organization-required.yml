@@ -39,7 +39,7 @@ jobs:
           PULL_NUMBER: ${{ github.event.pull_request.number }}
           PYTHONPATH: ${{ github.workspace }}/gate/src
         run: |
-          python -P -c 'import os; from supportability_gate.codex_review import require_acknowledgement; require_acknowledgement(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"])'
+          python -P -c 'import os; from supportability_gate.codex_review import OBSERVER_MARKER, require_acknowledgement; comment_id = require_acknowledgement(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print(f"{OBSERVER_MARKER}{comment_id}")'
 
   characterize-base:
     name: Characterize Base
