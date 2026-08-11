@@ -58,10 +58,22 @@ def _reaction(
     }
 
 
-def _acknowledgement(*, user_id: int = codex_review.ACTIONS_ID) -> dict[str, object]:
+def _observer(**overrides: object) -> dict[str, object]:
+    job: dict[str, object] = {
+        "conclusion": "success",
+        "head_sha": HEAD,
+        "name": codex_review.OBSERVER_JOB,
+        "run_id": RUN_ID,
+        "workflow_name": codex_review.WORKFLOW_NAME,
+    }
+    job.update(overrides)
+    return job
+
+
+def _jobs(jobs: list[dict[str, object]] | None = None) -> dict[str, object]:
     return {
-        "content": codex_review.ACKNOWLEDGEMENT,
-        "user": {"id": user_id},
+        "jobs": jobs or [],
+        "total_count": len(jobs or []),
     }
 
 
@@ -95,6 +107,7 @@ def _opener(
     comments: list[dict[str, object]],
     reactions: list[dict[str, object]] | None = None,
     reviews: list[dict[str, object]] | None = None,
+    jobs: list[dict[str, object]] | None = None,
 ) -> Callable[..., _Reply]:
     sources = {
         "comments": comments,
@@ -106,6 +119,9 @@ def _opener(
         assert kwargs == {"timeout": 30}
         url = urllib.parse.urlparse(request.full_url)
         page = int(urllib.parse.parse_qs(url.query)["page"][0])
+        if url.path.endswith("jobs"):
+            start = (page - 1) * 100
+            return _Reply(_jobs((jobs or [])[start : start + 100]))
         key = next(name for name in sources if url.path.endswith(name))
         start = (page - 1) * 100
         return _Reply(sources[key][start : start + 100])
@@ -141,9 +157,9 @@ def _handshake_opener(*, clean_summary: bool = False) -> Callable[..., _Reply]:
             return _Reply(comments)
         if path.endswith("reactions"):
             reaction_calls += 1
-            return _Reply(
-                [_reaction(content="eyes")] if reaction_calls == 1 else [_acknowledgement()]
-            )
+            return _Reply([_reaction(content="eyes")] if reaction_calls == 1 else [])
+        if path.endswith("jobs"):
+            return _Reply(_jobs([_observer()]))
         if path.endswith("reviews"):
             return _Reply([] if reaction_calls == 1 else [_review()])
         raise AssertionError(path)
@@ -158,7 +174,6 @@ def _handshake_opener(*, clean_summary: bool = False) -> Callable[..., _Reply]:
         ([_request(OLD_HEAD)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request()], [_reaction(content="eyes")], "CODEX_REVIEW_PENDING"),
         ([_request()], [_reaction(user_id=1)], "CODEX_REVIEW_PENDING"),
-        ([_request()], [_acknowledgement(user_id=1)], "CODEX_REVIEW_PENDING"),
         ([_request(run_id=RUN_ID - 1)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request(user_id=1)], [], "MISSING_CODEX_REVIEW_REQUEST"),
         ([_request(updated_at=COMPLETED)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
@@ -225,17 +240,17 @@ def test_acknowledged_exact_request_clean_summary_passes() -> None:
     )
 
 
-def test_connector_eyes_are_persisted_on_exact_request() -> None:
+def test_connector_eyes_are_observed_without_repository_write() -> None:
     requests: list[Any] = []
 
     def opener(request: Any, **kwargs: object) -> _Reply:
         requests.append(request)
         assert kwargs == {"timeout": 30}
         path = urllib.parse.urlparse(request.full_url).path
+        if path.endswith("jobs"):
+            return _Reply(_jobs())
         if path.endswith("comments"):
             return _Reply([_request()])
-        if request.get_method() == "POST":
-            return _Reply(_acknowledgement())
         if path.endswith("reactions"):
             return _Reply([_reaction(content="eyes")])
         raise AssertionError(path)
@@ -252,10 +267,21 @@ def test_connector_eyes_are_persisted_on_exact_request() -> None:
         sleeper=lambda _: None,
     )
 
-    posted = requests[-1]
-    assert posted.get_method() == "POST"
-    assert posted.headers["Content-type"] == "application/json"
-    assert json.loads(posted.data) == {"content": codex_review.ACKNOWLEDGEMENT}
+    assert all(request.get_method() == "GET" for request in requests)
+
+
+def test_prior_successful_observer_attempt_is_durable() -> None:
+    codex_review.require_acknowledgement(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=1,
+        delay=0,
+        opener=_opener([], jobs=[_observer()]),
+        sleeper=lambda _: None,
+    )
 
 
 def test_legacy_head_only_request_does_not_override_exact_run_request() -> None:

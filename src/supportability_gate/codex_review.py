@@ -13,11 +13,11 @@ from typing import Any
 
 CONNECTOR_ID = 199175422
 REQUESTER_ID = 229662739
-ACTIONS_ID = 41898282
 HEAD_PREFIX = "Codex-Review-Head: "
 RUN_PREFIX = "Codex-Review-Run: "
 CLEAN_PREFIX = "Codex Review: Didn't find any major issues."
-ACKNOWLEDGEMENT = "rocket"
+OBSERVER_JOB = "Observe Codex Review"
+WORKFLOW_NAME = "Organization Required Supportability Gate"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
 MAX_PAGES = 10
@@ -88,6 +88,41 @@ def _pages(endpoint: str, token: str, opener: Any) -> tuple[dict[str, Any], ...]
     raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
 
 
+def _observer_complete(
+    repository: str, run_id: int, head_sha: str, token: str, opener: Any
+) -> bool:
+    root = f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs?filter=all"
+    for page in range(1, MAX_PAGES + 1):
+        request = urllib.request.Request(
+            f"{root}&per_page=100&page={page}",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        try:
+            with opener(request, timeout=30) as response:
+                value: object = json.loads(response.read())
+        except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
+            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
+        jobs = value.get("jobs") if isinstance(value, dict) else None
+        if not isinstance(jobs, list) or any(not isinstance(job, dict) for job in jobs):
+            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+        if any(
+            job.get("run_id") == run_id
+            and job.get("head_sha") == head_sha
+            and job.get("workflow_name") == WORKFLOW_NAME
+            and job.get("name") == OBSERVER_JOB
+            and job.get("conclusion") == "success"
+            for job in jobs
+        ):
+            return True
+        if len(jobs) < 100:
+            return False
+    raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+
+
 def _request_values(body: object) -> tuple[str, int] | None:
     if not isinstance(body, str):
         return None
@@ -150,36 +185,6 @@ def _trusted_user(item: dict[str, Any]) -> bool:
     return isinstance(user, dict) and user.get("id") == CONNECTOR_ID
 
 
-def _acknowledged(reactions: tuple[dict[str, Any], ...]) -> bool:
-    return any(
-        isinstance(reaction.get("user"), dict)
-        and reaction["user"].get("id") == ACTIONS_ID
-        and reaction.get("content") == ACKNOWLEDGEMENT
-        for reaction in reactions
-    )
-
-
-def _persist_acknowledgement(endpoint: str, token: str, opener: Any) -> None:
-    request = urllib.request.Request(
-        endpoint,
-        data=json.dumps({"content": ACKNOWLEDGEMENT}).encode(),
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-        method="POST",
-    )
-    try:
-        with opener(request, timeout=30) as response:
-            value: object = json.loads(response.read())
-    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
-        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
-    if not isinstance(value, dict) or not _acknowledged((value,)):
-        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
-
-
 def _clean_summary(item: dict[str, Any], request: ReviewRequest, head_sha: str) -> bool:
     body = item.get("body")
     match = REVIEWED_COMMIT.search(body) if isinstance(body, str) else None
@@ -237,6 +242,7 @@ def _state(
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
     request = _review_request(comments, head_sha, run_id)
     reactions = _pages(f"{root}/issues/comments/{request.comment_id}/reactions", token, opener)
+    acknowledged = _observer_complete(repository, run_id, head_sha, token, opener)
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
     complete = _completed(
         request,
@@ -244,7 +250,7 @@ def _state(
         comments,
         reactions,
         reviews,
-        _acknowledged(reactions),
+        acknowledged,
     )
     return None if complete else "CODEX_REVIEW_PENDING"
 
@@ -261,22 +267,21 @@ def require_acknowledgement(
     opener: Any = urllib.request.urlopen,
     sleeper: Any = time.sleep,
 ) -> None:
-    """Persist trusted connector acknowledgement on the exact request."""
+    """Observe trusted connector acknowledgement on the exact request."""
     root = f"https://api.github.com/repos/{repository}"
     last_code = "CODEX_REVIEW_PENDING"
     for attempt in range(attempts):
         try:
+            if _observer_complete(repository, run_id, head_sha, token, opener):
+                return
             comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
             request = _review_request(comments, head_sha, run_id)
             endpoint = f"{root}/issues/comments/{request.comment_id}/reactions"
             reactions = _pages(endpoint, token, opener)
-            if _acknowledged(reactions):
-                return
             if any(
                 _trusted_user(reaction) and reaction.get("content") == "eyes"
                 for reaction in reactions
             ):
-                _persist_acknowledgement(endpoint, token, opener)
                 return
         except CodexReviewError as error:
             if error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE":

@@ -90,12 +90,22 @@ def main() -> None:
                     }
                 ]
                 if reaction_calls == 1
-                else [
-                    {
-                        "content": module.ACKNOWLEDGEMENT,
-                        "user": {"id": module.ACTIONS_ID},
-                    }
-                ]
+                else []
+            )
+        if path.endswith("jobs"):
+            return Reply(
+                {
+                    "jobs": [
+                        {
+                            "conclusion": "success",
+                            "head_sha": HEAD,
+                            "name": module.OBSERVER_JOB,
+                            "run_id": RUN_ID,
+                            "workflow_name": module.WORKFLOW_NAME,
+                        }
+                    ],
+                    "total_count": 1,
+                }
             )
         if path.endswith("reviews"):
             return Reply([])

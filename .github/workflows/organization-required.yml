@@ -13,9 +13,9 @@ jobs:
   observe-codex-review:
     name: Observe Codex Review
     permissions:
+      actions: read
       contents: read
-      issues: write
-      pull-requests: write
+      issues: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Persist exact-request connector acknowledgement
+      - name: Observe exact-request connector acknowledgement
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
