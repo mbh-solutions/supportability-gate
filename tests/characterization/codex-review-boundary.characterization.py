@@ -56,20 +56,29 @@ def main() -> None:
         path = urllib.parse.urlparse(request.full_url).path
         paths.append(path)
         if path.endswith("comments"):
-            return Reply(
-                [
+            comments = [
+                {
+                    "body": (
+                        f"@codex review\n\nCodex-Review-Head: {HEAD}\nCodex-Review-Run: {RUN_ID}"
+                    ),
+                    "created_at": REQUESTED,
+                    "id": 1,
+                    "updated_at": REQUESTED,
+                    "user": {"id": module.REQUESTER_ID},
+                }
+            ]
+            if reaction_calls:
+                comments.append(
                     {
                         "body": (
-                            f"@codex review\n\nCodex-Review-Head: {HEAD}\n"
-                            f"Codex-Review-Run: {RUN_ID}"
+                            "Codex Review: Didn't find any major issues. Delightful!\n\n"
+                            f"**Reviewed commit:** `{HEAD[:10]}`"
                         ),
-                        "created_at": REQUESTED,
-                        "id": 1,
-                        "updated_at": REQUESTED,
-                        "user": {"id": module.REQUESTER_ID},
+                        "created_at": COMPLETED,
+                        "user": {"id": module.CONNECTOR_ID},
                     }
-                ]
-            )
+                )
+            return Reply(comments)
         if path.endswith("reactions"):
             reaction_calls += 1
             return Reply(
@@ -84,17 +93,7 @@ def main() -> None:
                 else []
             )
         if path.endswith("reviews"):
-            return Reply(
-                []
-                if reaction_calls == 1
-                else [
-                    {
-                        "commit_id": HEAD,
-                        "submitted_at": COMPLETED,
-                        "user": {"id": module.CONNECTOR_ID},
-                    }
-                ]
-            )
+            return Reply([])
         raise RuntimeError("unexpected endpoint")
 
     module.require_completion(

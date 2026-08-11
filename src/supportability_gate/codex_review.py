@@ -15,7 +15,9 @@ CONNECTOR_ID = 199175422
 REQUESTER_ID = 229662739
 HEAD_PREFIX = "Codex-Review-Head: "
 RUN_PREFIX = "Codex-Review-Run: "
+CLEAN_PREFIX = "Codex Review: Didn't find any major issues."
 SHA = re.compile(r"[0-9a-f]{40}\Z")
+REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
 MAX_PAGES = 10
 POLL_ATTEMPTS = 30
 POLL_SECONDS = 15
@@ -146,9 +148,23 @@ def _trusted_user(item: dict[str, Any]) -> bool:
     return isinstance(user, dict) and user.get("id") == CONNECTOR_ID
 
 
+def _clean_summary(item: dict[str, Any], request: ReviewRequest, head_sha: str) -> bool:
+    body = item.get("body")
+    match = REVIEWED_COMMIT.search(body) if isinstance(body, str) else None
+    return (
+        _trusted_user(item)
+        and isinstance(body, str)
+        and body.startswith(CLEAN_PREFIX)
+        and match is not None
+        and match.group(1) == head_sha[:10]
+        and _timestamp(item.get("created_at")) >= request.created_at
+    )
+
+
 def _completed(
     request: ReviewRequest,
     head_sha: str,
+    comments: tuple[dict[str, Any], ...],
     reactions: tuple[dict[str, Any], ...],
     reviews: tuple[dict[str, Any], ...],
     acknowledged: bool,
@@ -164,6 +180,8 @@ def _completed(
         _trusted_user(reaction) and reaction.get("content") == "eyes" for reaction in reactions
     ):
         return False
+    if any(_clean_summary(comment, request, head_sha) for comment in comments):
+        return True
     for review in reviews:
         if (
             _trusted_user(review)
@@ -196,6 +214,7 @@ def _state(
     complete = _completed(
         request,
         head_sha,
+        comments,
         reactions,
         reviews,
         acknowledged_comment == request.comment_id,

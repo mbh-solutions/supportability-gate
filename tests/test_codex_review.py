@@ -72,6 +72,18 @@ def _review(*, user_id: int = codex_review.CONNECTOR_ID, head: str = HEAD) -> di
     }
 
 
+def _summary(*, user_id: int = codex_review.CONNECTOR_ID, head: str = HEAD) -> dict[str, object]:
+    return {
+        "body": (
+            "Codex Review: Didn't find any major issues. Delightful!\n\n"
+            f"**Reviewed commit:** `{head[:10]}`"
+        ),
+        "created_at": COMPLETED,
+        "updated_at": COMPLETED,
+        "user": {"id": user_id},
+    }
+
+
 def _opener(
     comments: list[dict[str, object]],
     reactions: list[dict[str, object]] | None = None,
@@ -108,7 +120,7 @@ def _verify(opener: Callable[..., _Reply]) -> None:
     )
 
 
-def _handshake_opener() -> Callable[..., _Reply]:
+def _handshake_opener(*, clean_summary: bool = False) -> Callable[..., _Reply]:
     reaction_calls = 0
 
     def open_request(request: Any, **kwargs: object) -> _Reply:
@@ -116,7 +128,10 @@ def _handshake_opener() -> Callable[..., _Reply]:
         assert kwargs == {"timeout": 30}
         path = urllib.parse.urlparse(request.full_url).path
         if path.endswith("comments"):
-            return _Reply([_request()])
+            comments = [_request()]
+            if clean_summary and reaction_calls:
+                comments.append(_summary())
+            return _Reply(comments)
         if path.endswith("reactions"):
             reaction_calls += 1
             return _Reply([_reaction(content="eyes")] if reaction_calls == 1 else [])
@@ -167,6 +182,11 @@ def test_unacknowledged_exact_head_submitted_review_blocks() -> None:
         _verify(_opener([_request()], reviews=[_review()]))
 
 
+def test_unacknowledged_clean_summary_blocks() -> None:
+    with pytest.raises(codex_review.CodexReviewError, match="CODEX_REVIEW_PENDING"):
+        _verify(_opener([_request(), _summary()]))
+
+
 def test_acknowledged_exact_request_submitted_review_passes() -> None:
     codex_review.require_completion(
         "example/repository",
@@ -177,6 +197,20 @@ def test_acknowledged_exact_request_submitted_review_passes() -> None:
         attempts=2,
         delay=0,
         opener=_handshake_opener(),
+        sleeper=lambda _: None,
+    )
+
+
+def test_acknowledged_exact_request_clean_summary_passes() -> None:
+    codex_review.require_completion(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=2,
+        delay=0,
+        opener=_handshake_opener(clean_summary=True),
         sleeper=lambda _: None,
     )
 
