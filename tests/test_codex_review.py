@@ -14,6 +14,7 @@ HEAD = "a" * 40
 OLD_HEAD = "b" * 40
 REQUESTED = "2026-08-11T12:00:00Z"
 COMPLETED = "2026-08-11T12:01:00Z"
+RUN_ID = 12345
 
 
 class _Reply:
@@ -31,10 +32,14 @@ class _Reply:
 
 
 def _request(
-    head: str = HEAD, *, comment_id: int = 1, updated_at: str = REQUESTED
+    head: str = HEAD,
+    *,
+    comment_id: int = 1,
+    run_id: int = RUN_ID,
+    updated_at: str = REQUESTED,
 ) -> dict[str, object]:
     return {
-        "body": f"@codex review\n\nCodex-Review-Head: {head}",
+        "body": (f"@codex review\n\nCodex-Review-Head: {head}\nCodex-Review-Run: {run_id}"),
         "created_at": REQUESTED,
         "id": comment_id,
         "updated_at": updated_at,
@@ -86,6 +91,7 @@ def _verify(opener: Callable[..., _Reply]) -> None:
         "example/repository",
         7,
         HEAD,
+        RUN_ID,
         "token",
         attempts=1,
         delay=0,
@@ -101,6 +107,7 @@ def _verify(opener: Callable[..., _Reply]) -> None:
         ([_request(OLD_HEAD)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request()], [_reaction(content="eyes")], "CODEX_REVIEW_PENDING"),
         ([_request()], [_reaction(user_id=1)], "CODEX_REVIEW_PENDING"),
+        ([_request(run_id=RUN_ID - 1)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request(updated_at=COMPLETED)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
         ([_request(), _request(comment_id=2)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
     ],

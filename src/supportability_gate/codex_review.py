@@ -14,6 +14,7 @@ from typing import Any
 
 CONNECTOR_ID = 199175422
 HEAD_PREFIX = "Codex-Review-Head: "
+RUN_PREFIX = "Codex-Review-Run: "
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 MAX_PAGES = 10
 POLL_ATTEMPTS = 30
@@ -83,28 +84,40 @@ def _pages(endpoint: str, token: str, opener: Any) -> tuple[dict[str, Any], ...]
     raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
 
 
-def _request_head(body: object) -> str | None:
+def _request_values(body: object) -> tuple[str, int] | None:
     if not isinstance(body, str):
         return None
     commands = [line.strip() for line in body.splitlines() if line.strip() == "@codex review"]
-    markers = [
+    heads = [
         line.removeprefix(HEAD_PREFIX) for line in body.splitlines() if line.startswith(HEAD_PREFIX)
     ]
-    if not markers:
+    runs = [
+        line.removeprefix(RUN_PREFIX) for line in body.splitlines() if line.startswith(RUN_PREFIX)
+    ]
+    if not heads and not runs:
         return None
-    if len(commands) != 1 or len(markers) != 1 or SHA.fullmatch(markers[0]) is None:
+    if (
+        len(commands) != 1
+        or len(heads) != 1
+        or len(runs) != 1
+        or SHA.fullmatch(heads[0]) is None
+        or not runs[0].isdigit()
+        or int(runs[0]) < 1
+    ):
         raise CodexReviewError("MALFORMED_CODEX_REVIEW_REQUEST")
-    return markers[0]
+    return heads[0], int(runs[0])
 
 
-def _review_request(comments: tuple[dict[str, Any], ...], head_sha: str) -> ReviewRequest:
+def _review_request(
+    comments: tuple[dict[str, Any], ...], head_sha: str, run_id: int
+) -> ReviewRequest:
     candidates: list[ReviewRequest] = []
     stale = False
     for comment in comments:
-        request_head = _request_head(comment.get("body"))
-        if request_head is None:
+        request_values = _request_values(comment.get("body"))
+        if request_values is None:
             continue
-        if request_head != head_sha:
+        if request_values != (head_sha, run_id):
             stale = True
             continue
         comment_id = comment.get("id")
@@ -152,10 +165,12 @@ def _completed(
     return False
 
 
-def _state(repository: str, pull_number: int, head_sha: str, token: str, opener: Any) -> str | None:
+def _state(
+    repository: str, pull_number: int, head_sha: str, run_id: int, token: str, opener: Any
+) -> str | None:
     root = f"https://api.github.com/repos/{repository}"
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
-    request = _review_request(comments, head_sha)
+    request = _review_request(comments, head_sha, run_id)
     reactions = _pages(
         f"{root}/issues/comments/{request.comment_id}/reactions?"
         f"{urllib.parse.urlencode({'content': '+1'})}",
@@ -170,6 +185,7 @@ def require_completion(
     repository: str,
     pull_number: int,
     head_sha: str,
+    run_id: int,
     token: str,
     *,
     attempts: int = POLL_ATTEMPTS,
@@ -181,7 +197,7 @@ def require_completion(
     last_code = "CODEX_REVIEW_PENDING"
     for attempt in range(attempts):
         try:
-            block = _state(repository, pull_number, head_sha, token, opener)
+            block = _state(repository, pull_number, head_sha, run_id, token, opener)
         except CodexReviewError as error:
             last_code = error.code
         else:

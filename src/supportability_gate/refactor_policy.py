@@ -582,9 +582,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         repository_name, _, head_sha, pull_number = _event_values(event)
         token = os.environ.get("GITHUB_TOKEN")
-        if not token:
+        run_id = os.environ.get("GITHUB_RUN_ID")
+        if not token or not run_id or not run_id.isdigit() or int(run_id) < 1:
             raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
-        codex_review.require_completion(repository_name, pull_number, head_sha, token)
+        codex_review.require_completion(repository_name, pull_number, head_sha, int(run_id), token)
         comments = _github_comments(repository_name, pull_number, token)
         _, base_sha, _, _ = _event_values(event)
         predecessor, predecessor_block = _predecessor_authorization(
