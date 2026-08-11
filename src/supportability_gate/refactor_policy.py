@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from supportability_gate import contract, function_changes, git_changes
+from supportability_gate import codex_review, contract, function_changes, git_changes
 
 AUTHORIZATION_PREFIX = "Supportability-Refactor-Authorization: "
 AUTHORIZATION_SCHEMA = "1.0"
@@ -580,10 +580,11 @@ def main(argv: list[str] | None = None) -> int:
         characterization, _ = _read_json(
             Path(arguments.characterization_result), "MALFORMED_CHARACTERIZATION_RESULT"
         )
-        repository_name, _, _, pull_number = _event_values(event)
+        repository_name, _, head_sha, pull_number = _event_values(event)
         token = os.environ.get("GITHUB_TOKEN")
         if not token:
             raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
+        codex_review.require_completion(repository_name, pull_number, head_sha, token)
         comments = _github_comments(repository_name, pull_number, token)
         _, base_sha, _, _ = _event_values(event)
         predecessor, predecessor_block = _predecessor_authorization(

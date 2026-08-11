@@ -96,6 +96,15 @@ Stop condition:
   evidence required by the Milestone 1 directive.
 - Do not claim full Supportability Standard runtime while any required milestone remains incomplete.
 
+## Codex review completion
+
+- For every pull-request head, post exactly one comment containing `@codex review` and
+  `Codex-Review-Head: <40-character-head-sha>` on separate lines.
+- A new push requires a new exact-head request. Do not merge while the required Gate is waiting for
+  the trusted connector's post-request pull-request thumbs-up or exact-head submitted review.
+- Resolve every inline finding before merge; GitHub's required review-thread resolution remains the
+  enforcement boundary for unresolved findings.
+
 ## Active milestone control
 
 Before editing:

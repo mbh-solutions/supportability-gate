@@ -1,54 +1,51 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The supported package exposes only supportability-gate and enforces deterministic policy plus required structured author evidence."
-proof = "tests/test_evaluate_complexity.py::test_valid_milestone_three_evidence_passes_and_reports_judgment"
+intended_behavior = "The required Supportability Gate remains non-green until the trusted Codex connector completes review for the exact pull-request head."
+proof = "tests/test_codex_review.py::test_trusted_exact_head_submitted_review_passes"
 
 [characterization]
-captured_behavior = "Semantic-only scenarios are removed while retained Gate, quality, clause-inventory, architecture, modularity, and package scenarios remain."
-proof = "tests/test_characterization.py::test_deleted_source_uses_retained_characterization_only"
+captured_behavior = "Missing, stale, pending, spoofed, malformed, paginated, and unavailable GitHub evidence fail closed; trusted post-request completion passes."
+proof = "tests/test_codex_review.py"
 
 [separation_of_concerns]
-before = "A second package entry point owned model transport, GitHub App publication, review events, replay, diagnostics, and model verdict parsing."
-after = "Only the deterministic Gate entry point remains; machine and App resource cleanup stays isolated to S04."
+before = "The refactor policy could finish before advisory Codex review completed."
+after = "codex_review owns exact-head connector evidence while refactor_policy retains refactor authorization and invokes that boundary."
 
 [architecture]
-dependency_direction = "The retained package follows the existing deterministic Gate layers; the disconnected semantic dependency graph is removed."
+dependency_direction = "refactor_policy depends on the focused codex_review policy; codex_review uses only the Python standard library and imports no Gate policy."
 reviewed_paths = [
-    "src/supportability_gate/github_app.py",
-    "src/supportability_gate/handoff_policy.py",
-    "src/supportability_gate/responses_transport.py",
-    "src/supportability_gate/review_events.py",
-    "src/supportability_gate/review_state.py",
-    "src/supportability_gate/semantic_cli.py",
-    "src/supportability_gate/semantic_contract.py",
-    "src/supportability_gate/semantic_diagnostics.py",
-    "src/supportability_gate/semantic_review.py",
-    "src/supportability_gate/clause_inventory.py",
-    "src/supportability_gate/review_evidence.py",
+    "src/supportability_gate/codex_review.py",
+    "src/supportability_gate/refactor_policy.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/clause_inventory.py"
-owns = "Immutable Standard clause traceability to retained deterministic blocking tests."
-does_not_own = "Independent qualitative truth judgment, model review, machine cleanup, or target execution."
+path = "src/supportability_gate/codex_review.py"
+owns = "Bounded GitHub evidence reads and trusted exact-head Codex review completion."
+does_not_own = "Codex review judgment, deterministic Supportability evaluation, inline-thread resolution, or target execution."
 
 [incremental_refactor]
-target = "Retire custom semantic source without weakening deterministic enforcement."
-completed_step = "Removed semantic-only source, entry point, tests, qualification paths, and stale mappings while retaining structured review validation."
+target = "Close the merge race without restoring the retired semantic-review system."
+completed_step = "Added one focused evidence policy to the existing required Gate path with no new service, check, package, or dependency."
 
 [review_handoff]
-summary = "Deterministic enforcement and author-provided qualitative review evidence passed; no independent or exhaustive semantic assurance is claimed."
+summary = "Deterministic enforcement now waits for trusted exact-head Codex review completion; native thread resolution still blocks unresolved inline findings."
 remaining_risks = [
-    "Author-provided qualitative evidence is structurally validated, but its prose truth is not mechanically established.",
-    "Disabled tasks, App, key, runtimes, and diagnostics remain for S04.",
+    "Codex review remains nondeterministic and is not exhaustive assurance.",
+    "A clean connector result is a trusted pull-request reaction temporally bound to the exact-head request because GitHub reactions do not carry commit IDs.",
 ]
 
 [human_review]
-naming = "The retained supportability-gate name identifies the sole supported deterministic enforcement entry point."
-cohesion = "Semantic transport, orchestration, publication, replay, and verdict parsing leave together as one disconnected capability island."
-intended_behavior = "Deterministic policy and required structured author evidence remain; custom model judgment is retired."
-reviewability = "The source graph, manifest, blocking-test pointers, package metadata, and fresh wheel provide direct bounded proof."
+naming = "codex_review names its single external evidence responsibility."
+cohesion = "Request parsing, authenticated pagination, connector identity, exact-head review, clean reaction, and bounded polling form one policy boundary."
+intended_behavior = "The existing Gate waits for connector completion and fails closed on missing, stale, spoofed, malformed, or unavailable evidence."
+reviewability = "Eight focused tests cover every acceptance branch without target execution or a new runtime surface."
+
+[[module_boundaries]]
+path = "src/supportability_gate/codex_review.py"
+owner_path = "src/supportability_gate/codex_review.py"
+basis = "responsibility"
+justification = "Owns exact-head Codex request and completion evidence from fixed authenticated GitHub endpoints; it does not own refactor policy or review-thread resolution."
 
 [[module_boundaries]]
 path = "src/supportability_gate/quality_profile.py"
