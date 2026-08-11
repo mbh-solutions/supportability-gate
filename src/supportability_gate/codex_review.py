@@ -152,7 +152,8 @@ def _state(repository: str, pull_number: int, head_sha: str, token: str, opener:
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
     request = _review_request(comments, head_sha)
     reactions = _pages(
-        f"{root}/issues/{pull_number}/reactions?{urllib.parse.urlencode({'content': '+1'})}",
+        f"{root}/issues/comments/{request.comment_id}/reactions?"
+        f"{urllib.parse.urlencode({'content': '+1'})}",
         token,
         opener,
     )

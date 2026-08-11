@@ -109,8 +109,17 @@ def test_missing_stale_pending_and_spoofed_evidence_block(
         _verify(_opener(comments, reactions))
 
 
-def test_trusted_post_request_pull_request_thumbsup_passes() -> None:
-    _verify(_opener([_request()], [_reaction()]))
+def test_trusted_exact_request_comment_thumbsup_passes() -> None:
+    opener = _opener([_request()], [_reaction()])
+    urls: list[str] = []
+
+    def record(request: Any, **kwargs: object) -> _Reply:
+        urls.append(request.full_url)
+        return opener(request, **kwargs)
+
+    _verify(record)
+
+    assert any("/issues/comments/1/reactions?" in url for url in urls)
 
 
 def test_trusted_exact_head_submitted_review_passes() -> None:

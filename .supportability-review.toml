@@ -5,7 +5,7 @@ intended_behavior = "The required Supportability Gate remains non-green until th
 proof = "tests/test_codex_review.py::test_trusted_exact_head_submitted_review_passes"
 
 [characterization]
-captured_behavior = "Missing, stale, pending, spoofed, malformed, paginated, and unavailable GitHub evidence fail closed; trusted post-request completion passes."
+captured_behavior = "Missing, stale, pending, spoofed, malformed, paginated, and unavailable GitHub evidence fail closed; trusted exact-request completion passes."
 proof = "tests/test_codex_review.py"
 
 [separation_of_concerns]
@@ -29,10 +29,10 @@ target = "Close the merge race without restoring the retired semantic-review sys
 completed_step = "Added one focused evidence policy to the existing required Gate path with no new service, check, package, or dependency."
 
 [review_handoff]
-summary = "Deterministic enforcement now waits for trusted exact-head Codex review completion; native thread resolution still blocks unresolved inline findings."
+summary = "Deterministic enforcement now waits for trusted exact-request Codex review completion; native thread resolution still blocks unresolved inline findings."
 remaining_risks = [
     "Codex review remains nondeterministic and is not exhaustive assurance.",
-    "A clean connector result is a trusted pull-request reaction temporally bound to the exact-head request because GitHub reactions do not carry commit IDs.",
+    "A clean connector result is proven by its trusted reaction on the exact-head request comment; a findings result is tied to the exact reviewed commit.",
 ]
 
 [human_review]

@@ -101,7 +101,7 @@ Stop condition:
 - For every pull-request head, post exactly one comment containing `@codex review` and
   `Codex-Review-Head: <40-character-head-sha>` on separate lines.
 - A new push requires a new exact-head request. Do not merge while the required Gate is waiting for
-  the trusted connector's post-request pull-request thumbs-up or exact-head submitted review.
+  the trusted connector's thumbs-up on that exact request comment or exact-head submitted review.
 - Resolve every inline finding before merge; GitHub's required review-thread resolution remains the
   enforcement boundary for unresolved findings.
 
