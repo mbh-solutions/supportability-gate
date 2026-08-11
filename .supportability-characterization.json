@@ -21,6 +21,13 @@
     },
     {
       "covers": [
+        "src/supportability_gate/codex_review.py"
+      ],
+      "id": "codex-review-boundary",
+      "kind": "regression"
+    },
+    {
+      "covers": [
         "src/supportability_gate/quality_profile.py",
         "src/supportability_gate/reporting.py"
       ],
