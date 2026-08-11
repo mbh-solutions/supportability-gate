@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 CONNECTOR_ID = 199175422
+REQUESTER_ID = 229662739
 HEAD_PREFIX = "Codex-Review-Head: "
 RUN_PREFIX = "Codex-Review-Run: "
 SHA = re.compile(r"[0-9a-f]{40}\Z")
@@ -96,6 +97,8 @@ def _request_values(body: object) -> tuple[str, int] | None:
     ]
     if not heads and not runs:
         return None
+    if len(commands) == 1 and len(heads) == 1 and not runs and SHA.fullmatch(heads[0]) is not None:
+        return heads[0], 0
     if (
         len(commands) != 1
         or len(heads) != 1
@@ -114,6 +117,9 @@ def _review_request(
     candidates: list[ReviewRequest] = []
     stale = False
     for comment in comments:
+        user = comment.get("user")
+        if not isinstance(user, dict) or user.get("id") != REQUESTER_ID:
+            continue
         request_values = _request_values(comment.get("body"))
         if request_values is None:
             continue

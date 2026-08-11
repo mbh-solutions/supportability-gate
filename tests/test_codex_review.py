@@ -37,12 +37,14 @@ def _request(
     comment_id: int = 1,
     run_id: int = RUN_ID,
     updated_at: str = REQUESTED,
+    user_id: int = codex_review.REQUESTER_ID,
 ) -> dict[str, object]:
     return {
         "body": (f"@codex review\n\nCodex-Review-Head: {head}\nCodex-Review-Run: {run_id}"),
         "created_at": REQUESTED,
         "id": comment_id,
         "updated_at": updated_at,
+        "user": {"id": user_id},
     }
 
 
@@ -54,6 +56,12 @@ def _reaction(
         "created_at": COMPLETED,
         "user": {"id": user_id},
     }
+
+
+def _legacy_request() -> dict[str, object]:
+    request = _request()
+    request["body"] = f"@codex review\n\nCodex-Review-Head: {HEAD}"
+    return request
 
 
 def _review(*, user_id: int = codex_review.CONNECTOR_ID, head: str = HEAD) -> dict[str, object]:
@@ -108,6 +116,7 @@ def _verify(opener: Callable[..., _Reply]) -> None:
         ([_request()], [_reaction(content="eyes")], "CODEX_REVIEW_PENDING"),
         ([_request()], [_reaction(user_id=1)], "CODEX_REVIEW_PENDING"),
         ([_request(run_id=RUN_ID - 1)], [], "STALE_CODEX_REVIEW_REQUEST"),
+        ([_request(user_id=1)], [], "MISSING_CODEX_REVIEW_REQUEST"),
         ([_request(updated_at=COMPLETED)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
         ([_request(), _request(comment_id=2)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
     ],
@@ -136,6 +145,10 @@ def test_trusted_exact_request_comment_thumbsup_passes() -> None:
 
 def test_trusted_exact_head_submitted_review_passes() -> None:
     _verify(_opener([_request()], reviews=[_review()]))
+
+
+def test_legacy_head_only_request_does_not_override_exact_run_request() -> None:
+    _verify(_opener([_legacy_request(), _request(comment_id=2)], [_reaction()]))
 
 
 def test_api_failure_blocks() -> None:
