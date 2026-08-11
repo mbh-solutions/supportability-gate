@@ -295,6 +295,22 @@ def test_connector_eyes_are_observed_without_repository_write() -> None:
     assert all(request.get_method() == "GET" for request in requests)
 
 
+def test_exact_request_thumbsup_does_not_require_eyes() -> None:
+    comment_id = codex_review.require_acknowledgement(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=1,
+        delay=0,
+        opener=_opener([_request()], [_reaction()]),
+        sleeper=lambda _: None,
+    )
+
+    assert comment_id == 1
+
+
 def test_prior_successful_observer_attempt_is_durable() -> None:
     comment_id = codex_review.require_acknowledgement(
         "example/repository",

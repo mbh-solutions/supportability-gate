@@ -355,6 +355,13 @@ def require_acknowledgement(
             endpoint = f"{root}/issues/comments/{request.comment_id}/reactions"
             reactions = _pages(endpoint, token, opener)
             if any(
+                _trusted_user(reaction)
+                and reaction.get("content") == "+1"
+                and _timestamp(reaction.get("created_at")) >= request.created_at
+                for reaction in reactions
+            ):
+                return request.comment_id
+            if any(
                 _trusted_user(reaction) and reaction.get("content") == "eyes"
                 for reaction in reactions
             ):
