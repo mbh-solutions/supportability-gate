@@ -254,6 +254,7 @@ def test_connector_eyes_are_persisted_on_exact_request() -> None:
 
     posted = requests[-1]
     assert posted.get_method() == "POST"
+    assert posted.headers["Content-type"] == "application/json"
     assert json.loads(posted.data) == {"content": codex_review.ACKNOWLEDGEMENT}
 
 

@@ -166,6 +166,7 @@ def _persist_acknowledgement(endpoint: str, token: str, opener: Any) -> None:
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
             "X-GitHub-Api-Version": "2022-11-28",
         },
         method="POST",
