@@ -30,11 +30,14 @@ class _Reply:
         return json.dumps(self.value).encode()
 
 
-def _request(head: str = HEAD, *, comment_id: int = 1) -> dict[str, object]:
+def _request(
+    head: str = HEAD, *, comment_id: int = 1, updated_at: str = REQUESTED
+) -> dict[str, object]:
     return {
         "body": f"@codex review\n\nCodex-Review-Head: {head}",
         "created_at": REQUESTED,
         "id": comment_id,
+        "updated_at": updated_at,
     }
 
 
@@ -98,6 +101,8 @@ def _verify(opener: Callable[..., _Reply]) -> None:
         ([_request(OLD_HEAD)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request()], [_reaction(content="eyes")], "CODEX_REVIEW_PENDING"),
         ([_request()], [_reaction(user_id=1)], "CODEX_REVIEW_PENDING"),
+        ([_request(updated_at=COMPLETED)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
+        ([_request(), _request(comment_id=2)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
     ],
 )
 def test_missing_stale_pending_and_spoofed_evidence_block(

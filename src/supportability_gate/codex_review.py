@@ -110,12 +110,17 @@ def _review_request(comments: tuple[dict[str, Any], ...], head_sha: str) -> Revi
         comment_id = comment.get("id")
         if type(comment_id) is not int:
             raise CodexReviewError("MALFORMED_CODEX_REVIEW_EVIDENCE")
-        candidates.append(ReviewRequest(comment_id, _timestamp(comment.get("created_at"))))
+        created_at = _timestamp(comment.get("created_at"))
+        if created_at != _timestamp(comment.get("updated_at")):
+            raise CodexReviewError("MALFORMED_CODEX_REVIEW_REQUEST")
+        candidates.append(ReviewRequest(comment_id, created_at))
     if not candidates:
         raise CodexReviewError(
             "STALE_CODEX_REVIEW_REQUEST" if stale else "MISSING_CODEX_REVIEW_REQUEST"
         )
-    return max(candidates, key=lambda item: (item.created_at, item.comment_id))
+    if len(candidates) != 1:
+        raise CodexReviewError("MALFORMED_CODEX_REVIEW_REQUEST")
+    return candidates[0]
 
 
 def _trusted_user(item: dict[str, Any]) -> bool:

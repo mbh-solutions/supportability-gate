@@ -14,6 +14,7 @@
     },
     {
       "covers": [
+        "src/supportability_gate/codex_review.py",
         "src/supportability_gate/refactor_policy.py"
       ],
       "id": "refactor-policy-retained",
