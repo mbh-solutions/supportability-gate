@@ -14,11 +14,17 @@
     },
     {
       "covers": [
-        "src/supportability_gate/codex_review.py",
         "src/supportability_gate/refactor_policy.py"
       ],
       "id": "refactor-policy-retained",
       "kind": "cli"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/codex_review.py"
+      ],
+      "id": "codex-review-boundary",
+      "kind": "regression"
     },
     {
       "covers": [
