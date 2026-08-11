@@ -1273,7 +1273,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #3 issue #116 maintenance is complete; stop
+Current authorized work: NONE — Project #9 S05 is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
@@ -1320,3 +1320,38 @@ Do not create a new terminal label not authorized by an active milestone directi
   identities, immutable Standard hash, fresh-wheel entry points, and cleanup readback.
 - Stop: after S03 reaches `Done / Complete / On scope / Yes`, only S04 may be `Ready`; no S04
   operation is part of this assurance.
+
+## Project #9 S05 exact-head Codex completion assurance
+
+- Status: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+- Authority: Project #9 issue #133. The issue records the full terminal evidence; Project #9 is
+  closed and no successor work is authorized.
+- Protected source delivery: implementation PR #134 merged exact head
+  `46e992fcbc8ca0575da9b91dfd2a48315c536305` as
+  `e8ea676d700ee78cceaff731a70edd6789f2d3be`; private-repository permission repair PR #135
+  merged exact head `e70d81265bb92829603177a122de59f82e879940` as
+  `1c13e872ef39abda3d2d66ef57a4f033dd17e22f`. Both merged normally without bypass.
+- Required completion: the existing `Supportability Gate` now binds a trusted connector request
+  to the exact pull-request head and required-workflow run. A separate read-only observer records
+  trusted acknowledgement in its immutable job log. Missing, pending, stale, duplicate, mutable,
+  spoofed, malformed, paginated, timeout, and GitHub API failure cases fail closed.
+- Live race proof: source run `31515753816`, DC Training run `31516101190`, and private TWMN run
+  `31516105396` each kept the Gate non-green while connector review was pending, then passed only
+  after trusted exact-head completion. Observer jobs `93860349100`, `93861501388`, and
+  `93861515384` logged the exact request-comment IDs. Protected target PRs #39 and #70 merged as
+  `66ee7eff59fe04aa231007189807c702bc969283` and
+  `a73386b7b5d14e220aa261647688a79c4a985ac7`.
+- Inline findings: PR #134 had nine connector threads; every thread received an owner reply before
+  resolution, and final readback showed nine resolved and zero unresolved. Native required
+  review-thread resolution remains the merge block for inline findings.
+- Source proof: Python 3.12 exact-lock Ruff lint/format/C901, strict mypy, Import Linter,
+  compileall, 188 tests with 2 skips, wheel build, fresh install, installed CLI help,
+  immutable-standard tamper, and source diff checks passed. The immutable Standard SHA-256
+  remained `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Enforcement readback: DC Training ruleset `20588739` and TWMN ruleset `19913103` are active,
+  zero-bypass, require review-thread resolution, and pin workflow SHA
+  `1c13e872ef39abda3d2d66ef57a4f033dd17e22f`. TWMN required-check ruleset `20081233` and source
+  ruleset `19767613` are active, strict, and zero-bypass.
+- Assurance limit: connector completion is required, but connector judgment remains
+  nondeterministic and non-exhaustive. Deterministic Supportability enforcement remains separate.
+- Remaining work: None. Stop; no successor milestone is authorized.
