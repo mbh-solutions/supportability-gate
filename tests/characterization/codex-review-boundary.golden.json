@@ -1,5 +1,12 @@
 {
-  "exit_code": 0,
-  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "stdout_sha256": "c10d466d329e36f9a2cc7659851c8792e1b4a63cee26190ef0f0600bebbda36b"
+  "paths": [
+    "/repos/example/repository/issues/7/comments",
+    "/repos/example/repository/issues/comments/1/reactions",
+    "/repos/example/repository/pulls/7/reviews",
+    "/repos/example/repository/issues/7/comments",
+    "/repos/example/repository/issues/comments/1/reactions",
+    "/repos/example/repository/pulls/7/reviews"
+  ],
+  "reaction_calls": 2,
+  "result": "PASS"
 }
