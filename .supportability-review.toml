@@ -32,7 +32,7 @@ completed_step = "Added one focused evidence policy to the existing required Gat
 summary = "Deterministic enforcement now waits for trusted exact-head and exact-run Codex review completion; native thread resolution still blocks unresolved inline findings."
 remaining_risks = [
     "Codex review remains nondeterministic and is not exhaustive assurance.",
-    "A clean connector result is proven by its trusted reaction on the exact-head request comment; a findings result is tied to the exact reviewed commit.",
+    "A clean result is tied to the exact request comment; a findings result also requires the running Gate to observe the eyes handshake on that comment before the exact-head review.",
 ]
 
 [human_review]

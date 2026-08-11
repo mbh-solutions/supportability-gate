@@ -108,6 +108,25 @@ def _verify(opener: Callable[..., _Reply]) -> None:
     )
 
 
+def _handshake_opener() -> Callable[..., _Reply]:
+    reaction_calls = 0
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        nonlocal reaction_calls
+        assert kwargs == {"timeout": 30}
+        path = urllib.parse.urlparse(request.full_url).path
+        if path.endswith("comments"):
+            return _Reply([_request()])
+        if path.endswith("reactions"):
+            reaction_calls += 1
+            return _Reply([_reaction(content="eyes")] if reaction_calls == 1 else [])
+        if path.endswith("reviews"):
+            return _Reply([] if reaction_calls == 1 else [_review()])
+        raise AssertionError(path)
+
+    return open_request
+
+
 @pytest.mark.parametrize(
     ("comments", "reactions", "code"),
     [
@@ -143,8 +162,23 @@ def test_trusted_exact_request_comment_thumbsup_passes() -> None:
     assert any("/issues/comments/1/reactions?" in url for url in urls)
 
 
-def test_trusted_exact_head_submitted_review_passes() -> None:
-    _verify(_opener([_request()], reviews=[_review()]))
+def test_unacknowledged_exact_head_submitted_review_blocks() -> None:
+    with pytest.raises(codex_review.CodexReviewError, match="CODEX_REVIEW_PENDING"):
+        _verify(_opener([_request()], reviews=[_review()]))
+
+
+def test_acknowledged_exact_request_submitted_review_passes() -> None:
+    codex_review.require_completion(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=2,
+        delay=0,
+        opener=_handshake_opener(),
+        sleeper=lambda _: None,
+    )
 
 
 def test_legacy_head_only_request_does_not_override_exact_run_request() -> None:

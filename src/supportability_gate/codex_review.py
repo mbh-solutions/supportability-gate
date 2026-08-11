@@ -6,7 +6,6 @@ import json
 import re
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -152,6 +151,7 @@ def _completed(
     head_sha: str,
     reactions: tuple[dict[str, Any], ...],
     reviews: tuple[dict[str, Any], ...],
+    acknowledged: bool,
 ) -> bool:
     for reaction in reactions:
         if (
@@ -160,6 +160,10 @@ def _completed(
             and _timestamp(reaction.get("created_at")) >= request.created_at
         ):
             return True
+    if not acknowledged or any(
+        _trusted_user(reaction) and reaction.get("content") == "eyes" for reaction in reactions
+    ):
+        return False
     for review in reviews:
         if (
             _trusted_user(review)
@@ -172,19 +176,31 @@ def _completed(
 
 
 def _state(
-    repository: str, pull_number: int, head_sha: str, run_id: int, token: str, opener: Any
-) -> str | None:
+    repository: str,
+    pull_number: int,
+    head_sha: str,
+    run_id: int,
+    token: str,
+    acknowledged_comment: int | None,
+    opener: Any,
+) -> tuple[str | None, int | None]:
     root = f"https://api.github.com/repos/{repository}"
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
     request = _review_request(comments, head_sha, run_id)
-    reactions = _pages(
-        f"{root}/issues/comments/{request.comment_id}/reactions?"
-        f"{urllib.parse.urlencode({'content': '+1'})}",
-        token,
-        opener,
-    )
+    reactions = _pages(f"{root}/issues/comments/{request.comment_id}/reactions", token, opener)
+    if any(_trusted_user(reaction) and reaction.get("content") == "eyes" for reaction in reactions):
+        acknowledged_comment = request.comment_id
+    elif acknowledged_comment != request.comment_id:
+        acknowledged_comment = None
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
-    return None if _completed(request, head_sha, reactions, reviews) else "CODEX_REVIEW_PENDING"
+    complete = _completed(
+        request,
+        head_sha,
+        reactions,
+        reviews,
+        acknowledged_comment == request.comment_id,
+    )
+    return (None if complete else "CODEX_REVIEW_PENDING"), acknowledged_comment
 
 
 def require_completion(
@@ -201,9 +217,18 @@ def require_completion(
 ) -> None:
     """Wait a bounded time for trusted exact-head Codex review completion."""
     last_code = "CODEX_REVIEW_PENDING"
+    acknowledged_comment: int | None = None
     for attempt in range(attempts):
         try:
-            block = _state(repository, pull_number, head_sha, run_id, token, opener)
+            block, acknowledged_comment = _state(
+                repository,
+                pull_number,
+                head_sha,
+                run_id,
+                token,
+                acknowledged_comment,
+                opener,
+            )
         except CodexReviewError as error:
             last_code = error.code
         else:
