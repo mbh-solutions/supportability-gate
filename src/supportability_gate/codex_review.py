@@ -6,6 +6,7 @@ import json
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -32,6 +33,28 @@ class CodexReviewError(ValueError):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow HTTPS log redirects without leaking the GitHub bearer token."""
+
+    def redirect_request(
+        self,
+        request: urllib.request.Request,
+        file_pointer: Any,
+        code: int,
+        message: str,
+        headers: Any,
+        new_url: str,
+    ) -> urllib.request.Request | None:
+        if urllib.parse.urlparse(new_url).scheme != "https":
+            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+        redirected = super().redirect_request(
+            request, file_pointer, code, message, headers, new_url
+        )
+        if redirected is not None:
+            redirected.remove_header("Authorization")
+        return redirected
 
 
 @dataclass(frozen=True)
@@ -141,8 +164,13 @@ def _observer_log(repository: str, job_id: int, token: str, opener: Any) -> str:
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
+    log_opener = (
+        urllib.request.build_opener(_NoAuthRedirect()).open
+        if opener is urllib.request.urlopen
+        else opener
+    )
     try:
-        with opener(request, timeout=30) as response:
+        with log_opener(request, timeout=30) as response:
             content: bytes = response.read()
     except (OSError, TimeoutError, urllib.error.URLError) as error:
         raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error

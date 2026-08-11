@@ -311,6 +311,22 @@ def test_prior_successful_observer_attempt_is_durable() -> None:
     assert comment_id == 1
 
 
+def test_log_redirect_drops_github_authorization_and_requires_https() -> None:
+    handler = codex_review._NoAuthRedirect()
+    request = codex_review.urllib.request.Request(
+        "https://api.github.com/example", headers={"Authorization": "Bearer token"}
+    )
+
+    redirected = handler.redirect_request(
+        request, None, 302, "Found", {}, "https://blob.example/log"
+    )
+
+    assert redirected is not None
+    assert redirected.get_header("Authorization") is None
+    with pytest.raises(codex_review.CodexReviewError, match="GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"):
+        handler.redirect_request(request, None, 302, "Found", {}, "http://blob.example/log")
+
+
 def test_legacy_head_only_request_does_not_override_exact_run_request() -> None:
     _verify(_opener([_legacy_request(), _request(comment_id=2)], [_reaction()]))
 
