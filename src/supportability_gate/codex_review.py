@@ -279,6 +279,8 @@ def require_acknowledgement(
                 _persist_acknowledgement(endpoint, token, opener)
                 return
         except CodexReviewError as error:
+            if error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE":
+                raise
             last_code = error.code
         if attempt + 1 < attempts:
             sleeper(delay)
