@@ -104,8 +104,8 @@ Stop condition:
 - A new push requires a new exact-head request. Do not merge while the required Gate is waiting for
   the trusted connector's thumbs-up on that exact request comment, exact-head clean summary, or
   exact-head submitted review.
-- A clean summary or submitted review counts only after the running Gate observed the connector's
-  eyes on that same exact request comment and then observed the eyes clear.
+- A clean summary or submitted review counts only after the required workflow persisted the
+  connector's eyes on that same exact request comment and later observed the eyes clear.
 - Resolve every inline finding before merge; GitHub's required review-thread resolution remains the
   enforcement boundary for unresolved findings.
 

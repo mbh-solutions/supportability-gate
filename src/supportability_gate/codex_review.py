@@ -13,9 +13,11 @@ from typing import Any
 
 CONNECTOR_ID = 199175422
 REQUESTER_ID = 229662739
+ACTIONS_ID = 41898282
 HEAD_PREFIX = "Codex-Review-Head: "
 RUN_PREFIX = "Codex-Review-Run: "
 CLEAN_PREFIX = "Codex Review: Didn't find any major issues."
+ACKNOWLEDGEMENT = "rocket"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
 MAX_PAGES = 10
@@ -148,6 +150,35 @@ def _trusted_user(item: dict[str, Any]) -> bool:
     return isinstance(user, dict) and user.get("id") == CONNECTOR_ID
 
 
+def _acknowledged(reactions: tuple[dict[str, Any], ...]) -> bool:
+    return any(
+        isinstance(reaction.get("user"), dict)
+        and reaction["user"].get("id") == ACTIONS_ID
+        and reaction.get("content") == ACKNOWLEDGEMENT
+        for reaction in reactions
+    )
+
+
+def _persist_acknowledgement(endpoint: str, token: str, opener: Any) -> None:
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps({"content": ACKNOWLEDGEMENT}).encode(),
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        method="POST",
+    )
+    try:
+        with opener(request, timeout=30) as response:
+            value: object = json.loads(response.read())
+    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
+    if not isinstance(value, dict) or not _acknowledged((value,)):
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+
+
 def _clean_summary(item: dict[str, Any], request: ReviewRequest, head_sha: str) -> bool:
     body = item.get("body")
     match = REVIEWED_COMMIT.search(body) if isinstance(body, str) else None
@@ -199,17 +230,12 @@ def _state(
     head_sha: str,
     run_id: int,
     token: str,
-    acknowledged_comment: int | None,
     opener: Any,
-) -> tuple[str | None, int | None]:
+) -> str | None:
     root = f"https://api.github.com/repos/{repository}"
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
     request = _review_request(comments, head_sha, run_id)
     reactions = _pages(f"{root}/issues/comments/{request.comment_id}/reactions", token, opener)
-    if any(_trusted_user(reaction) and reaction.get("content") == "eyes" for reaction in reactions):
-        acknowledged_comment = request.comment_id
-    elif acknowledged_comment != request.comment_id:
-        acknowledged_comment = None
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
     complete = _completed(
         request,
@@ -217,9 +243,45 @@ def _state(
         comments,
         reactions,
         reviews,
-        acknowledged_comment == request.comment_id,
+        _acknowledged(reactions),
     )
-    return (None if complete else "CODEX_REVIEW_PENDING"), acknowledged_comment
+    return None if complete else "CODEX_REVIEW_PENDING"
+
+
+def require_acknowledgement(
+    repository: str,
+    pull_number: int,
+    head_sha: str,
+    run_id: int,
+    token: str,
+    *,
+    attempts: int = POLL_ATTEMPTS,
+    delay: int = POLL_SECONDS,
+    opener: Any = urllib.request.urlopen,
+    sleeper: Any = time.sleep,
+) -> None:
+    """Persist trusted connector acknowledgement on the exact request."""
+    root = f"https://api.github.com/repos/{repository}"
+    last_code = "CODEX_REVIEW_PENDING"
+    for attempt in range(attempts):
+        try:
+            comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
+            request = _review_request(comments, head_sha, run_id)
+            endpoint = f"{root}/issues/comments/{request.comment_id}/reactions"
+            reactions = _pages(endpoint, token, opener)
+            if _acknowledged(reactions):
+                return
+            if any(
+                _trusted_user(reaction) and reaction.get("content") == "eyes"
+                for reaction in reactions
+            ):
+                _persist_acknowledgement(endpoint, token, opener)
+                return
+        except CodexReviewError as error:
+            last_code = error.code
+        if attempt + 1 < attempts:
+            sleeper(delay)
+    raise CodexReviewError(last_code)
 
 
 def require_completion(
@@ -236,16 +298,14 @@ def require_completion(
 ) -> None:
     """Wait a bounded time for trusted exact-head Codex review completion."""
     last_code = "CODEX_REVIEW_PENDING"
-    acknowledged_comment: int | None = None
     for attempt in range(attempts):
         try:
-            block, acknowledged_comment = _state(
+            block = _state(
                 repository,
                 pull_number,
                 head_sha,
                 run_id,
                 token,
-                acknowledged_comment,
                 opener,
             )
         except CodexReviewError as error:

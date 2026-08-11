@@ -90,7 +90,12 @@ def main() -> None:
                     }
                 ]
                 if reaction_calls == 1
-                else []
+                else [
+                    {
+                        "content": module.ACKNOWLEDGEMENT,
+                        "user": {"id": module.ACTIONS_ID},
+                    }
+                ]
             )
         if path.endswith("reviews"):
             return Reply([])

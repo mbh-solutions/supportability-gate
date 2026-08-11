@@ -58,6 +58,13 @@ def _reaction(
     }
 
 
+def _acknowledgement(*, user_id: int = codex_review.ACTIONS_ID) -> dict[str, object]:
+    return {
+        "content": codex_review.ACKNOWLEDGEMENT,
+        "user": {"id": user_id},
+    }
+
+
 def _legacy_request() -> dict[str, object]:
     request = _request()
     request["body"] = f"@codex review\n\nCodex-Review-Head: {HEAD}"
@@ -134,7 +141,9 @@ def _handshake_opener(*, clean_summary: bool = False) -> Callable[..., _Reply]:
             return _Reply(comments)
         if path.endswith("reactions"):
             reaction_calls += 1
-            return _Reply([_reaction(content="eyes")] if reaction_calls == 1 else [])
+            return _Reply(
+                [_reaction(content="eyes")] if reaction_calls == 1 else [_acknowledgement()]
+            )
         if path.endswith("reviews"):
             return _Reply([] if reaction_calls == 1 else [_review()])
         raise AssertionError(path)
@@ -149,6 +158,7 @@ def _handshake_opener(*, clean_summary: bool = False) -> Callable[..., _Reply]:
         ([_request(OLD_HEAD)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request()], [_reaction(content="eyes")], "CODEX_REVIEW_PENDING"),
         ([_request()], [_reaction(user_id=1)], "CODEX_REVIEW_PENDING"),
+        ([_request()], [_acknowledgement(user_id=1)], "CODEX_REVIEW_PENDING"),
         ([_request(run_id=RUN_ID - 1)], [], "STALE_CODEX_REVIEW_REQUEST"),
         ([_request(user_id=1)], [], "MISSING_CODEX_REVIEW_REQUEST"),
         ([_request(updated_at=COMPLETED)], [], "MALFORMED_CODEX_REVIEW_REQUEST"),
@@ -213,6 +223,38 @@ def test_acknowledged_exact_request_clean_summary_passes() -> None:
         opener=_handshake_opener(clean_summary=True),
         sleeper=lambda _: None,
     )
+
+
+def test_connector_eyes_are_persisted_on_exact_request() -> None:
+    requests: list[Any] = []
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        assert kwargs == {"timeout": 30}
+        path = urllib.parse.urlparse(request.full_url).path
+        if path.endswith("comments"):
+            return _Reply([_request()])
+        if request.get_method() == "POST":
+            return _Reply(_acknowledgement())
+        if path.endswith("reactions"):
+            return _Reply([_reaction(content="eyes")])
+        raise AssertionError(path)
+
+    codex_review.require_acknowledgement(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=1,
+        delay=0,
+        opener=opener,
+        sleeper=lambda _: None,
+    )
+
+    posted = requests[-1]
+    assert posted.get_method() == "POST"
+    assert json.loads(posted.data) == {"content": codex_review.ACKNOWLEDGEMENT}
 
 
 def test_legacy_head_only_request_does_not_override_exact_run_request() -> None:
