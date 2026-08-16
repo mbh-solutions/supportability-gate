@@ -9,7 +9,7 @@ description = "Deterministic supportability policy evidence for pull-request cha
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "cryptography==46.0.7",
+    "cryptography==50.0.0",
     "mccabe==0.7.0",
     "ruff==0.16.0",
     "tree-sitter==0.25.2",
