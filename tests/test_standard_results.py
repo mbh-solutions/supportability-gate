@@ -312,6 +312,8 @@ def test_non_prefix_completion_snapshot_becomes_shared_technical() -> None:
         "partial_technical",
         "request_gap",
         "pending_gap",
+        "completion_before_request",
+        "next_request_at_completion",
         "wrong_owner",
     ],
 )
@@ -348,6 +350,12 @@ def test_malformed_entries_and_incorrect_bindings_fail_closed(case: str) -> None
         entries[1]["codex_review"]["completion"] = None
         entries[1]["blocks"] = ["FOCUSED_CODEX_REVIEW_PENDING_2"]
         entries[1]["result"] = "BLOCK"
+    elif case == "completion_before_request":
+        entries[0]["codex_review"]["completion"]["completed_at"] = "2026-08-11T11:59:00+00:00"
+    elif case == "next_request_at_completion":
+        entries[1]["codex_review"]["requested_at"] = entries[0]["codex_review"]["completion"][
+            "completed_at"
+        ]
     else:
         entries[1]["blocks"] = ["QUALITY_GATE_FAILED:python.pytest.v1"]
         entries[1]["result"] = "BLOCK"
@@ -761,6 +769,7 @@ def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() ->
     assert "artifact-ids: ${{ needs.supportability-evidence.outputs.artifact-id }}" in job
     assert "STANDARD: ${{ matrix.standard }}" in job
     enforcer_step = job.split("\n      - name: Enforce one Standard result\n", 1)[1]
+    assert enforcer_step.startswith("        if: always()\n")
     assert "continue-on-error:" not in enforcer_step
     assert "python -P -m supportability_gate.standard_results_enforcer \\" in job
     assert '--input "$RUNNER_TEMP/evidence/standard-results.json" \\' in job

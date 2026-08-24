@@ -31,7 +31,7 @@ reviewed_paths = [
 
 [responsibility_boundary]
 path = "src/supportability_gate/standard_results.py"
-owns = "Pure exact eight-entry composition, block ownership, shared trust failure propagation, and evidence binding."
+owns = "Pure exact eight-entry composition, block ownership validation, shared trust failure propagation, and evidence binding."
 does_not_own = "Target analysis, policy thresholds, connector judgment, owner authorization, ruleset mutation, or product code."
 
 [incremental_refactor]
