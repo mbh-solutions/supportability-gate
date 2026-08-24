@@ -14,6 +14,7 @@ from supportability_gate import (
     clause_inventory,
     codex_review,
     review_evidence,
+    standard_block_ownership,
     standard_results,
     standard_results_enforcer,
     standard_results_producer,
@@ -339,6 +340,104 @@ def test_module_boundary_review_defects_belong_to_standard_four(block: str) -> N
     assert review_evidence.block_standard(block) == 4
 
 
+def test_every_non_review_block_family_has_one_exact_standard_owner() -> None:
+    expected = (
+        ("FUNCTION_COMPLEXITY:",),
+        (),
+        (
+            "ARCHITECTURE_GATE_NOT_EXECUTED",
+            "ARCHITECTURE_PRODUCTION_COVERAGE:",
+            "DEPENDENCY_INVERSION:",
+            "FORBIDDEN_DOMAIN_DEPENDENCY:",
+            "IMPORT_CYCLE:",
+        ),
+        (
+            "INVALID_NEW_LOCATION_JUSTIFICATION:",
+            "MISSING_NEW_LOCATION_JUSTIFICATION:",
+            "NEW_LOCATION_GATE_COVERAGE:",
+            "NEW_MODULE_OWNER_NOT_PREEXISTING:",
+            "PARALLEL_PACKAGE:",
+            "UNRESOLVED_MODULE_OWNER:",
+            "VAGUE_PRODUCTION_LOCATION:",
+        ),
+        (
+            "BASE_CAPTURE_DIGEST_MISMATCH",
+            "CHANGED_CHARACTERIZATION_DEFINITION:",
+            "CHANGED_GOLDEN_OUTPUT:",
+            "CHARACTERIZATION_DEFINITION_MISMATCH:",
+            "CHARACTERIZATION_DRIVER_IDENTITY_MISMATCH:",
+            "CHARACTERIZATION_EXECUTION_FAILED:",
+            "CHARACTERIZATION_FINGERPRINT_MISMATCH",
+            "CHARACTERIZATION_REPLAY_DRIFT:",
+            "GOLDEN_ARTIFACT_IDENTITY_MISMATCH:",
+            "GOLDEN_BEHAVIOR_MISMATCH:",
+            "HEAD_CAPTURE_DIGEST_MISMATCH",
+            "HEAD_ONLY_CHARACTERIZATION_CLAIM",
+            "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
+            "INCOMPLETE_CHARACTERIZATION_EVIDENCE",
+            "INVALID_ARTIFACT_IDENTITY",
+            "MISSING_BASELINE",
+            "MISSING_CHARACTERIZATION_COVERAGE:",
+            "REMOVED_CHARACTERIZATION_SCENARIO:",
+            "STALE_BASELINE_ARTIFACT",
+            "STALE_POST_CHANGE_ARTIFACT",
+            "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+        ),
+        (
+            "AUTHORIZATION_REPOSITORY_MISMATCH",
+            "BROAD_AUTHORIZATION_REQUIRED",
+            "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+            "INVALID_STRANGLER_SEQUENCE",
+            "MALFORMED_OWNER_AUTHORIZATION",
+            "MISSING_BOUNDED_PRODUCTION_TARGET",
+            "MISSING_OWNER_AUTHORIZATION",
+            "MISSING_RUNNABILITY_COVERAGE",
+            "NON_RUNNABLE_LOGICAL_STEP",
+            "STALE_OWNER_AUTHORIZATION",
+            "STALE_RUNNABILITY_EVIDENCE",
+            "UNAUTHENTICATED_OWNER_AUTHORIZATION",
+            "UNAUTHENTICATED_RUNNABILITY_EVIDENCE",
+            "UNFOCUSED_DIFF_SCOPE",
+            "UNVERIFIABLE_BOUNDED_TARGET",
+        ),
+        (
+            "CANDIDATE_CONTRACT_CHANGE",
+            "CHANGED_FILE_GATE_COVERAGE:",
+            "DECLARED_TOOL_NOT_EXECUTED:",
+            "GATE_SCOPE_NARROWING",
+            "HIGH_RISK_FILE_GATE_COVERAGE:",
+            "MAXIMUM_EXCEEDS_APPROVED_THRESHOLD",
+            "MISSING_QUALITY_COMMAND:",
+            "MISSING_REQUIRED_ADAPTER:",
+            "PRODUCTION_PATH_MOVED_OUTSIDE_SCOPE:",
+            "PROFILE_SOURCE_MISMATCH:",
+            "QUALITY_CHANGED_FILE_COVERAGE:",
+            "QUALITY_CHANGED_FILE_NOT_ATTESTED:",
+            "QUALITY_COMMAND_VECTOR_MISMATCH:",
+            "QUALITY_COVERAGE_MAPPING_MISMATCH",
+            "QUALITY_EXCLUSION_ADDED:",
+            "QUALITY_GATE_FAILED:",
+            "QUALITY_HIGH_RISK_FILE_COVERAGE:",
+            "QUALITY_HIGH_RISK_FILE_NOT_ATTESTED:",
+            "QUALITY_PRODUCTION_MANIFEST_MISMATCH",
+            "QUALITY_PROOF_KIND_MISMATCH:",
+            "QUALITY_SCOPE_NARROWING",
+            "QUALITY_THRESHOLD_MISMATCH",
+            "QUALITY_THRESHOLD_WEAKENING",
+            "THRESHOLD_WEAKENING",
+            "UNAPPROVED_ADAPTER:",
+            "UNAPPROVED_QUALITY_COMMAND:",
+            "UNTESTED_AREA:",
+        ),
+        (),
+    )
+    assert standard_block_ownership.BLOCK_FAMILIES == expected
+    for standard, families in enumerate(expected, start=1):
+        for family in families:
+            block = f"{family}example" if family.endswith(":") else family
+            assert standard_block_ownership.owners(block) == {standard}
+
+
 def _producer_arguments(tmp_path: Path) -> tuple[list[str], Path]:
     paths = []
     for name, value in zip(
@@ -428,6 +527,34 @@ def test_producer_makes_snapshot_failure_shared_and_technical(
     }
 
 
+@pytest.mark.parametrize(
+    ("option", "code"),
+    [
+        ("--complexity-result", "MISSING_COMPLEXITY_RESULT"),
+        ("--characterization-result", "MISSING_CHARACTERIZATION_RESULT"),
+        ("--refactor-result", "MISSING_REFACTOR_RESULT"),
+        ("--quality-provenance", "MISSING_QUALITY_PROVENANCE"),
+    ],
+)
+@pytest.mark.parametrize("defect", ["missing", "malformed"])
+def test_producer_emits_exact_shared_failure_for_every_upstream_input(
+    tmp_path: Path, option: str, code: str, defect: str
+) -> None:
+    arguments, output = _producer_arguments(tmp_path)
+    path = Path(arguments[arguments.index(option) + 1])
+    if defect == "missing":
+        path.unlink()
+    else:
+        path.write_text("{", encoding="utf-8")
+
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert [entry["result"] for entry in payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
+    assert {tuple(entry["technical_errors"]) for entry in payload["entries"]} == {
+        tuple(sorted(("MALFORMED_COMPLEXITY_RESULT", code)))
+    }
+
+
 def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() -> None:
     workflow = (
         Path(__file__).parents[1] / ".github/workflows/organization-required.yml"
@@ -444,6 +571,11 @@ def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() ->
         for standard, context in enumerate(standard_results.CHECK_CONTEXTS, start=1)
     ]
     assert "needs: supportability-evidence" in job
+    assert job.count("repository: mbh-solutions/supportability-gate") == 1
+    assert job.count("ref: ${{ github.workflow_sha }}") == 1
+    assert job.count("path: gate") == 1
+    assert job.count("PYTHONPATH: ${{ github.workspace }}/gate/src") == 1
+    assert "target/src" not in job
     assert "artifact-ids: ${{ needs.supportability-evidence.outputs.artifact-id }}" in job
     assert "STANDARD: ${{ matrix.standard }}" in job
     assert "python -P -m supportability_gate.standard_results_enforcer \\" in job

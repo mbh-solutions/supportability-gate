@@ -13,7 +13,7 @@ before = "The aggregate workflow coupled Codex completion to the Standard 6 refa
 after = "The refactor policy emits only Standard 6 evidence; the producer invokes one pure composer, and eight matrix jobs use the artifact enforcer for one fixed entry each."
 
 [architecture]
-dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes the standard_results contract; standard_results depends only on neutral focused-review and block-ownership contracts, while the producer alone depends on connector transport."
+dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes the standard_results contract; standard_results depends only on clause-inventory, focused-review, and block-ownership contracts, while the producer alone depends on connector transport."
 reviewed_paths = [
     ".github/workflows/organization-required.yml",
     "src/supportability_gate/codex_review.py",

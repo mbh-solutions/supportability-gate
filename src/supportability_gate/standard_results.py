@@ -92,6 +92,16 @@ class DeterministicState:
     technical_errors: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ValidatedCodexBinding:
+    """Named fields from one validated focused-review entry."""
+
+    request_id: int | None
+    requested_at: datetime | None
+    artifact: tuple[str, int] | None
+    completed_at: datetime | None
+
+
 def _canonical(value: object) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
 
@@ -516,7 +526,7 @@ def _completion_identity(
 
 def _validate_codex(
     value: object, focus: str, result: str, blocks: list[str]
-) -> tuple[int | None, datetime | None, tuple[str, int] | None, datetime | None]:
+) -> ValidatedCodexBinding:
     expected = {"completion", "focus", "request_id", "requested_at"}
     if not isinstance(value, dict) or set(value) != expected or value.get("focus") != focus:
         raise StandardResultsError("MALFORMED_STANDARD_RESULT_ENTRY")
@@ -539,12 +549,10 @@ def _validate_codex(
         raise StandardResultsError("MISSING_STANDARD_CODEX_BINDING")
     if artifact is not None and codex_blocks:
         raise StandardResultsError("STANDARD_CODEX_BINDING_MISMATCH")
-    return request_id, requested_time, artifact, completed_time
+    return ValidatedCodexBinding(request_id, requested_time, artifact, completed_time)
 
 
-def _validate_entry(
-    value: object, standard: int
-) -> tuple[int | None, datetime | None, tuple[str, int] | None, datetime | None]:
+def _validate_entry(value: object, standard: int) -> ValidatedCodexBinding:
     expected = {
         "applicable",
         "blocks",
@@ -604,23 +612,23 @@ def _validate_quality_artifact(value: object, technical: bool) -> None:
 
 
 def _validate_codex_sequence(
-    rows: list[tuple[int | None, datetime | None, tuple[str, int] | None, datetime | None]],
+    rows: list[ValidatedCodexBinding],
 ) -> None:
-    request_ids = [item[0] for item in rows if item[0] is not None]
-    artifacts = [item[2] for item in rows if item[2] is not None]
+    request_ids = [item.request_id for item in rows if item.request_id is not None]
+    artifacts = [item.artifact for item in rows if item.artifact is not None]
     if len(request_ids) != len(set(request_ids)) or len(artifacts) != len(set(artifacts)):
         raise StandardResultsError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
     saw_request_gap = False
-    for request_id, _, _, _ in rows:
-        if request_id is None:
+    for item in rows:
+        if item.request_id is None:
             saw_request_gap = True
         elif saw_request_gap:
             raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
     for current, following in zip(rows, rows[1:], strict=False):
-        if following[1] is not None and (
-            current[3] is None
-            or (current[1] is not None and current[1] >= following[1])
-            or (current[3] is not None and current[3] >= following[1])
+        if following.requested_at is not None and (
+            current.completed_at is None
+            or (current.requested_at is not None and current.requested_at >= following.requested_at)
+            or (current.completed_at is not None and current.completed_at >= following.requested_at)
         ):
             raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
 
