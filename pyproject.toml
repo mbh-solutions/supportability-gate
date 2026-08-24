@@ -69,6 +69,7 @@ layers = [
     "supportability_gate.quality_runner",
     "supportability_gate.quality_profile | supportability_gate.architecture_policy | supportability_gate.gate_policy | supportability_gate.complexity_policy",
     "supportability_gate.complexity_metrics",
+    "supportability_gate.standard_results",
     "supportability_gate.refactor_policy",
     "supportability_gate.codex_review",
     "supportability_gate.function_changes",

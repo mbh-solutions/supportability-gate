@@ -16,17 +16,13 @@ REQUESTED = "2026-08-11T12:00:00Z"
 COMPLETED = "2026-08-11T12:01:00Z"
 RUN_ID = 12345
 FOCUS_REQUEST_TIMES = {
-    "2": "2026-08-11T12:00:00Z",
-    "4": "2026-08-11T12:02:00Z",
-    "8": "2026-08-11T12:04:00Z",
+    str(focus): f"2026-08-11T12:{(focus - 1) * 2:02d}:00Z" for focus in range(1, 9)
 }
 FOCUS_COMPLETION_TIMES = {
-    "2": "2026-08-11T12:01:00Z",
-    "4": "2026-08-11T12:03:00Z",
-    "8": "2026-08-11T12:05:00Z",
+    str(focus): f"2026-08-11T12:{(focus - 1) * 2 + 1:02d}:00Z" for focus in range(1, 9)
 }
-FOCUS_REQUEST_IDS = {"2": 21, "4": 22, "8": 23}
-FOCUS_ARTIFACT_IDS = {"2": 201, "4": 401, "8": 801}
+FOCUS_REQUEST_IDS = {str(focus): 20 + focus for focus in range(1, 9)}
+FOCUS_ARTIFACT_IDS = {str(focus): 100 * focus + 1 for focus in range(1, 9)}
 
 
 class _Reply:
@@ -231,8 +227,10 @@ def _focused_opener(
     return open_request
 
 
-def _verify_focused(opener: Callable[..., _Reply]) -> None:
-    codex_review.require_focused_completion(
+def _verify_focused(
+    opener: Callable[..., _Reply],
+) -> tuple[codex_review.FocusedReviewEvidence, ...]:
+    return codex_review.require_focused_completion(
         "example/repository",
         7,
         HEAD,
@@ -502,10 +500,66 @@ def test_paginated_exact_head_request_is_found() -> None:
 
 def test_clean_reaction_and_finding_review_completions_pass() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
-    comments = [*requests, _focused_summary("2")]
-    reactions = {FOCUS_REQUEST_IDS["4"]: [_focused_reaction("4")]}
+    comments = [*requests, _focused_summary("1")]
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[1:-1]
+    }
 
-    _verify_focused(_focused_opener(comments, reactions=reactions, reviews=[_focused_review("8")]))
+    evidence = _verify_focused(
+        _focused_opener(comments, reactions=reactions, reviews=[_focused_review("8")])
+    )
+
+    assert tuple(item.focus for item in evidence) == codex_review.FOCUSES
+    assert tuple(item.request_id for item in evidence) == tuple(
+        FOCUS_REQUEST_IDS[focus] for focus in codex_review.FOCUSES
+    )
+    assert len({(item.completion.kind, item.completion.artifact_id) for item in evidence}) == 8  # type: ignore[union-attr]
+
+
+def test_eight_focus_commands_and_order_are_exact() -> None:
+    assert codex_review.FOCUSED_REVIEWS == (
+        (
+            "1",
+            "@codex review for maze-like control flow, misleading extraction, or helpers that "
+            "lower measured complexity without improving readability, testability, or naming in "
+            "changed code only",
+        ),
+        (
+            "2",
+            "@codex review for mixed responsibilities or unclear single ownership in changed "
+            "code only",
+        ),
+        (
+            "3",
+            "@codex review for unclear, inverted, cyclic, or unjustified dependency direction "
+            "across changed boundaries only",
+        ),
+        (
+            "4",
+            "@codex review for weak domain ownership, low cohesion, avoidable coupling, or "
+            "unjustified module boundaries only",
+        ),
+        (
+            "5",
+            "@codex review for missing, weak, misleading, or nondeterministic characterization "
+            "of behavior at risk from this change only",
+        ),
+        (
+            "6",
+            "@codex review for oversized, non-runnable, big-bang, or insufficiently bounded "
+            "refactor steps in this change only",
+        ),
+        (
+            "7",
+            "@codex review for validation evidence that omits changed or high-risk behavior, "
+            "weakens scope or thresholds, hides failures, or overstates what ran only",
+        ),
+        (
+            "8",
+            "@codex review for unsupported, contradictory, stale, incomplete, or misleading "
+            "handoff claims about change, boundaries, validation, risk, or gate coverage only",
+        ),
+    )
 
 
 @pytest.mark.parametrize(
@@ -518,7 +572,7 @@ def test_stale_focused_requests_block(head: str, run_id: int) -> None:
 
     with pytest.raises(
         codex_review.CodexReviewError,
-        match="STALE_FOCUSED_CODEX_REVIEW_REQUEST_2",
+        match="STALE_FOCUSED_CODEX_REVIEW_REQUEST_1",
     ):
         _verify_focused(_focused_opener(requests))
 
@@ -527,19 +581,19 @@ def test_stale_focused_requests_block(head: str, run_id: int) -> None:
     ("case", "code"),
     [
         ("mutable", "MALFORMED_FOCUSED_CODEX_REVIEW_REQUEST"),
-        ("spoofed", "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_2"),
+        ("spoofed", "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_1"),
         ("malformed", "MALFORMED_FOCUSED_CODEX_REVIEW_REQUEST"),
     ],
 )
 def test_untrusted_or_mutable_focused_requests_block(case: str, code: str) -> None:
-    request = _focused_request("2")
+    request = _focused_request("1")
     if case == "mutable":
         request["updated_at"] = COMPLETED
     elif case == "spoofed":
         request["user"] = {"id": 1}
     else:
         request["body"] = str(request["body"]).replace(
-            dict(codex_review.FOCUSED_REVIEWS)["2"],
+            dict(codex_review.FOCUSED_REVIEWS)["1"],
             "@codex review for an unrecognized focus",
         )
 
@@ -562,13 +616,13 @@ def test_invalid_focused_request_sequences_block(case: str, code: str) -> None:
     if case == "missing":
         requests.pop()
     elif case == "duplicate":
-        requests.append(_focused_request("2", comment_id=24))
+        requests.append(_focused_request("1", comment_id=99))
     elif case == "unfocused":
         requests.append(_request(comment_id=24))
     elif case == "out_of_order":
-        requests[1] = _focused_request("4", created_at="2026-08-11T11:59:00Z")
+        requests[1] = _focused_request("2", created_at="2026-08-11T11:59:00Z")
     else:
-        requests[1] = _focused_request("4", created_at=FOCUS_REQUEST_TIMES["2"])
+        requests[1] = _focused_request("2", created_at=FOCUS_REQUEST_TIMES["1"])
 
     with pytest.raises(codex_review.CodexReviewError, match=code):
         _verify_focused(_focused_opener(requests))
@@ -589,15 +643,17 @@ def test_one_artifact_cannot_satisfy_multiple_focuses() -> None:
 
 def test_multiple_valid_focused_artifacts_are_ambiguous() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
-    comments = [*requests, _focused_summary("2")]
-    reactions = {FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in ("4", "8")}
+    comments = [*requests, _focused_summary("1")]
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[1:]
+    }
 
     with pytest.raises(
         codex_review.CodexReviewError,
         match="AMBIGUOUS_FOCUSED_CODEX_REVIEW_COMPLETION",
     ):
         _verify_focused(
-            _focused_opener(comments, reactions=reactions, reviews=[_focused_review("2")])
+            _focused_opener(comments, reactions=reactions, reviews=[_focused_review("1")])
         )
 
 
@@ -617,7 +673,7 @@ def test_focused_completion_timeout_blocks() -> None:
 
     with pytest.raises(
         codex_review.CodexReviewError,
-        match="FOCUSED_CODEX_REVIEW_PENDING_2",
+        match="FOCUSED_CODEX_REVIEW_PENDING_1",
     ):
         codex_review.require_focused_completion(
             "example/repository",
@@ -637,8 +693,8 @@ def test_focused_completion_timeout_blocks() -> None:
 @pytest.mark.parametrize(
     "bindings",
     [
-        (("4", 21), ("2", 22), ("8", 23)),
-        (("2", 99), ("4", 22), ("8", 23)),
+        (("2", 22), ("1", 21), ("3", 23), ("4", 24), ("5", 25), ("6", 26), ("7", 27), ("8", 28)),
+        (("1", 99), ("2", 22), ("3", 23), ("4", 24), ("5", 25), ("6", 26), ("7", 27), ("8", 28)),
     ],
 )
 def test_observer_markers_bind_focus_and_request(
@@ -660,9 +716,11 @@ def test_edited_focused_summary_blocks() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
     comments = [
         *requests,
-        _focused_summary("2", updated_at="2026-08-11T12:01:30Z"),
+        _focused_summary("1", updated_at="2026-08-11T12:01:30Z"),
     ]
-    reactions = {FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in ("4", "8")}
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[1:]
+    }
     with pytest.raises(
         codex_review.CodexReviewError,
         match="MALFORMED_CODEX_REVIEW_EVIDENCE",
@@ -672,16 +730,18 @@ def test_edited_focused_summary_blocks() -> None:
 
 def test_dismissed_focused_review_blocks() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
-    reactions = {FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in ("4", "8")}
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[1:]
+    }
     with pytest.raises(
         codex_review.CodexReviewError,
-        match="FOCUSED_CODEX_REVIEW_PENDING_2",
+        match="FOCUSED_CODEX_REVIEW_PENDING_1",
     ):
         _verify_focused(
             _focused_opener(
                 requests,
                 reactions=reactions,
-                reviews=[_focused_review("2", state="DISMISSED")],
+                reviews=[_focused_review("1", state="DISMISSED")],
             )
         )
 
@@ -699,12 +759,8 @@ def test_focused_observer_is_get_only_and_tracks_serial_acknowledgements() -> No
             return _Reply(_jobs())
         if path.endswith("comments"):
             comment_poll += 1
-            comments = [_focused_request("2")]
-            if comment_poll >= 3:
-                comments.append(_focused_request("4"))
-            if comment_poll >= 5:
-                comments.append(_focused_request("8"))
-            return _Reply(comments)
+            visible = min((comment_poll + 1) // 2, len(codex_review.FOCUSES))
+            return _Reply([_focused_request(focus) for focus in codex_review.FOCUSES[:visible]])
         if path.endswith("reviews"):
             return _Reply([])
         if path.endswith("reactions"):
@@ -712,7 +768,7 @@ def test_focused_observer_is_get_only_and_tracks_serial_acknowledgements() -> No
             focus = next(
                 item for item, identifier in FOCUS_REQUEST_IDS.items() if identifier == comment_id
             )
-            first_seen = {"2": 1, "4": 3, "8": 5}
+            first_seen = {focus: index * 2 + 1 for index, focus in enumerate(codex_review.FOCUSES)}
             if comment_poll == first_seen[focus]:
                 return _Reply([_focused_reaction(focus, content="eyes")])
             if comment_poll > first_seen[focus]:
@@ -726,14 +782,14 @@ def test_focused_observer_is_get_only_and_tracks_serial_acknowledgements() -> No
         HEAD,
         RUN_ID,
         "token",
-        attempts=5,
+        attempts=15,
         delay=0,
         opener=opener,
         sleeper=lambda _: None,
     )
 
     assert comment_ids == tuple(FOCUS_REQUEST_IDS[focus] for focus in codex_review.FOCUSES)
-    assert comment_poll == 5
+    assert comment_poll == 15
     assert all(request.get_method() == "GET" for request in requests)
 
 

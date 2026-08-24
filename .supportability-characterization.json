@@ -29,7 +29,8 @@
     {
       "covers": [
         "src/supportability_gate/quality_profile.py",
-        "src/supportability_gate/reporting.py"
+        "src/supportability_gate/reporting.py",
+        "src/supportability_gate/standard_results.py"
       ],
       "id": "m9-quality-profile",
       "kind": "cli"

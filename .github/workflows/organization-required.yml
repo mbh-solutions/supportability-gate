@@ -268,12 +268,15 @@ jobs:
           path: ${{ runner.temp }}/quality/quality-gates.json
           if-no-files-found: error
 
-  supportability-gate:
-    name: Supportability Gate
+  supportability-evidence:
+    name: Supportability Evidence
     needs: [observe-codex-review, characterize-base, characterize-head, quality-profile]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+    outputs:
+      artifact-digest: ${{ steps.upload_evidence.outputs.artifact-digest }}
+      artifact-id: ${{ steps.upload_evidence.outputs.artifact-id }}
     steps:
       - name: Check out target pull-request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -434,6 +437,33 @@ jobs:
           cat "$RUNNER_TEMP/evidence/complexity-result.json"
           exit "$status"
 
+      - name: Compose eight independently enforceable results
+        id: standard_results
+        if: always()
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+        run: |
+          python -P -m supportability_gate.standard_results compose \
+            --repository "$GITHUB_REPOSITORY" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --base-sha "$BASE_SHA" \
+            --head-sha "$HEAD_SHA" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --pull-number "$PULL_NUMBER" \
+            --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
+            --characterization-result "$RUNNER_TEMP/evidence/characterization-result.json" \
+            --refactor-result "$RUNNER_TEMP/evidence/refactor-policy-result.json" \
+            --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
+            --output "$RUNNER_TEMP/evidence/standard-results.json"
+          cat "$RUNNER_TEMP/evidence/standard-results.json"
+
       - name: Upload authoritative supportability evidence
         id: upload_evidence
         if: always()
@@ -444,27 +474,75 @@ jobs:
           path: ${{ runner.temp }}/evidence
           if-no-files-found: error
 
-      - name: Enforce aggregate result
+  standard-results:
+    name: ${{ matrix.context }}
+    needs: supportability-evidence
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - standard: 1
+            context: Supportability 1 - Cyclomatic Complexity
+          - standard: 2
+            context: Supportability 2 - Separation of Concerns
+          - standard: 3
+            context: Supportability 3 - Dependency Direction
+          - standard: 4
+            context: Supportability 4 - Domain Modularity
+          - standard: 5
+            context: Supportability 5 - Characterization
+          - standard: 6
+            context: Supportability 6 - Incremental Refactor
+          - standard: 7
+            context: Supportability 7 - Quality Gates
+          - standard: 8
+            context: Supportability 8 - Review Handoff
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact gate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Download exact authoritative evidence artifact
+        id: download
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          artifact-ids: ${{ needs.supportability-evidence.outputs.artifact-id }}
+          path: ${{ runner.temp }}/evidence
+
+      - name: Enforce one Standard result
         if: always()
         env:
-          OBSERVER_RESULT: ${{ needs.observe-codex-review.result }}
-          BASE_RESULT: ${{ needs.characterize-base.result }}
-          HEAD_RESULT: ${{ needs.characterize-head.result }}
-          QUALITY_RESULT: ${{ needs.quality-profile.result }}
-          INSTALL_OUTCOME: ${{ steps.install.outcome }}
-          BASE_DOWNLOAD_OUTCOME: ${{ steps.download_base.outcome }}
-          HEAD_DOWNLOAD_OUTCOME: ${{ steps.download_head.outcome }}
-          QUALITY_DOWNLOAD_OUTCOME: ${{ steps.download_quality.outcome }}
-          METADATA_OUTCOME: ${{ steps.artifact_metadata.outcome }}
-          REFACTOR_OUTCOME: ${{ steps.refactor_policy.outcome }}
-          EVALUATE_OUTCOME: ${{ steps.evaluate.outcome }}
-          UPLOAD_OUTCOME: ${{ steps.upload_evidence.outcome }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+          STANDARD: ${{ matrix.standard }}
         run: |
-          status=0
-          for result in "$OBSERVER_RESULT" "$BASE_RESULT" "$HEAD_RESULT" "$QUALITY_RESULT" \
-            "$INSTALL_OUTCOME" "$BASE_DOWNLOAD_OUTCOME" "$HEAD_DOWNLOAD_OUTCOME" \
-            "$QUALITY_DOWNLOAD_OUTCOME" "$METADATA_OUTCOME" "$REFACTOR_OUTCOME" \
-            "$EVALUATE_OUTCOME" "$UPLOAD_OUTCOME"; do
-            if [ "$result" != "success" ]; then status=1; fi
-          done
-          exit "$status"
+          if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
+            echo "MISSING_STANDARD_RESULTS_ARTIFACT"
+            exit 2
+          fi
+          python -P -m supportability_gate.standard_results enforce \
+            --repository "$GITHUB_REPOSITORY" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --base-sha "$BASE_SHA" \
+            --head-sha "$HEAD_SHA" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --input "$RUNNER_TEMP/evidence/standard-results.json" \
+            --standard "$STANDARD"

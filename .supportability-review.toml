@@ -1,48 +1,51 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Record the already-proven Project #9 S07 implementation, canary, consumer-alignment, and ruleset evidence without changing production runtime behavior."
-proof = "docs/product_completion_contract.md::Project #9 S07 focused Codex review assurance; source runs 32688222080 and 32688222103; DC canary run 32689057072"
+intended_behavior = "Replace the aggregate Gate result with eight independent Standard results while retaining one shared evidence evaluation and exact serial Codex binding."
+proof = "tests/test_standard_results.py; tests/test_codex_review.py; .github/workflows/organization-required.yml"
 
 [characterization]
-captured_behavior = "No production source, characterization definition, golden, workflow, dependency, threshold, or gate scope changes in this terminal ledger transaction."
-proof = "git diff against 519bdee34a78f50b54bedf8a597f255b727ac173; required protected exact-head Source Validation and Gate"
+captured_behavior = "Existing CLI, refactor, connector, quality, architecture, and modularity behavior remains covered; the new composer reuses their evidence without rerunning target analysis."
+proof = ".supportability-characterization.json; tests/characterization; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "S07 terminal evidence was distributed across the implementation PR, canary, consumer PRs, workflow runs, and ruleset readbacks."
-after = "The completion ledger owns the durable consolidated assurance while issue and Project fields own live closure state."
+before = "The aggregate workflow coupled Codex completion to the Standard 6 refactor result and collapsed all policy outcomes into one check."
+after = "The refactor policy emits only Standard 6 evidence; one composer binds shared evidence once and eight matrix jobs enforce one fixed entry each."
 
 [architecture]
-dependency_direction = "Documentation records runtime evidence and does not become a dependency of production Gate modules; no production dependency direction changes."
+dependency_direction = "The workflow produces existing evidence before standard_results reads it; matrix consumers validate the producer artifact and never call target analyzers."
 reviewed_paths = [
-    ".supportability-review.toml",
-    "docs/product_completion_contract.md",
+    ".github/workflows/organization-required.yml",
+    "src/supportability_gate/codex_review.py",
+    "src/supportability_gate/refactor_policy.py",
+    "src/supportability_gate/review_evidence.py",
+    "src/supportability_gate/standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "docs/product_completion_contract.md"
-owns = "Durable product status, exact S07 assurance evidence, remaining work, and successor authorization state."
-does_not_own = "Gate execution, connector judgment, ruleset mutation, target product behavior, or immutable Standard requirements."
+path = "src/supportability_gate/standard_results.py"
+owns = "Exact eight-entry composition, block ownership, shared trust failure propagation, evidence binding, and single-entry enforcement."
+does_not_own = "Target analysis, policy thresholds, connector judgment, owner authorization, ruleset mutation, or product code."
 
 [incremental_refactor]
-target = "Close only Project #9 S07 after implementation, canary, consumer alignment, and enforcement readback are directly proven."
-completed_step = "Appended S07 terminal assurance and changed current authorized work from completed S05 to completed S07; no successor work or runtime change was added."
+target = "One S08 workflow transition from the aggregate result to eight fixed Standard results."
+completed_step = "Added the composer, decoupled connector completion from refactor evidence, expanded serial focus binding, and wired the fixed matrix without changing target commands or dependencies."
 
 [review_handoff]
-summary = "Changed files are the completion ledger and this machine-readable handoff only. Required hosted checks parse and evaluate this TOML and apply checkout and diff validation to the ledger; the ledger's completion, canary, and ruleset claims require human verification against their cited live evidence. No production or high-risk file is changed or excluded, and no threshold, scope, waiver, dependency, function, C901 ceiling, or architecture boundary changes."
+summary = "S08 changes only Gate policy, evidence composition, workflow wiring, request instructions, import and characterization contracts, and directly required tests. The immutable Standard, frozen roadmap, target commands, thresholds, exclusions, waivers, and consumer product code are unchanged."
 remaining_risks = [
-    "Codex judgment remains probabilistic and non-exhaustive even when three focused completions are required.",
-    "Clean summaries and submitted reviews omit their triggering request ID, so focus attribution still relies on request-specific eyes acknowledgement, serial request windows, bounded final polling, and unique artifact identity.",
+    "Codex review remains probabilistic and connector latency can require a new exact-head run.",
+    "The eight contexts become required only through the separately verified source and consumer ruleset migration and DC never-merge canary.",
 ]
 
 [human_review]
-naming = "The S07 assurance heading and status fields name the exact completed pilot and avoid retired Semantic Review terminology."
-cohesion = "One ledger section consolidates source, canary, consumer, and ruleset proof for one terminal milestone."
-intended_behavior = "The ledger becomes canonical only after protected merge; Project and issue closure follow that merge and no successor starts."
-reviewability = "Exact PR, commit, run, job, request, artifact, ruleset, App, hash, and test identities support direct readback without relying on narrative alone."
+naming = "Each check, focus, evidence field, and module names one Standard or one shared trust boundary."
+cohesion = "standard_results owns composition and enforcement; existing analyzers retain their prior responsibilities."
+intended_behavior = "One ordinary policy defect blocks only its owned lane; shared trust corruption makes all eight lanes technical failures."
+reviewability = "Focused fixtures prove each lane, all lanes together, every declared family owner, malformed bindings, and exact workflow text."
 
 [[module_boundaries]]
-path = "docs/product_completion_contract.md"
-owner_path = "docs/product_completion_contract.md"
+path = "src/supportability_gate/standard_results.py"
+owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
-justification = "This completion ledger owns durable milestone completion evidence and product authorization state; it does not implement or configure runtime enforcement."
+justification = "The new module owns only transformation and enforcement of already-produced result artifacts; reporting remains the pre-existing owner of authoritative evaluation serialization."

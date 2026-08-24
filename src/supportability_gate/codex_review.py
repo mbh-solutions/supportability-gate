@@ -30,13 +30,39 @@ POLL_SECONDS = 15
 FOCUSED_POLL_ATTEMPTS = 120
 FOCUSED_REVIEWS = (
     (
+        "1",
+        "@codex review for maze-like control flow, misleading extraction, or helpers that lower "
+        "measured complexity without improving readability, testability, or naming in changed "
+        "code only",
+    ),
+    (
         "2",
         "@codex review for mixed responsibilities or unclear single ownership in changed code only",
+    ),
+    (
+        "3",
+        "@codex review for unclear, inverted, cyclic, or unjustified dependency direction across "
+        "changed boundaries only",
     ),
     (
         "4",
         "@codex review for weak domain ownership, low cohesion, avoidable coupling, "
         "or unjustified module boundaries only",
+    ),
+    (
+        "5",
+        "@codex review for missing, weak, misleading, or nondeterministic characterization of "
+        "behavior at risk from this change only",
+    ),
+    (
+        "6",
+        "@codex review for oversized, non-runnable, big-bang, or insufficiently bounded refactor "
+        "steps in this change only",
+    ),
+    (
+        "7",
+        "@codex review for validation evidence that omits changed or high-risk behavior, weakens "
+        "scope or thresholds, hides failures, or overstates what ran only",
     ),
     (
         "8",
@@ -101,6 +127,16 @@ class CompletionArtifact:
     kind: str
     artifact_id: int
     completed_at: datetime
+
+
+@dataclass(frozen=True)
+class FocusedReviewEvidence:
+    """One focused request and its unique completion, when complete."""
+
+    focus: str
+    request_id: int
+    requested_at: datetime
+    completion: CompletionArtifact | None
 
 
 def _timestamp(value: object) -> datetime:
@@ -663,17 +699,23 @@ def _focused_state(
     run_id: int,
     token: str,
     opener: Any,
-) -> str | None:
+) -> tuple[str | None, tuple[FocusedReviewEvidence, ...]]:
     root = f"https://api.github.com/repos/{repository}"
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
     requests = _required_focused_requests(comments, head_sha, run_id)
     acknowledged = _focused_observer_comment_ids(repository, run_id, head_sha, token, opener)
     if acknowledged is None:
-        return "FOCUSED_CODEX_REVIEW_PENDING_2"
+        return (
+            f"FOCUSED_CODEX_REVIEW_PENDING_{FOCUSES[0]}",
+            tuple(
+                FocusedReviewEvidence(item.focus, item.comment_id, item.created_at, None)
+                for item in requests
+            ),
+        )
     if acknowledged != tuple(item.comment_id for item in requests):
         raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
-    artifacts: list[CompletionArtifact] = []
+    evidence: list[FocusedReviewEvidence] = []
     for index, request in enumerate(requests):
         reactions = _pages(f"{root}/issues/comments/{request.comment_id}/reactions", token, opener)
         completed_before = requests[index + 1].created_at if index + 1 < len(requests) else None
@@ -686,12 +728,30 @@ def _focused_state(
             True,
             completed_before,
         )
-        if artifact is None:
-            return f"FOCUSED_CODEX_REVIEW_PENDING_{request.focus}"
-        artifacts.append(artifact)
-    if len({(item.kind, item.artifact_id) for item in artifacts}) != len(FOCUSES):
+        evidence.append(
+            FocusedReviewEvidence(request.focus, request.comment_id, request.created_at, artifact)
+        )
+    artifacts = [item.completion for item in evidence if item.completion is not None]
+    if len({(item.kind, item.artifact_id) for item in artifacts}) != len(artifacts):
         raise CodexReviewError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
-    return None
+    pending = next((item.focus for item in evidence if item.completion is None), None)
+    return (
+        f"FOCUSED_CODEX_REVIEW_PENDING_{pending}" if pending else None,
+        tuple(evidence),
+    )
+
+
+def focused_completion_snapshot(
+    repository: str,
+    pull_number: int,
+    head_sha: str,
+    run_id: int,
+    token: str,
+    *,
+    opener: Any = urllib.request.urlopen,
+) -> tuple[str | None, tuple[FocusedReviewEvidence, ...]]:
+    """Return current focused completion identities without polling."""
+    return _focused_state(repository, pull_number, head_sha, run_id, token, opener)
 
 
 def _observed_eyes(reactions: tuple[dict[str, Any], ...], request: FocusedReviewRequest) -> bool:
@@ -736,7 +796,7 @@ def require_focused_acknowledgements(
     """Observe connector acknowledgement on each serial focused request."""
     root = f"https://api.github.com/repos/{repository}"
     acknowledged: dict[str, int] = {}
-    last_code = "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_2"
+    last_code = f"MISSING_FOCUSED_CODEX_REVIEW_REQUEST_{FOCUSES[0]}"
     for attempt in range(attempts):
         try:
             durable = _focused_observer_comment_ids(repository, run_id, head_sha, token, opener)
@@ -777,12 +837,12 @@ def require_focused_completion(
     delay: int = POLL_SECONDS,
     opener: Any = urllib.request.urlopen,
     sleeper: Any = time.sleep,
-) -> None:
-    """Require three distinct observer-bound focused connector completions."""
-    last_code = "FOCUSED_CODEX_REVIEW_PENDING_2"
+) -> tuple[FocusedReviewEvidence, ...]:
+    """Require eight distinct observer-bound focused connector completions."""
+    last_code = f"FOCUSED_CODEX_REVIEW_PENDING_{FOCUSES[0]}"
     for attempt in range(attempts):
         try:
-            block = _focused_state(
+            block, evidence = _focused_state(
                 repository,
                 pull_number,
                 head_sha,
@@ -794,7 +854,7 @@ def require_focused_completion(
             last_code = error.code
         else:
             if block is None:
-                return
+                return evidence
             last_code = block
         if attempt + 1 < attempts:
             sleeper(delay)
