@@ -703,6 +703,24 @@ def _observed_eyes(reactions: tuple[dict[str, Any], ...], request: FocusedReview
     )
 
 
+def _focused_acknowledgement_block(
+    requests: dict[str, FocusedReviewRequest],
+    stale: bool,
+    acknowledged: dict[str, int],
+) -> str | None:
+    missing = next((focus for focus in FOCUSES if focus not in requests), None)
+    if missing is not None:
+        prefix = "STALE" if stale and not requests else "MISSING"
+        return f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{missing}"
+    pending = next(
+        (focus for focus in FOCUSES if acknowledged.get(focus) != requests[focus].comment_id),
+        None,
+    )
+    if pending is None:
+        return None
+    return f"FOCUSED_CODEX_REVIEW_PENDING_{pending}"
+
+
 def require_focused_acknowledgements(
     repository: str,
     pull_number: int,
@@ -735,22 +753,10 @@ def require_focused_acknowledgements(
                     for reaction in reactions
                 ):
                     acknowledged[focus] = request.comment_id
-            missing = next((focus for focus in FOCUSES if focus not in requests), None)
-            if missing is not None:
-                prefix = "STALE" if stale and not requests else "MISSING"
-                last_code = f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{missing}"
-            else:
-                pending = next(
-                    (
-                        focus
-                        for focus in FOCUSES
-                        if acknowledged.get(focus) != requests[focus].comment_id
-                    ),
-                    None,
-                )
-                if pending is None:
-                    return tuple(requests[focus].comment_id for focus in FOCUSES)
-                last_code = f"FOCUSED_CODEX_REVIEW_PENDING_{pending}"
+            block = _focused_acknowledgement_block(requests, stale, acknowledged)
+            if block is None:
+                return tuple(requests[focus].comment_id for focus in FOCUSES)
+            last_code = block
         except CodexReviewError as error:
             if error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE":
                 raise

@@ -127,20 +127,23 @@ def _focused_request(
     *,
     comment_id: int | None = None,
     created_at: str | None = None,
+    head: str = HEAD,
+    run_id: int = RUN_ID,
     updated_at: str | None = None,
+    user_id: int = codex_review.REQUESTER_ID,
 ) -> dict[str, object]:
     requested_at = created_at or FOCUS_REQUEST_TIMES[focus]
     return {
         "body": (
             f"{dict(codex_review.FOCUSED_REVIEWS)[focus]}\n\n"
             f"Codex-Review-Focus: {focus}\n"
-            f"Codex-Review-Head: {HEAD}\n"
-            f"Codex-Review-Run: {RUN_ID}"
+            f"Codex-Review-Head: {head}\n"
+            f"Codex-Review-Run: {run_id}"
         ),
         "created_at": requested_at,
         "id": comment_id or FOCUS_REQUEST_IDS[focus],
         "updated_at": updated_at or requested_at,
-        "user": {"id": codex_review.REQUESTER_ID},
+        "user": {"id": user_id},
     }
 
 
@@ -479,12 +482,15 @@ def test_legacy_head_only_request_does_not_override_exact_run_request() -> None:
     _verify(_opener([_legacy_request(), _request(comment_id=2)], [_reaction()]))
 
 
-def test_api_failure_blocks() -> None:
+@pytest.mark.parametrize("verify", [_verify, _verify_focused], ids=("single", "focused"))
+def test_api_failure_blocks(
+    verify: Callable[[Callable[..., _Reply]], None],
+) -> None:
     def fail(*args: object, **kwargs: object) -> _Reply:
         raise urllib.error.URLError("offline")
 
     with pytest.raises(codex_review.CodexReviewError, match="GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"):
-        _verify(fail)
+        verify(fail)
 
 
 def test_paginated_exact_head_request_is_found() -> None:
@@ -494,13 +500,51 @@ def test_paginated_exact_head_request_is_found() -> None:
     _verify(_opener(comments, [_reaction()]))
 
 
-def test_three_distinct_focused_requests_and_artifacts_pass() -> None:
+def test_clean_reaction_and_finding_review_completions_pass() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
-    reactions = {
-        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES
-    }
+    comments = [*requests, _focused_summary("2")]
+    reactions = {FOCUS_REQUEST_IDS["4"]: [_focused_reaction("4")]}
 
-    _verify_focused(_focused_opener(requests, reactions=reactions))
+    _verify_focused(_focused_opener(comments, reactions=reactions, reviews=[_focused_review("8")]))
+
+
+@pytest.mark.parametrize(
+    ("head", "run_id"),
+    [(OLD_HEAD, RUN_ID), (HEAD, RUN_ID - 1)],
+    ids=("head", "run"),
+)
+def test_stale_focused_requests_block(head: str, run_id: int) -> None:
+    requests = [_focused_request(focus, head=head, run_id=run_id) for focus in codex_review.FOCUSES]
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="STALE_FOCUSED_CODEX_REVIEW_REQUEST_2",
+    ):
+        _verify_focused(_focused_opener(requests))
+
+
+@pytest.mark.parametrize(
+    ("case", "code"),
+    [
+        ("mutable", "MALFORMED_FOCUSED_CODEX_REVIEW_REQUEST"),
+        ("spoofed", "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_2"),
+        ("malformed", "MALFORMED_FOCUSED_CODEX_REVIEW_REQUEST"),
+    ],
+)
+def test_untrusted_or_mutable_focused_requests_block(case: str, code: str) -> None:
+    request = _focused_request("2")
+    if case == "mutable":
+        request["updated_at"] = COMPLETED
+    elif case == "spoofed":
+        request["user"] = {"id": 1}
+    else:
+        request["body"] = str(request["body"]).replace(
+            dict(codex_review.FOCUSED_REVIEWS)["2"],
+            "@codex review for an unrecognized focus",
+        )
+
+    with pytest.raises(codex_review.CodexReviewError, match=code):
+        _verify_focused(_focused_opener([request]))
 
 
 @pytest.mark.parametrize(
@@ -541,6 +585,53 @@ def test_one_artifact_cannot_satisfy_multiple_focuses() -> None:
         match="REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE",
     ):
         _verify_focused(_focused_opener(requests, reactions=reactions))
+
+
+def test_multiple_valid_focused_artifacts_are_ambiguous() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    comments = [*requests, _focused_summary("2")]
+    reactions = {FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in ("4", "8")}
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="AMBIGUOUS_FOCUSED_CODEX_REVIEW_COMPLETION",
+    ):
+        _verify_focused(
+            _focused_opener(comments, reactions=reactions, reviews=[_focused_review("2")])
+        )
+
+
+def test_paginated_focused_requests_are_found() -> None:
+    comments: list[dict[str, object]] = [{"body": "ordinary", "id": item} for item in range(100)]
+    comments.extend(_focused_request(focus) for focus in codex_review.FOCUSES)
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES
+    }
+
+    _verify_focused(_focused_opener(comments, reactions=reactions))
+
+
+def test_focused_completion_timeout_blocks() -> None:
+    delays: list[int] = []
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="FOCUSED_CODEX_REVIEW_PENDING_2",
+    ):
+        codex_review.require_focused_completion(
+            "example/repository",
+            7,
+            HEAD,
+            RUN_ID,
+            "token",
+            attempts=2,
+            delay=3,
+            opener=_focused_opener(requests),
+            sleeper=delays.append,
+        )
+
+    assert delays == [3]
 
 
 @pytest.mark.parametrize(
