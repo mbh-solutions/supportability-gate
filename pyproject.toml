@@ -76,4 +76,5 @@ layers = [
     "supportability_gate.function_changes",
     "supportability_gate.characterization",
     "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.git_changes | supportability_gate.review_evidence",
+    "supportability_gate.focused_review | supportability_gate.standard_block_ownership",
 ]

@@ -13,12 +13,14 @@ before = "The aggregate workflow coupled Codex completion to the Standard 6 refa
 after = "The refactor policy emits only Standard 6 evidence; the producer invokes one pure composer, and eight matrix jobs use the artifact enforcer for one fixed entry each."
 
 [architecture]
-dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes the standard_results contract; producer and standard_results_enforcer both depend on that lower contract and never on each other or target analyzers."
+dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes the standard_results contract; standard_results depends only on neutral focused-review and block-ownership contracts, while the producer alone depends on connector transport."
 reviewed_paths = [
     ".github/workflows/organization-required.yml",
     "src/supportability_gate/codex_review.py",
+    "src/supportability_gate/focused_review.py",
     "src/supportability_gate/refactor_policy.py",
     "src/supportability_gate/review_evidence.py",
+    "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",
     "src/supportability_gate/standard_results_enforcer.py",
     "src/supportability_gate/standard_results_producer.py",
@@ -37,12 +39,13 @@ completed_step = "Added the producer, Standard-results contract, and artifact en
 summary = "S08 changes only Gate policy, evidence composition, workflow wiring, request instructions, import and characterization contracts, and directly required tests. Policy thresholds, target commands, exclusions, waivers, consumer product code, the immutable Standard, and the frozen roadmap are unchanged. Operational polling expands from 120 to 240 attempts; the observer timeout expands from 45 to 70 minutes; and the evidence-job timeout expands from 15 to 30 minutes for eight serial reviews."
 remaining_risks = [
     "Codex review remains probabilistic and connector latency can require a new exact-head run.",
+    "Clean summaries and submitted reviews expose no triggering request ID, so exact attribution relies on observer acknowledgement plus the strict serial timestamp window.",
     "The eight contexts become required only through the separately verified source and consumer ruleset migration and DC never-merge canary.",
 ]
 
 [human_review]
 naming = "Each check, focus, evidence field, and module names one Standard or one shared trust boundary."
-cohesion = "standard_results owns the eight-entry artifact contract, composition, and validation; standard_results_producer owns polling and emission; standard_results_enforcer owns one-lane exit behavior; and existing analyzers retain their prior responsibilities."
+cohesion = "focused_review owns neutral focus evidence types; standard_block_ownership owns lane vocabulary; standard_results owns artifact composition and validation; the producer owns polling and emission; and the enforcer owns one-lane exit behavior."
 intended_behavior = "One ordinary policy defect blocks only its owned lane; shared trust corruption makes all eight lanes technical failures."
 reviewability = "Focused fixtures prove each lane, all lanes together, every declared family owner, malformed bindings, and exact workflow text."
 
@@ -63,3 +66,15 @@ path = "src/supportability_gate/standard_results_enforcer.py"
 owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
 justification = "The enforcer owns only one-entry exit behavior after lower-contract validation; reporting remains the pre-existing workflow evaluation owner."
+
+[[module_boundaries]]
+path = "src/supportability_gate/focused_review.py"
+owner_path = "src/supportability_gate/codex_review.py"
+basis = "responsibility"
+justification = "The neutral module owns only fixed focus commands and evidence values; codex_review remains the pre-existing connector transport owner."
+
+[[module_boundaries]]
+path = "src/supportability_gate/standard_block_ownership.py"
+owner_path = "src/supportability_gate/reporting.py"
+basis = "responsibility"
+justification = "The neutral module owns only the stable Standard lane mapping for producer blocks; reporting remains the pre-existing evaluation serialization owner."

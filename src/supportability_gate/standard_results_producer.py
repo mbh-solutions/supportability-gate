@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from supportability_gate import codex_review, standard_results
+from supportability_gate import codex_review, focused_review, standard_results
 
 
 def _read_json(path: Path, code: str) -> dict[str, Any]:
@@ -50,14 +50,12 @@ def _compose(arguments: argparse.Namespace) -> dict[str, object]:
         refactor = _read_json(Path(arguments.refactor_result), "MISSING_REFACTOR_RESULT")
         quality = _read_json(Path(arguments.quality_provenance), "MISSING_QUALITY_PROVENANCE")
     except standard_results.StandardResultsError as error:
-        return standard_results.compose_results(
-            {}, {}, {}, {}, identity, (), codex_review.CodexReviewError(error.code)
-        )
+        return standard_results.compose_results({}, {}, {}, {}, identity, (), error.code)
     token = os.environ.get("GITHUB_TOKEN")
-    evidence: tuple[codex_review.FocusedReviewEvidence, ...] = ()
-    codex_error: codex_review.CodexReviewError | None = None
+    evidence: tuple[focused_review.FocusedReviewEvidence, ...] = ()
+    codex_error: str | None = None
     if not token:
-        codex_error = codex_review.CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+        codex_error = "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"
     else:
         try:
             evidence = codex_review.require_focused_completion(
@@ -68,7 +66,7 @@ def _compose(arguments: argparse.Namespace) -> dict[str, object]:
                 token,
             )
         except codex_review.CodexReviewError as error:
-            codex_error = error
+            codex_error = error.code
             try:
                 _, evidence = codex_review.focused_completion_snapshot(
                     identity.repository,
@@ -79,7 +77,7 @@ def _compose(arguments: argparse.Namespace) -> dict[str, object]:
                 )
             except codex_review.CodexReviewError as snapshot_error:
                 evidence = ()
-                codex_error = snapshot_error
+                codex_error = snapshot_error.code
     return standard_results.compose_results(
         complexity,
         characterization,

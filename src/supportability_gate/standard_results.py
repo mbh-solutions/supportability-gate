@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from supportability_gate import clause_inventory, codex_review
+from supportability_gate import clause_inventory, focused_review, standard_block_ownership
 
 SCHEMA_VERSION = "standard-results.v1"
 RESULTS = frozenset({"PASS", "BLOCK", "TECHNICAL_FAILURE"})
@@ -104,6 +104,15 @@ def _string_list(value: object, code: str) -> list[str]:
     return value
 
 
+def _require_owner(block: str, expected: int) -> None:
+    owners = standard_block_ownership.owners(block)
+    if len(owners) != 1:
+        kind = "UNKNOWN" if not owners else "MULTIPLE"
+        raise StandardResultsError(f"{kind}_STANDARD_BLOCK_OWNER:{block}")
+    if owners.pop() != expected:
+        raise StandardResultsError(f"STANDARD_BLOCK_SOURCE_MISMATCH:{block}")
+
+
 def _validate_identity(identity: RunIdentity) -> None:
     if (
         identity.repository.count("/") != 1
@@ -117,13 +126,15 @@ def _validate_identity(identity: RunIdentity) -> None:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_IDENTITY")
 
 
-def _result_blocks(value: dict[str, Any], schema: str, code: str) -> list[str]:
+def _result_blocks(value: dict[str, Any], schema: str, code: str, standard: int) -> list[str]:
     blocks = _string_list(value.get("policy_blocks"), code)
     result = value.get("overall_result")
     if value.get("schema_version") != schema or result not in {"PASS", "BLOCK"}:
         raise StandardResultsError(code)
     if (result == "PASS") == bool(blocks):
         raise StandardResultsError(code)
+    for block in blocks:
+        _require_owner(block, standard)
     return blocks
 
 
@@ -183,6 +194,8 @@ def _standard_blocks(value: object, policy_blocks: list[str]) -> dict[int, list[
         if row.get("standard") != standard:
             raise StandardResultsError("MALFORMED_STANDARD_BLOCK_BINDING")
         blocks[standard] = _string_list(row.get("blocks"), "MALFORMED_STANDARD_BLOCK_BINDING")
+        for block in blocks[standard]:
+            _require_owner(block, standard)
     flattened = [block for standard in range(1, 9) for block in blocks[standard]]
     duplicates = sorted({block for block in flattened if flattened.count(block) > 1})
     if duplicates:
@@ -249,7 +262,9 @@ def _validate_characterization(value: dict[str, Any], identity: RunIdentity) -> 
     )
     if actual != expected:
         raise StandardResultsError("CHARACTERIZATION_RESULT_BINDING_MISMATCH")
-    return _result_blocks(value, "characterization-result.v1", "MALFORMED_CHARACTERIZATION_RESULT")
+    return _result_blocks(
+        value, "characterization-result.v1", "MALFORMED_CHARACTERIZATION_RESULT", 5
+    )
 
 
 def _validate_refactor(
@@ -262,13 +277,16 @@ def _validate_refactor(
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
     if type(value.get("applicable")) is not bool:
         raise StandardResultsError("MALFORMED_REFACTOR_RESULT")
-    return _result_blocks(value, "refactor-policy-result.v1", "MALFORMED_REFACTOR_RESULT")
+    return _result_blocks(value, "refactor-policy-result.v1", "MALFORMED_REFACTOR_RESULT", 6)
 
 
-def _nested_blocks(value: object, code: str) -> set[str]:
+def _nested_blocks(value: object, code: str, standard: int) -> set[str]:
     if not isinstance(value, dict):
         raise StandardResultsError(code)
-    return set(_string_list(value.get("blocks"), code))
+    blocks = set(_string_list(value.get("blocks"), code))
+    for block in blocks:
+        _require_owner(block, standard)
+    return blocks
 
 
 def _function_blocks(functions: list[dict[str, Any]]) -> list[str]:
@@ -298,8 +316,10 @@ def _deterministic_state(
     quality_artifact = _validate_quality(complexity, quality_provenance, identity)
     characterization_blocks = _validate_characterization(characterization, identity)
     refactor_blocks = _validate_refactor(refactor, characterization, identity)
-    architecture = _nested_blocks(complexity.get("architecture"), "MALFORMED_ARCHITECTURE_RESULT")
-    modularity = _nested_blocks(complexity.get("modularity"), "MALFORMED_MODULARITY_RESULT")
+    architecture = _nested_blocks(
+        complexity.get("architecture"), "MALFORMED_ARCHITECTURE_RESULT", 3
+    )
+    modularity = _nested_blocks(complexity.get("modularity"), "MALFORMED_MODULARITY_RESULT", 4)
     blocks = {standard: list(standard_blocks[standard]) for standard in range(1, 9)}
     blocks[1].extend(_function_blocks(functions))
     blocks[5].extend(characterization_blocks)
@@ -321,11 +341,11 @@ def _deterministic_state(
 
 
 def _codex_rows(
-    evidence: tuple[codex_review.FocusedReviewEvidence, ...],
+    evidence: tuple[focused_review.FocusedReviewEvidence, ...],
 ) -> dict[str, dict[str, object]]:
     by_focus = {item.focus: item for item in evidence}
     if len(by_focus) != len(evidence) or any(
-        focus not in codex_review.FOCUSES for focus in by_focus
+        focus not in focused_review.FOCUSES for focus in by_focus
     ):
         raise StandardResultsError("MALFORMED_CODEX_REVIEW_BINDING")
     artifacts = [item.completion for item in evidence if item.completion]
@@ -333,7 +353,7 @@ def _codex_rows(
     if len(identities) != len(set(identities)):
         raise StandardResultsError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
     rows: dict[str, dict[str, object]] = {}
-    for focus in codex_review.FOCUSES:
+    for focus in focused_review.FOCUSES:
         item = by_focus.get(focus)
         completion = item.completion if item else None
         rows[focus] = {
@@ -356,23 +376,23 @@ def _codex_rows(
 def _codex_blocks(rows: dict[str, dict[str, object]], prefix: str) -> dict[int, list[str]]:
     return {
         int(focus): [f"{prefix}_{focus}"]
-        for focus in codex_review.FOCUSES
+        for focus in focused_review.FOCUSES
         if rows[focus]["completion"] is None
     }
 
 
 def _codex_payload(
-    evidence: tuple[codex_review.FocusedReviewEvidence, ...],
-    error: codex_review.CodexReviewError | None,
+    evidence: tuple[focused_review.FocusedReviewEvidence, ...],
+    error_code: str | None,
 ) -> tuple[dict[str, dict[str, object]], dict[int, list[str]], tuple[str, ...]]:
     try:
         rows = _codex_rows(evidence)
     except StandardResultsError as binding_error:
         return {}, {}, (binding_error.code,)
     blocks: dict[int, list[str]] = {standard: [] for standard in range(1, 9)}
-    if error is None and all(rows[focus]["completion"] for focus in codex_review.FOCUSES):
+    if error_code is None and all(rows[focus]["completion"] for focus in focused_review.FOCUSES):
         return rows, blocks, ()
-    code = error.code if error else "MALFORMED_CODEX_REVIEW_BINDING"
+    code = error_code or "MALFORMED_CODEX_REVIEW_BINDING"
     prefixes = ("FOCUSED_CODEX_REVIEW_PENDING", "MISSING_FOCUSED_CODEX_REVIEW_REQUEST")
     prefix = next((item for item in prefixes if code.startswith(f"{item}_")), None)
     if prefix and (focused_blocks := _codex_blocks(rows, prefix)):
@@ -384,7 +404,7 @@ def _codex_payload(
 def _empty_codex() -> dict[str, dict[str, object]]:
     return {
         focus: {"completion": None, "focus": focus, "request_id": None, "requested_at": None}
-        for focus in codex_review.FOCUSES
+        for focus in focused_review.FOCUSES
     }
 
 
@@ -433,8 +453,8 @@ def compose_results(
     refactor: dict[str, Any],
     quality_provenance: dict[str, Any],
     identity: RunIdentity,
-    codex_evidence: tuple[codex_review.FocusedReviewEvidence, ...],
-    codex_error: codex_review.CodexReviewError | None = None,
+    codex_evidence: tuple[focused_review.FocusedReviewEvidence, ...],
+    codex_error: str | None = None,
 ) -> dict[str, object]:
     """Compose exactly eight results without rerunning target analysis."""
     try:
@@ -562,6 +582,8 @@ def _validate_entry(
         raise StandardResultsError("MALFORMED_STANDARD_RESULT_ENTRY")
     if any("FOCUSED_CODEX_REVIEW" in block and block not in codex_families for block in blocks):
         raise StandardResultsError("STANDARD_CODEX_BINDING_MISMATCH")
+    for block in set(blocks) - codex_families:
+        _require_owner(block, standard)
     return _validate_codex(value.get("codex_review"), str(standard), str(result), blocks)
 
 
@@ -579,6 +601,28 @@ def _validate_quality_artifact(value: object, technical: bool) -> None:
         or SHA64.fullmatch(value["capture_sha256"]) is None
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
+
+
+def _validate_codex_sequence(
+    rows: list[tuple[int | None, datetime | None, tuple[str, int] | None, datetime | None]],
+) -> None:
+    request_ids = [item[0] for item in rows if item[0] is not None]
+    artifacts = [item[2] for item in rows if item[2] is not None]
+    if len(request_ids) != len(set(request_ids)) or len(artifacts) != len(set(artifacts)):
+        raise StandardResultsError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
+    saw_request_gap = False
+    for request_id, _, _, _ in rows:
+        if request_id is None:
+            saw_request_gap = True
+        elif saw_request_gap:
+            raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
+    for current, following in zip(rows, rows[1:], strict=False):
+        if following[1] is not None and (
+            current[3] is None
+            or (current[1] is not None and current[1] >= following[1])
+            or (current[3] is not None and current[3] >= following[1])
+        ):
+            raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
 
 
 def validate_payload(value: object, identity: RunIdentity | None = None) -> dict[str, Any]:
@@ -622,15 +666,7 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> dict
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS")
     codex = [_validate_entry(entry, standard) for standard, entry in enumerate(entries, start=1)]
-    request_ids = [item[0] for item in codex if item[0] is not None]
-    artifacts = [item[2] for item in codex if item[2] is not None]
-    if len(request_ids) != len(set(request_ids)) or len(artifacts) != len(set(artifacts)):
-        raise StandardResultsError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
-    for current, following in zip(codex, codex[1:], strict=False):
-        if (current[1] is not None and following[1] is not None and current[1] >= following[1]) or (
-            current[3] is not None and following[1] is not None and current[3] >= following[1]
-        ):
-            raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
+    _validate_codex_sequence(codex)
     technical_rows = [entry.get("result") == "TECHNICAL_FAILURE" for entry in entries]
     if any(technical_rows) != all(technical_rows):
         raise StandardResultsError("INCONSISTENT_SHARED_TECHNICAL_FAILURE")

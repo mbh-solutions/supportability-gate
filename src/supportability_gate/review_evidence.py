@@ -5,6 +5,8 @@ from __future__ import annotations
 import tomllib
 from typing import Any
 
+from supportability_gate import standard_block_ownership
+
 REVIEW_EVIDENCE_PATH = ".supportability-review.toml"
 _TEXT_FIELDS = {
     "behavior": ("intended_behavior", "proof"),
@@ -21,27 +23,6 @@ _LIST_FIELDS = {
     "review_handoff": ("remaining_risks",),
 }
 _MODULE_BOUNDARY_FIELDS = {"basis", "justification", "owner_path", "path"}
-_FIELD_STANDARDS = {
-    "architecture.dependency_direction": 3,
-    "architecture.reviewed_paths": 3,
-    "behavior.intended_behavior": 5,
-    "behavior.proof": 5,
-    "characterization.captured_behavior": 5,
-    "characterization.proof": 5,
-    "human_review.cohesion": 4,
-    "human_review.intended_behavior": 5,
-    "human_review.naming": 1,
-    "human_review.reviewability": 1,
-    "incremental_refactor.completed_step": 6,
-    "incremental_refactor.target": 6,
-    "responsibility_boundary.does_not_own": 4,
-    "responsibility_boundary.owns": 4,
-    "responsibility_boundary.path": 4,
-    "review_handoff.remaining_risks": 8,
-    "review_handoff.summary": 8,
-    "separation_of_concerns.after": 2,
-    "separation_of_concerns.before": 2,
-}
 
 ReviewEvidence = dict[str, object]
 
@@ -138,20 +119,7 @@ def _block(kind: str, location: str) -> str:
 
 def block_standard(block: str) -> int | None:
     """Return the Standard owned by one producer-generated review block."""
-    prefixes = (
-        "MISSING_REVIEW_EVIDENCE:",
-        "MALFORMED_REVIEW_EVIDENCE:",
-        "INSUFFICIENT_REVIEW_EVIDENCE:",
-    )
-    prefix = next((item for item in prefixes if block.startswith(item)), None)
-    if prefix is None:
-        return None
-    location = block.removeprefix(prefix)
-    if location == "module_boundaries.path" or location.startswith("module_boundaries["):
-        return 4
-    if location == "module_boundaries":
-        return 4
-    return _FIELD_STANDARDS.get(location)
+    return standard_block_ownership.review_block_standard(block)
 
 
 def _value_block(value: object, location: str, *, text_list: bool) -> str | None:

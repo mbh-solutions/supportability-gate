@@ -108,7 +108,7 @@ def _inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str,
 def _compose(
     inputs: tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]],
     *,
-    codex_error: codex_review.CodexReviewError | None = None,
+    codex_error: str | None = None,
 ) -> dict[str, object]:
     return standard_results.compose_results(*inputs, IDENTITY, _evidence(), codex_error)
 
@@ -201,7 +201,7 @@ def test_shared_binding_or_codex_trust_corruption_makes_all_results_technical() 
     binding_payload = _compose(binding)
     codex_payload = _compose(
         _inputs(),
-        codex_error=codex_review.CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"),
+        codex_error="GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE",
     )
 
     assert [entry["result"] for entry in binding_payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
@@ -210,7 +210,18 @@ def test_shared_binding_or_codex_trust_corruption_makes_all_results_technical() 
 
 @pytest.mark.parametrize(
     "case",
-    ["missing", "duplicate", "unknown", "identity", "artifact", "quality", "partial_technical"],
+    [
+        "missing",
+        "duplicate",
+        "unknown",
+        "identity",
+        "artifact",
+        "quality",
+        "partial_technical",
+        "request_gap",
+        "pending_gap",
+        "wrong_owner",
+    ],
 )
 def test_malformed_entries_and_incorrect_bindings_fail_closed(case: str) -> None:
     payload = copy.deepcopy(_compose(_inputs()))
@@ -229,9 +240,25 @@ def test_malformed_entries_and_incorrect_bindings_fail_closed(case: str) -> None
         ]
     elif case == "quality":
         payload["quality_artifact"]["id"] = 0
-    else:
+    elif case == "partial_technical":
         entries[0]["result"] = "TECHNICAL_FAILURE"
         entries[0]["technical_errors"] = ["SHARED_TRUST_FAILURE"]
+    elif case == "request_gap":
+        entries[1]["codex_review"] = {
+            "completion": None,
+            "focus": "2",
+            "request_id": None,
+            "requested_at": None,
+        }
+        entries[1]["blocks"] = ["MISSING_FOCUSED_CODEX_REVIEW_REQUEST_2"]
+        entries[1]["result"] = "BLOCK"
+    elif case == "pending_gap":
+        entries[1]["codex_review"]["completion"] = None
+        entries[1]["blocks"] = ["FOCUSED_CODEX_REVIEW_PENDING_2"]
+        entries[1]["result"] = "BLOCK"
+    else:
+        entries[1]["blocks"] = ["QUALITY_GATE_FAILED:python.pytest.v1"]
+        entries[1]["result"] = "BLOCK"
 
     with pytest.raises(standard_results.StandardResultsError):
         standard_results.validate_payload(payload, IDENTITY)
@@ -275,27 +302,41 @@ def test_structured_review_collects_every_applicable_field_defect() -> None:
         b'schema_version = "1.0"\n\n[behavior]\nintended_behavior = ""\nproof = 1\n'
     )
 
-    assert set(blocks) == {
-        "INSUFFICIENT_REVIEW_EVIDENCE:behavior.intended_behavior",
-        "MALFORMED_REVIEW_EVIDENCE:behavior.proof",
-        "MISSING_REVIEW_EVIDENCE:architecture.dependency_direction",
-        "MISSING_REVIEW_EVIDENCE:architecture.reviewed_paths",
-        "MISSING_REVIEW_EVIDENCE:characterization.captured_behavior",
-        "MISSING_REVIEW_EVIDENCE:characterization.proof",
-        "MISSING_REVIEW_EVIDENCE:human_review.cohesion",
-        "MISSING_REVIEW_EVIDENCE:human_review.intended_behavior",
-        "MISSING_REVIEW_EVIDENCE:human_review.naming",
-        "MISSING_REVIEW_EVIDENCE:human_review.reviewability",
-        "MISSING_REVIEW_EVIDENCE:incremental_refactor.completed_step",
-        "MISSING_REVIEW_EVIDENCE:incremental_refactor.target",
-        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.does_not_own",
-        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.owns",
-        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.path",
-        "MISSING_REVIEW_EVIDENCE:review_handoff.remaining_risks",
-        "MISSING_REVIEW_EVIDENCE:review_handoff.summary",
-        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.after",
-        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.before",
+    expected = {
+        "INSUFFICIENT_REVIEW_EVIDENCE:behavior.intended_behavior": 5,
+        "MALFORMED_REVIEW_EVIDENCE:behavior.proof": 5,
+        "MISSING_REVIEW_EVIDENCE:architecture.dependency_direction": 3,
+        "MISSING_REVIEW_EVIDENCE:architecture.reviewed_paths": 3,
+        "MISSING_REVIEW_EVIDENCE:characterization.captured_behavior": 5,
+        "MISSING_REVIEW_EVIDENCE:characterization.proof": 5,
+        "MISSING_REVIEW_EVIDENCE:human_review.cohesion": 4,
+        "MISSING_REVIEW_EVIDENCE:human_review.intended_behavior": 5,
+        "MISSING_REVIEW_EVIDENCE:human_review.naming": 1,
+        "MISSING_REVIEW_EVIDENCE:human_review.reviewability": 1,
+        "MISSING_REVIEW_EVIDENCE:incremental_refactor.completed_step": 6,
+        "MISSING_REVIEW_EVIDENCE:incremental_refactor.target": 6,
+        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.does_not_own": 4,
+        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.owns": 4,
+        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.path": 4,
+        "MISSING_REVIEW_EVIDENCE:review_handoff.remaining_risks": 8,
+        "MISSING_REVIEW_EVIDENCE:review_handoff.summary": 8,
+        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.after": 2,
+        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.before": 2,
     }
+    assert set(blocks) == set(expected)
+    assert {block: review_evidence.block_standard(block) for block in blocks} == expected
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "MALFORMED_REVIEW_EVIDENCE:module_boundaries",
+        "MALFORMED_REVIEW_EVIDENCE:module_boundaries.path",
+        "MISSING_REVIEW_EVIDENCE:module_boundaries[0].basis",
+    ],
+)
+def test_module_boundary_review_defects_belong_to_standard_four(block: str) -> None:
+    assert review_evidence.block_standard(block) == 4
 
 
 def _producer_arguments(tmp_path: Path) -> tuple[list[str], Path]:

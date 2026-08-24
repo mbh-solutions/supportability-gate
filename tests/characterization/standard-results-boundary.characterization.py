@@ -23,6 +23,8 @@ def main() -> None:
     target = Path(os.environ["SUPPORTABILITY_CHARACTERIZATION_TARGET"])
     definition = Path(os.environ["SUPPORTABILITY_CHARACTERIZATION_DEFINITION"])
     modules = (
+        "focused_review.py",
+        "standard_block_ownership.py",
         "standard_results.py",
         "standard_results_enforcer.py",
         "standard_results_producer.py",
