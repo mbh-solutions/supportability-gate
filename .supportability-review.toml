@@ -29,7 +29,7 @@ target = "Close only Project #9 S07 after implementation, canary, consumer align
 completed_step = "Appended S07 terminal assurance and changed current authorized work from completed S05 to completed S07; no successor work or runtime change was added."
 
 [review_handoff]
-summary = "Changed files are the completion ledger and this machine-readable handoff only. Required hosted source checks cover both files through repository checkout, TOML parsing, required Gate evaluation, and diff validation; no production or high-risk file is changed or excluded, and no threshold, scope, waiver, dependency, function, C901 ceiling, or architecture boundary changes."
+summary = "Changed files are the completion ledger and this machine-readable handoff only. Required hosted checks parse and evaluate this TOML and apply checkout and diff validation to the ledger; the ledger's completion, canary, and ruleset claims require human verification against their cited live evidence. No production or high-risk file is changed or excluded, and no threshold, scope, waiver, dependency, function, C901 ceiling, or architecture boundary changes."
 remaining_risks = [
     "Codex judgment remains probabilistic and non-exhaustive even when three focused completions are required.",
     "Clean summaries and submitted reviews omit their triggering request ID, so focus attribution still relies on request-specific eyes acknowledgement, serial request windows, bounded final polling, and unique artifact identity.",
