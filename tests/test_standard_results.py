@@ -839,6 +839,29 @@ def test_producer_emits_exact_shared_failure_for_every_upstream_input(
     }
 
 
+def test_producer_emits_shared_failure_for_zero_quality_artifact_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arguments, output = _producer_arguments(tmp_path)
+    path = Path(arguments[arguments.index("--quality-provenance") + 1])
+    provenance = json.loads(path.read_bytes())
+    provenance["artifact_id"] = "0"
+    path.write_text(json.dumps(provenance), encoding="utf-8")
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+    monkeypatch.setattr(
+        standard_results_producer.codex_review,
+        "require_focused_completion",
+        lambda *args: _evidence(),
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert [entry["result"] for entry in payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
+    assert {tuple(entry["technical_errors"]) for entry in payload["entries"]} == {
+        ("MALFORMED_QUALITY_RESULT_BINDING",)
+    }
+
+
 def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() -> None:
     workflow = (
         Path(__file__).parents[1] / ".github/workflows/organization-required.yml"

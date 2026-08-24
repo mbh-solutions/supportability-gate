@@ -516,6 +516,35 @@ def test_clean_reaction_and_finding_review_completions_pass() -> None:
     assert len({(item.completion.kind, item.completion.artifact_id) for item in evidence}) == 8  # type: ignore[union-attr]
 
 
+@pytest.mark.parametrize("kind", ["reaction", "summary", "review"])
+@pytest.mark.parametrize("completed_at", [FOCUS_REQUEST_TIMES["1"], FOCUS_REQUEST_TIMES["2"]])
+def test_focused_completion_window_boundaries_block(kind: str, completed_at: str) -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    comments = list(requests)
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[1:]
+    }
+    reviews: list[dict[str, object]] = []
+    if kind == "reaction":
+        artifact = _focused_reaction("1")
+        artifact["created_at"] = completed_at
+        reactions[FOCUS_REQUEST_IDS["1"]] = [artifact]
+    elif kind == "summary":
+        artifact = _focused_summary("1", updated_at=completed_at)
+        artifact["created_at"] = completed_at
+        comments.append(artifact)
+    else:
+        artifact = _focused_review("1")
+        artifact["submitted_at"] = completed_at
+        reviews.append(artifact)
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="FOCUSED_CODEX_REVIEW_PENDING_1",
+    ):
+        _verify_focused(_focused_opener(comments, reactions=reactions, reviews=reviews))
+
+
 @pytest.mark.parametrize("kind", ["summary", "review"])
 def test_focused_indirect_completions_require_observer(kind: str) -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]

@@ -185,6 +185,7 @@ def _validate_quality(
     if (
         not isinstance(artifact_id, str)
         or not artifact_id.isdigit()
+        or int(artifact_id) <= 0
         or not isinstance(digest, str)
         or SHA64.fullmatch(digest) is None
         or not isinstance(capture, str)
