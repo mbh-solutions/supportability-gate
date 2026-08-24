@@ -1368,9 +1368,10 @@ Do not create a new terminal label not authorized by an active milestone directi
   `519bdee34a78f50b54bedf8a597f255b727ac173`, without bypass. Source Validation run
   `32688222080` and required run `32688222103` passed; observer job `97317071643` and aggregate
   Gate job `97318368585` succeeded on that exact head.
-- Focused completion: the existing read-only observer now requires fixed owner-authenticated requests
-  in serial focus order `2 -> 4 -> 8`, binds each request to one exact head and workflow run, and
-  requires one distinct trusted connector artifact per focus. Source request/artifact pairs were
+- Focused completion: the existing read-only observer now requires fixed owner-authenticated request
+  acknowledgements in serial focus order `2 -> 4 -> 8`, bound to one exact head and workflow run,
+  and logs each request ID. The aggregate Gate separately binds one distinct trusted connector
+  completion artifact to each focus. Source request/artifact pairs were
   `5390539454`/`5390554090`, `5390558941`/`5390573837`, and
   `5390577996`/`5390594303`; all three completed cleanly on the implementation head.
 - Deterministic aggregation: policy and candidate-contract failures no longer suppress independently
