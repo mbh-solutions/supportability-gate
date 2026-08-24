@@ -175,6 +175,38 @@ def test_eight_simultaneous_poisons_emit_eight_blocks() -> None:
     assert all(len(entry["blocks"]) == 1 for entry in payload["entries"])
 
 
+@pytest.mark.parametrize(
+    ("decision", "metric"),
+    [("PASS_PROGRESSIVE", "head"), ("DELETED", "base")],
+)
+def test_valid_non_blocking_function_decisions_pass(decision: str, metric: str) -> None:
+    inputs = _inputs()
+    inputs[0]["functions"] = [{"decision": decision, metric: {"qualified_name": "sample.changed"}}]
+
+    payload = _compose(inputs)
+
+    assert [entry["result"] for entry in payload["entries"]] == ["PASS"] * 8
+
+
+@pytest.mark.parametrize(
+    ("changed_files", "refactor_applicable", "expected"),
+    [
+        ([], False, [False] * 8),
+        ([{"path": "src/sample.py"}], True, [True] * 8),
+    ],
+)
+def test_applicability_tracks_changed_files_and_refactor_policy(
+    changed_files: list[dict[str, str]], refactor_applicable: bool, expected: list[bool]
+) -> None:
+    inputs = _inputs()
+    inputs[0]["changed_files"] = changed_files
+    inputs[2]["applicable"] = refactor_applicable
+
+    payload = _compose(inputs)
+
+    assert [entry["applicable"] for entry in payload["entries"]] == expected
+
+
 def test_unknown_or_multiply_owned_blocks_make_all_results_technical() -> None:
     unknown = _inputs()
     unknown[0]["policy_blocks"] = ["UNKNOWN_POLICY_BLOCK"]

@@ -302,9 +302,10 @@ def _nested_blocks(value: object, code: str, standard: int) -> set[str]:
 def _function_blocks(functions: list[dict[str, Any]]) -> list[str]:
     blocks: list[str] = []
     for item in functions:
-        if item.get("decision") not in {"PASS", "BLOCK"}:
+        decision = item.get("decision")
+        if decision not in {"PASS", "PASS_PROGRESSIVE", "DELETED", "BLOCK"}:
             raise StandardResultsError("MALFORMED_COMPLEXITY_RESULT")
-        if item.get("decision") == "PASS":
+        if decision != "BLOCK":
             continue
         metric = item.get("head") or item.get("base")
         name = metric.get("qualified_name") if isinstance(metric, dict) else None

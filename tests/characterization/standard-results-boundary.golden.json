@@ -1,4 +1,14 @@
 {
+  "applicable": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+  ],
   "contexts": [
     "Supportability 1 - Cyclomatic Complexity",
     "Supportability 2 - Separation of Concerns",

@@ -165,6 +165,7 @@ def main() -> None:
         payload = json.loads(output.read_bytes())
 
     behavior = {
+        "applicable": [entry["applicable"] for entry in payload["entries"]],
         "contexts": [entry["check_context"] for entry in payload["entries"]],
         "enforcer_exit": enforced,
         "producer_exit": produced,
