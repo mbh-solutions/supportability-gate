@@ -1,0 +1,25 @@
+{
+  "contexts": [
+    "Supportability 1 - Cyclomatic Complexity",
+    "Supportability 2 - Separation of Concerns",
+    "Supportability 3 - Dependency Direction",
+    "Supportability 4 - Domain Modularity",
+    "Supportability 5 - Characterization",
+    "Supportability 6 - Incremental Refactor",
+    "Supportability 7 - Quality Gates",
+    "Supportability 8 - Review Handoff"
+  ],
+  "enforcer_exit": 0,
+  "producer_exit": 0,
+  "results": [
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS"
+  ],
+  "schema_version": "standard-results.v1"
+}

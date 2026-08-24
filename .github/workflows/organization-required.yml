@@ -18,7 +18,7 @@ jobs:
       issues: read
       pull-requests: read
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 70
     steps:
       - name: Check out exact gate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -448,7 +448,7 @@ jobs:
           PULL_NUMBER: ${{ github.event.pull_request.number }}
           PYTHONPATH: ${{ github.workspace }}/gate/src
         run: |
-          python -P -m supportability_gate.standard_results compose \
+          python -P -m supportability_gate.standard_results_producer \
             --repository "$GITHUB_REPOSITORY" \
             --repository-id "$GITHUB_REPOSITORY_ID" \
             --base-sha "$BASE_SHA" \
@@ -536,7 +536,7 @@ jobs:
             echo "MISSING_STANDARD_RESULTS_ARTIFACT"
             exit 2
           fi
-          python -P -m supportability_gate.standard_results enforce \
+          python -P -m supportability_gate.standard_results_enforcer \
             --repository "$GITHUB_REPOSITORY" \
             --repository-id "$GITHUB_REPOSITORY_ID" \
             --base-sha "$BASE_SHA" \

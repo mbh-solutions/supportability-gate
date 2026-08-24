@@ -6,30 +6,32 @@ proof = "tests/test_standard_results.py; tests/test_codex_review.py; .github/wor
 
 [characterization]
 captured_behavior = "Existing CLI, refactor, connector, quality, architecture, and modularity behavior remains covered; the new composer reuses their evidence without rerunning target analysis."
-proof = ".supportability-characterization.json; tests/characterization; tests/test_standard_results.py"
+proof = ".supportability-characterization.json; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json; tests/test_standard_results.py"
 
 [separation_of_concerns]
 before = "The aggregate workflow coupled Codex completion to the Standard 6 refactor result and collapsed all policy outcomes into one check."
-after = "The refactor policy emits only Standard 6 evidence; one composer binds shared evidence once and eight matrix jobs enforce one fixed entry each."
+after = "The refactor policy emits only Standard 6 evidence; the producer invokes one pure composer, and eight matrix jobs use the artifact enforcer for one fixed entry each."
 
 [architecture]
-dependency_direction = "The workflow produces existing evidence before standard_results reads it; matrix consumers validate the producer artifact and never call target analyzers."
+dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes standard_results; matrix consumers depend only on standard_results_enforcer and the producer artifact, never target analyzers."
 reviewed_paths = [
     ".github/workflows/organization-required.yml",
     "src/supportability_gate/codex_review.py",
     "src/supportability_gate/refactor_policy.py",
     "src/supportability_gate/review_evidence.py",
     "src/supportability_gate/standard_results.py",
+    "src/supportability_gate/standard_results_enforcer.py",
+    "src/supportability_gate/standard_results_producer.py",
 ]
 
 [responsibility_boundary]
 path = "src/supportability_gate/standard_results.py"
-owns = "Exact eight-entry composition, block ownership, shared trust failure propagation, evidence binding, and single-entry enforcement."
+owns = "Pure exact eight-entry composition, block ownership, shared trust failure propagation, and evidence binding."
 does_not_own = "Target analysis, policy thresholds, connector judgment, owner authorization, ruleset mutation, or product code."
 
 [incremental_refactor]
 target = "One S08 workflow transition from the aggregate result to eight fixed Standard results."
-completed_step = "Added the composer, decoupled connector completion from refactor evidence, expanded serial focus binding, and wired the fixed matrix without changing target commands or dependencies."
+completed_step = "Added the producer, composer, and artifact enforcer; decoupled connector completion from refactor evidence; expanded serial focus binding; and wired the fixed matrix without changing target commands or third-party dependencies. Internal dependency direction is producer to enforcer and composer, and enforcer to composer."
 
 [review_handoff]
 summary = "S08 changes only Gate policy, evidence composition, workflow wiring, request instructions, import and characterization contracts, and directly required tests. The immutable Standard, frozen roadmap, target commands, thresholds, exclusions, waivers, and consumer product code are unchanged."
@@ -40,7 +42,7 @@ remaining_risks = [
 
 [human_review]
 naming = "Each check, focus, evidence field, and module names one Standard or one shared trust boundary."
-cohesion = "standard_results owns composition and enforcement; existing analyzers retain their prior responsibilities."
+cohesion = "standard_results owns pure composition, standard_results_producer owns polling and emission, standard_results_enforcer owns artifact validation and one-lane enforcement, and existing analyzers retain their prior responsibilities."
 intended_behavior = "One ordinary policy defect blocks only its owned lane; shared trust corruption makes all eight lanes technical failures."
 reviewability = "Focused fixtures prove each lane, all lanes together, every declared family owner, malformed bindings, and exact workflow text."
 
@@ -48,4 +50,16 @@ reviewability = "Focused fixtures prove each lane, all lanes together, every dec
 path = "src/supportability_gate/standard_results.py"
 owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
-justification = "The new module owns only transformation and enforcement of already-produced result artifacts; reporting remains the pre-existing owner of authoritative evaluation serialization."
+justification = "The new module owns only transformation of already-produced evidence into eight results; reporting remains the pre-existing owner of authoritative evaluation serialization."
+
+[[module_boundaries]]
+path = "src/supportability_gate/standard_results_producer.py"
+owner_path = "src/supportability_gate/reporting.py"
+basis = "responsibility"
+justification = "The producer owns only exact-run connector collection and artifact emission; reporting remains the pre-existing workflow evaluation owner."
+
+[[module_boundaries]]
+path = "src/supportability_gate/standard_results_enforcer.py"
+owner_path = "src/supportability_gate/reporting.py"
+basis = "responsibility"
+justification = "The enforcer owns only artifact validation and one-entry exit behavior; reporting remains the pre-existing workflow evaluation owner."

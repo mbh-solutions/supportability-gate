@@ -27,7 +27,7 @@ REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
 MAX_PAGES = 10
 POLL_ATTEMPTS = 30
 POLL_SECONDS = 15
-FOCUSED_POLL_ATTEMPTS = 120
+FOCUSED_POLL_ATTEMPTS = 240
 FOCUSED_REVIEWS = (
     (
         "1",

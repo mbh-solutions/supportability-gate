@@ -10,7 +10,13 @@ from typing import Any
 
 import pytest
 
-from supportability_gate import clause_inventory, codex_review, review_evidence, standard_results
+from supportability_gate import (
+    clause_inventory,
+    codex_review,
+    review_evidence,
+    standard_results,
+    standard_results_enforcer,
+)
 
 IDENTITY = standard_results.RunIdentity(
     "example/repository",
@@ -245,12 +251,11 @@ def test_malformed_entries_and_incorrect_bindings_fail_closed(case: str) -> None
         entries[0]["technical_errors"] = ["SHARED_TRUST_FAILURE"]
 
     with pytest.raises(standard_results.StandardResultsError):
-        standard_results.validate_payload(payload, IDENTITY)
+        standard_results_enforcer.validate_payload(payload, IDENTITY)
 
 
 def test_enforcer_returns_pass_block_or_technical(tmp_path: Path) -> None:
     common = [
-        "enforce",
         "--repository",
         IDENTITY.repository,
         "--repository-id",
@@ -272,13 +277,13 @@ def test_enforcer_returns_pass_block_or_technical(tmp_path: Path) -> None:
     ]
     path = tmp_path / "standard-results.json"
     path.write_text(json.dumps(_compose(_inputs())), encoding="utf-8")
-    assert standard_results.main(common) == 0
+    assert standard_results_enforcer.main(common) == 0
     blocked = _inputs()
     _poison(1, blocked)
     path.write_text(json.dumps(_compose(blocked)), encoding="utf-8")
-    assert standard_results.main(common) == 1
+    assert standard_results_enforcer.main(common) == 1
     path.write_text("{}", encoding="utf-8")
-    assert standard_results.main(common) == 2
+    assert standard_results_enforcer.main(common) == 2
 
 
 def test_structured_review_collects_every_applicable_field_defect() -> None:
@@ -293,7 +298,7 @@ def test_structured_review_collects_every_applicable_field_defect() -> None:
     assert "MISSING_REVIEW_EVIDENCE:review_handoff.remaining_risks" in blocks
 
 
-def test_workflow_emits_exactly_eight_matrix_contexts_without_aggregate() -> None:
+def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() -> None:
     workflow = (
         Path(__file__).parents[1] / ".github/workflows/organization-required.yml"
     ).read_text(encoding="utf-8")
@@ -302,4 +307,15 @@ def test_workflow_emits_exactly_eight_matrix_contexts_without_aggregate() -> Non
     assert re.search(r"(?m)^  standard-results:\n(?:.|\n)*?^    if: always\(\)$", workflow)
     assert not re.search(r"(?m)^\s+name: Supportability Gate\s*$", workflow)
     assert not re.search(r"(?m)^  supportability-gate:\s*$", workflow)
-    assert [workflow.count(context) for context in standard_results.CHECK_CONTEXTS] == [1] * 8
+    job = workflow.split("\n  standard-results:\n", 1)[1]
+    rows = re.findall(r"(?m)^          - standard: ([1-8])\n            context: (.+)$", job)
+    assert rows == [
+        (str(standard), context)
+        for standard, context in enumerate(standard_results.CHECK_CONTEXTS, start=1)
+    ]
+    assert "needs: supportability-evidence" in job
+    assert "artifact-ids: ${{ needs.supportability-evidence.outputs.artifact-id }}" in job
+    assert "STANDARD: ${{ matrix.standard }}" in job
+    assert "python -P -m supportability_gate.standard_results_enforcer \\" in job
+    assert '--input "$RUNNER_TEMP/evidence/standard-results.json" \\' in job
+    assert '--standard "$STANDARD"' in job
