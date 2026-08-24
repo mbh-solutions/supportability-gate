@@ -115,6 +115,30 @@ REVIEW_FIELD_OWNERS = {
 }
 
 
+def rows(values: tuple[tuple[int, tuple[str, ...]], ...]) -> list[dict[str, object]]:
+    """Serialize the shared eight-Standard block shape."""
+    return [{"blocks": list(blocks), "standard": standard} for standard, blocks in values]
+
+
+def parse_rows(value: object) -> dict[int, list[str]] | None:
+    """Parse the shared eight-Standard block shape."""
+    if not isinstance(value, list) or len(value) != 8:
+        return None
+    parsed: dict[int, list[str]] = {}
+    for standard, row in enumerate(value, start=1):
+        if (
+            not isinstance(row, dict)
+            or set(row) != {"blocks", "standard"}
+            or row.get("standard") != standard
+            or not isinstance(row.get("blocks"), list)
+            or any(not isinstance(block, str) for block in row["blocks"])
+            or len(row["blocks"]) != len(set(row["blocks"]))
+        ):
+            return None
+        parsed[standard] = row["blocks"]
+    return parsed
+
+
 def review_block_standard(block: str) -> int | None:
     """Return the Standard for one producer-generated review block."""
     prefixes = (

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.error
 import urllib.parse
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -569,48 +571,15 @@ def test_focused_indirect_completions_require_observer(kind: str) -> None:
 
 
 def test_eight_focus_commands_and_order_are_exact() -> None:
-    assert codex_review.FOCUSED_REVIEWS == (
-        (
-            "1",
-            "@codex review for maze-like control flow, misleading extraction, or helpers that "
-            "lower measured complexity without improving readability, testability, or naming in "
-            "changed code only",
-        ),
-        (
-            "2",
-            "@codex review for mixed responsibilities or unclear single ownership in changed "
-            "code only",
-        ),
-        (
-            "3",
-            "@codex review for unclear, inverted, cyclic, or unjustified dependency direction "
-            "across changed boundaries only",
-        ),
-        (
-            "4",
-            "@codex review for weak domain ownership, low cohesion, avoidable coupling, or "
-            "unjustified module boundaries only",
-        ),
-        (
-            "5",
-            "@codex review for missing, weak, misleading, or nondeterministic characterization "
-            "of behavior at risk from this change only",
-        ),
-        (
-            "6",
-            "@codex review for oversized, non-runnable, big-bang, or insufficiently bounded "
-            "refactor steps in this change only",
-        ),
-        (
-            "7",
-            "@codex review for validation evidence that omits changed or high-risk behavior, "
-            "weakens scope or thresholds, hides failures, or overstates what ran only",
-        ),
-        (
-            "8",
-            "@codex review for unsupported, contradictory, stale, incomplete, or misleading "
-            "handoff claims about change, boundaries, validation, risk, or gate coverage only",
-        ),
+    contract = (Path(__file__).parents[1] / "AGENTS.md").read_text(encoding="utf-8")
+    assert (
+        tuple(
+            re.findall(
+                r"(?m)^  - `([1-8])`: `(@codex review[^`\r\n]+)`$",
+                contract,
+            )
+        )
+        == codex_review.FOCUSED_REVIEWS
     )
 
 

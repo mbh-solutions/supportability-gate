@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from supportability_gate import standard_block_ownership
 from supportability_gate.architecture_policy import ArchitectureResult
 from supportability_gate.complexity_metrics import RuffCommandRecord, RuffDiagnostic
 from supportability_gate.complexity_policy import FunctionDecision
@@ -193,10 +194,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "functions": functions,
         "overall_result": result.overall_result,
         "policy_blocks": list(result.policy_blocks),
-        "standard_blocks": [
-            {"blocks": list(blocks), "standard": standard}
-            for standard, blocks in result.standard_blocks
-        ],
+        "standard_blocks": standard_block_ownership.rows(result.standard_blocks),
         "production_paths": list(result.production_paths),
         "quality_profile": decision_payload(result.quality_profile)
         if result.quality_profile

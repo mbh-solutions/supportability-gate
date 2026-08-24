@@ -196,15 +196,10 @@ def _validate_quality(
 
 
 def _standard_blocks(value: object, policy_blocks: list[str]) -> dict[int, list[str]]:
-    if not isinstance(value, list) or len(value) != 8:
+    blocks = standard_block_ownership.parse_rows(value)
+    if blocks is None:
         raise StandardResultsError("MALFORMED_STANDARD_BLOCK_BINDING")
-    blocks: dict[int, list[str]] = {}
-    for standard, row in enumerate(value, start=1):
-        if not isinstance(row, dict) or set(row) != {"blocks", "standard"}:
-            raise StandardResultsError("MALFORMED_STANDARD_BLOCK_BINDING")
-        if row.get("standard") != standard:
-            raise StandardResultsError("MALFORMED_STANDARD_BLOCK_BINDING")
-        blocks[standard] = _string_list(row.get("blocks"), "MALFORMED_STANDARD_BLOCK_BINDING")
+    for standard in range(1, 9):
         for block in blocks[standard]:
             _require_owner(block, standard)
     flattened = [block for standard in range(1, 9) for block in blocks[standard]]
@@ -622,8 +617,8 @@ def _validate_entry(value: object, standard: int) -> ValidatedCodexBinding:
     return _validate_codex(value.get("codex_review"), str(standard), str(result), blocks)
 
 
-def _validate_quality_artifact(value: object, technical: bool) -> None:
-    if value is None and technical:
+def _validate_quality_artifact(value: object, allow_missing: bool) -> None:
+    if value is None and allow_missing:
         return
     if (
         not isinstance(value, dict)
@@ -708,5 +703,7 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> dict
     technical = all(technical_rows)
     if technical and len({tuple(entry["technical_errors"]) for entry in entries}) != 1:
         raise StandardResultsError("INCONSISTENT_SHARED_TECHNICAL_FAILURE")
-    _validate_quality_artifact(value.get("quality_artifact"), technical)
+    technical_errors = entries[0]["technical_errors"] if technical else []
+    codex_only = technical and all("CODEX_REVIEW" in code for code in technical_errors)
+    _validate_quality_artifact(value.get("quality_artifact"), technical and not codex_only)
     return value

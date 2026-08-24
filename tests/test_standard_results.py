@@ -278,6 +278,17 @@ def test_shared_binding_or_codex_trust_corruption_makes_all_results_technical() 
 
     assert [entry["result"] for entry in binding_payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
     assert [entry["result"] for entry in codex_payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
+    assert codex_payload["quality_artifact"] == {
+        "capture_sha256": "c" * 64,
+        "digest": "d" * 64,
+        "id": 789,
+    }
+    codex_payload["quality_artifact"] = None
+    with pytest.raises(
+        standard_results.StandardResultsError,
+        match="MALFORMED_STANDARD_RESULTS_ARTIFACT",
+    ):
+        standard_results.validate_payload(codex_payload)
 
 
 def test_non_prefix_completion_snapshot_becomes_shared_technical() -> None:
@@ -880,6 +891,10 @@ def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() ->
     assert codex_review.FOCUSED_POLL_ATTEMPTS == 240
     assert observer_job.count("timeout-minutes: 70") == 1
     assert evidence_job.count("timeout-minutes: 30") == 1
+    assert (
+        "needs: [observe-codex-review, characterize-base, characterize-head, quality-profile]"
+        in evidence_job
+    )
     assert evidence_job.count("repository: mbh-solutions/supportability-gate") == 1
     assert evidence_job.count("ref: ${{ github.workflow_sha }}") == 1
     assert evidence_job.count("path: gate") == 1
