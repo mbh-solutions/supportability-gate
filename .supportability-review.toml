@@ -1,79 +1,48 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The required Supportability Gate preserves independently computable deterministic results: policy violations and candidate-contract changes do not suppress complexity results, and connector failures do not suppress the refactor-policy result; it remains non-green until the trusted Codex connector completes distinct serial reviews for Standard focuses 2, 4, and 8 on the exact pull-request head and workflow run."
-proof = "tests/test_codex_review.py; tests/test_evaluate_complexity.py::test_policy_and_complexity_blocks_are_reported_together; tests/test_evaluate_complexity.py::test_candidate_contract_change_and_complexity_block_are_reported_together; tests/test_refactor_policy.py::test_connector_failure_does_not_suppress_refactor_result"
+intended_behavior = "Record the already-proven Project #9 S07 implementation, canary, consumer-alignment, and ruleset evidence without changing production runtime behavior."
+proof = "docs/product_completion_contract.md::Project #9 S07 focused Codex review assurance; source runs 32688222080 and 32688222103; DC canary run 32689057072"
 
 [characterization]
-captured_behavior = "The retained single-review boundary remains stable while focused tests cover missing, stale, unfocused, mutable, duplicate, out-of-order, ambiguous, reused, and unavailable evidence; three distinct observer-bound completions pass."
-proof = "tests/test_codex_review.py"
+captured_behavior = "No production source, characterization definition, golden, workflow, dependency, threshold, or gate scope changes in this terminal ledger transaction."
+proof = "git diff against 519bdee34a78f50b54bedf8a597f255b727ac173; required protected exact-head Source Validation and Gate"
 
 [separation_of_concerns]
-before = "The refactor policy could finish before advisory Codex review completed."
-after = "codex_review owns serial lens-bound connector evidence while refactor_policy writes deterministic authorization evidence before invoking that boundary."
+before = "S07 terminal evidence was distributed across the implementation PR, canary, consumer PRs, workflow runs, and ruleset readbacks."
+after = "The completion ledger owns the durable consolidated assurance while issue and Project fields own live closure state."
 
 [architecture]
-dependency_direction = "refactor_policy depends on the focused codex_review policy; codex_review uses only the Python standard library and imports no Gate policy."
+dependency_direction = "Documentation records runtime evidence and does not become a dependency of production Gate modules; no production dependency direction changes."
 reviewed_paths = [
-    "src/supportability_gate/codex_review.py",
-    "src/supportability_gate/refactor_policy.py",
-    "src/supportability_gate/cli.py",
+    ".supportability-review.toml",
+    "docs/product_completion_contract.md",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/codex_review.py"
-owns = "Bounded GitHub evidence reads and three trusted, serial, exact-head focused Codex review completions."
-does_not_own = "Codex review judgment, deterministic Supportability evaluation, inline-thread resolution, or target execution."
+path = "docs/product_completion_contract.md"
+owns = "Durable product status, exact S07 assurance evidence, remaining work, and successor authorization state."
+does_not_own = "Gate execution, connector judgment, ruleset mutation, target product behavior, or immutable Standard requirements."
 
 [incremental_refactor]
-target = "Increase first-pass qualitative review coverage without restoring a custom semantic-review runtime."
-completed_step = "Added enforcement for three fixed owner-posted focused review requests to the existing read-only observer and one aggregate Gate, with no new service, check, package, or dependency."
+target = "Close only Project #9 S07 after implementation, canary, consumer alignment, and enforcement readback are directly proven."
+completed_step = "Appended S07 terminal assurance and changed current authorized work from completed S05 to completed S07; no successor work or runtime change was added."
 
 [review_handoff]
-summary = "The Gate preserves independently computable deterministic results: policy violations and candidate-contract changes do not suppress complexity results, and connector failures do not suppress the refactor-policy result; it waits for distinct exact-head and exact-run Codex reviews focused on Standard items 2, 4, and 8, while native thread resolution still blocks unresolved inline findings."
+summary = "Changed files are the completion ledger and this machine-readable handoff only. Required hosted source checks cover both files through repository checkout, TOML parsing, required Gate evaluation, and diff validation; no production or high-risk file is changed or excluded, and no threshold, scope, waiver, dependency, function, C901 ceiling, or architecture boundary changes."
 remaining_risks = [
-    "Codex review remains nondeterministic and is not exhaustive assurance.",
-    "Clean summaries and submitted reviews do not expose their triggering request ID, so their focus attribution relies on an observed request-specific eyes handshake, serial request windows, bounded final polling, and unique artifact identity.",
+    "Codex judgment remains probabilistic and non-exhaustive even when three focused completions are required.",
+    "Clean summaries and submitted reviews omit their triggering request ID, so focus attribution still relies on request-specific eyes acknowledgement, serial request windows, bounded final polling, and unique artifact identity.",
 ]
 
 [human_review]
-naming = "codex_review names its single external evidence responsibility and the fixed Standard focus identifiers."
-cohesion = "Request parsing, authenticated pagination, connector identity, serial artifact binding, and bounded polling form one policy boundary."
-intended_behavior = "The Gate waits for three distinct focused connector completions and fails closed on missing, stale, spoofed, malformed, ambiguous, reused, or unavailable evidence."
-reviewability = "Focused protocol tests cover request order, observer binding, artifact uniqueness, and trust failures without target execution or a new runtime surface."
+naming = "The S07 assurance heading and status fields name the exact completed pilot and avoid retired Semantic Review terminology."
+cohesion = "One ledger section consolidates source, canary, consumer, and ruleset proof for one terminal milestone."
+intended_behavior = "The ledger becomes canonical only after protected merge; Project and issue closure follow that merge and no successor starts."
+reviewability = "Exact PR, commit, run, job, request, artifact, ruleset, App, hash, and test identities support direct readback without relying on narrative alone."
 
 [[module_boundaries]]
-path = "src/supportability_gate/codex_review.py"
-owner_path = "src/supportability_gate/codex_review.py"
+path = "docs/product_completion_contract.md"
+owner_path = "docs/product_completion_contract.md"
 basis = "responsibility"
-justification = "Owns serial focused exact-head Codex request and completion evidence from fixed authenticated GitHub endpoints; it does not own refactor policy or review-thread resolution."
-
-[[module_boundaries]]
-path = "src/supportability_gate/quality_profile.py"
-owner_path = "src/supportability_gate/quality_profile.py"
-basis = "responsibility"
-justification = "Owns the immutable approved command contract and verification of API-read artifact metadata and exact attestation values, but not plan materialization, generated tool configuration, or target execution."
-
-[[module_boundaries]]
-path = "src/supportability_gate/quality_runner.py"
-owner_path = "src/supportability_gate/quality_runner.py"
-basis = "responsibility"
-justification = "Owns materialization of concrete Python and TypeScript command plans from the quality-profile contract and independently defines their immutable tool configuration while the disposable GitHub-hosted job alone executes target code."
-
-[[module_boundaries]]
-path = "src/supportability_gate/refactor_policy.py"
-owner_path = "src/supportability_gate/refactor_policy.py"
-basis = "responsibility"
-justification = "Owns deterministic Milestone 8 authorization, boundedness, focus, runnability, and sequence verification without executing target code."
-
-[[module_boundaries]]
-path = "src/supportability_gate/characterization.py"
-owner_path = "src/supportability_gate/characterization.py"
-basis = "responsibility"
-justification = "Owns deterministic static verification of authenticated Milestone 7 capture artifacts without executing target code."
-
-[[module_boundaries]]
-path = "src/supportability_gate/modularity_policy.py"
-owner_path = "src/supportability_gate/modularity_policy.py"
-basis = "responsibility"
-justification = "Owns deterministic new-location justification, vague-location, coupling-edge, and complete-coverage evidence required by Enforcement Milestone 6."
+justification = "This completion ledger owns durable milestone completion evidence and product authorization state; it does not implement or configure runtime enforcement."
