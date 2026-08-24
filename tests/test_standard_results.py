@@ -573,6 +573,16 @@ def test_producer_preserves_partial_snapshot_when_completion_is_pending(
 ) -> None:
     arguments, output = _producer_arguments(tmp_path)
     monkeypatch.setenv("GITHUB_TOKEN", "token")
+    complete = _evidence()
+    snapshot = (
+        complete[0],
+        codex_review.FocusedReviewEvidence(
+            complete[1].focus,
+            complete[1].request_id,
+            complete[1].requested_at,
+            None,
+        ),
+    )
 
     def pending(*args: object) -> tuple[codex_review.FocusedReviewEvidence, ...]:
         raise codex_review.CodexReviewError("FOCUSED_CODEX_REVIEW_PENDING_2")
@@ -583,7 +593,7 @@ def test_producer_preserves_partial_snapshot_when_completion_is_pending(
     monkeypatch.setattr(
         standard_results_producer.codex_review,
         "focused_completion_snapshot",
-        lambda *args: ("FOCUSED_CODEX_REVIEW_PENDING_2", _evidence()[:1]),
+        lambda *args: ("FOCUSED_CODEX_REVIEW_PENDING_2", snapshot),
     )
 
     assert standard_results_producer.main(arguments) == 0
@@ -591,6 +601,20 @@ def test_producer_preserves_partial_snapshot_when_completion_is_pending(
     assert [entry["result"] for entry in payload["entries"]] == ["PASS", *("BLOCK",) * 7]
     assert [entry["blocks"] for entry in payload["entries"]][1:] == [
         [f"FOCUSED_CODEX_REVIEW_PENDING_{standard}"] for standard in range(2, 9)
+    ]
+    assert [entry["codex_review"]["request_id"] for entry in payload["entries"]] == [
+        21,
+        22,
+        *([None] * 6),
+    ]
+    assert [entry["codex_review"]["requested_at"] for entry in payload["entries"]] == [
+        complete[0].requested_at.isoformat(),
+        complete[1].requested_at.isoformat(),
+        *([None] * 6),
+    ]
+    assert [entry["codex_review"]["completion"] is not None for entry in payload["entries"]] == [
+        True,
+        *([False] * 7),
     ]
 
 
@@ -702,9 +726,20 @@ def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() ->
     assert re.search(r"(?m)^  standard-results:\n(?:.|\n)*?^    if: always\(\)$", workflow)
     assert not re.search(r"(?m)^\s+name: Supportability Gate\s*$", workflow)
     assert not re.search(r"(?m)^  supportability-gate:\s*$", workflow)
+    observer_job = workflow.split("\n  observe-codex-review:\n", 1)[1].split(
+        "\n  characterize-base:\n", 1
+    )[0]
     evidence_job, job = workflow.split("\n  supportability-evidence:\n", 1)[1].split(
         "\n  standard-results:\n", 1
     )
+    assert codex_review.FOCUSED_POLL_ATTEMPTS == 240
+    assert observer_job.count("timeout-minutes: 70") == 1
+    assert evidence_job.count("timeout-minutes: 30") == 1
+    assert evidence_job.count("repository: mbh-solutions/supportability-gate") == 1
+    assert evidence_job.count("ref: ${{ github.workflow_sha }}") == 1
+    assert evidence_job.count("path: gate") == 1
+    assert evidence_job.count("PYTHONPATH: ${{ github.workspace }}/gate/src") == 1
+    assert "target/src" not in evidence_job
     assert "artifact-id: ${{ steps.upload_evidence.outputs.artifact-id }}" in evidence_job
     assert "python -P -m supportability_gate.standard_results_producer \\" in evidence_job
     assert '--output "$RUNNER_TEMP/evidence/standard-results.json"' in evidence_job
