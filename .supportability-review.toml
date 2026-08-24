@@ -50,7 +50,7 @@ remaining_risks = [
 naming = "Each check, focus, evidence field, and module names one Standard or one shared trust boundary."
 cohesion = "focused_review owns neutral focus evidence types; standard_block_ownership owns lane vocabulary; standard_results owns artifact composition and validation; the producer owns upstream ingestion, error normalization, collection orchestration, and emission; and the enforcer owns one-lane exit behavior."
 intended_behavior = "One ordinary policy defect blocks only its owned lane; shared trust corruption makes all eight lanes technical failures."
-reviewability = "Focused fixtures prove each lane, all lanes together, every declared family owner, malformed bindings, and exact workflow text."
+reviewability = "Focused fixtures prove each lane, all lanes together, every declared family owner, malformed bindings, and required workflow wiring."
 
 [[module_boundaries]]
 path = "src/supportability_gate/standard_results.py"

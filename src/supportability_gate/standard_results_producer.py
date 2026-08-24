@@ -68,7 +68,7 @@ def _compose(arguments: argparse.Namespace) -> dict[str, object]:
         except codex_review.CodexReviewError as error:
             codex_error = error.code
             try:
-                _, evidence = codex_review.focused_completion_snapshot(
+                codex_error, evidence = codex_review.focused_completion_snapshot(
                     identity.repository,
                     arguments.pull_number,
                     identity.head_sha,

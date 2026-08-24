@@ -1165,6 +1165,28 @@ def test_review_list_defects_emit_exact_owned_lane(
     ]
 
 
+def test_unexpected_behavior_field_emits_standard_five_result(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    evidence = REVIEW_EVIDENCE.replace(
+        'proof = "tests/test_behavior.py::test_changed_behavior"',
+        'proof = "tests/test_behavior.py::test_changed_behavior"\nextra = "invalid"',
+        1,
+    )
+    _write(repository / ".supportability-review.toml", evidence)
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    block = "MALFORMED_REVIEW_EVIDENCE:behavior.extra"
+    assert exit_code == 1
+    assert result["policy_blocks"] == [block]
+    assert result["standard_blocks"] == [
+        {"blocks": [block] if standard == 5 else [], "standard": standard}
+        for standard in range(1, 9)
+    ]
+
+
 @pytest.mark.parametrize(
     ("definition", "top_level", "block"),
     [

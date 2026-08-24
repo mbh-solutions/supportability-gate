@@ -583,7 +583,7 @@ def test_producer_preserves_partial_snapshot_when_completion_is_pending(
     monkeypatch.setattr(
         standard_results_producer.codex_review,
         "focused_completion_snapshot",
-        lambda *args: ((), _evidence()[:1]),
+        lambda *args: ("FOCUSED_CODEX_REVIEW_PENDING_2", _evidence()[:1]),
     )
 
     assert standard_results_producer.main(arguments) == 0
@@ -616,6 +616,29 @@ def test_producer_preserves_completed_prefix_when_next_request_is_missing(
     payload = json.loads(output.read_bytes())
     assert [entry["result"] for entry in payload["entries"]] == [*("PASS",) * 7, "BLOCK"]
     assert payload["entries"][7]["blocks"] == ["MISSING_FOCUSED_CODEX_REVIEW_REQUEST_8"]
+
+
+def test_producer_uses_refreshed_complete_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arguments, output = _producer_arguments(tmp_path)
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+
+    def pending(*args: object) -> tuple[codex_review.FocusedReviewEvidence, ...]:
+        raise codex_review.CodexReviewError("FOCUSED_CODEX_REVIEW_PENDING_8")
+
+    monkeypatch.setattr(
+        standard_results_producer.codex_review, "require_focused_completion", pending
+    )
+    monkeypatch.setattr(
+        standard_results_producer.codex_review,
+        "focused_completion_snapshot",
+        lambda *args: (None, _evidence()),
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert [entry["result"] for entry in payload["entries"]] == ["PASS"] * 8
 
 
 def test_producer_makes_snapshot_failure_shared_and_technical(

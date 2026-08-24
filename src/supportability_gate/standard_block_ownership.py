@@ -130,7 +130,13 @@ def review_block_standard(block: str) -> int | None:
         return 4
     if location == "module_boundaries":
         return 4
-    return REVIEW_FIELD_OWNERS.get(location)
+    if owner := REVIEW_FIELD_OWNERS.get(location):
+        return owner
+    section = location.partition(".")[0]
+    section_owners = {
+        owner for field, owner in REVIEW_FIELD_OWNERS.items() if field.startswith(f"{section}.")
+    }
+    return section_owners.pop() if len(section_owners) == 1 else None
 
 
 def owners(block: str) -> set[int]:
