@@ -1273,7 +1273,7 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #9 S05 is complete; stop
+Current authorized work: NONE — Project #9 S07 is complete; stop
 Next milestone authorized: NO — no successor work is authorized
 ```
 
@@ -1354,4 +1354,60 @@ Do not create a new terminal label not authorized by an active milestone directi
   ruleset `19767613` are active, strict, and zero-bypass.
 - Assurance limit: connector completion is required, but connector judgment remains
   nondeterministic and non-exhaustive. Deterministic Supportability enforcement remains separate.
+- Remaining work: None. Stop; no successor milestone is authorized.
+
+## Project #9 S07 focused Codex review assurance
+
+- Terminal result recorded by this protected ledger transaction: Status `COMPLETE`; Evidence
+  `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after merge.
+- Authority: Project #9 issue #138. Owner authorization permits the focused connector-review pilot
+  and narrow correction of stale request instructions while preserving the immutable Standard,
+  frozen roadmap, exact trust binding, fail-closed behavior, and native review-thread resolution.
+- Protected source delivery: implementation PR #139 merged exact head
+  `15f791e50bb8c992db19195637821931b7e9dd85` normally as
+  `519bdee34a78f50b54bedf8a597f255b727ac173`, without bypass. Source Validation run
+  `32688222080` and required run `32688222103` passed; observer job `97317071643` and aggregate
+  Gate job `97318368585` succeeded on that exact head.
+- Focused completion: the existing read-only observer now requires fixed owner-authenticated request
+  acknowledgements in serial focus order `2 -> 4 -> 8`, bound to one exact head and workflow run,
+  and logs each request ID. The aggregate Gate separately binds one distinct trusted connector
+  completion artifact to each focus. Source request/artifact pairs were
+  `5390539454`/`5390554090`, `5390558941`/`5390573837`, and
+  `5390577996`/`5390594303`; all three completed cleanly on the implementation head.
+- Deterministic aggregation: policy and candidate-contract failures no longer suppress independently
+  computable complexity results, and connector failure no longer suppresses the refactor-policy
+  result. Direct focused tests cover stale head/run, missing, mutable, duplicate, malformed, spoofed,
+  out-of-order, ambiguous, reused, paginated, unavailable, timeout, and mixed completion evidence.
+- Source proof: Python 3.12.13 exact-lock Ruff lint/format/C901, strict mypy, Import Linter,
+  compileall, 212 tests with 2 skips, wheel build, fresh exact-lock install, installed CLI help,
+  immutable-standard tamper, and source diff checks passed. The immutable Standard SHA-256 remained
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Live never-merge canary: DC Training PR #47 used exact head
+  `1ce2ef774945797ff62b56f2447249e8ff87cddb` and required run `32689057072`. Before focused
+  evidence, the required Gate remained non-green. Request/artifact pairs
+  `5390620544`/`5390630723`, `5390635357`/`5390644751`, and
+  `5390649034`/review `5004502573` were accepted serially; observer `97319303061` and Gate
+  `97320136237` passed. Focus 8 correctly found stale handoff in inline comment `3840669831`, and
+  native unresolved-thread protection kept merge blocked. The canary closed unmerged, its finding
+  remained unresolved rather than falsely marked fixed, and its branch was deleted.
+- Request-instruction alignment: DC Training PR #48 merged exact head
+  `1cacd1050a3aedd371af1fe0df1626c89be864e9` as
+  `999bfce6153745205a95432e9555fcc69fed6e04`; required run `32690107628`, observer
+  `97322131870`, and Gate `97323045311` passed three clean focused reviews. TWMN transition PR #93
+  used isolated head `b9c7abf835ee346091536c0a3ca38fe291278654`, passed legacy required run
+  `32690378596`, and squash-merged as `63accf0f7bf090bcb881abb90a5c06ebf83746a7` before its
+  pin changed. Neither PR changed target product code.
+- Enforcement readback: DC Training ruleset `20588739`, TWMN ruleset `19913103`, and
+  supportability-audit ruleset `20917183` are active, zero-bypass, require native review-thread
+  resolution and strict `Supportability Gate` App `15368`, and pin workflow SHA
+  `519bdee34a78f50b54bedf8a597f255b727ac173`. Source ruleset `19767613` remains active,
+  zero-bypass, requires review-thread resolution, and requires Source Validation plus Gate App
+  `15368`. Pre-ledger final readback found zero open PRs across all four repositories.
+- Assurance limit: focused connector judgment remains probabilistic and non-exhaustive. Clean
+  summaries and submitted reviews do not expose their triggering request ID, so attribution retains
+  request-specific eyes acknowledgement, serial request windows, bounded final polling, and unique
+  artifact identity. Deterministic Supportability enforcement remains separate.
+- Closure transaction: this protected ledger merge makes S07 assurance canonical; immediate Project
+  synchronization then sets S07 to `Done / Complete / On scope / Yes`, closes issue #138 and Project
+  #9, and authorizes no successor work.
 - Remaining work: None. Stop; no successor milestone is authorized.
