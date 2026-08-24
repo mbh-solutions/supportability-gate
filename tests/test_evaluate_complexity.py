@@ -407,6 +407,9 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
         "python.pytest.v1",
         "python.ruff-lint.v1",
     ]
+    assert result["standard_blocks"] == [
+        {"blocks": [], "standard": standard} for standard in range(1, 9)
+    ]
 
 
 def test_new_complexity_11_blocks(tmp_path: Path) -> None:
@@ -785,6 +788,13 @@ def test_policy_and_complexity_blocks_are_reported_together(tmp_path: Path) -> N
     assert exit_code == 1
     assert result["overall_result"] == "BLOCK"
     assert "UNAPPROVED_ADAPTER:python.unapproved.v1" in result["policy_blocks"]
+    assert result["standard_blocks"][6] == {
+        "blocks": [
+            "MISSING_REQUIRED_ADAPTER:python.ruff-lint.v1",
+            "UNAPPROVED_ADAPTER:python.unapproved.v1",
+        ],
+        "standard": 7,
+    }
     assert result["functions"][0]["decision"] == "BLOCK"
     assert result["functions"][0]["head"]["complexity"] == 11
 
@@ -948,6 +958,10 @@ def test_missing_milestone_three_evidence_blocks(tmp_path: Path, section: str) -
 
     assert exit_code == 1
     assert result["policy_blocks"][0].startswith("MISSING_REVIEW_EVIDENCE:")
+    assert (
+        sorted(block for row in result["standard_blocks"] for block in row["blocks"])
+        == result["policy_blocks"]
+    )
 
 
 @pytest.mark.parametrize(

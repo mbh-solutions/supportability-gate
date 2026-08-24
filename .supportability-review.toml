@@ -5,7 +5,7 @@ intended_behavior = "Replace the aggregate Gate result with eight independent St
 proof = "tests/test_standard_results.py; tests/test_codex_review.py; .github/workflows/organization-required.yml"
 
 [characterization]
-captured_behavior = "Existing CLI, refactor, connector, quality, architecture, and modularity behavior remains covered; the new composer reuses their evidence without rerunning target analysis."
+captured_behavior = "Existing CLI, refactor, connector, quality, architecture, and modularity behavior remains covered; the standard-results scenario directly runs producer, composer, artifact validation, and enforcer without rerunning target analysis."
 proof = ".supportability-characterization.json; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json; tests/test_standard_results.py"
 
 [separation_of_concerns]
@@ -13,7 +13,7 @@ before = "The aggregate workflow coupled Codex completion to the Standard 6 refa
 after = "The refactor policy emits only Standard 6 evidence; the producer invokes one pure composer, and eight matrix jobs use the artifact enforcer for one fixed entry each."
 
 [architecture]
-dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes standard_results; matrix consumers depend only on standard_results_enforcer and the producer artifact, never target analyzers."
+dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes the standard_results contract; producer and standard_results_enforcer both depend on that lower contract and never on each other or target analyzers."
 reviewed_paths = [
     ".github/workflows/organization-required.yml",
     "src/supportability_gate/codex_review.py",
@@ -31,10 +31,10 @@ does_not_own = "Target analysis, policy thresholds, connector judgment, owner au
 
 [incremental_refactor]
 target = "One S08 workflow transition from the aggregate result to eight fixed Standard results."
-completed_step = "Added the producer, composer, and artifact enforcer; decoupled connector completion from refactor evidence; expanded serial focus binding; and wired the fixed matrix without changing target commands or third-party dependencies. Internal dependency direction is producer to enforcer and composer, and enforcer to composer."
+completed_step = "Added the producer, Standard-results contract, and artifact enforcer; decoupled connector completion from refactor evidence; expanded serial focus binding; and wired the fixed matrix without changing target commands or third-party dependencies. Producer and enforcer each depend directly on the lower Standard-results contract."
 
 [review_handoff]
-summary = "S08 changes only Gate policy, evidence composition, workflow wiring, request instructions, import and characterization contracts, and directly required tests. The immutable Standard, frozen roadmap, target commands, thresholds, exclusions, waivers, and consumer product code are unchanged."
+summary = "S08 changes only Gate policy, evidence composition, workflow wiring, request instructions, import and characterization contracts, and directly required tests. Policy thresholds, target commands, exclusions, waivers, consumer product code, the immutable Standard, and the frozen roadmap are unchanged. Operational polling expands from 120 to 240 attempts; the observer timeout expands from 45 to 70 minutes; and the evidence-job timeout expands from 15 to 30 minutes for eight serial reviews."
 remaining_risks = [
     "Codex review remains probabilistic and connector latency can require a new exact-head run.",
     "The eight contexts become required only through the separately verified source and consumer ruleset migration and DC never-merge canary.",
@@ -42,7 +42,7 @@ remaining_risks = [
 
 [human_review]
 naming = "Each check, focus, evidence field, and module names one Standard or one shared trust boundary."
-cohesion = "standard_results owns pure composition, standard_results_producer owns polling and emission, standard_results_enforcer owns artifact validation and one-lane enforcement, and existing analyzers retain their prior responsibilities."
+cohesion = "standard_results owns the eight-entry artifact contract, composition, and validation; standard_results_producer owns polling and emission; standard_results_enforcer owns one-lane exit behavior; and existing analyzers retain their prior responsibilities."
 intended_behavior = "One ordinary policy defect blocks only its owned lane; shared trust corruption makes all eight lanes technical failures."
 reviewability = "Focused fixtures prove each lane, all lanes together, every declared family owner, malformed bindings, and exact workflow text."
 
@@ -50,7 +50,7 @@ reviewability = "Focused fixtures prove each lane, all lanes together, every dec
 path = "src/supportability_gate/standard_results.py"
 owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
-justification = "The new module owns only transformation of already-produced evidence into eight results; reporting remains the pre-existing owner of authoritative evaluation serialization."
+justification = "The new module owns only the schema, transformation, and validation of already-produced evidence into eight results; reporting remains the pre-existing owner of source evaluation serialization."
 
 [[module_boundaries]]
 path = "src/supportability_gate/standard_results_producer.py"
@@ -62,4 +62,4 @@ justification = "The producer owns only exact-run connector collection and artif
 path = "src/supportability_gate/standard_results_enforcer.py"
 owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
-justification = "The enforcer owns only artifact validation and one-entry exit behavior; reporting remains the pre-existing workflow evaluation owner."
+justification = "The enforcer owns only one-entry exit behavior after lower-contract validation; reporting remains the pre-existing workflow evaluation owner."

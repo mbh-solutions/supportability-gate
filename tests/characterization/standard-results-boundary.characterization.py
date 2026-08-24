@@ -71,6 +71,7 @@ def main() -> None:
         },
         "repository_remote": f"github.com/{identity.repository}",
         "schema_version": "1.0",
+        "standard_blocks": [{"blocks": [], "standard": standard} for standard in range(1, 9)],
         "standard_sha256": clause_inventory.STANDARD_SHA256,
         "technical_errors": [],
     }

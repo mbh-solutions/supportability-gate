@@ -56,6 +56,7 @@ class EvaluationResult:
     architecture: ArchitectureResult | None = None
     modularity: ModularityResult | None = None
     quality_profile: QualityEvidence | None = None
+    standard_blocks: tuple[tuple[int, tuple[str, ...]], ...] = ()
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -192,6 +193,10 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "functions": functions,
         "overall_result": result.overall_result,
         "policy_blocks": list(result.policy_blocks),
+        "standard_blocks": [
+            {"blocks": list(blocks), "standard": standard}
+            for standard, blocks in result.standard_blocks
+        ],
         "production_paths": list(result.production_paths),
         "quality_profile": decision_payload(result.quality_profile)
         if result.quality_profile

@@ -16,6 +16,7 @@ from supportability_gate import (
     review_evidence,
     standard_results,
     standard_results_enforcer,
+    standard_results_producer,
 )
 
 IDENTITY = standard_results.RunIdentity(
@@ -68,6 +69,7 @@ def _inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str,
         },
         "repository_remote": f"github.com/{IDENTITY.repository}",
         "schema_version": "1.0",
+        "standard_blocks": [{"blocks": [], "standard": standard} for standard in range(1, 9)],
         "standard_sha256": clause_inventory.STANDARD_SHA256,
         "technical_errors": [],
     }
@@ -116,18 +118,23 @@ def _poison(
     inputs: tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]],
 ) -> None:
     complexity, characterization, refactor, _ = inputs
+
+    def add_policy_block(block: str) -> None:
+        complexity["policy_blocks"].append(block)
+        complexity["standard_blocks"][standard - 1]["blocks"].append(block)
+
     if standard == 1:
         complexity["functions"] = [
             {"decision": "BLOCK", "head": {"qualified_name": "sample.complex"}}
         ]
     elif standard == 2:
-        complexity["policy_blocks"].append("MISSING_REVIEW_EVIDENCE:separation_of_concerns.after")
+        add_policy_block("MISSING_REVIEW_EVIDENCE:separation_of_concerns.after")
     elif standard == 3:
         complexity["architecture"]["blocks"].append("IMPORT_CYCLE:src/a.py:1:src.b")
-        complexity["policy_blocks"].append("IMPORT_CYCLE:src/a.py:1:src.b")
+        add_policy_block("IMPORT_CYCLE:src/a.py:1:src.b")
     elif standard == 4:
         complexity["modularity"]["blocks"].append("MISSING_NEW_LOCATION_JUSTIFICATION:src/new.py")
-        complexity["policy_blocks"].append("MISSING_NEW_LOCATION_JUSTIFICATION:src/new.py")
+        add_policy_block("MISSING_NEW_LOCATION_JUSTIFICATION:src/new.py")
     elif standard == 5:
         characterization["policy_blocks"] = ["MISSING_BASELINE"]
         characterization["overall_result"] = "BLOCK"
@@ -136,9 +143,9 @@ def _poison(
         refactor["policy_blocks"] = ["MISSING_OWNER_AUTHORIZATION"]
         refactor["overall_result"] = "BLOCK"
     elif standard == 7:
-        complexity["policy_blocks"].append("QUALITY_GATE_FAILED:python.pytest.v1")
+        add_policy_block("QUALITY_GATE_FAILED:python.pytest.v1")
     else:
-        complexity["policy_blocks"].append("MISSING_REVIEW_EVIDENCE:review_handoff.summary")
+        add_policy_block("MISSING_REVIEW_EVIDENCE:review_handoff.summary")
     if complexity["policy_blocks"] or complexity["functions"]:
         complexity["overall_result"] = "BLOCK"
     refactor["characterization_sha256"] = hashlib.sha256(_canonical(characterization)).hexdigest()
@@ -167,44 +174,20 @@ def test_eight_simultaneous_poisons_emit_eight_blocks() -> None:
     assert all(len(entry["blocks"]) == 1 for entry in payload["entries"])
 
 
-@pytest.mark.parametrize(
-    ("standard", "family"),
-    [
-        (standard, family)
-        for standard, families in enumerate(standard_results.BLOCK_FAMILIES, start=1)
-        for family in families
-    ],
-)
-def test_every_declared_block_family_has_one_standard_owner(standard: int, family: str) -> None:
-    block = f"{family}sample" if family.endswith(":") else family
-    assert standard_results._require_owner(block) == standard
-
-
-@pytest.mark.parametrize(
-    ("standard", "location"),
-    [(standard, location) for location, standard in standard_results.REVIEW_FIELD_OWNERS.items()]
-    + [(4, "module_boundaries"), (4, "module_boundaries[0].basis")],
-)
-def test_every_review_field_family_has_one_standard_owner(standard: int, location: str) -> None:
-    assert standard_results._require_owner(f"MISSING_REVIEW_EVIDENCE:{location}") == standard
-
-
-def test_unknown_or_multiply_owned_blocks_make_all_results_technical(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_unknown_or_multiply_owned_blocks_make_all_results_technical() -> None:
     unknown = _inputs()
-    unknown[1]["policy_blocks"] = ["UNKNOWN_CHARACTERIZATION_POLICY"]
-    unknown[1]["overall_result"] = "BLOCK"
-    unknown[2]["characterization_sha256"] = hashlib.sha256(_canonical(unknown[1])).hexdigest()
+    unknown[0]["policy_blocks"] = ["UNKNOWN_POLICY_BLOCK"]
+    unknown[0]["overall_result"] = "BLOCK"
 
     unknown_payload = _compose(unknown)
 
     assert [entry["result"] for entry in unknown_payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
-    families = list(standard_results.BLOCK_FAMILIES)
-    families[6] = (*families[6], "IMPORT_CYCLE:")
-    monkeypatch.setattr(standard_results, "BLOCK_FAMILIES", tuple(families))
     multiple = _inputs()
-    _poison(3, multiple)
+    block = "QUALITY_GATE_FAILED:python.pytest.v1"
+    multiple[0]["policy_blocks"] = [block]
+    multiple[0]["standard_blocks"][2]["blocks"] = [block]
+    multiple[0]["standard_blocks"][6]["blocks"] = [block]
+    multiple[0]["overall_result"] = "BLOCK"
 
     multiple_payload = _compose(multiple)
 
@@ -251,10 +234,11 @@ def test_malformed_entries_and_incorrect_bindings_fail_closed(case: str) -> None
         entries[0]["technical_errors"] = ["SHARED_TRUST_FAILURE"]
 
     with pytest.raises(standard_results.StandardResultsError):
-        standard_results_enforcer.validate_payload(payload, IDENTITY)
+        standard_results.validate_payload(payload, IDENTITY)
 
 
-def test_enforcer_returns_pass_block_or_technical(tmp_path: Path) -> None:
+@pytest.mark.parametrize("standard", range(1, 9))
+def test_enforcer_returns_pass_block_or_technical(tmp_path: Path, standard: int) -> None:
     common = [
         "--repository",
         IDENTITY.repository,
@@ -273,13 +257,13 @@ def test_enforcer_returns_pass_block_or_technical(tmp_path: Path) -> None:
         "--input",
         str(tmp_path / "standard-results.json"),
         "--standard",
-        "1",
+        str(standard),
     ]
     path = tmp_path / "standard-results.json"
     path.write_text(json.dumps(_compose(_inputs())), encoding="utf-8")
     assert standard_results_enforcer.main(common) == 0
     blocked = _inputs()
-    _poison(1, blocked)
+    _poison(standard, blocked)
     path.write_text(json.dumps(_compose(blocked)), encoding="utf-8")
     assert standard_results_enforcer.main(common) == 1
     path.write_text("{}", encoding="utf-8")
@@ -291,11 +275,116 @@ def test_structured_review_collects_every_applicable_field_defect() -> None:
         b'schema_version = "1.0"\n\n[behavior]\nintended_behavior = ""\nproof = 1\n'
     )
 
-    assert len(blocks) == 19
-    assert "INSUFFICIENT_REVIEW_EVIDENCE:behavior.intended_behavior" in blocks
-    assert "MALFORMED_REVIEW_EVIDENCE:behavior.proof" in blocks
-    assert "MISSING_REVIEW_EVIDENCE:architecture.reviewed_paths" in blocks
-    assert "MISSING_REVIEW_EVIDENCE:review_handoff.remaining_risks" in blocks
+    assert set(blocks) == {
+        "INSUFFICIENT_REVIEW_EVIDENCE:behavior.intended_behavior",
+        "MALFORMED_REVIEW_EVIDENCE:behavior.proof",
+        "MISSING_REVIEW_EVIDENCE:architecture.dependency_direction",
+        "MISSING_REVIEW_EVIDENCE:architecture.reviewed_paths",
+        "MISSING_REVIEW_EVIDENCE:characterization.captured_behavior",
+        "MISSING_REVIEW_EVIDENCE:characterization.proof",
+        "MISSING_REVIEW_EVIDENCE:human_review.cohesion",
+        "MISSING_REVIEW_EVIDENCE:human_review.intended_behavior",
+        "MISSING_REVIEW_EVIDENCE:human_review.naming",
+        "MISSING_REVIEW_EVIDENCE:human_review.reviewability",
+        "MISSING_REVIEW_EVIDENCE:incremental_refactor.completed_step",
+        "MISSING_REVIEW_EVIDENCE:incremental_refactor.target",
+        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.does_not_own",
+        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.owns",
+        "MISSING_REVIEW_EVIDENCE:responsibility_boundary.path",
+        "MISSING_REVIEW_EVIDENCE:review_handoff.remaining_risks",
+        "MISSING_REVIEW_EVIDENCE:review_handoff.summary",
+        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.after",
+        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.before",
+    }
+
+
+def _producer_arguments(tmp_path: Path) -> tuple[list[str], Path]:
+    paths = []
+    for name, value in zip(
+        ("complexity", "characterization", "refactor", "quality"), _inputs(), strict=True
+    ):
+        path = tmp_path / f"{name}.json"
+        path.write_text(json.dumps(value), encoding="utf-8")
+        paths.append(path)
+    output = tmp_path / "standard-results.json"
+    return [
+        "--repository",
+        IDENTITY.repository,
+        "--repository-id",
+        str(IDENTITY.repository_id),
+        "--base-sha",
+        IDENTITY.base_sha,
+        "--head-sha",
+        IDENTITY.head_sha,
+        "--workflow-sha",
+        IDENTITY.workflow_sha,
+        "--run-id",
+        str(IDENTITY.run_id),
+        "--run-attempt",
+        str(IDENTITY.run_attempt),
+        "--pull-number",
+        "7",
+        "--complexity-result",
+        str(paths[0]),
+        "--characterization-result",
+        str(paths[1]),
+        "--refactor-result",
+        str(paths[2]),
+        "--quality-provenance",
+        str(paths[3]),
+        "--output",
+        str(output),
+    ], output
+
+
+def test_producer_preserves_partial_snapshot_when_completion_is_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arguments, output = _producer_arguments(tmp_path)
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+
+    def pending(*args: object) -> tuple[codex_review.FocusedReviewEvidence, ...]:
+        raise codex_review.CodexReviewError("FOCUSED_CODEX_REVIEW_PENDING_2")
+
+    monkeypatch.setattr(
+        standard_results_producer.codex_review, "require_focused_completion", pending
+    )
+    monkeypatch.setattr(
+        standard_results_producer.codex_review,
+        "focused_completion_snapshot",
+        lambda *args: ((), _evidence()[:1]),
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert [entry["result"] for entry in payload["entries"]] == ["PASS", *("BLOCK",) * 7]
+    assert [entry["blocks"] for entry in payload["entries"]][1:] == [
+        [f"FOCUSED_CODEX_REVIEW_PENDING_{standard}"] for standard in range(2, 9)
+    ]
+
+
+def test_producer_makes_snapshot_failure_shared_and_technical(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arguments, output = _producer_arguments(tmp_path)
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+
+    def failure(*args: object) -> tuple[codex_review.FocusedReviewEvidence, ...]:
+        raise codex_review.CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+
+    monkeypatch.setattr(
+        standard_results_producer.codex_review, "require_focused_completion", failure
+    )
+    monkeypatch.setattr(
+        standard_results_producer.codex_review, "focused_completion_snapshot", failure
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert [entry["result"] for entry in payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
+    assert {tuple(entry["technical_errors"]) for entry in payload["entries"]} == {
+        ("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE",)
+    }
 
 
 def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() -> None:

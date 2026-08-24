@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from supportability_gate import codex_review, standard_results, standard_results_enforcer
+from supportability_gate import codex_review, standard_results
 
 
 def _read_json(path: Path, code: str) -> dict[str, Any]:
@@ -113,7 +113,6 @@ def main(argv: list[str] | None = None) -> int:
     """Compose and write one validated authoritative Standard results artifact."""
     arguments = _parser().parse_args(argv)
     payload = _compose(arguments)
-    standard_results_enforcer.validate_payload(payload, _identity(arguments))
     _write_json(Path(arguments.output), payload)
     print("STANDARD_RESULTS_EMITTED")
     return 0
