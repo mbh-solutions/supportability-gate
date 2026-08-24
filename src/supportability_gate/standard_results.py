@@ -407,6 +407,10 @@ def _codex_blocks(rows: dict[str, dict[str, object]], prefix: str) -> dict[int, 
     }
 
 
+def _is_prefix(sequence: tuple[bool, ...]) -> bool:
+    return sequence == tuple(sorted(sequence, reverse=True))
+
+
 def _codex_payload(
     evidence: tuple[focused_review.FocusedReviewEvidence, ...],
     error_code: str | None,
@@ -419,7 +423,7 @@ def _codex_payload(
         tuple(rows[focus]["request_id"] is not None for focus in focused_review.FOCUSES),
         tuple(rows[focus]["completion"] is not None for focus in focused_review.FOCUSES),
     )
-    if any(sequence != tuple(sorted(sequence, reverse=True)) for sequence in sequences):
+    if any(not _is_prefix(sequence) for sequence in sequences):
         return {}, {}, ("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE",)
     blocks: dict[int, list[str]] = {standard: [] for standard in range(1, 9)}
     if error_code is None and all(rows[focus]["completion"] for focus in focused_review.FOCUSES):
@@ -640,12 +644,12 @@ def _validate_codex_sequence(
     artifacts = [item.artifact for item in rows if item.artifact is not None]
     if len(request_ids) != len(set(request_ids)) or len(artifacts) != len(set(artifacts)):
         raise StandardResultsError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
-    saw_request_gap = False
-    for item in rows:
-        if item.request_id is None:
-            saw_request_gap = True
-        elif saw_request_gap:
-            raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
+    sequences = (
+        tuple(item.request_id is not None for item in rows),
+        tuple(item.artifact is not None for item in rows),
+    )
+    if any(not _is_prefix(sequence) for sequence in sequences):
+        raise StandardResultsError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE")
     for current, following in zip(rows, rows[1:], strict=False):
         if following.requested_at is not None and (
             current.completed_at is None

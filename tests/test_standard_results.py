@@ -568,7 +568,7 @@ def _producer_arguments(tmp_path: Path) -> tuple[list[str], Path]:
     ], output
 
 
-def test_producer_preserves_partial_snapshot_when_completion_is_pending(
+def test_producer_preserves_partial_snapshot_when_next_request_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     arguments, output = _producer_arguments(tmp_path)
@@ -593,14 +593,15 @@ def test_producer_preserves_partial_snapshot_when_completion_is_pending(
     monkeypatch.setattr(
         standard_results_producer.codex_review,
         "focused_completion_snapshot",
-        lambda *args: ("FOCUSED_CODEX_REVIEW_PENDING_2", snapshot),
+        lambda *args: ("MISSING_FOCUSED_CODEX_REVIEW_REQUEST_3", snapshot),
     )
 
     assert standard_results_producer.main(arguments) == 0
     payload = json.loads(output.read_bytes())
     assert [entry["result"] for entry in payload["entries"]] == ["PASS", *("BLOCK",) * 7]
     assert [entry["blocks"] for entry in payload["entries"]][1:] == [
-        [f"FOCUSED_CODEX_REVIEW_PENDING_{standard}"] for standard in range(2, 9)
+        ["FOCUSED_CODEX_REVIEW_PENDING_2"],
+        *[[f"MISSING_FOCUSED_CODEX_REVIEW_REQUEST_{standard}"] for standard in range(3, 9)],
     ]
     assert [entry["codex_review"]["request_id"] for entry in payload["entries"]] == [
         21,
@@ -759,6 +760,8 @@ def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() ->
     assert "target/src" not in job
     assert "artifact-ids: ${{ needs.supportability-evidence.outputs.artifact-id }}" in job
     assert "STANDARD: ${{ matrix.standard }}" in job
+    enforcer_step = job.split("\n      - name: Enforce one Standard result\n", 1)[1]
+    assert "continue-on-error:" not in enforcer_step
     assert "python -P -m supportability_gate.standard_results_enforcer \\" in job
     assert '--input "$RUNNER_TEMP/evidence/standard-results.json" \\' in job
     assert '--standard "$STANDARD"' in job
