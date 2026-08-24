@@ -324,6 +324,13 @@ def _deterministic_state(
 ) -> DeterministicState:
     _validate_identity(identity)
     standard_blocks, functions, technical = _validate_complexity(complexity, identity)
+    if technical:
+        return DeterministicState(
+            standard_blocks,
+            {standard: True for standard in range(1, 9)},
+            None,
+            technical,
+        )
     quality_artifact = _validate_quality(complexity, quality_provenance, identity)
     characterization_blocks = _validate_characterization(characterization, identity)
     refactor_blocks = _validate_refactor(refactor, characterization, identity)

@@ -12,7 +12,11 @@ import pytest
 
 from supportability_gate import (
     clause_inventory,
+    cli,
     codex_review,
+    function_changes,
+    git_changes,
+    reporting,
     review_evidence,
     standard_block_ownership,
     standard_results,
@@ -177,7 +181,7 @@ def test_eight_simultaneous_poisons_emit_eight_blocks() -> None:
 
 @pytest.mark.parametrize(
     ("decision", "metric"),
-    [("PASS_PROGRESSIVE", "head"), ("DELETED", "base")],
+    [("PASS", "head"), ("PASS_PROGRESSIVE", "head"), ("DELETED", "base")],
 )
 def test_valid_non_blocking_function_decisions_pass(decision: str, metric: str) -> None:
     inputs = _inputs()
@@ -186,6 +190,38 @@ def test_valid_non_blocking_function_decisions_pass(decision: str, metric: str) 
     payload = _compose(inputs)
 
     assert [entry["result"] for entry in payload["entries"]] == ["PASS"] * 8
+
+
+def test_genuine_analyzer_technical_payload_preserves_error() -> None:
+    repository_identity = git_changes.RepositoryIdentity(
+        f"github.com/{IDENTITY.repository}",
+        IDENTITY.base_sha,
+        "c" * 40,
+        IDENTITY.head_sha,
+        "d" * 40,
+        "git version 2",
+    )
+    complexity = reporting.result_payload(
+        cli._technical_result(
+            repository_identity,
+            ".supportability.toml",
+            [],
+            [],
+            None,
+            None,
+            (),
+            function_changes.PythonSourceError("SYNTAX_ERROR", "invalid syntax"),
+        )
+    )
+    _, characterization, refactor, quality = _inputs()
+
+    payload = _compose((complexity, characterization, refactor, quality))
+
+    assert payload["quality_artifact"] is None
+    assert [entry["result"] for entry in payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
+    assert {tuple(entry["technical_errors"]) for entry in payload["entries"]} == {
+        ("COMPLEXITY_RESULT:SYNTAX_ERROR",)
+    }
 
 
 @pytest.mark.parametrize(
