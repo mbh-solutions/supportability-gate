@@ -449,7 +449,7 @@ def _deterministic_state(
         complexity.get("architecture"), "MALFORMED_ARCHITECTURE_RESULT", 3
     )
     modularity = _nested_blocks(complexity.get("modularity"), "MALFORMED_MODULARITY_RESULT", 4)
-    blocks = {standard: [] for standard in range(1, 9)}
+    blocks: dict[int, list[str]] = {standard: [] for standard in range(1, 9)}
     blocks[1].extend(_function_blocks(functions))
     blocks[5].extend(characterization_blocks)
     blocks[6].extend(refactor_blocks)
@@ -523,7 +523,7 @@ def _codex_payload(
         rows = _codex_rows(evidence)
     except StandardResultsError as binding_error:
         return {}, {}, (binding_error.code,)
-    blocks = {standard: [] for standard in range(1, 9)}
+    blocks: dict[int, list[str]] = {standard: [] for standard in range(1, 9)}
     if error is None and all(rows[focus]["completion"] for focus in codex_review.FOCUSES):
         return rows, blocks, ()
     code = error.code if error else "MALFORMED_CODEX_REVIEW_BINDING"
@@ -752,14 +752,17 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> dict
     }
     if not isinstance(value, dict) or set(value) != expected:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS")
+    repository_id = value.get("repository_id")
+    run_id = value.get("run_id")
+    run_attempt = value.get("run_attempt")
     actual = RunIdentity(
         str(value.get("repository")),
-        value.get("repository_id") if type(value.get("repository_id")) is int else 0,
+        repository_id if type(repository_id) is int else 0,
         str(value.get("base_sha")),
         str(value.get("head_sha")),
         str(value.get("workflow_sha")),
-        value.get("run_id") if type(value.get("run_id")) is int else 0,
-        value.get("run_attempt") if type(value.get("run_attempt")) is int else 0,
+        run_id if type(run_id) is int else 0,
+        run_attempt if type(run_attempt) is int else 0,
     )
     _validate_identity(actual)
     if identity is not None and actual != identity:
