@@ -1,51 +1,52 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The required Supportability Gate remains non-green until the trusted Codex connector completes review for the exact pull-request head and workflow run."
-proof = "tests/test_codex_review.py::test_trusted_exact_head_submitted_review_passes"
+intended_behavior = "The required Supportability Gate preserves independently computable deterministic results: policy violations and candidate-contract changes do not suppress complexity results, and connector failures do not suppress the refactor-policy result; it remains non-green until the trusted Codex connector completes distinct serial reviews for Standard focuses 2, 4, and 8 on the exact pull-request head and workflow run."
+proof = "tests/test_codex_review.py; tests/test_evaluate_complexity.py::test_policy_and_complexity_blocks_are_reported_together; tests/test_evaluate_complexity.py::test_candidate_contract_change_and_complexity_block_are_reported_together; tests/test_refactor_policy.py::test_connector_failure_does_not_suppress_refactor_result"
 
 [characterization]
-captured_behavior = "Missing, stale-head, stale-run, pending, spoofed, mutable, duplicate, paginated, and unavailable GitHub evidence fail closed; trusted exact-request completion passes."
+captured_behavior = "The retained single-review boundary remains stable while focused tests cover missing, stale, unfocused, mutable, duplicate, out-of-order, ambiguous, reused, and unavailable evidence; three distinct observer-bound completions pass."
 proof = "tests/test_codex_review.py"
 
 [separation_of_concerns]
 before = "The refactor policy could finish before advisory Codex review completed."
-after = "codex_review owns exact-head connector evidence while refactor_policy retains refactor authorization and invokes that boundary."
+after = "codex_review owns serial lens-bound connector evidence while refactor_policy writes deterministic authorization evidence before invoking that boundary."
 
 [architecture]
 dependency_direction = "refactor_policy depends on the focused codex_review policy; codex_review uses only the Python standard library and imports no Gate policy."
 reviewed_paths = [
     "src/supportability_gate/codex_review.py",
     "src/supportability_gate/refactor_policy.py",
+    "src/supportability_gate/cli.py",
 ]
 
 [responsibility_boundary]
 path = "src/supportability_gate/codex_review.py"
-owns = "Bounded GitHub evidence reads and trusted exact-head Codex review completion."
+owns = "Bounded GitHub evidence reads and three trusted, serial, exact-head focused Codex review completions."
 does_not_own = "Codex review judgment, deterministic Supportability evaluation, inline-thread resolution, or target execution."
 
 [incremental_refactor]
-target = "Close the merge race without restoring the retired semantic-review system."
-completed_step = "Added one focused evidence policy to the existing required Gate path with no new service, check, package, or dependency."
+target = "Increase first-pass qualitative review coverage without restoring a custom semantic-review runtime."
+completed_step = "Added enforcement for three fixed owner-posted focused review requests to the existing read-only observer and one aggregate Gate, with no new service, check, package, or dependency."
 
 [review_handoff]
-summary = "Deterministic enforcement now waits for trusted exact-head and exact-run Codex review completion; native thread resolution still blocks unresolved inline findings."
+summary = "The Gate preserves independently computable deterministic results: policy violations and candidate-contract changes do not suppress complexity results, and connector failures do not suppress the refactor-policy result; it waits for distinct exact-head and exact-run Codex reviews focused on Standard items 2, 4, and 8, while native thread resolution still blocks unresolved inline findings."
 remaining_risks = [
     "Codex review remains nondeterministic and is not exhaustive assurance.",
-    "A clean result is tied to the exact request comment; a findings result also requires the running Gate to observe the eyes handshake on that comment before the exact-head review.",
+    "Clean summaries and submitted reviews do not expose their triggering request ID, so their focus attribution relies on an observed request-specific eyes handshake, serial request windows, bounded final polling, and unique artifact identity.",
 ]
 
 [human_review]
-naming = "codex_review names its single external evidence responsibility."
-cohesion = "Request parsing, authenticated pagination, connector identity, exact-head review, clean reaction, and bounded polling form one policy boundary."
-intended_behavior = "The existing Gate waits for connector completion and fails closed on missing, stale, spoofed, malformed, or unavailable evidence."
-reviewability = "Eight focused tests cover every acceptance branch without target execution or a new runtime surface."
+naming = "codex_review names its single external evidence responsibility and the fixed Standard focus identifiers."
+cohesion = "Request parsing, authenticated pagination, connector identity, serial artifact binding, and bounded polling form one policy boundary."
+intended_behavior = "The Gate waits for three distinct focused connector completions and fails closed on missing, stale, spoofed, malformed, ambiguous, reused, or unavailable evidence."
+reviewability = "Focused protocol tests cover request order, observer binding, artifact uniqueness, and trust failures without target execution or a new runtime surface."
 
 [[module_boundaries]]
 path = "src/supportability_gate/codex_review.py"
 owner_path = "src/supportability_gate/codex_review.py"
 basis = "responsibility"
-justification = "Owns exact-head Codex request and completion evidence from fixed authenticated GitHub endpoints; it does not own refactor policy or review-thread resolution."
+justification = "Owns serial focused exact-head Codex request and completion evidence from fixed authenticated GitHub endpoints; it does not own refactor policy or review-thread resolution."
 
 [[module_boundaries]]
 path = "src/supportability_gate/quality_profile.py"
