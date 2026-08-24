@@ -214,36 +214,19 @@ def _result(
     quality: quality_profile.QualityEvidence,
     quality_blocks: tuple[str, ...],
 ) -> reporting.EvaluationResult:
-    if any(
-        contract_path in {item.change.old_path, item.change.new_path}
-        for item in analyzed.assessments
-    ):
-        return reporting.EvaluationResult(
-            identity,
-            contract_path,
-            blob.object_sha,
-            policy.sha256,
-            policy.production_paths,
-            policy.high_risk_paths,
-            _gate_coverage(policy),
-            analyzed.assessments,
-            (),
-            (),
-            (),
-            (
-                "CANDIDATE_CONTRACT_CHANGE",
-                *gate_policy.contract_change_blocks(policy, candidate_policy),
-            ),
-            "BLOCK",
-            _versions(identity),
-            tuple(records),
-            (),
-            structured_review,
-            policy.language,
-            architecture,
-            quality_profile=quality,
+    candidate_blocks = (
+        (
+            "CANDIDATE_CONTRACT_CHANGE",
+            *gate_policy.contract_change_blocks(policy, candidate_policy),
         )
+        if any(
+            contract_path in {item.change.old_path, item.change.new_path}
+            for item in analyzed.assessments
+        )
+        else ()
+    )
     policy_blocks = (
+        *candidate_blocks,
         *gate_policy.evaluate_contract(policy, analyzed.assessments),
         *architecture.blocks,
         *modularity.blocks,
@@ -436,11 +419,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
                 candidate_policy = contract.parse_contract(candidate_blob.content)
             except (contract.ContractError, git_changes.GitError):
                 candidate_policy = None
-        analyzed = (
-            _AnalyzedChanges(assessments, (), {})
-            if contract_changed
-            else _analyze_changes(repository, identity, policy, assessments, records)
-        )
+        analyzed = _analyze_changes(repository, identity, policy, assessments, records)
         architecture_gate = next(
             (
                 gate

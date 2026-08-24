@@ -1,8 +1,8 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The required Supportability Gate reports all applicable deterministic failures and remains non-green until the trusted Codex connector completes distinct serial reviews for Standard focuses 2, 4, and 8 on the exact pull-request head and workflow run."
-proof = "tests/test_codex_review.py; tests/test_evaluate_complexity.py::test_policy_and_complexity_blocks_are_reported_together; tests/test_refactor_policy.py::test_connector_failure_does_not_suppress_refactor_result"
+intended_behavior = "The required Supportability Gate preserves independently computable deterministic results: policy violations and candidate-contract changes do not suppress complexity results, and connector failures do not suppress the refactor-policy result; it remains non-green until the trusted Codex connector completes distinct serial reviews for Standard focuses 2, 4, and 8 on the exact pull-request head and workflow run."
+proof = "tests/test_codex_review.py; tests/test_evaluate_complexity.py::test_policy_and_complexity_blocks_are_reported_together; tests/test_evaluate_complexity.py::test_candidate_contract_change_and_complexity_block_are_reported_together; tests/test_refactor_policy.py::test_connector_failure_does_not_suppress_refactor_result"
 
 [characterization]
 captured_behavior = "The retained single-review boundary remains stable while focused tests cover missing, stale, unfocused, mutable, duplicate, out-of-order, ambiguous, reused, and unavailable evidence; three distinct observer-bound completions pass."
@@ -27,13 +27,13 @@ does_not_own = "Codex review judgment, deterministic Supportability evaluation, 
 
 [incremental_refactor]
 target = "Increase first-pass qualitative review coverage without restoring a custom semantic-review runtime."
-completed_step = "Added three fixed focused invocations to the existing read-only observer and one aggregate Gate, with no new service, check, package, or dependency."
+completed_step = "Added enforcement for three fixed owner-posted focused review requests to the existing read-only observer and one aggregate Gate, with no new service, check, package, or dependency."
 
 [review_handoff]
-summary = "Deterministic enforcement now reports applicable failures together and waits for distinct exact-head and exact-run Codex reviews focused on Standard items 2, 4, and 8; native thread resolution still blocks unresolved inline findings."
+summary = "The Gate preserves independently computable deterministic results: policy violations and candidate-contract changes do not suppress complexity results, and connector failures do not suppress the refactor-policy result; it waits for distinct exact-head and exact-run Codex reviews focused on Standard items 2, 4, and 8, while native thread resolution still blocks unresolved inline findings."
 remaining_risks = [
     "Codex review remains nondeterministic and is not exhaustive assurance.",
-    "Clean summaries and submitted reviews do not expose their triggering request ID, so their focus attribution relies on an observed request-specific eyes handshake, strict serial windows, and unique artifact identity.",
+    "Clean summaries and submitted reviews do not expose their triggering request ID, so their focus attribution relies on an observed request-specific eyes handshake, serial request windows, bounded final polling, and unique artifact identity.",
 ]
 
 [human_review]

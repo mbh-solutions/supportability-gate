@@ -747,18 +747,29 @@ class Widget:
     ]
 
 
-def test_candidate_contract_change_blocks(tmp_path: Path) -> None:
+def test_candidate_contract_change_and_complexity_block_are_reported_together(
+    tmp_path: Path,
+) -> None:
     repository = _initialize_repository(tmp_path)
     _write(repository / "src" / "sample.py", _function_source("existing", 1))
     base_sha = _commit(repository, "base")
-    _write(repository / ".supportability.toml", CONTRACT + "\n")
+    _write(
+        repository / ".supportability.toml",
+        CONTRACT.replace("maximum = 10", "maximum = 11"),
+    )
+    _write(repository / "src" / "sample.py", _function_source("existing", 11))
     head_sha = _commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 1
     assert result["overall_result"] == "BLOCK"
-    assert result["policy_blocks"] == ["CANDIDATE_CONTRACT_CHANGE"]
+    assert result["policy_blocks"] == [
+        "CANDIDATE_CONTRACT_CHANGE",
+        "THRESHOLD_WEAKENING",
+    ]
+    assert result["functions"][0]["head"]["complexity"] == 11
+    assert result["functions"][0]["decision"] == "BLOCK"
 
 
 def test_policy_and_complexity_blocks_are_reported_together(tmp_path: Path) -> None:
