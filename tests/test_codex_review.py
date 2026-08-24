@@ -516,6 +516,29 @@ def test_clean_reaction_and_finding_review_completions_pass() -> None:
     assert len({(item.completion.kind, item.completion.artifact_id) for item in evidence}) == 8  # type: ignore[union-attr]
 
 
+@pytest.mark.parametrize("kind", ["summary", "review"])
+def test_focused_indirect_completions_require_observer(kind: str) -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    comments = [*requests, *([_focused_summary("1")] if kind == "summary" else [])]
+    reviews = [_focused_review("1")] if kind == "review" else []
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[1:]
+    }
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="FOCUSED_CODEX_REVIEW_PENDING_1",
+    ):
+        _verify_focused(
+            _focused_opener(
+                comments,
+                reactions=reactions,
+                reviews=reviews,
+                jobs=[],
+            )
+        )
+
+
 def test_eight_focus_commands_and_order_are_exact() -> None:
     assert codex_review.FOCUSED_REVIEWS == (
         (

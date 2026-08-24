@@ -5,8 +5,6 @@ from __future__ import annotations
 import tomllib
 from typing import Any
 
-from supportability_gate import standard_block_ownership
-
 REVIEW_EVIDENCE_PATH = ".supportability-review.toml"
 _TEXT_FIELDS = {
     "behavior": ("intended_behavior", "proof"),
@@ -115,11 +113,6 @@ def parse_review_evidence(content: bytes) -> ReviewEvidence:
 
 def _block(kind: str, location: str) -> str:
     return f"{kind}_REVIEW_EVIDENCE:{location}"
-
-
-def block_standard(block: str) -> int | None:
-    """Return the Standard owned by one producer-generated review block."""
-    return standard_block_ownership.review_block_standard(block)
 
 
 def _value_block(value: object, location: str, *, text_list: bool) -> str | None:

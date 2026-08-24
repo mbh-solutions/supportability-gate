@@ -11,11 +11,14 @@ from typing import Any
 import pytest
 
 from supportability_gate import (
+    architecture_policy,
     clause_inventory,
     cli,
     codex_review,
     function_changes,
     git_changes,
+    modularity_policy,
+    quality_profile,
     reporting,
     review_evidence,
     standard_block_ownership,
@@ -308,6 +311,7 @@ def test_non_prefix_completion_snapshot_becomes_shared_technical() -> None:
         "unknown",
         "identity",
         "artifact",
+        "request_id",
         "quality",
         "partial_technical",
         "request_gap",
@@ -332,6 +336,8 @@ def test_malformed_entries_and_incorrect_bindings_fail_closed(case: str) -> None
         entries[1]["codex_review"]["completion"]["id"] = entries[0]["codex_review"]["completion"][
             "id"
         ]
+    elif case == "request_id":
+        entries[1]["codex_review"]["request_id"] = entries[0]["codex_review"]["request_id"]
     elif case == "quality":
         payload["quality_artifact"]["id"] = 0
     elif case == "partial_technical":
@@ -424,7 +430,9 @@ def test_structured_review_collects_every_applicable_field_defect() -> None:
         "MISSING_REVIEW_EVIDENCE:separation_of_concerns.before": 2,
     }
     assert set(blocks) == set(expected)
-    assert {block: review_evidence.block_standard(block) for block in blocks} == expected
+    assert {
+        block: standard_block_ownership.review_block_standard(block) for block in blocks
+    } == expected
 
 
 @pytest.mark.parametrize(
@@ -436,7 +444,7 @@ def test_structured_review_collects_every_applicable_field_defect() -> None:
     ],
 )
 def test_module_boundary_review_defects_belong_to_standard_four(block: str) -> None:
-    assert review_evidence.block_standard(block) == 4
+    assert standard_block_ownership.review_block_standard(block) == 4
 
 
 def test_every_non_review_block_family_has_one_exact_standard_owner() -> None:
@@ -574,6 +582,111 @@ def _producer_arguments(tmp_path: Path) -> tuple[list[str], Path]:
         "--output",
         str(output),
     ], output
+
+
+def test_emitted_evaluator_artifacts_pass_producer_and_enforcer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    quality = quality_profile.QualityEvidence(
+        base_sha=IDENTITY.base_sha,
+        changed_paths=(),
+        commands=(),
+        exclusions=(),
+        head_sha=IDENTITY.head_sha,
+        high_risk_paths=(),
+        language="python",
+        maximum_complexity=10,
+        production_files=(),
+        production_paths=("src",),
+        repository=IDENTITY.repository,
+        repository_id=str(IDENTITY.repository_id),
+        repository_remote=f"github.com/{IDENTITY.repository}",
+        run_attempt=str(IDENTITY.run_attempt),
+        run_id=str(IDENTITY.run_id),
+        runner_environment="github-hosted",
+        schema_version=quality_profile.SCHEMA_VERSION,
+        workflow_sha=IDENTITY.workflow_sha,
+        job="quality-profile",
+        artifact_id="789",
+        artifact_digest="d" * 64,
+        capture_sha256="c" * 64,
+    )
+    emitted = tmp_path / "emitted"
+    reporting.write_reports(
+        reporting.EvaluationResult(
+            identity=git_changes.RepositoryIdentity(
+                f"github.com/{IDENTITY.repository}",
+                IDENTITY.base_sha,
+                "c" * 40,
+                IDENTITY.head_sha,
+                "d" * 40,
+                "git version 2",
+            ),
+            contract_path=".supportability.toml",
+            contract_blob_sha=None,
+            contract_sha256=None,
+            production_paths=("src",),
+            high_risk_paths=(),
+            gate_coverage=(),
+            changed_files=(),
+            functions=(),
+            ruff_diagnostics=(),
+            technical_errors=(),
+            policy_blocks=(),
+            overall_result="PASS",
+            tool_versions={},
+            git_commands=(),
+            ruff_commands=(),
+            language="python",
+            architecture=architecture_policy.ArchitectureResult(
+                "python.ast-imports.v1", True, (), (), (), ()
+            ),
+            modularity=modularity_policy.ModularityResult((), (), (), (), (), ()),
+            quality_profile=quality,
+            standard_blocks=tuple((standard, ()) for standard in range(1, 9)),
+        ),
+        emitted,
+    )
+    arguments, output = _producer_arguments(tmp_path)
+    arguments[arguments.index("--complexity-result") + 1] = str(emitted / "complexity-result.json")
+    arguments[arguments.index("--quality-provenance") + 1] = str(
+        emitted / "quality-provenance.json"
+    )
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+    monkeypatch.setattr(
+        standard_results_producer.codex_review,
+        "require_focused_completion",
+        lambda *args: _evidence(),
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+    assert [entry["result"] for entry in json.loads(output.read_bytes())["entries"]] == ["PASS"] * 8
+    for standard in range(1, 9):
+        assert (
+            standard_results_enforcer.main(
+                [
+                    "--repository",
+                    IDENTITY.repository,
+                    "--repository-id",
+                    str(IDENTITY.repository_id),
+                    "--base-sha",
+                    IDENTITY.base_sha,
+                    "--head-sha",
+                    IDENTITY.head_sha,
+                    "--workflow-sha",
+                    IDENTITY.workflow_sha,
+                    "--run-id",
+                    str(IDENTITY.run_id),
+                    "--run-attempt",
+                    str(IDENTITY.run_attempt),
+                    "--input",
+                    str(output),
+                    "--standard",
+                    str(standard),
+                ]
+            )
+            == 0
+        )
 
 
 def test_producer_preserves_partial_snapshot_when_next_request_is_missing(

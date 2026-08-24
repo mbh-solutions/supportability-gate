@@ -62,13 +62,13 @@ justification = "The new module owns only the schema, transformation, and valida
 path = "src/supportability_gate/standard_results_producer.py"
 owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
-justification = "The producer owns only upstream artifact ingestion, error normalization, exact-run connector collection orchestration, and artifact emission; reporting remains the pre-existing workflow evaluation owner."
+justification = "The producer owns only upstream artifact ingestion, error normalization, exact-run connector collection orchestration, and artifact emission; reporting remains the pre-existing source evaluation serialization owner."
 
 [[module_boundaries]]
 path = "src/supportability_gate/standard_results_enforcer.py"
 owner_path = "src/supportability_gate/reporting.py"
 basis = "responsibility"
-justification = "The enforcer owns only one-entry exit behavior after lower-contract validation; reporting remains the pre-existing workflow evaluation owner."
+justification = "The enforcer owns only one-entry exit behavior after lower-contract validation; reporting remains the pre-existing source evaluation serialization owner."
 
 [[module_boundaries]]
 path = "src/supportability_gate/focused_review.py"
