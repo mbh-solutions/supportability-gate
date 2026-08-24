@@ -596,7 +596,15 @@ def test_workflow_wires_each_matrix_lane_to_the_exact_artifact_and_enforcer() ->
     assert re.search(r"(?m)^  standard-results:\n(?:.|\n)*?^    if: always\(\)$", workflow)
     assert not re.search(r"(?m)^\s+name: Supportability Gate\s*$", workflow)
     assert not re.search(r"(?m)^  supportability-gate:\s*$", workflow)
-    job = workflow.split("\n  standard-results:\n", 1)[1]
+    evidence_job, job = workflow.split("\n  supportability-evidence:\n", 1)[1].split(
+        "\n  standard-results:\n", 1
+    )
+    assert "artifact-id: ${{ steps.upload_evidence.outputs.artifact-id }}" in evidence_job
+    assert "python -P -m supportability_gate.standard_results_producer \\" in evidence_job
+    assert '--output "$RUNNER_TEMP/evidence/standard-results.json"' in evidence_job
+    assert "id: upload_evidence" in evidence_job
+    assert "path: ${{ runner.temp }}/evidence" in evidence_job
+    assert "if-no-files-found: error" in evidence_job
     rows = re.findall(r"(?m)^          - standard: ([1-8])\n            context: (.+)$", job)
     assert rows == [
         (str(standard), context)

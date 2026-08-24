@@ -220,4 +220,5 @@ def evaluate_review_evidence(
     blocks.extend(_module_boundary_blocks(data.get("module_boundaries")))
     if blocks:
         return None, tuple(sorted(set(blocks)))
-    return parse_review_evidence(content), ()
+    data["module_boundaries"] = data.get("module_boundaries", [])
+    return data, ()

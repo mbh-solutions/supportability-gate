@@ -19,6 +19,7 @@ from supportability_gate import (
     quality_profile,
     reporting,
     review_evidence,
+    standard_block_ownership,
 )
 
 
@@ -236,21 +237,18 @@ def _result(
         *review_blocks,
         *quality_blocks,
     )
-    review_by_standard = {
-        standard: tuple(
-            block for block in review_blocks if review_evidence.block_standard(block) == standard
+    standard_blocks = tuple(
+        (
+            standard,
+            tuple(
+                sorted(
+                    block
+                    for block in policy_blocks
+                    if standard in standard_block_ownership.owners(block)
+                )
+            ),
         )
         for standard in range(1, 9)
-    }
-    standard_blocks = (
-        (1, review_by_standard[1]),
-        (2, review_by_standard[2]),
-        (3, tuple(sorted((*architecture.blocks, *review_by_standard[3])))),
-        (4, tuple(sorted((*modularity.blocks, *review_by_standard[4])))),
-        (5, review_by_standard[5]),
-        (6, review_by_standard[6]),
-        (7, tuple(sorted((*contract_blocks, *quality_blocks, *review_by_standard[7])))),
-        (8, review_by_standard[8]),
     )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")

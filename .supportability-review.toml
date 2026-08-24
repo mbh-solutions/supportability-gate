@@ -16,9 +16,12 @@ after = "The refactor policy emits only Standard 6 evidence; the producer invoke
 dependency_direction = "The workflow produces existing evidence before standard_results_producer invokes the standard_results contract; standard_results depends only on clause-inventory, focused-review, and block-ownership contracts, while the producer alone depends on connector transport."
 reviewed_paths = [
     ".github/workflows/organization-required.yml",
+    "pyproject.toml",
+    "src/supportability_gate/cli.py",
     "src/supportability_gate/codex_review.py",
     "src/supportability_gate/focused_review.py",
     "src/supportability_gate/refactor_policy.py",
+    "src/supportability_gate/reporting.py",
     "src/supportability_gate/review_evidence.py",
     "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",

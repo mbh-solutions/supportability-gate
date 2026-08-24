@@ -964,6 +964,76 @@ def test_missing_milestone_three_evidence_blocks(tmp_path: Path, section: str) -
     )
 
 
+def test_missing_review_document_emits_every_field_in_its_standard_lane(
+    tmp_path: Path,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    (repository / ".supportability-review.toml").unlink()
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["standard_blocks"] == [
+        {
+            "standard": 1,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:human_review.naming",
+                "MISSING_REVIEW_EVIDENCE:human_review.reviewability",
+            ],
+        },
+        {
+            "standard": 2,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:separation_of_concerns.after",
+                "MISSING_REVIEW_EVIDENCE:separation_of_concerns.before",
+            ],
+        },
+        {
+            "standard": 3,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:architecture.dependency_direction",
+                "MISSING_REVIEW_EVIDENCE:architecture.reviewed_paths",
+            ],
+        },
+        {
+            "standard": 4,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:human_review.cohesion",
+                "MISSING_REVIEW_EVIDENCE:responsibility_boundary.does_not_own",
+                "MISSING_REVIEW_EVIDENCE:responsibility_boundary.owns",
+                "MISSING_REVIEW_EVIDENCE:responsibility_boundary.path",
+            ],
+        },
+        {
+            "standard": 5,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:behavior.intended_behavior",
+                "MISSING_REVIEW_EVIDENCE:behavior.proof",
+                "MISSING_REVIEW_EVIDENCE:characterization.captured_behavior",
+                "MISSING_REVIEW_EVIDENCE:characterization.proof",
+                "MISSING_REVIEW_EVIDENCE:human_review.intended_behavior",
+            ],
+        },
+        {
+            "standard": 6,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:incremental_refactor.completed_step",
+                "MISSING_REVIEW_EVIDENCE:incremental_refactor.target",
+            ],
+        },
+        {"standard": 7, "blocks": []},
+        {
+            "standard": 8,
+            "blocks": [
+                "MISSING_REVIEW_EVIDENCE:review_handoff.remaining_risks",
+                "MISSING_REVIEW_EVIDENCE:review_handoff.summary",
+            ],
+        },
+    ]
+
+
 @pytest.mark.parametrize(
     "section",
     [
