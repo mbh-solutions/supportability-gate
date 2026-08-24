@@ -628,6 +628,26 @@ def test_invalid_focused_request_sequences_block(case: str, code: str) -> None:
         _verify_focused(_focused_opener(requests))
 
 
+def test_snapshot_preserves_completed_prefix_when_next_request_is_missing() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES[:7]]
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES[:7]
+    }
+
+    block, evidence = codex_review.focused_completion_snapshot(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        opener=_focused_opener(requests, reactions=reactions, jobs=[]),
+    )
+
+    assert block == "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_8"
+    assert tuple(item.focus for item in evidence) == codex_review.FOCUSES[:7]
+    assert all(item.completion is not None for item in evidence)
+
+
 def test_one_artifact_cannot_satisfy_multiple_focuses() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
     reactions = {

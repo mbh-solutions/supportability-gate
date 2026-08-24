@@ -392,6 +392,14 @@ def _codex_rows(
 
 
 def _codex_blocks(rows: dict[str, dict[str, object]], prefix: str) -> dict[int, list[str]]:
+    if prefix == "MISSING_FOCUSED_CODEX_REVIEW_REQUEST":
+        return {
+            int(focus): [
+                f"{prefix if rows[focus]['request_id'] is None else 'FOCUSED_CODEX_REVIEW_PENDING'}_{focus}"
+            ]
+            for focus in focused_review.FOCUSES
+            if rows[focus]["completion"] is None
+        }
     return {
         int(focus): [f"{prefix}_{focus}"]
         for focus in focused_review.FOCUSES
@@ -407,6 +415,12 @@ def _codex_payload(
         rows = _codex_rows(evidence)
     except StandardResultsError as binding_error:
         return {}, {}, (binding_error.code,)
+    sequences = (
+        tuple(rows[focus]["request_id"] is not None for focus in focused_review.FOCUSES),
+        tuple(rows[focus]["completion"] is not None for focus in focused_review.FOCUSES),
+    )
+    if any(sequence != tuple(sorted(sequence, reverse=True)) for sequence in sequences):
+        return {}, {}, ("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE",)
     blocks: dict[int, list[str]] = {standard: [] for standard in range(1, 9)}
     if error_code is None and all(rows[focus]["completion"] for focus in focused_review.FOCUSES):
         return rows, blocks, ()

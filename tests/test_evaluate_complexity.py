@@ -933,6 +933,16 @@ def _defective_review_evidence(section: str, defect: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _review_evidence_with_module_boundaries(definition: str, *, top_level: bool) -> str:
+    if top_level:
+        return REVIEW_EVIDENCE.replace(
+            'schema_version = "1.0"\n',
+            f'schema_version = "1.0"\n{definition}',
+            1,
+        )
+    return f"{REVIEW_EVIDENCE}\n{definition}"
+
+
 @pytest.mark.parametrize(
     "section",
     [
@@ -1088,6 +1098,166 @@ def test_insufficient_milestone_three_evidence_blocks(tmp_path: Path, section: s
 
     assert exit_code == 1
     assert result["policy_blocks"][0].startswith("INSUFFICIENT_REVIEW_EVIDENCE:")
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement", "standard", "block"),
+    [
+        (
+            'reviewed_paths = ["src/sample.py"]',
+            "reviewed_paths = [1]",
+            3,
+            "MALFORMED_REVIEW_EVIDENCE:architecture.reviewed_paths",
+        ),
+        (
+            'reviewed_paths = ["src/sample.py"]',
+            "reviewed_paths = []",
+            3,
+            "INSUFFICIENT_REVIEW_EVIDENCE:architecture.reviewed_paths",
+        ),
+        (
+            'reviewed_paths = ["src/sample.py"]',
+            'reviewed_paths = [""]',
+            3,
+            "INSUFFICIENT_REVIEW_EVIDENCE:architecture.reviewed_paths",
+        ),
+        (
+            'remaining_risks = ["No known remaining risk in the focused boundary."]',
+            "remaining_risks = [1]",
+            8,
+            "MALFORMED_REVIEW_EVIDENCE:review_handoff.remaining_risks",
+        ),
+        (
+            'remaining_risks = ["No known remaining risk in the focused boundary."]',
+            "remaining_risks = []",
+            8,
+            "INSUFFICIENT_REVIEW_EVIDENCE:review_handoff.remaining_risks",
+        ),
+        (
+            'remaining_risks = ["No known remaining risk in the focused boundary."]',
+            'remaining_risks = [""]',
+            8,
+            "INSUFFICIENT_REVIEW_EVIDENCE:review_handoff.remaining_risks",
+        ),
+    ],
+)
+def test_review_list_defects_emit_exact_owned_lane(
+    tmp_path: Path,
+    original: str,
+    replacement: str,
+    standard: int,
+    block: str,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / ".supportability-review.toml",
+        REVIEW_EVIDENCE.replace(original, replacement, 1),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [block]
+    assert result["standard_blocks"] == [
+        {"blocks": [block] if item == standard else [], "standard": item} for item in range(1, 9)
+    ]
+
+
+@pytest.mark.parametrize(
+    ("definition", "top_level", "block"),
+    [
+        (
+            'module_boundaries = "invalid"\n',
+            True,
+            "MALFORMED_REVIEW_EVIDENCE:module_boundaries",
+        ),
+        (
+            'module_boundaries = ["invalid"]\n',
+            True,
+            "MALFORMED_REVIEW_EVIDENCE:module_boundaries[0]",
+        ),
+        (
+            """[[module_boundaries]]
+path = "src/new.py"
+owner_path = "src/owner.py"
+justification = "One boundary."
+""",
+            False,
+            "MISSING_REVIEW_EVIDENCE:module_boundaries[0].basis",
+        ),
+        (
+            """[[module_boundaries]]
+path = "src/new.py"
+owner_path = "src/owner.py"
+basis = "responsibility"
+justification = "One boundary."
+extra = "invalid"
+""",
+            False,
+            "MALFORMED_REVIEW_EVIDENCE:module_boundaries[0].extra",
+        ),
+        (
+            """[[module_boundaries]]
+path = "src/new.py"
+owner_path = "src/owner.py"
+basis = "invalid"
+justification = "One boundary."
+""",
+            False,
+            "MALFORMED_REVIEW_EVIDENCE:module_boundaries[0].basis",
+        ),
+        (
+            """[[module_boundaries]]
+path = "src/new.py"
+owner_path = "src/owner.py"
+basis = "responsibility"
+justification = ""
+""",
+            False,
+            "INSUFFICIENT_REVIEW_EVIDENCE:module_boundaries[0].justification",
+        ),
+        (
+            """[[module_boundaries]]
+path = "src/new.py"
+owner_path = "src/owner.py"
+basis = "responsibility"
+justification = "One boundary."
+
+[[module_boundaries]]
+path = "src/new.py"
+owner_path = "src/owner.py"
+basis = "responsibility"
+justification = "Duplicate boundary."
+""",
+            False,
+            "MALFORMED_REVIEW_EVIDENCE:module_boundaries.path",
+        ),
+    ],
+)
+def test_module_boundary_defects_emit_exact_standard_four_result(
+    tmp_path: Path,
+    definition: str,
+    top_level: bool,
+    block: str,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_module_boundaries(definition, top_level=top_level),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [block]
+    assert result["standard_blocks"] == [
+        {"blocks": [block] if standard == 4 else [], "standard": standard}
+        for standard in range(1, 9)
+    ]
 
 
 def test_valid_milestone_three_evidence_passes_and_reports_judgment(tmp_path: Path) -> None:

@@ -332,17 +332,6 @@ def _focused_review_requests(
     return requests, stale
 
 
-def _required_focused_requests(
-    comments: tuple[dict[str, Any], ...], head_sha: str, run_id: int
-) -> tuple[FocusedReviewRequest, ...]:
-    requests, stale = _focused_review_requests(comments, head_sha, run_id)
-    missing = next((focus for focus in FOCUSES if focus not in requests), None)
-    if missing is not None:
-        prefix = "STALE" if stale and not requests else "MISSING"
-        raise CodexReviewError(f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{missing}")
-    return tuple(requests[focus] for focus in FOCUSES)
-
-
 def _trusted_owner(item: dict[str, Any]) -> bool:
     user = item.get("user")
     return isinstance(user, dict) and user.get("id") == REQUESTER_ID
@@ -647,17 +636,12 @@ def _focused_state(
 ) -> tuple[str | None, tuple[FocusedReviewEvidence, ...]]:
     root = f"https://api.github.com/repos/{repository}"
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
-    requests = _required_focused_requests(comments, head_sha, run_id)
+    request_map, stale = _focused_review_requests(comments, head_sha, run_id)
+    requests = tuple(request_map[focus] for focus in FOCUSES if focus in request_map)
+    missing = next((focus for focus in FOCUSES if focus not in request_map), None)
     acknowledged = _focused_observer_comment_ids(repository, run_id, head_sha, token, opener)
-    if acknowledged is None:
-        return (
-            f"FOCUSED_CODEX_REVIEW_PENDING_{FOCUSES[0]}",
-            tuple(
-                FocusedReviewEvidence(item.focus, item.comment_id, item.created_at, None)
-                for item in requests
-            ),
-        )
-    if acknowledged != tuple(item.comment_id for item in requests):
+    request_ids = tuple(item.comment_id for item in requests)
+    if acknowledged is not None and acknowledged[: len(request_ids)] != request_ids:
         raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
     evidence: list[FocusedReviewEvidence] = []
@@ -670,7 +654,7 @@ def _focused_state(
             comments,
             reactions,
             reviews,
-            True,
+            acknowledged is not None,
             completed_before,
         )
         evidence.append(
@@ -680,10 +664,12 @@ def _focused_state(
     if len({(item.kind, item.artifact_id) for item in artifacts}) != len(artifacts):
         raise CodexReviewError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
     pending = next((item.focus for item in evidence if item.completion is None), None)
-    return (
-        f"FOCUSED_CODEX_REVIEW_PENDING_{pending}" if pending else None,
-        tuple(evidence),
-    )
+    if missing:
+        prefix = "STALE" if stale and not requests else "MISSING"
+        return f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{missing}", tuple(evidence)
+    if pending:
+        return f"FOCUSED_CODEX_REVIEW_PENDING_{pending}", tuple(evidence)
+    return None, tuple(evidence)
 
 
 def focused_completion_snapshot(

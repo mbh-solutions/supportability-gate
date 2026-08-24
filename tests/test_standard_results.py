@@ -277,6 +277,29 @@ def test_shared_binding_or_codex_trust_corruption_makes_all_results_technical() 
     assert [entry["result"] for entry in codex_payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
 
 
+def test_non_prefix_completion_snapshot_becomes_shared_technical() -> None:
+    evidence = list(_evidence())
+    second = evidence[1]
+    evidence[1] = codex_review.FocusedReviewEvidence(
+        second.focus,
+        second.request_id,
+        second.requested_at,
+        None,
+    )
+
+    payload = standard_results.compose_results(
+        *_inputs(),
+        IDENTITY,
+        tuple(evidence),
+        "FOCUSED_CODEX_REVIEW_PENDING_2",
+    )
+
+    assert [entry["result"] for entry in payload["entries"]] == ["TECHNICAL_FAILURE"] * 8
+    assert {tuple(entry["technical_errors"]) for entry in payload["entries"]} == {
+        ("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_EVIDENCE",)
+    }
+
+
 @pytest.mark.parametrize(
     "case",
     [
@@ -569,6 +592,30 @@ def test_producer_preserves_partial_snapshot_when_completion_is_pending(
     assert [entry["blocks"] for entry in payload["entries"]][1:] == [
         [f"FOCUSED_CODEX_REVIEW_PENDING_{standard}"] for standard in range(2, 9)
     ]
+
+
+def test_producer_preserves_completed_prefix_when_next_request_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arguments, output = _producer_arguments(tmp_path)
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+
+    def missing(*args: object) -> tuple[codex_review.FocusedReviewEvidence, ...]:
+        raise codex_review.CodexReviewError("MISSING_FOCUSED_CODEX_REVIEW_REQUEST_8")
+
+    monkeypatch.setattr(
+        standard_results_producer.codex_review, "require_focused_completion", missing
+    )
+    monkeypatch.setattr(
+        standard_results_producer.codex_review,
+        "focused_completion_snapshot",
+        lambda *args: ("MISSING_FOCUSED_CODEX_REVIEW_REQUEST_8", _evidence()[:7]),
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert [entry["result"] for entry in payload["entries"]] == [*("PASS",) * 7, "BLOCK"]
+    assert payload["entries"][7]["blocks"] == ["MISSING_FOCUSED_CODEX_REVIEW_REQUEST_8"]
 
 
 def test_producer_makes_snapshot_failure_shared_and_technical(
