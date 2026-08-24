@@ -570,3 +570,48 @@ def test_authorization_focus_and_sequence_are_exact(tmp_path: Path, defect: str,
     )
 
     assert code in result["policy_blocks"]
+
+
+def test_connector_failure_does_not_suppress_refactor_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "refactor-result.json"
+    result = {"overall_result": "BLOCK", "policy_blocks": ["EXAMPLE_BLOCK"]}
+    monkeypatch.setenv("RUNNER_ENVIRONMENT", "github-hosted")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    monkeypatch.setattr(refactor_policy, "_read_json", lambda *args: ({}, b"{}"))
+    monkeypatch.setattr(
+        refactor_policy,
+        "_event_values",
+        lambda event: ("example/repository", "b" * 40, "a" * 40, 7),
+    )
+    monkeypatch.setattr(refactor_policy, "_github_comments", lambda *args: ())
+    monkeypatch.setattr(refactor_policy, "_predecessor_authorization", lambda *args: (None, None))
+    monkeypatch.setattr(refactor_policy, "verify_refactor", lambda *args: result)
+
+    def fail_completion(*args: object, **kwargs: object) -> None:
+        raise refactor_policy.codex_review.CodexReviewError("FOCUSED_CODEX_REVIEW_PENDING_2")
+
+    monkeypatch.setattr(
+        refactor_policy.codex_review,
+        "require_focused_completion",
+        fail_completion,
+    )
+
+    exit_code = refactor_policy.main(
+        [
+            "--repository",
+            str(tmp_path),
+            "--event",
+            str(tmp_path / "event.json"),
+            "--characterization-result",
+            str(tmp_path / "characterization.json"),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 2
+    assert json.loads(output.read_text(encoding="utf-8")) == result

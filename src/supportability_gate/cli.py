@@ -250,30 +250,6 @@ def _result(
         *review_blocks,
         *quality_blocks,
     )
-    if policy_blocks:
-        return reporting.EvaluationResult(
-            identity,
-            contract_path,
-            blob.object_sha,
-            policy.sha256,
-            policy.production_paths,
-            policy.high_risk_paths,
-            _gate_coverage(policy),
-            analyzed.assessments,
-            (),
-            (),
-            (),
-            policy_blocks,
-            "BLOCK",
-            _versions(identity),
-            tuple(records),
-            (),
-            structured_review,
-            policy.language,
-            architecture,
-            modularity,
-            quality,
-        )
     base_definitions = _all_definitions(analyzed.analyses, "base")
     head_definitions = _all_definitions(analyzed.analyses, "head")
     base_metrics = complexity_metrics.measure_definitions(base_definitions, policy.language)
@@ -294,7 +270,9 @@ def _result(
         head_metrics,
     )
     complexity_policy.validate_reporting(decisions, policy.maximum)
-    overall = "BLOCK" if any(item.decision == "BLOCK" for item in decisions) else "PASS"
+    overall = (
+        "BLOCK" if policy_blocks or any(item.decision == "BLOCK" for item in decisions) else "PASS"
+    )
     return reporting.EvaluationResult(
         identity,
         contract_path,
@@ -307,7 +285,7 @@ def _result(
         decisions,
         ruff.diagnostics,
         (),
-        (),
+        policy_blocks,
         overall,
         _versions(identity),
         tuple(records),

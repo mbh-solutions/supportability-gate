@@ -761,6 +761,23 @@ def test_candidate_contract_change_blocks(tmp_path: Path) -> None:
     assert result["policy_blocks"] == ["CANDIDATE_CONTRACT_CHANGE"]
 
 
+def test_policy_and_complexity_blocks_are_reported_together(tmp_path: Path) -> None:
+    policy = CONTRACT.replace("python.ruff-lint.v1", "python.unapproved.v1")
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 11))
+    head_sha = _commit(repository, "exceed complexity")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["overall_result"] == "BLOCK"
+    assert "UNAPPROVED_ADAPTER:python.unapproved.v1" in result["policy_blocks"]
+    assert result["functions"][0]["decision"] == "BLOCK"
+    assert result["functions"][0]["head"]["complexity"] == 11
+
+
 def test_unapproved_gate_adapter_blocks(tmp_path: Path) -> None:
     policy = CONTRACT.replace("python.ruff-lint.v1", "python.unapproved.v1")
     repository = _initialize_repository(tmp_path, policy)

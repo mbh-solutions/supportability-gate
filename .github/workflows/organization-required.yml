@@ -18,7 +18,7 @@ jobs:
       issues: read
       pull-requests: read
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     steps:
       - name: Check out exact gate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,14 +33,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Observe exact-request connector acknowledgement
+      - name: Observe serial focused connector reviews
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PULL_NUMBER: ${{ github.event.pull_request.number }}
           PYTHONPATH: ${{ github.workspace }}/gate/src
         run: |
-          python -P -c 'import os; from supportability_gate.codex_review import OBSERVER_MARKER, require_acknowledgement; comment_id = require_acknowledgement(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print(f"{OBSERVER_MARKER}{comment_id}")'
+          python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_OBSERVER_MARKER, FOCUSES, require_focused_acknowledgements; comment_ids = require_focused_acknowledgements(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_OBSERVER_MARKER}{focus}:{comment_id}" for focus, comment_id in zip(FOCUSES, comment_ids, strict=True)))'
 
   characterize-base:
     name: Characterize Base
@@ -271,6 +271,7 @@ jobs:
   supportability-gate:
     name: Supportability Gate
     needs: [observe-codex-review, characterize-base, characterize-head, quality-profile]
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -296,30 +297,44 @@ jobs:
           python-version: "3.12"
 
       - name: Install exact gate
+        id: install
+        continue-on-error: true
         run: |
           python -m venv "$RUNNER_TEMP/gate-venv"
           "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
           "$RUNNER_TEMP/gate-venv/bin/python" -m pip install --disable-pip-version-check --no-build-isolation --no-deps ./gate
 
       - name: Download authenticated base behavior
+        id: download_base
+        if: needs.characterize-base.result == 'success'
+        continue-on-error: true
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           artifact-ids: ${{ needs.characterize-base.outputs.artifact-id }}
           path: ${{ runner.temp }}/base
 
       - name: Download authenticated head behavior
+        id: download_head
+        if: needs.characterize-head.result == 'success'
+        continue-on-error: true
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           artifact-ids: ${{ needs.characterize-head.outputs.artifact-id }}
           path: ${{ runner.temp }}/head
 
       - name: Download authenticated quality evidence
+        id: download_quality
+        if: needs.quality-profile.result == 'success'
+        continue-on-error: true
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           artifact-ids: ${{ needs.quality-profile.outputs.artifact-id }}
           path: ${{ runner.temp }}/quality
 
       - name: Read back GitHub artifact metadata
+        id: artifact_metadata
+        if: steps.download_quality.outcome == 'success'
+        continue-on-error: true
         env:
           ARTIFACT_ID: ${{ needs.quality-profile.outputs.artifact-id }}
           GH_TOKEN: ${{ github.token }}
@@ -332,6 +347,12 @@ jobs:
             --output "$RUNNER_TEMP/quality/artifact-metadata.json"
 
       - name: Verify exact behavior and refactor policy
+        id: refactor_policy
+        if: >-
+          steps.install.outcome == 'success' &&
+          steps.download_base.outcome == 'success' &&
+          steps.download_head.outcome == 'success'
+        continue-on-error: true
         env:
           BASE_ARTIFACT_DIGEST: ${{ needs.characterize-base.outputs.artifact-digest }}
           BASE_ARTIFACT_ID: ${{ needs.characterize-base.outputs.artifact-id }}
@@ -377,6 +398,12 @@ jobs:
           exit "$refactor_status"
 
       - name: Evaluate immutable pull-request commits
+        id: evaluate
+        if: >-
+          steps.install.outcome == 'success' &&
+          steps.download_quality.outcome == 'success' &&
+          steps.artifact_metadata.outcome == 'success'
+        continue-on-error: true
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -408,9 +435,36 @@ jobs:
           exit "$status"
 
       - name: Upload authoritative supportability evidence
+        id: upload_evidence
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: supportability-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/evidence
           if-no-files-found: error
+
+      - name: Enforce aggregate result
+        if: always()
+        env:
+          OBSERVER_RESULT: ${{ needs.observe-codex-review.result }}
+          BASE_RESULT: ${{ needs.characterize-base.result }}
+          HEAD_RESULT: ${{ needs.characterize-head.result }}
+          QUALITY_RESULT: ${{ needs.quality-profile.result }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          BASE_DOWNLOAD_OUTCOME: ${{ steps.download_base.outcome }}
+          HEAD_DOWNLOAD_OUTCOME: ${{ steps.download_head.outcome }}
+          QUALITY_DOWNLOAD_OUTCOME: ${{ steps.download_quality.outcome }}
+          METADATA_OUTCOME: ${{ steps.artifact_metadata.outcome }}
+          REFACTOR_OUTCOME: ${{ steps.refactor_policy.outcome }}
+          EVALUATE_OUTCOME: ${{ steps.evaluate.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload_evidence.outcome }}
+        run: |
+          status=0
+          for result in "$OBSERVER_RESULT" "$BASE_RESULT" "$HEAD_RESULT" "$QUALITY_RESULT" \
+            "$INSTALL_OUTCOME" "$BASE_DOWNLOAD_OUTCOME" "$HEAD_DOWNLOAD_OUTCOME" \
+            "$QUALITY_DOWNLOAD_OUTCOME" "$METADATA_OUTCOME" "$REFACTOR_OUTCOME" \
+            "$EVALUATE_OUTCOME" "$UPLOAD_OUTCOME"; do
+            if [ "$result" != "success" ]; then status=1; fi
+          done
+          exit "$status"

@@ -585,7 +585,6 @@ def main(argv: list[str] | None = None) -> int:
         run_id = os.environ.get("GITHUB_RUN_ID")
         if not token or not run_id or not run_id.isdigit() or int(run_id) < 1:
             raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
-        codex_review.require_completion(repository_name, pull_number, head_sha, int(run_id), token)
         comments = _github_comments(repository_name, pull_number, token)
         _, base_sha, _, _ = _event_values(event)
         predecessor, predecessor_block = _predecessor_authorization(
@@ -600,6 +599,13 @@ def main(argv: list[str] | None = None) -> int:
             predecessor_block,
         )
         _write_result(Path(arguments.output), result)
+        codex_review.require_focused_completion(
+            repository_name,
+            pull_number,
+            head_sha,
+            int(run_id),
+            token,
+        )
     except Exception as error:  # fail closed at hosted-job boundary
         print(getattr(error, "code", "TECHNICAL_FAILURE"))
         return 2

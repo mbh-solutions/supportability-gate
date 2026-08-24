@@ -98,14 +98,21 @@ Stop condition:
 
 ## Codex review completion
 
-- For every pull-request head and required-workflow run, post exactly one comment containing
-  `@codex review`, `Codex-Review-Head: <40-character-head-sha>`, and
-  `Codex-Review-Run: <workflow-run-id>` on separate lines.
+- For every pull-request head and required-workflow run, post exactly three owner-authenticated
+  comments, one at a time in focus order `2`, `4`, then `8`.
+- Each comment must contain the exact focus command below plus
+  `Codex-Review-Focus: <focus>`, `Codex-Review-Head: <40-character-head-sha>`, and
+  `Codex-Review-Run: <workflow-run-id>` on separate lines:
+  - `2`: `@codex review for mixed responsibilities or unclear single ownership in changed code only`
+  - `4`: `@codex review for weak domain ownership, low cohesion, avoidable coupling, or unjustified module boundaries only`
+  - `8`: `@codex review for unsupported, contradictory, stale, incomplete, or misleading handoff claims about change, boundaries, validation, risk, or gate coverage only`
+- Post the next focus only after the connector completes the prior focus. A generic request, an
+  out-of-order request, or one completion artifact reused across focuses does not count.
 - A new push requires a new exact-head request. Do not merge while the required Gate is waiting for
-  the trusted connector's thumbs-up on that exact request comment, exact-head clean summary, or
-  exact-head submitted review.
+  any trusted focused completion.
 - A clean summary or submitted review counts only after the exact-run observer job logged that
-  request's comment ID while connector eyes were present and the required Gate later saw eyes clear.
+  focus and request comment ID while connector eyes were present; the required Gate must then bind
+  one unique completion artifact to that focus's strict serial time window.
 - Resolve every inline finding before merge; GitHub's required review-thread resolution remains the
   enforcement boundary for unresolved findings.
 

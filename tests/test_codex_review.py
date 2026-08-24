@@ -15,6 +15,18 @@ OLD_HEAD = "b" * 40
 REQUESTED = "2026-08-11T12:00:00Z"
 COMPLETED = "2026-08-11T12:01:00Z"
 RUN_ID = 12345
+FOCUS_REQUEST_TIMES = {
+    "2": "2026-08-11T12:00:00Z",
+    "4": "2026-08-11T12:02:00Z",
+    "8": "2026-08-11T12:04:00Z",
+}
+FOCUS_COMPLETION_TIMES = {
+    "2": "2026-08-11T12:01:00Z",
+    "4": "2026-08-11T12:03:00Z",
+    "8": "2026-08-11T12:05:00Z",
+}
+FOCUS_REQUEST_IDS = {"2": 21, "4": 22, "8": 23}
+FOCUS_ARTIFACT_IDS = {"2": 201, "4": 401, "8": 801}
 
 
 class _Reply:
@@ -108,6 +120,126 @@ def _summary(*, user_id: int = codex_review.CONNECTOR_ID, head: str = HEAD) -> d
         "updated_at": COMPLETED,
         "user": {"id": user_id},
     }
+
+
+def _focused_request(
+    focus: str,
+    *,
+    comment_id: int | None = None,
+    created_at: str | None = None,
+    updated_at: str | None = None,
+) -> dict[str, object]:
+    requested_at = created_at or FOCUS_REQUEST_TIMES[focus]
+    return {
+        "body": (
+            f"{dict(codex_review.FOCUSED_REVIEWS)[focus]}\n\n"
+            f"Codex-Review-Focus: {focus}\n"
+            f"Codex-Review-Head: {HEAD}\n"
+            f"Codex-Review-Run: {RUN_ID}"
+        ),
+        "created_at": requested_at,
+        "id": comment_id or FOCUS_REQUEST_IDS[focus],
+        "updated_at": updated_at or requested_at,
+        "user": {"id": codex_review.REQUESTER_ID},
+    }
+
+
+def _focused_reaction(
+    focus: str,
+    *,
+    artifact_id: int | None = None,
+    content: str = "+1",
+) -> dict[str, object]:
+    return {
+        "content": content,
+        "created_at": FOCUS_COMPLETION_TIMES[focus],
+        "id": artifact_id or FOCUS_ARTIFACT_IDS[focus],
+        "user": {"id": codex_review.CONNECTOR_ID},
+    }
+
+
+def _focused_summary(
+    focus: str,
+    *,
+    updated_at: str | None = None,
+) -> dict[str, object]:
+    completed_at = FOCUS_COMPLETION_TIMES[focus]
+    return {
+        "body": (
+            "Codex Review: Didn't find any major issues. Delightful!\n\n"
+            f"**Reviewed commit:** `{HEAD[:10]}`"
+        ),
+        "created_at": completed_at,
+        "id": FOCUS_ARTIFACT_IDS[focus],
+        "updated_at": updated_at or completed_at,
+        "user": {"id": codex_review.CONNECTOR_ID},
+    }
+
+
+def _focused_review(focus: str, *, state: str = "COMMENTED") -> dict[str, object]:
+    return {
+        "commit_id": HEAD,
+        "id": FOCUS_ARTIFACT_IDS[focus],
+        "state": state,
+        "submitted_at": FOCUS_COMPLETION_TIMES[focus],
+        "user": {"id": codex_review.CONNECTOR_ID},
+    }
+
+
+def _focused_log(
+    bindings: tuple[tuple[str, int], ...] | None = None,
+) -> bytes:
+    bound = bindings or tuple((focus, FOCUS_REQUEST_IDS[focus]) for focus in codex_review.FOCUSES)
+    return "".join(
+        f"2026-08-11T12:06:00Z {codex_review.FOCUSED_OBSERVER_MARKER}{focus}:{request_id}\n"
+        for focus, request_id in bound
+    ).encode()
+
+
+def _focused_opener(
+    comments: list[dict[str, object]],
+    *,
+    reactions: dict[int, list[dict[str, object]]] | None = None,
+    reviews: list[dict[str, object]] | None = None,
+    jobs: list[dict[str, object]] | None = None,
+    log: bytes | None = None,
+) -> Callable[..., _Reply]:
+    reaction_rows = reactions or {}
+    job_rows = [_observer()] if jobs is None else jobs
+
+    def open_request(request: Any, **kwargs: object) -> _Reply:
+        assert kwargs == {"timeout": 30}
+        url = urllib.parse.urlparse(request.full_url)
+        page = int(urllib.parse.parse_qs(url.query).get("page", ["1"])[0])
+        start = (page - 1) * 100
+        if url.path.endswith("logs"):
+            return _Reply(log or _focused_log())
+        if url.path.endswith("jobs"):
+            return _Reply(_jobs(job_rows[start : start + 100]))
+        if url.path.endswith("comments"):
+            return _Reply(comments[start : start + 100])
+        if url.path.endswith("reviews"):
+            return _Reply((reviews or [])[start : start + 100])
+        if url.path.endswith("reactions"):
+            comment_id = int(url.path.split("/")[-2])
+            return _Reply(reaction_rows.get(comment_id, [])[start : start + 100])
+        raise AssertionError(url.path)
+
+    return open_request
+
+
+def _verify_focused(opener: Callable[..., _Reply]) -> None:
+    codex_review.require_focused_completion(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=1,
+        delay=0,
+        opener=opener,
+        sleeper=lambda _: None,
+    )
 
 
 def _opener(
@@ -360,3 +492,196 @@ def test_paginated_exact_head_request_is_found() -> None:
     comments.append(_request(comment_id=101))
 
     _verify(_opener(comments, [_reaction()]))
+
+
+def test_three_distinct_focused_requests_and_artifacts_pass() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES
+    }
+
+    _verify_focused(_focused_opener(requests, reactions=reactions))
+
+
+@pytest.mark.parametrize(
+    ("case", "code"),
+    [
+        ("missing", "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_8"),
+        ("duplicate", "MALFORMED_FOCUSED_CODEX_REVIEW_REQUEST"),
+        ("unfocused", "UNFOCUSED_CODEX_REVIEW_REQUEST"),
+        ("out_of_order", "OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_REQUEST"),
+        ("same_second", "OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_REQUEST"),
+    ],
+)
+def test_invalid_focused_request_sequences_block(case: str, code: str) -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    if case == "missing":
+        requests.pop()
+    elif case == "duplicate":
+        requests.append(_focused_request("2", comment_id=24))
+    elif case == "unfocused":
+        requests.append(_request(comment_id=24))
+    elif case == "out_of_order":
+        requests[1] = _focused_request("4", created_at="2026-08-11T11:59:00Z")
+    else:
+        requests[1] = _focused_request("4", created_at=FOCUS_REQUEST_TIMES["2"])
+
+    with pytest.raises(codex_review.CodexReviewError, match=code):
+        _verify_focused(_focused_opener(requests))
+
+
+def test_one_artifact_cannot_satisfy_multiple_focuses() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus, artifact_id=999)]
+        for focus in codex_review.FOCUSES
+    }
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE",
+    ):
+        _verify_focused(_focused_opener(requests, reactions=reactions))
+
+
+@pytest.mark.parametrize(
+    "bindings",
+    [
+        (("4", 21), ("2", 22), ("8", 23)),
+        (("2", 99), ("4", 22), ("8", 23)),
+    ],
+)
+def test_observer_markers_bind_focus_and_request(
+    bindings: tuple[tuple[str, int], ...],
+) -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    reactions = {
+        FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in codex_review.FOCUSES
+    }
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE",
+    ):
+        _verify_focused(_focused_opener(requests, reactions=reactions, log=_focused_log(bindings)))
+
+
+def test_edited_focused_summary_blocks() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    comments = [
+        *requests,
+        _focused_summary("2", updated_at="2026-08-11T12:01:30Z"),
+    ]
+    reactions = {FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in ("4", "8")}
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="MALFORMED_CODEX_REVIEW_EVIDENCE",
+    ):
+        _verify_focused(_focused_opener(comments, reactions=reactions))
+
+
+def test_dismissed_focused_review_blocks() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    reactions = {FOCUS_REQUEST_IDS[focus]: [_focused_reaction(focus)] for focus in ("4", "8")}
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="FOCUSED_CODEX_REVIEW_PENDING_2",
+    ):
+        _verify_focused(
+            _focused_opener(
+                requests,
+                reactions=reactions,
+                reviews=[_focused_review("2", state="DISMISSED")],
+            )
+        )
+
+
+def test_focused_observer_is_get_only_and_tracks_serial_acknowledgements() -> None:
+    requests: list[Any] = []
+    comment_poll = 0
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        nonlocal comment_poll
+        requests.append(request)
+        assert kwargs == {"timeout": 30}
+        path = urllib.parse.urlparse(request.full_url).path
+        if path.endswith("jobs"):
+            return _Reply(_jobs())
+        if path.endswith("comments"):
+            comment_poll += 1
+            comments = [_focused_request("2")]
+            if comment_poll >= 3:
+                comments.append(_focused_request("4"))
+            if comment_poll >= 5:
+                comments.append(_focused_request("8"))
+            return _Reply(comments)
+        if path.endswith("reviews"):
+            return _Reply([])
+        if path.endswith("reactions"):
+            comment_id = int(path.split("/")[-2])
+            focus = next(
+                item for item, identifier in FOCUS_REQUEST_IDS.items() if identifier == comment_id
+            )
+            first_seen = {"2": 1, "4": 3, "8": 5}
+            if comment_poll == first_seen[focus]:
+                return _Reply([_focused_reaction(focus, content="eyes")])
+            if comment_poll > first_seen[focus]:
+                return _Reply([_focused_reaction(focus)])
+            return _Reply([])
+        raise AssertionError(path)
+
+    comment_ids = codex_review.require_focused_acknowledgements(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=5,
+        delay=0,
+        opener=opener,
+        sleeper=lambda _: None,
+    )
+
+    assert comment_ids == tuple(FOCUS_REQUEST_IDS[focus] for focus in codex_review.FOCUSES)
+    assert comment_poll == 5
+    assert all(request.get_method() == "GET" for request in requests)
+
+
+def test_focused_completion_waits_for_final_eyes_to_clear() -> None:
+    requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
+    polls = 0
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        nonlocal polls
+        assert kwargs == {"timeout": 30}
+        path = urllib.parse.urlparse(request.full_url).path
+        if path.endswith("comments"):
+            polls += 1
+            return _Reply(requests)
+        if path.endswith("jobs"):
+            return _Reply(_jobs([_observer()]))
+        if path.endswith("logs"):
+            return _Reply(_focused_log())
+        if path.endswith("reviews"):
+            return _Reply([])
+        if path.endswith("reactions"):
+            comment_id = int(path.split("/")[-2])
+            focus = next(
+                item for item, identifier in FOCUS_REQUEST_IDS.items() if identifier == comment_id
+            )
+            content = "eyes" if focus == "8" and polls == 1 else "+1"
+            return _Reply([_focused_reaction(focus, content=content)])
+        raise AssertionError(path)
+
+    codex_review.require_focused_completion(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=2,
+        delay=0,
+        opener=opener,
+        sleeper=lambda _: None,
+    )
+
+    assert polls == 2
