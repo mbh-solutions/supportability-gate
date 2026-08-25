@@ -280,9 +280,7 @@ def main() -> int:
         return 2
     return int(
         any(
-            quality_profile.command_failed(
-                evidence.language, item.adapter, item.executed, item.exit_code
-            )
+            contract.command_failed(evidence.language, item.adapter, item.executed, item.exit_code)
             for item in evidence.commands
         )
     )

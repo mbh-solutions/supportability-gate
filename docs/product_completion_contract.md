@@ -1789,11 +1789,15 @@ Do not create a new terminal label not authorized by an active milestone directi
   parameters, logical assignments, optional access/calls, and parameter-owned callbacks without
   leaking nested or class-implicit code paths into enclosing functions. Aggregate evidence binds
   changed production sides, renames, qualified names, touched names, measured values, and the exact
-  touched Ruff diagnostic set; malformed or valid-looking field poison fails closed.
+  touched Ruff diagnostic set; malformed or valid-looking field poison fails closed. The shared
+  ordinary-exit classifier lives in the existing contract leaf so the minimal aggregate producer
+  does not import hosted analyzers or tree-sitter dependencies.
 - Deterministic proof: the initial characterized nodes produced 18 intended failures; the later
   Ruff-binding additions produced four intended failures. The one directly relevant S03 suite then
-  passed all 167 tests. The final review head must also pass the issue's exact Python 3.12.13 source
-  proof, protected source workflow, and eight serial focused reviews before merge.
+  passed all 167 tests. A protected-run failure reproduced the missing minimal-import boundary; its
+  focused regression failed before the leaf correction and passed after it. The final review head
+  must also pass the issue's exact Python 3.12.13 source proof, protected source workflow, and eight
+  serial focused reviews before merge.
 - Protected qualification requirement: never-merge Python and frontend/component canaries must each
   prove a valid changed function passes and an actual complexity-11 function blocks Gate 1 only,
   with exact ruleset, run/job, artifact, App, base/head, and cleanup evidence recorded in issue #146.

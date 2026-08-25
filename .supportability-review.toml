@@ -1,82 +1,97 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Project #10 S02 makes each deterministic Standard lane own its applicability, evidence, policy blocks, technical errors, and result. A lane-specific poison changes only its owning lane, simultaneous poisons remain independent, and only a named validated dependency failure may affect its exact dependent lane set. One authenticated added documentation line may use NOT_APPLICABLE_SHORT_TASK; uncertain or broader changes use the full process."
-proof = "tests/test_standard_results.py::{test_gate_three_cycle_blocks_only_gate_three,test_quality_provenance_binding_mismatch_is_gate_seven_technical_only,test_simultaneous_gate_three_and_gate_seven_poisons_remain_independent,test_malformed_shared_review_document_names_only_affected_lanes,test_cli_captures_one_added_document_line_without_broadening_other_files,test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners,test_completed_passing_source_requires_success_outcome,test_blocked_refactor_source_requires_failure_and_remains_a_policy_block,test_failed_quality_capture_without_gate_seven_block_is_malformed,test_short_task_ignores_irrelevant_characterization_and_refactor_outcomes,test_forged_short_results_are_rejected_by_applicability_evidence,test_install_failure_suppresses_all_derived_source_errors}; tests/test_evaluate_complexity.py::test_syntax_error_is_technical_failure; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json"
+intended_behavior = "Project #10 S03 makes Gate 1 deterministically qualify touched Python and TypeScript/TSX functions at maximum 10, preserve progressive legacy improvement, and own ordinary complexity policy failures without creating derivative Gate 4 or Gate 7 failures. Exact changed paths, qualified function identities, metrics, decisions, and applicable Ruff evidence must cross-bind or fail closed."
+proof = "tests/test_evaluate_complexity.py::{test_new_complexity_10_passes,test_new_complexity_11_blocks,test_decorated_python_complexity_binds_ruff_to_definition_line,test_legacy_14_to_12_passes_progressively,test_typescript_clean_complexity_10_passes,test_typescript_complexity_11_blocks,test_typescript_metric_matches_eslint_classic_function_constructs,test_complexity_poison_is_byte_identical}; tests/test_standard_results.py::{test_complexity_policy_exit_blocks_gate_one_only,test_progressive_complexity_policy_exit_remains_a_successful_capture,test_function_evidence_must_cross_bind_to_changed_paths_and_ruff,test_ruff_evidence_must_bind_to_touched_function,test_standard_results_import_does_not_require_analysis_dependencies}"
 
 [characterization]
-captured_behavior = "The standard-results boundary freezes clean full-process output, isolated gate-3 and gate-7 poison, simultaneous independent poison, explicit complexity and review shared dependencies, authenticated one-line documentation short-task output, authentic source outcomes, and the producer's exact review-required stdout. Focused tests also freeze malformed, missing, duplicate, stale, spoofed, misbound, partial-technical, and outcome-contradictory input handling plus exact per-lane enforcement exits."
-proof = ".supportability-characterization.json scenario standard-results-boundary; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json; tests/test_standard_results.py"
+captured_behavior = "Existing gate-cli, quality-profile, architecture-modularity, and standard-results-boundary scenarios cover every changed production responsibility. Focused fixtures add valid and poisoned Python/TypeScript metrics, decorated Ruff mapping, byte identity, Gate 1-only isolation, progressive capture, exact result binding, and the minimal aggregate import boundary."
+proof = ".supportability-characterization.json scenarios gate-cli, m9-quality-profile, architecture-modularity-baseline, and standard-results-boundary; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "The aggregate result path flattened deterministic blocks and technical failures into one workflow result, so one source failure could obscure unaffected lane outcomes and eligible short work had no authenticated per-lane NOT_APPLICABLE result."
-after = "standard_block_ownership.py owns exact block and shared-dependency lane mapping; standard_results.py owns canonical lane composition plus exact identity and schema validation; standard_results_producer.py owns strict artifact loading and canonical output; standard_results_enforcer.py owns strict input reading, delegates validation to standard_results.py, and translates one selected lane result to its exit; organization-required.yml wires the independent matrix and requests advisory review only when deterministic applicability requires it."
+before = "Ordinary complexity-adapter exit 1 was classified as a quality failure, new-location coverage rejected the same authenticated execution, TypeScript function metrics omitted approved classic constructs, decorated Ruff locations used decorator spans, and aggregate function/Ruff collections were independently valid but not cross-bound."
+after = "The leaf contract owns ordinary command-failure classification; quality and modularity consumers reuse it; changed-function collection and complexity measurement remain separate; reporting emits only already-verified touched Ruff rows; and standard-results composition cross-binds exact changed sides, names, spans, metrics, messages, decisions, and policy ownership."
 
 [architecture]
-dependency_direction = "standard_results_producer.py and standard_results_enforcer.py depend only on standard_results.py; standard_results.py depends on the leaf clause_inventory.py and standard_block_ownership.py boundaries. The workflow invokes producer and enforcer as command modules and cannot decide a lane result. Import Linter names all four new production modules and enforces this direction."
+dependency_direction = "The dependency-free contract leaf owns fixed adapter identities and command-failure classification. Quality and modularity analysis depend downward on it. The minimal standard-results producer imports standard_results, which now depends only on leaf contract, clause inventory, and block ownership rather than hosted analyzers or tree-sitter packages."
 reviewed_paths = [
-    ".github/workflows/organization-required.yml",
-    ".supportability-characterization.json",
     ".supportability-review.toml",
-    "AGENTS.md",
     "docs/product_completion_contract.md",
-    "pyproject.toml",
-    "src/supportability_gate/cli.py",
-    "src/supportability_gate/standard_block_ownership.py",
+    "src/supportability_gate/complexity_metrics.py",
+    "src/supportability_gate/contract.py",
+    "src/supportability_gate/function_changes.py",
+    "src/supportability_gate/modularity_policy.py",
+    "src/supportability_gate/quality_profile.py",
+    "src/supportability_gate/reporting.py",
     "src/supportability_gate/standard_results.py",
-    "src/supportability_gate/standard_results_enforcer.py",
-    "src/supportability_gate/standard_results_producer.py",
-    "tests/characterization/standard-results-boundary.characterization.py",
-    "tests/characterization/standard-results-boundary.golden.json",
+    "tests/hosted_quality_profile.py",
     "tests/test_evaluate_complexity.py",
     "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results.py"
-owns = "Canonical standard-results.v2 composition, exact schema and identity validation, authenticated applicability, per-lane policy and technical state, explicit shared-dependency representation, and the deterministic review-required decision."
-does_not_own = "Block-family ownership data, filesystem or command-line input handling, source-artifact generation, workflow orchestration, Codex connector judgment, GitHub mutation, target repository import, or target repository execution."
+path = "src/supportability_gate/complexity_metrics.py"
+owns = "Exact per-function Python McCabe and TypeScript classic metrics, isolated Ruff execution, normalized C901 diagnostics, and bidirectional Ruff parity before reporting."
+does_not_own = "Changed-line selection, progressive policy decisions, hosted quality capture, modularity coverage, aggregate lane composition, advisory review, target repository execution, workflow orchestration, or GitHub mutation."
 
 [incremental_refactor]
-target = "Complete only Project #10 S02 independent lane applicability, evidence, block, technical-error, and result ownership plus explicit genuine shared-dependency behavior; do not begin S03 or change production target code or rulesets."
-completed_step = "One runnable slice adds the four named standard-results responsibilities, converts the required workflow to an independent eight-lane matrix, conditionally requests advisory review, and adds focused plus regression characterization for isolated, simultaneous, shared, malformed, and authenticated short-task cases."
+target = "Complete only Project #10 S03 Gate 1 Python and TypeScript/TSX qualification, exact evidence binding, lane isolation, protected canaries, and terminal ledger transaction; do not begin S04 or redesign Gates 2-8."
+completed_step = "One runnable slice corrects existing Gate 1 identities, metrics, Ruff mapping, exit ownership, new-location coverage, touched evidence serialization, aggregate cross-binding, and the minimal producer dependency while retaining existing schemas, commands, workflows, thresholds, and modules."
 
 [review_handoff]
-summary = "Issue #145 owner-authorizes this bounded S02 slice. Frozen deterministic-green full-process head 51e5a824d64eb91c03a413fefef643ad00b71974 and required run 32824078342 completed one serial eight-focus lifecycle with unique trusted completions. The owner recorded supported findings 3850712993, 3850713003, 3850822052, 3850965961, 3851067418, and the contract inconsistency in 3851109632 for remediation; findings 3850713009, 3850860315, 3850898748, and 3851014643 were rejected with evidence. Successful focuses will not be rerun. This evidence does not claim the final remediation head or authorization, final source or protected-target proof, normal merge, or terminal Project readback."
+summary = "Issue #146 owner-authorizes this bounded S03 slice. Local Python 3.12.13 source proof passed on the initial implementation head, and protected Source Validation passed. Required run 32856379536 then exposed the minimal producer importing tree-sitter transitively; the current correction moves the shared predicate to the existing contract leaf and adds a direct import-boundary regression. No focused review request has been posted, and no protected merge or canary result is claimed."
 remaining_risks = [
-    "The reviewed lifecycle and finding disposition are recorded, but the exact final remediation head, immutable reviewed-to-final authorization, final-head source validation, supported remediation proof, zero unresolved threads, and normal merge remain unclaimed until protected GitHub evidence exists.",
-    "Protected clean and poisoned Python and frontend qualification plus the real eligible short-task run remain unclaimed until their exact runs, jobs, artifacts, lane JSON, ruleset state, and cleanup are read back.",
-    "The authenticated short-task rule is deliberately narrow: exactly one added nonproduction documentation file with one positive changed head line. Uncertain, modified, deleted, renamed, production, immutable, frozen-roadmap, or ledger changes use the full process.",
-    "Only genuinely multi-lane common identity, aggregate, characterization, installation, or structured-review document and section dependencies may be shared; refactor evidence is owned only by Gate 6. Unmapped, generic, copied, malformed, stale, spoofed, duplicate, or misbound evidence fails closed.",
-    "Codex judgment remains probabilistic and non-exhaustive even when eight focused completions are required.",
+    "The corrected head still needs exact full source proof, protected deterministic evidence, eight serial focused completions, supported-finding disposition, zero unresolved threads, and normal merge without bypass.",
+    "Protected never-merge Python and frontend/component valid-plus-complexity-11 canaries, shared-artifact poison, durable temporary-ruleset snapshots, rejection proof, and cleanup remain unclaimed until exact GitHub evidence exists.",
+    "Class-field initializers and class-static blocks are ESLint implicit code paths, not S03 Gate 1 function identities; they do not leak into enclosing metrics, and independent enforcement requires separate owner authorization and binding rules.",
+    "The Gate never imports or executes target repository code; existing target-native characterization and quality commands execute only inside the isolated hosted target workflow as supporting authenticated evidence.",
+    "Codex judgment remains advisory, probabilistic, and non-exhaustive even after all eight focused reviews complete.",
 ]
 
 [human_review]
-naming = "standard_block_ownership names ownership data; standard_results names canonical composition and validation; producer names artifact creation; enforcer names one-lane enforcement."
-cohesion = "Each new module has one self-owned responsibility, one enforced dependency direction, focused direct tests, and one shared standard-results-boundary characterization instead of a generalized framework."
-intended_behavior = "Owner-authorized issue #145 limits this change to S02 lane isolation and explicit shared dependencies. S03-S11, package additions, target-product changes, target code import or execution, weakened thresholds, and production ruleset changes remain excluded."
-reviewability = "Reviewed paths enumerate every planned S02 source, workflow, focused test, characterization, contract, and terminal-ledger change; handoff text distinguishes code evidence from still-unclaimed hosted and protected-target proof."
+naming = "command_failed names the one shared fixed exit classifier; changed-function collection, metrics, reporting, and standard-results binding keep their existing responsibility names without generic helpers."
+cohesion = "Every correction stays in the existing owner of the behavior, and the only shared predicate moves to the existing dependency-free contract leaf used by all consumers."
+intended_behavior = "Issue #146 limits the change to Gate 1 qualification and direct proof. Packages, workflow command vectors, schemas, thresholds, target product code, production rulesets, class-implicit identities, S04, and Gates 2-8 redesign remain excluded."
+reviewability = "Reviewed paths enumerate the exact implementation, proof, review document, and prospective ledger scope. The handoff distinguishes passed local/source evidence from the failed diagnostic run and every still-unclaimed hosted, advisory, merge, canary, cleanup, and Project fact."
 
 [[module_boundaries]]
-path = "src/supportability_gate/standard_block_ownership.py"
-owner_path = "src/supportability_gate/standard_block_ownership.py"
+path = "src/supportability_gate/contract.py"
+owner_path = "src/supportability_gate/contract.py"
 basis = "responsibility"
-justification = "This dependency-free leaf owns the exact mapping from deterministic block families, review fields, and technical source failures to their owning lane sets and named shared dependencies."
+justification = "This dependency-free leaf already owns fixed per-language complexity adapter identities and now owns their single ordinary-exit classification without pulling analyzers into minimal consumers."
+
+[[module_boundaries]]
+path = "src/supportability_gate/function_changes.py"
+owner_path = "src/supportability_gate/function_changes.py"
+basis = "responsibility"
+justification = "This module owns stable nested Python and TypeScript/TSX function identities and now visits parameter-owned callbacks as part of the same parse responsibility."
+
+[[module_boundaries]]
+path = "src/supportability_gate/complexity_metrics.py"
+owner_path = "src/supportability_gate/complexity_metrics.py"
+basis = "responsibility"
+justification = "This module owns exact static complexity measurement and Ruff parity, including approved TypeScript classic constructs and Python definition-line diagnostic mapping."
+
+[[module_boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+owner_path = "src/supportability_gate/quality_profile.py"
+basis = "responsibility"
+justification = "This module owns authenticated hosted quality evidence and delegates only the fixed ordinary-exit classification to the contract leaf."
+
+[[module_boundaries]]
+path = "src/supportability_gate/modularity_policy.py"
+owner_path = "src/supportability_gate/modularity_policy.py"
+basis = "responsibility"
+justification = "This module owns new-location coverage and treats an authenticated ordinary complexity policy exit as execution coverage without changing Gate 4 policy."
+
+[[module_boundaries]]
+path = "src/supportability_gate/reporting.py"
+owner_path = "src/supportability_gate/reporting.py"
+basis = "responsibility"
+justification = "This module owns authoritative result serialization and emits only touched Ruff diagnostics after full in-memory changed-file parity succeeds."
 
 [[module_boundaries]]
 path = "src/supportability_gate/standard_results.py"
 owner_path = "src/supportability_gate/standard_results.py"
 basis = "responsibility"
-justification = "This module owns canonical standard-results.v2 composition and validation so workflow wiring, artifact loading, and one-lane process exits cannot independently reinterpret lane outcomes."
-
-[[module_boundaries]]
-path = "src/supportability_gate/standard_results_enforcer.py"
-owner_path = "src/supportability_gate/standard_results_enforcer.py"
-basis = "responsibility"
-justification = "This command module owns strict reading of one canonical standard-results artifact, delegates exact identity and schema validation to standard_results.py, and translates one selected lane result to its process exit."
-
-[[module_boundaries]]
-path = "src/supportability_gate/standard_results_producer.py"
-owner_path = "src/supportability_gate/standard_results_producer.py"
-basis = "responsibility"
-justification = "This command module owns strict deterministic source-artifact loading, source-outcome capture, canonical composition invocation, and one standard-results artifact write."
+justification = "This module owns aggregate lane composition and fail-closed cross-binding of changed production sides, renames, functions, touched names, Ruff spans/messages, and exact lane ownership."

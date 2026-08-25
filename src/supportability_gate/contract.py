@@ -15,6 +15,13 @@ COMPLEXITY_ADAPTERS = {
 }
 
 
+def command_failed(language: str, adapter: str, executed: bool, exit_code: int) -> bool:
+    """Return whether a command failed outside ordinary Gate 1 policy evidence."""
+    return not executed or (
+        exit_code != 0 and (adapter != COMPLEXITY_ADAPTERS[language] or exit_code != 1)
+    )
+
+
 class ContractError(ValueError):
     """A fail-closed base contract error."""
 

@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from supportability_gate import clause_inventory, quality_profile, standard_block_ownership
+from supportability_gate import clause_inventory, contract, standard_block_ownership
 
 CHECK_CONTEXTS = (
     "Supportability 1 - Cyclomatic Complexity",
@@ -449,7 +449,7 @@ def _s02_profile(
     result = (
         "BLOCK"
         if any(
-            quality_profile.command_failed(
+            contract.command_failed(
                 row["language"],
                 command["adapter"],
                 command["executed"],
@@ -463,7 +463,7 @@ def _s02_profile(
         command["adapter"]
         for command in commands
         if command["executed"]
-        and quality_profile.command_failed(
+        and contract.command_failed(
             row["language"],
             command["adapter"],
             command["executed"],

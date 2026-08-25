@@ -6,9 +6,14 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 from supportability_gate.architecture_policy import ArchitectureResult, ImportEdge
-from supportability_gate.contract import Contract, ContractError, normalize_repository_path
+from supportability_gate.contract import (
+    Contract,
+    ContractError,
+    command_failed,
+    normalize_repository_path,
+)
 from supportability_gate.function_changes import ChangedFileAssessment
-from supportability_gate.quality_profile import QualityEvidence, command_failed
+from supportability_gate.quality_profile import QualityEvidence
 from supportability_gate.review_evidence import ReviewEvidence
 
 VAGUE_LOCATION_NAMES = frozenset({"common", "helpers", "misc", "stuff", "utils"})

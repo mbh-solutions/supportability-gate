@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -363,6 +364,34 @@ def test_clean_current_aggregate_schema_passes_without_prototype_standard_blocks
     }
     assert standard_results.validate_payload(payload, IDENTITY) is None
     assert standard_results.review_required(payload) is True
+
+
+def test_standard_results_import_does_not_require_analysis_dependencies() -> None:
+    script = """
+import builtins
+import sys
+
+sys.path.insert(0, "src")
+original_import = builtins.__import__
+
+def guarded_import(name, *args, **kwargs):
+    if name == "tree_sitter_typescript":
+        raise ModuleNotFoundError(name)
+    return original_import(name, *args, **kwargs)
+
+builtins.__import__ = guarded_import
+import supportability_gate.standard_results
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-P", "-c", script],
+        cwd=Path(__file__).parents[1],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_current_refactor_schema_has_exact_boolean_applicable() -> None:
