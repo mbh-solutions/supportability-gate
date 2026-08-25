@@ -725,8 +725,10 @@ def _s02_ruff_bindings(
     head_paths: set[str],
     code: str,
 ) -> None:
-    if language == "typescript" and rows:
-        raise StandardResultsError(code)
+    if language == "typescript":
+        if rows:
+            raise StandardResultsError(code)
+        return
     touched = {(item["path"], item["qualified_name"]): item for item in heads}
     matched: dict[tuple[str, str], int] = {}
     seen: set[tuple[str, str]] = set()

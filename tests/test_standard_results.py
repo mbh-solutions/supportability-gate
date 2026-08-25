@@ -871,19 +871,29 @@ def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
     )
 
 
-def test_complexity_policy_exit_blocks_gate_one_only() -> None:
+@pytest.mark.parametrize(
+    ("language", "adapter"),
+    [
+        ("python", "python.c901-touched.v1"),
+        ("typescript", "typescript.c901-equivalent-touched.v1"),
+    ],
+)
+def test_complexity_policy_exit_blocks_gate_one_only(language: str, adapter: str) -> None:
     inputs = _inputs()
     head = _metric("src/sample.py", "too_complex", 11)
     inputs[0]["functions"] = [
         _function(None, head, state="NEW", decision="BLOCK", debt=None, next_target=None)
     ]
+    inputs[0]["language"] = language
     inputs[0]["overall_result"] = "BLOCK"
-    inputs[0]["ruff_diagnostics"] = [_ruff(head)]
+    inputs[0]["ruff_diagnostics"] = [_ruff(head)] if language == "python" else []
     inputs[0]["touched_qualified_functions"] = ["too_complex"]
+    inputs[0]["gate_coverage"][0]["adapter"] = adapter
+    inputs[0]["quality_profile"]["language"] = language
     profile_command = inputs[0]["quality_profile"]["commands"][0]
-    profile_command["adapter"] = "python.c901-touched.v1"
+    profile_command["adapter"] = adapter
     profile_command["exit_code"] = 1
-    inputs[3]["commands"][0]["adapter"] = "python.c901-touched.v1"
+    inputs[3]["commands"][0]["adapter"] = adapter
     outcomes = dict(SUCCESS_OUTCOMES)
     outcomes["complexity"] = "failure"
 
@@ -895,7 +905,7 @@ def test_complexity_policy_exit_blocks_gate_one_only() -> None:
     assert standard_results.review_required(payload) is False
 
     forged = copy.deepcopy(inputs)
-    forged[0]["policy_blocks"] = ["QUALITY_GATE_FAILED:python.c901-touched.v1"]
+    forged[0]["policy_blocks"] = [f"QUALITY_GATE_FAILED:{adapter}"]
     forged_payload = _compose(forged, source_outcomes=outcomes)
     assert _technical_standards(forged_payload) == set(range(1, 9))
 
