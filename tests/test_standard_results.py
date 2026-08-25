@@ -368,23 +368,14 @@ def test_clean_current_aggregate_schema_passes_without_prototype_standard_blocks
 
 def test_standard_results_import_does_not_require_analysis_dependencies() -> None:
     script = """
-import builtins
 import sys
 
 sys.path.insert(0, "src")
-original_import = builtins.__import__
-
-def guarded_import(name, *args, **kwargs):
-    if name == "tree_sitter_typescript":
-        raise ModuleNotFoundError(name)
-    return original_import(name, *args, **kwargs)
-
-builtins.__import__ = guarded_import
 import supportability_gate.standard_results
 """
 
     completed = subprocess.run(
-        [sys.executable, "-P", "-c", script],
+        [sys.executable, "-P", "-S", "-c", script],
         cwd=Path(__file__).parents[1],
         check=False,
         capture_output=True,
@@ -993,6 +984,30 @@ def test_function_evidence_must_cross_bind_to_changed_paths_and_ruff(poison: str
         inputs[0]["touched_qualified_functions"].append("legacy")
     else:
         inputs[0]["ruff_diagnostics"].append(copy.deepcopy(inputs[0]["ruff_diagnostics"][0]))
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+def test_function_evidence_must_intersect_changed_head_lines() -> None:
+    inputs = _inputs(lines=[40])
+    base = _metric("src/sample.py", "untouched", 1)
+    head = _metric("src/sample.py", "untouched", 1)
+    inputs[0]["functions"] = [
+        _function(
+            base,
+            head,
+            state="EXISTING",
+            decision="PASS",
+            debt=None,
+            next_target=None,
+        )
+    ]
+    inputs[0]["touched_qualified_functions"] = ["untouched"]
 
     payload = _compose(inputs)
 

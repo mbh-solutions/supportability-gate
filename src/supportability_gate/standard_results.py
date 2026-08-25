@@ -655,7 +655,7 @@ def _s02_change_bindings(
     row: dict[str, Any],
     changed: tuple[dict[str, Any], ...],
     code: str,
-) -> tuple[set[str], set[str], set[tuple[str, str]]]:
+) -> tuple[set[str], dict[str, set[int]], set[tuple[str, str]]]:
     rename_rows = _s02_rows(row["rename_bindings"], {"new_path", "old_path"}, code)
     renames = {(item["old_path"], item["new_path"]) for item in rename_rows}
     expected = {
@@ -666,16 +666,18 @@ def _s02_change_bindings(
     base_paths = {
         item["old_path"] for item in changed if item["base_production"] and item["old_path"]
     }
-    head_paths = {
-        item["new_path"] for item in changed if item["head_production"] and item["new_path"]
+    head_lines = {
+        item["new_path"]: set(item["changed_head_lines"])
+        for item in changed
+        if item["head_production"] and item["new_path"]
     }
-    return base_paths, head_paths, renames
+    return base_paths, head_lines, renames
 
 
 def _s02_function_bindings(
     value: object,
     base_paths: set[str],
-    head_paths: set[str],
+    head_lines: dict[str, set[int]],
     renames: set[tuple[str, str]],
     touched: object,
     code: str,
@@ -693,7 +695,12 @@ def _s02_function_bindings(
             base_identities.add(identity)
         if head is not None:
             identity = (head["path"], head["qualified_name"])
-            if head["path"] not in head_paths or identity in head_identities:
+            changed_lines = head_lines.get(head["path"])
+            if (
+                changed_lines is None
+                or not changed_lines.intersection(range(head["start_line"], head["end_line"] + 1))
+                or identity in head_identities
+            ):
                 raise StandardResultsError(code)
             head_identities.add(identity)
             heads.append(head)
@@ -854,17 +861,17 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     ):
         raise StandardResultsError(code)
     _s02_complexity_lists(row, code)
-    base_paths, head_paths, renames = _s02_change_bindings(row, changed, code)
+    base_paths, head_lines, renames = _s02_change_bindings(row, changed, code)
     heads = _s02_function_bindings(
         row["functions"],
         base_paths,
-        head_paths,
+        head_lines,
         renames,
         row["touched_qualified_functions"],
         code,
     )
     ruff = _s02_ruff(row["ruff_diagnostics"], code)
-    _s02_ruff_bindings(ruff, row["language"], heads, head_paths, code)
+    _s02_ruff_bindings(ruff, row["language"], heads, set(head_lines), code)
     _s02_commands(row["commands"], code, True)
     _s02_gate_coverage(row["gate_coverage"], code, common_required)
     quality_adapters, quality_result = _s02_complexity_components(
