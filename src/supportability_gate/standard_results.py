@@ -406,7 +406,7 @@ def _s02_profile_command(row: dict[str, Any], code: str) -> str:
 
 
 def _s02_profile(
-    value: object, identity: RunIdentity, code: str
+    value: object, identity: RunIdentity, language: str, code: str
 ) -> tuple[tuple[str, ...], str, tuple[str, ...]]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
@@ -418,7 +418,7 @@ def _s02_profile(
         f"github.com/{identity.repository}",
         identity.workflow_sha,
     )
-    if row["language"] not in {"python", "typescript"}:
+    if row["language"] != language:
         raise StandardResultsError(code)
     command_keys = {
         "adapter",
@@ -680,8 +680,10 @@ def _s02_function_bindings(
     head_lines: dict[str, set[int]],
     renames: set[tuple[str, str]],
     touched: object,
+    language: str,
     code: str,
 ) -> tuple[dict[str, Any], ...]:
+    suffixes = (".py", ".pyi") if language == "python" else (".cts", ".mts", ".ts", ".tsx")
     base_identities: set[tuple[str, str]] = set()
     head_identities: set[tuple[str, str]] = set()
     heads: list[dict[str, Any]] = []
@@ -690,7 +692,11 @@ def _s02_function_bindings(
         head = _s02_metric(row["head"], code)
         if base is not None:
             identity = (base["path"], base["qualified_name"])
-            if base["path"] not in base_paths or identity in base_identities:
+            if (
+                base["path"] not in base_paths
+                or not base["path"].endswith(suffixes)
+                or identity in base_identities
+            ):
                 raise StandardResultsError(code)
             base_identities.add(identity)
         if head is not None:
@@ -698,6 +704,7 @@ def _s02_function_bindings(
             changed_lines = head_lines.get(head["path"])
             if (
                 changed_lines is None
+                or not head["path"].endswith(suffixes)
                 or not changed_lines.intersection(range(head["start_line"], head["end_line"] + 1))
                 or identity in head_identities
             ):
@@ -757,12 +764,22 @@ def _s02_ruff_bindings(
         raise StandardResultsError(code)
 
 
-def _s02_gate_coverage(value: object, code: str, required: bool) -> None:
+def _s02_gate_coverage(value: object, language: str, code: str, required: bool) -> None:
     rows = _s02_rows(value, {"adapter", "paths"}, code, required)
+    adapters: list[str] = []
     for row in rows:
         if not isinstance(row["adapter"], str) or not row["adapter"]:
             raise StandardResultsError(code)
+        adapters.append(row["adapter"])
         _s02_strings(row["paths"], code, True)
+    expected = contract.COMPLEXITY_ADAPTERS[language]
+    other = set(contract.COMPLEXITY_ADAPTERS.values()) - {expected}
+    if (
+        len(adapters) != len(set(adapters))
+        or any(adapter in other for adapter in adapters)
+        or (required and expected not in adapters)
+    ):
+        raise StandardResultsError(code)
 
 
 def _s02_complexity_technical_standards(technical: list[str]) -> frozenset[int]:
@@ -804,7 +821,7 @@ def _s02_complexity_components(
     if row["review_evidence"] is not None or review_owners:
         _s02_review(row["review_evidence"], blocks, code)
     profile = (
-        _s02_profile(row["quality_profile"], identity, code)
+        _s02_profile(row["quality_profile"], identity, row["language"], code)
         if row["quality_profile"] is not None
         else ((), None, ())
     )
@@ -870,12 +887,13 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         head_lines,
         renames,
         row["touched_qualified_functions"],
+        row["language"],
         code,
     )
     ruff = _s02_ruff(row["ruff_diagnostics"], code)
     _s02_ruff_bindings(ruff, row["language"], heads, set(head_lines), code)
     _s02_commands(row["commands"], code, True)
-    _s02_gate_coverage(row["gate_coverage"], code, common_required)
+    _s02_gate_coverage(row["gate_coverage"], row["language"], code, common_required)
     quality_adapters, quality_result = _s02_complexity_components(
         row, blocks, technical, identity, code
     )

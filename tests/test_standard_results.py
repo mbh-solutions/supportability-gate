@@ -872,15 +872,22 @@ def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
 
 
 @pytest.mark.parametrize(
-    ("language", "adapter"),
+    ("language", "adapter", "architecture_adapter", "path"),
     [
-        ("python", "python.c901-touched.v1"),
-        ("typescript", "typescript.c901-equivalent-touched.v1"),
+        ("python", "python.c901-touched.v1", "python.import-linter.v1", "src/sample.py"),
+        (
+            "typescript",
+            "typescript.c901-equivalent-touched.v1",
+            "typescript.import-boundaries.v1",
+            "src/sample.ts",
+        ),
     ],
 )
-def test_complexity_policy_exit_blocks_gate_one_only(language: str, adapter: str) -> None:
-    inputs = _inputs()
-    head = _metric("src/sample.py", "too_complex", 11)
+def test_complexity_policy_exit_blocks_gate_one_only(
+    language: str, adapter: str, architecture_adapter: str, path: str
+) -> None:
+    inputs = _inputs(path)
+    head = _metric(path, "too_complex", 11)
     inputs[0]["functions"] = [
         _function(None, head, state="NEW", decision="BLOCK", debt=None, next_target=None)
     ]
@@ -888,8 +895,14 @@ def test_complexity_policy_exit_blocks_gate_one_only(language: str, adapter: str
     inputs[0]["overall_result"] = "BLOCK"
     inputs[0]["ruff_diagnostics"] = [_ruff(head)] if language == "python" else []
     inputs[0]["touched_qualified_functions"] = ["too_complex"]
-    inputs[0]["gate_coverage"][0]["adapter"] = adapter
+    inputs[0]["architecture"]["adapter"] = architecture_adapter
+    inputs[0]["gate_coverage"] = [
+        {"adapter": adapter, "paths": ["src"]},
+        {"adapter": architecture_adapter, "paths": ["src"]},
+    ]
     inputs[0]["quality_profile"]["language"] = language
+    inputs[0]["review_evidence"]["architecture"]["reviewed_paths"] = [path]
+    inputs[0]["review_evidence"]["responsibility_boundary"]["path"] = path
     profile_command = inputs[0]["quality_profile"]["commands"][0]
     profile_command["adapter"] = adapter
     profile_command["exit_code"] = 1
@@ -936,6 +949,13 @@ def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> No
     assert _results(payload) == ["PASS"] * 8
     assert payload["source_outcomes"]["quality"] == "success"
     assert standard_results.review_required(payload) is True
+
+    forged = copy.deepcopy(inputs)
+    forged[0]["language"] = "typescript"
+    forged[0]["ruff_diagnostics"] = []
+    assert _technical_standards(_compose(forged, source_outcomes=SUCCESS_OUTCOMES)) == set(
+        range(1, 9)
+    )
 
 
 def test_complexity_adapter_tool_failure_still_blocks_gate_seven() -> None:
