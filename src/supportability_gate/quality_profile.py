@@ -745,7 +745,9 @@ def _command_blocks(
             blocks.append(f"QUALITY_PROOF_KIND_MISMATCH:{adapter}")
         if not result.executed:
             blocks.append(f"DECLARED_TOOL_NOT_EXECUTED:{adapter}")
-        elif result.exit_code:
+        elif contract.command_failed(
+            policy.language, result.adapter, result.executed, result.exit_code
+        ):
             blocks.append(f"QUALITY_GATE_FAILED:{adapter}")
         if result.proof_kind != "provisioning":
             blocks.extend(

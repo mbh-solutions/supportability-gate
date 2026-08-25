@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S02 issue #145 is the sole active slice
-Next milestone authorized: S03 only after exact protected S02 completion and transition readback
+Current authorized work: Project #10 S03 issue #146 is the sole active slice
+Next milestone authorized: S04 only after exact protected S03 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1768,3 +1768,51 @@ Do not create a new terminal label not authorized by an active milestone directi
   refreshes issue #146 with exact predecessor and remaining-limit evidence, and activates S03 alone.
 - Remaining work: pass final-ledger local and hosted source proof, merge PR #157 normally without
   bypass, complete issue/Project readback, refresh and activate S03 only, then stop S02.
+
+## Project #10 S03 Gate 1 qualification
+
+- Terminal result recorded by this protected ledger transaction: Status `COMPLETE`; Evidence
+  `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after the protected
+  pull request closing issue #146 merges normally and every required canary, cleanup, issue, and
+  Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gQU`, repository issue #146, and protected-main base
+  `80b33863e2e3293ed938fa6fb1f26b5e1833daba`. The owner authorized automatic S04 activation only
+  after this exact protected completion.
+- Responsibility boundary: Gate 1 owns deterministic changed Python and TypeScript/TSX function
+  identities, exact maximum-10 metrics, progressive legacy decisions, applicable Python Ruff
+  parity, and `FUNCTION_COMPLEXITY:` blocks. Ordinary complexity-adapter exit `1` remains
+  authenticated Gate 1 policy evidence; tool/capture failures remain Gate 7. Gates 2-8 do not
+  inherit an ordinary Gate 1 failure.
+- Source correction: decorator-inclusive Python spans remain authoritative for change detection,
+  while Ruff diagnostics bind to the AST definition line. TypeScript metrics now include default
+  parameters, logical assignments, optional access/calls, and parameter-owned callbacks without
+  leaking nested or class-implicit code paths into enclosing functions. Aggregate evidence binds
+  changed production sides, renames, qualified names, touched names, measured values, and the exact
+  touched Ruff diagnostic set; malformed or valid-looking field poison fails closed. The shared
+  ordinary-exit classifier lives in the existing contract leaf so the minimal aggregate producer
+  does not import hosted analyzers or tree-sitter dependencies.
+- Deterministic proof: the initial characterized nodes produced 18 intended failures; the later
+  Ruff-binding additions produced four intended failures. The one directly relevant S03 suite then
+  passed all 167 tests. A protected-run failure reproduced the missing minimal-import boundary; its
+  focused regression failed before the leaf correction and passed after it. The final review head
+  must also pass the issue's exact Python 3.12.13 source proof, protected source workflow, and eight
+  serial focused reviews before merge.
+- Protected qualification requirement: never-merge Python and frontend/component canaries must each
+  prove a valid changed function passes and an actual complexity-11 function blocks Gate 1 only,
+  with exact ruleset, run/job, artifact, App, base/head, and cleanup evidence recorded in issue #146.
+  A separate shared-artifact poison must remain an explicit dependent-lane technical failure.
+- Execution assurance: the Gate does not import or execute target repository code. Existing
+  target-native characterization and quality commands execute only in the isolated hosted target
+  workflow and remain supporting authenticated evidence.
+- Qualification limit: class-field initializers and class-static blocks are ESLint implicit code
+  paths, not S03 Gate 1 function identities. Their branches do not leak into enclosing function
+  metrics; independent enforcement would require separate owner-authorized identities and binding
+  rules. Focused Codex review remains advisory, probabilistic, and non-exhaustive.
+- Closure transaction: this protected ledger merge makes the S03 result prospective and canonical
+  only after all post-merge canaries and readbacks complete. Immediate issue/Project synchronization
+  then records final identities, sets S03 `Done / Complete / On scope / Yes`, refreshes S04 with the
+  exact predecessor evidence, and activates S04 alone.
+- Remaining work: pass exact source and protected review proof, merge normally without bypass,
+  complete both protected never-merge canaries and cleanup, finish issue/Project readback, refresh
+  and activate S04 only, then stop S03.

@@ -278,7 +278,12 @@ def main() -> int:
         quality_profile.write_evidence(evidence, output)
     except Exception:
         return 2
-    return int(any(not item.executed or item.exit_code for item in evidence.commands))
+    return int(
+        any(
+            contract.command_failed(evidence.language, item.adapter, item.executed, item.exit_code)
+            for item in evidence.commands
+        )
+    )
 
 
 if __name__ == "__main__":

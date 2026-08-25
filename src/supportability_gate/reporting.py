@@ -111,6 +111,11 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
     """Convert typed evidence to the authoritative schema."""
     functions = [_decision_payload(item) for item in result.functions]
     touched = [item["head"]["qualified_name"] for item in functions if item["head"] is not None]
+    touched_identities = {
+        (item["head"]["path"], item["head"]["qualified_name"])
+        for item in functions
+        if item["head"] is not None
+    }
     renames = [
         {"new_path": item.change.new_path, "old_path": item.change.old_path}
         for item in result.changed_files
@@ -200,7 +205,11 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "repository_remote": identity["remote"],
         "review_evidence": result.review_evidence,
         "review_evidence_path": ".supportability-review.toml",
-        "ruff_diagnostics": [asdict(item) for item in result.ruff_diagnostics],
+        "ruff_diagnostics": [
+            asdict(item)
+            for item in result.ruff_diagnostics
+            if (item.path, item.qualified_name) in touched_identities
+        ],
         "schema_version": "1.0",
         "standard_sha256": STANDARD_SHA256,
         "technical_errors": [asdict(item) for item in result.technical_errors],

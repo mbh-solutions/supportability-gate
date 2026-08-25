@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 from supportability_gate.architecture_policy import ArchitectureResult, ImportEdge
-from supportability_gate.contract import Contract, ContractError, normalize_repository_path
+from supportability_gate.contract import (
+    Contract,
+    ContractError,
+    command_failed,
+    normalize_repository_path,
+)
 from supportability_gate.function_changes import ChangedFileAssessment
 from supportability_gate.quality_profile import QualityEvidence
 from supportability_gate.review_evidence import ReviewEvidence
@@ -154,8 +159,9 @@ def evaluate_modularity(
                     for command in quality.commands
                     if gate.adapter == command.adapter
                     and gate.covers(path)
-                    and command.executed
-                    and command.exit_code == 0
+                    and not command_failed(
+                        policy.language, command.adapter, command.executed, command.exit_code
+                    )
                     and path in (*command.observed_paths, *command.zero_statement_paths)
                 )
             ),

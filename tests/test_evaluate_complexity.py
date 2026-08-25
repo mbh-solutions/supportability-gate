@@ -242,7 +242,12 @@ def _typescript_repository(
 
 
 def _evaluate(
-    repository: Path, base_sha: str, head_sha: str, output: Path
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    output: Path,
+    *,
+    complexity_exit_code: int = 0,
 ) -> tuple[int, dict[str, object]]:
     quality_path = output.parent / f"{output.name}-quality.json"
     try:
@@ -286,7 +291,9 @@ def _evaluate(
                 else production_files,
                 (),
                 True,
-                0,
+                complexity_exit_code
+                if adapter == contract.COMPLEXITY_ADAPTERS[policy.language]
+                else 0,
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
@@ -412,12 +419,59 @@ def test_new_complexity_10_passes(tmp_path: Path) -> None:
 def test_new_complexity_11_blocks(tmp_path: Path) -> None:
     repository, base_sha, head_sha = _repository(tmp_path, None, _function_source("new", 11))
 
-    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
 
     assert exit_code == 1
     assert result["overall_result"] == "BLOCK"
     assert result["functions"][0]["decision"] == "BLOCK"
     assert result["ruff_diagnostics"][0]["complexity"] == 11
+    assert result["policy_blocks"] == []
+
+
+def test_decorated_python_complexity_binds_ruff_to_definition_line(tmp_path: Path) -> None:
+    base = "def marker(function: object) -> object:\n    return function\n"
+    head = base + "\n@marker\n" + _function_source("decorated", 11)
+    repository, base_sha, head_sha = _repository(tmp_path, base, head)
+
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
+
+    decorated = next(
+        item for item in result["functions"] if item["head"]["qualified_name"] == "decorated"
+    )
+    diagnostic = result["ruff_diagnostics"][0]
+    assert exit_code == 1
+    assert decorated["head"]["start_line"] == 4
+    assert diagnostic["qualified_name"] == "decorated"
+    assert diagnostic["line"] == 5
+
+
+def test_untouched_ruff_diagnostic_is_not_serialized_as_touched_evidence(
+    tmp_path: Path,
+) -> None:
+    legacy = _function_source("legacy", 11)
+    repository, base_sha, head_sha = _repository(
+        tmp_path,
+        legacy + "\n" + _function_source("changed", 1),
+        legacy + "\n" + _function_source("changed", 1, 1),
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["touched_qualified_functions"] == ["changed"]
+    assert result["ruff_diagnostics"] == []
 
 
 def test_legacy_14_to_12_passes_progressively(tmp_path: Path) -> None:
@@ -427,7 +481,13 @@ def test_legacy_14_to_12_passes_progressively(tmp_path: Path) -> None:
         _function_source("legacy", 12),
     )
 
-    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
 
     decision = result["functions"][0]
     assert exit_code == 0
@@ -439,6 +499,26 @@ def test_legacy_14_to_12_passes_progressively(tmp_path: Path) -> None:
     assert decision["starting_complexity"] == 14
     assert decision["ending_complexity"] == 12
     assert decision["next_target"] == 10
+    assert result["policy_blocks"] == []
+
+
+def test_complexity_adapter_tool_failure_remains_a_quality_block(tmp_path: Path) -> None:
+    repository, base_sha, head_sha = _repository(
+        tmp_path,
+        _function_source("clean", 1),
+        _function_source("clean", 10),
+    )
+
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=2,
+    )
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["QUALITY_GATE_FAILED:python.c901-touched.v1"]
 
 
 def test_typescript_clean_complexity_10_passes(tmp_path: Path) -> None:
@@ -460,11 +540,18 @@ def test_typescript_complexity_11_blocks(tmp_path: Path) -> None:
         tmp_path, None, _typescript_source("tooComplex", 11)
     )
 
-    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
 
     assert exit_code == 1
     assert result["functions"][0]["decision"] == "BLOCK"
     assert result["functions"][0]["ending_complexity"] == 11
+    assert result["policy_blocks"] == []
 
 
 def test_typescript_legacy_must_improve_and_reports_gap(tmp_path: Path) -> None:
@@ -474,7 +561,13 @@ def test_typescript_legacy_must_improve_and_reports_gap(tmp_path: Path) -> None:
         _typescript_source("legacyFlow", 12, 1),
     )
 
-    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
 
     decision = result["functions"][0]
     assert exit_code == 0
@@ -483,6 +576,7 @@ def test_typescript_legacy_must_improve_and_reports_gap(tmp_path: Path) -> None:
     assert decision["ending_complexity"] == 12
     assert decision["remaining_gap"] == 2
     assert decision["next_target"] == 10
+    assert result["policy_blocks"] == []
 
 
 def test_typescript_non_improving_legacy_touch_blocks(tmp_path: Path) -> None:
@@ -541,6 +635,65 @@ def test_typescript_anonymous_callback_gets_stable_identity(tmp_path: Path) -> N
     assert result["touched_qualified_functions"] == ["anonymous@1:31"]
 
 
+def test_typescript_metric_matches_eslint_classic_function_constructs() -> None:
+    source = b"""\
+export function eslintClassic(
+  value: number = 0,
+  box?: { next?: () => number; [key: string]: unknown },
+): number {
+  value &&= 1;
+  box?.next;
+  box?.["next"];
+  box?.next?.();
+  return value;
+}
+"""
+
+    parsed = function_changes.parse_typescript_file("src/sample.ts", source)
+    metrics = complexity_metrics.measure_definitions(parsed.functions, "typescript")
+
+    assert [(item.span.qualified_name, item.complexity) for item in metrics] == [
+        ("eslintClassic", 7)
+    ]
+
+
+def test_typescript_parameter_default_callback_has_own_identity_and_metric() -> None:
+    source = b"""\
+export function outer(
+  callback = (value: number) => value > 0 ? 1 : 0,
+): number {
+  return callback(1);
+}
+"""
+
+    parsed = function_changes.parse_typescript_file("src/sample.ts", source)
+    metrics = {
+        item.span.qualified_name: item.complexity
+        for item in complexity_metrics.measure_definitions(parsed.functions, "typescript")
+    }
+
+    nested = next(name for name in metrics if name != "outer")
+    assert nested.startswith("outer.anonymous@")
+    assert metrics == {"outer": 2, nested: 2}
+
+
+def test_typescript_class_code_paths_do_not_leak_into_enclosing_function() -> None:
+    source = b"""\
+export function outer(value: number): number {
+  class Inner {
+    [value || 0] = value || 0;
+    static { if (value) { value += 1; } }
+  }
+  return value;
+}
+"""
+
+    parsed = function_changes.parse_typescript_file("src/sample.ts", source)
+    metrics = complexity_metrics.measure_definitions(parsed.functions, "typescript")
+
+    assert [(item.span.qualified_name, item.complexity) for item in metrics] == [("outer", 2)]
+
+
 def test_typescript_profile_mismatch_blocks_instead_of_skipping(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
     base_sha = _commit(repository, "base")
@@ -582,6 +735,33 @@ def test_typescript_evidence_is_byte_identical(tmp_path: Path) -> None:
     second_exit, _ = _evaluate(repository, base_sha, head_sha, second)
 
     assert first_exit == second_exit == 0
+    assert (first / "complexity-result.json").read_bytes() == (
+        second / "complexity-result.json"
+    ).read_bytes()
+
+
+@pytest.mark.parametrize("language", ["python", "typescript"])
+def test_complexity_poison_is_byte_identical(language: str, tmp_path: Path) -> None:
+    if language == "python":
+        base = _function_source("existing", 1)
+        repository, base_sha, head_sha = _repository(
+            tmp_path, base, base + "\n" + _function_source("poison", 11)
+        )
+    else:
+        base = _typescript_source("existing", 1)
+        repository, base_sha, head_sha = _typescript_repository(
+            tmp_path, base, base + "\n" + _typescript_source("poison", 11)
+        )
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    first_exit, first_result = _evaluate(
+        repository, base_sha, head_sha, first, complexity_exit_code=1
+    )
+    second_exit, _ = _evaluate(repository, base_sha, head_sha, second, complexity_exit_code=1)
+
+    assert first_exit == second_exit == 1
+    assert first_result["policy_blocks"] == []
     assert (first / "complexity-result.json").read_bytes() == (
         second / "complexity-result.json"
     ).read_bytes()
