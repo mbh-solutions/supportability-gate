@@ -18,7 +18,7 @@ jobs:
       issues: read
       pull-requests: read
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 70
     steps:
       - name: Check out exact gate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,6 +41,34 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/gate/src
         run: |
           python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_OBSERVER_MARKER, FOCUSES, require_focused_acknowledgements; comment_ids = require_focused_acknowledgements(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_OBSERVER_MARKER}{focus}:{comment_id}" for focus, comment_id in zip(FOCUSES, comment_ids, strict=True)))'
+
+  collect-codex-review:
+    name: Collect Codex Review
+    needs: observe-codex-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact gate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Collect one-time focused connector completions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+        run: |
+          python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_COMPLETION_MARKER, require_focused_completion; evidence = require_focused_completion(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_COMPLETION_MARKER}{item.focus}:{item.request_id}:{item.completion.kind}:{item.completion.artifact_id}" for item in evidence))'
 
   characterize-base:
     name: Characterize Base
@@ -268,9 +296,9 @@ jobs:
           path: ${{ runner.temp }}/quality/quality-gates.json
           if-no-files-found: error
 
-  supportability-gate:
-    name: Supportability Gate
-    needs: [observe-codex-review, characterize-base, characterize-head, quality-profile]
+  deterministic-evidence:
+    name: Deterministic Supportability Evidence
+    needs: [characterize-base, characterize-head, quality-profile]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -447,7 +475,6 @@ jobs:
       - name: Enforce aggregate result
         if: always()
         env:
-          OBSERVER_RESULT: ${{ needs.observe-codex-review.result }}
           BASE_RESULT: ${{ needs.characterize-base.result }}
           HEAD_RESULT: ${{ needs.characterize-head.result }}
           QUALITY_RESULT: ${{ needs.quality-profile.result }}
@@ -461,10 +488,28 @@ jobs:
           UPLOAD_OUTCOME: ${{ steps.upload_evidence.outcome }}
         run: |
           status=0
-          for result in "$OBSERVER_RESULT" "$BASE_RESULT" "$HEAD_RESULT" "$QUALITY_RESULT" \
+          for result in "$BASE_RESULT" "$HEAD_RESULT" "$QUALITY_RESULT" \
             "$INSTALL_OUTCOME" "$BASE_DOWNLOAD_OUTCOME" "$HEAD_DOWNLOAD_OUTCOME" \
             "$QUALITY_DOWNLOAD_OUTCOME" "$METADATA_OUTCOME" "$REFACTOR_OUTCOME" \
             "$EVALUATE_OUTCOME" "$UPLOAD_OUTCOME"; do
+            if [ "$result" != "success" ]; then status=1; fi
+          done
+          exit "$status"
+
+  supportability-gate:
+    name: Supportability Gate
+    needs: [collect-codex-review, deterministic-evidence]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce separated connector and deterministic results
+        env:
+          CONNECTOR_RESULT: ${{ needs.collect-codex-review.result }}
+          DETERMINISTIC_RESULT: ${{ needs.deterministic-evidence.result }}
+        run: |
+          status=0
+          for result in "$CONNECTOR_RESULT" "$DETERMINISTIC_RESULT"; do
             if [ "$result" != "success" ]; then status=1; fi
           done
           exit "$status"

@@ -12,6 +12,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from supportability_gate.focused_review import (
+    FOCUSED_REVIEWS,
+    FOCUSES,
+    CompletionArtifact,
+    FocusedReviewEvidence,
+)
+
 CONNECTOR_ID = 199175422
 REQUESTER_ID = 229662739
 HEAD_PREFIX = "Codex-Review-Head: "
@@ -21,30 +28,14 @@ CLEAN_PREFIX = "Codex Review: Didn't find any major issues."
 OBSERVER_JOB = "Observe Codex Review"
 OBSERVER_MARKER = "CODEX_REVIEW_ACKNOWLEDGED:"
 FOCUSED_OBSERVER_MARKER = "CODEX_FOCUSED_REVIEW_ACKNOWLEDGED:"
+FOCUSED_COMPLETION_MARKER = "CODEX_FOCUSED_REVIEW_COMPLETED:"
 WORKFLOW_NAME = "Organization Required Supportability Gate"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
 MAX_PAGES = 10
 POLL_ATTEMPTS = 30
 POLL_SECONDS = 15
-FOCUSED_POLL_ATTEMPTS = 120
-FOCUSED_REVIEWS = (
-    (
-        "2",
-        "@codex review for mixed responsibilities or unclear single ownership in changed code only",
-    ),
-    (
-        "4",
-        "@codex review for weak domain ownership, low cohesion, avoidable coupling, "
-        "or unjustified module boundaries only",
-    ),
-    (
-        "8",
-        "@codex review for unsupported, contradictory, stale, incomplete, or misleading "
-        "handoff claims about change, boundaries, validation, risk, or gate coverage only",
-    ),
-)
-FOCUSES = tuple(item[0] for item in FOCUSED_REVIEWS)
+FOCUSED_POLL_ATTEMPTS = 240
 
 
 class CodexReviewError(ValueError):
@@ -92,15 +83,8 @@ class FocusedReviewRequest:
     focus: str
     comment_id: int
     created_at: datetime
-
-
-@dataclass(frozen=True)
-class CompletionArtifact:
-    """One trusted connector completion artifact."""
-
-    kind: str
-    artifact_id: int
-    completed_at: datetime
+    head_sha: str
+    run_id: int
 
 
 def _timestamp(value: object) -> datetime:
@@ -316,21 +300,10 @@ def _positive_id(item: dict[str, Any]) -> int:
     return identifier
 
 
-def _validate_focused_order(requests: dict[str, FocusedReviewRequest]) -> None:
-    present = tuple(focus for focus in FOCUSES if focus in requests)
-    if set(requests) != set(present) or present != FOCUSES[: len(present)]:
-        raise CodexReviewError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_REQUEST")
-    ordered = tuple(requests[focus] for focus in present)
-    for previous, current in zip(ordered, ordered[1:], strict=False):
-        if previous.created_at >= current.created_at or previous.comment_id >= current.comment_id:
-            raise CodexReviewError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_REQUEST")
-
-
 def _focused_review_requests(
-    comments: tuple[dict[str, Any], ...], head_sha: str, run_id: int
-) -> tuple[dict[str, FocusedReviewRequest], bool]:
-    requests: dict[str, FocusedReviewRequest] = {}
-    stale = False
+    comments: tuple[dict[str, Any], ...],
+) -> tuple[FocusedReviewRequest, ...]:
+    requests: list[FocusedReviewRequest] = []
     for comment in comments:
         if not _trusted_owner(comment):
             continue
@@ -338,28 +311,33 @@ def _focused_review_requests(
         if values is None:
             continue
         focus, requested_head, requested_run = values
-        if (requested_head, requested_run) != (head_sha, run_id):
-            stale = True
-            continue
         if focus not in FOCUSES:
             raise CodexReviewError("UNFOCUSED_CODEX_REVIEW_REQUEST")
         created_at = _timestamp(comment.get("created_at"))
-        if created_at != _timestamp(comment.get("updated_at")) or focus in requests:
+        if created_at != _timestamp(comment.get("updated_at")):
             raise CodexReviewError("MALFORMED_FOCUSED_CODEX_REVIEW_REQUEST")
-        requests[focus] = FocusedReviewRequest(focus, _positive_id(comment), created_at)
-    _validate_focused_order(requests)
-    return requests, stale
+        requests.append(
+            FocusedReviewRequest(
+                focus,
+                _positive_id(comment),
+                created_at,
+                requested_head,
+                requested_run,
+            )
+        )
+    ordered = tuple(sorted(requests, key=lambda item: (item.created_at, item.comment_id)))
+    for previous, current in zip(ordered, ordered[1:], strict=False):
+        if previous.created_at >= current.created_at or previous.comment_id >= current.comment_id:
+            raise CodexReviewError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_REQUEST")
+    return ordered
 
 
-def _required_focused_requests(
-    comments: tuple[dict[str, Any], ...], head_sha: str, run_id: int
+def _lifecycle_requests(
+    requests: tuple[FocusedReviewRequest, ...], head_sha: str, run_id: int
 ) -> tuple[FocusedReviewRequest, ...]:
-    requests, stale = _focused_review_requests(comments, head_sha, run_id)
-    missing = next((focus for focus in FOCUSES if focus not in requests), None)
-    if missing is not None:
-        prefix = "STALE" if stale and not requests else "MISSING"
-        raise CodexReviewError(f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{missing}")
-    return tuple(requests[focus] for focus in FOCUSES)
+    return tuple(
+        request for request in requests if (request.head_sha, request.run_id) == (head_sha, run_id)
+    )
 
 
 def _trusted_owner(item: dict[str, Any]) -> bool:
@@ -663,35 +641,166 @@ def _focused_state(
     run_id: int,
     token: str,
     opener: Any,
-) -> str | None:
+) -> tuple[str | None, tuple[FocusedReviewEvidence, ...]]:
     root = f"https://api.github.com/repos/{repository}"
     comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
-    requests = _required_focused_requests(comments, head_sha, run_id)
+    requests = _focused_review_requests(comments)
+    reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
+    reused = _reusable_lifecycle(
+        repository, root, pull_number, head_sha, requests, comments, reviews, token, opener
+    )
+    if reused is not None:
+        return None, reused
+    current = _lifecycle_requests(requests, head_sha, run_id)
+    if not current:
+        prefix = "STALE" if requests else "MISSING"
+        return f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{FOCUSES[0]}", ()
+    if len(current) != len(requests):
+        raise CodexReviewError("STALE_FOCUSED_CODEX_REVIEW_REQUEST")
     acknowledged = _focused_observer_comment_ids(repository, run_id, head_sha, token, opener)
     if acknowledged is None:
-        return "FOCUSED_CODEX_REVIEW_PENDING_2"
-    if acknowledged != tuple(item.comment_id for item in requests):
+        return f"FOCUSED_CODEX_REVIEW_PENDING_{FOCUSES[0]}", ()
+    reactions = _focused_reactions(root, current, token, opener)
+    block, evidence, pending = _evaluate_lifecycle(
+        current,
+        head_sha,
+        comments,
+        reviews,
+        reactions,
+        frozenset(acknowledged),
+    )
+    bound = tuple(item.request_id for item in evidence)
+    if pending is not None:
+        bound += (pending.comment_id,)
+    if acknowledged != bound:
         raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
-    reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
-    artifacts: list[CompletionArtifact] = []
+    return block, evidence
+
+
+def _reusable_lifecycle(
+    repository: str,
+    root: str,
+    pull_number: int,
+    head_sha: str,
+    requests: tuple[FocusedReviewRequest, ...],
+    comments: tuple[dict[str, Any], ...],
+    reviews: tuple[dict[str, Any], ...],
+    token: str,
+    opener: Any,
+) -> tuple[FocusedReviewEvidence, ...] | None:
+    completed = _completed_lifecycles(repository, root, requests, comments, reviews, token, opener)
+    if len(completed) > 1:
+        raise CodexReviewError("REPEATED_COMPLETED_CODEX_REVIEW_LIFECYCLE")
+    if not completed:
+        return None
+    reviewed_head, reviewed_run, evidence = completed[0]
+    if any(
+        (request.head_sha, request.run_id) != (reviewed_head, reviewed_run) for request in requests
+    ):
+        raise CodexReviewError("REPEATED_COMPLETED_CODEX_REVIEW_LIFECYCLE")
+    if reviewed_head != head_sha:
+        commits = {
+            item.get("sha") for item in _pages(f"{root}/pulls/{pull_number}/commits", token, opener)
+        }
+        if reviewed_head not in commits or head_sha not in commits:
+            raise CodexReviewError("STALE_COMPLETED_CODEX_REVIEW_LIFECYCLE")
+    return evidence
+
+
+def _focused_reactions(
+    root: str,
+    requests: tuple[FocusedReviewRequest, ...],
+    token: str,
+    opener: Any,
+) -> dict[int, tuple[dict[str, Any], ...]]:
+    return {
+        request.comment_id: _pages(
+            f"{root}/issues/comments/{request.comment_id}/reactions", token, opener
+        )
+        for request in requests
+    }
+
+
+def _evaluate_lifecycle(
+    requests: tuple[FocusedReviewRequest, ...],
+    head_sha: str,
+    comments: tuple[dict[str, Any], ...],
+    reviews: tuple[dict[str, Any], ...],
+    reactions: dict[int, tuple[dict[str, Any], ...]],
+    acknowledged: frozenset[int],
+) -> tuple[str | None, tuple[FocusedReviewEvidence, ...], FocusedReviewRequest | None]:
+    evidence: list[FocusedReviewEvidence] = []
+    pending: FocusedReviewRequest | None = None
+    expected = 0
     for index, request in enumerate(requests):
-        reactions = _pages(f"{root}/issues/comments/{request.comment_id}/reactions", token, opener)
+        focus_index = FOCUSES.index(request.focus)
+        if focus_index < expected:
+            raise CodexReviewError(f"REPEATED_COMPLETED_FOCUSED_CODEX_REVIEW_{request.focus}")
+        if focus_index > expected:
+            raise CodexReviewError("OUT_OF_ORDER_FOCUSED_CODEX_REVIEW_REQUEST")
         completed_before = requests[index + 1].created_at if index + 1 < len(requests) else None
         artifact = _focused_completion_artifact(
             request,
             head_sha,
             comments,
-            reactions,
+            reactions[request.comment_id],
             reviews,
-            True,
+            request.comment_id in acknowledged,
             completed_before,
         )
         if artifact is None:
-            return f"FOCUSED_CODEX_REVIEW_PENDING_{request.focus}"
-        artifacts.append(artifact)
-    if len({(item.kind, item.artifact_id) for item in artifacts}) != len(FOCUSES):
+            pending = request
+            continue
+        evidence.append(
+            FocusedReviewEvidence(request.focus, request.comment_id, request.created_at, artifact)
+        )
+        pending = None
+        expected += 1
+    identities = [(item.completion.kind, item.completion.artifact_id) for item in evidence]
+    if len(identities) != len(set(identities)):
         raise CodexReviewError("REUSED_FOCUSED_CODEX_REVIEW_EVIDENCE")
-    return None
+    if expected == len(FOCUSES):
+        return None, tuple(evidence), None
+    if pending is not None:
+        return f"FOCUSED_CODEX_REVIEW_PENDING_{pending.focus}", tuple(evidence), pending
+    return f"MISSING_FOCUSED_CODEX_REVIEW_REQUEST_{FOCUSES[expected]}", tuple(evidence), None
+
+
+def _completed_lifecycles(
+    repository: str,
+    root: str,
+    requests: tuple[FocusedReviewRequest, ...],
+    comments: tuple[dict[str, Any], ...],
+    reviews: tuple[dict[str, Any], ...],
+    token: str,
+    opener: Any,
+) -> list[tuple[str, int, tuple[FocusedReviewEvidence, ...]]]:
+    results: list[tuple[str, int, tuple[FocusedReviewEvidence, ...]]] = []
+    keys = tuple(dict.fromkeys((request.head_sha, request.run_id) for request in requests))
+    for lifecycle_head, lifecycle_run in keys:
+        acknowledged = _focused_observer_comment_ids(
+            repository, lifecycle_run, lifecycle_head, token, opener
+        )
+        if acknowledged is None:
+            continue
+        current = _lifecycle_requests(requests, lifecycle_head, lifecycle_run)
+        reactions = _focused_reactions(root, current, token, opener)
+        block, evidence, pending = _evaluate_lifecycle(
+            current,
+            lifecycle_head,
+            comments,
+            reviews,
+            reactions,
+            frozenset(acknowledged),
+        )
+        bound = tuple(item.request_id for item in evidence)
+        if pending is not None:
+            bound += (pending.comment_id,)
+        if acknowledged != bound:
+            raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+        if block is None:
+            results.append((lifecycle_head, lifecycle_run, evidence))
+    return results
 
 
 def _observed_eyes(reactions: tuple[dict[str, Any], ...], request: FocusedReviewRequest) -> bool:
@@ -703,22 +812,51 @@ def _observed_eyes(reactions: tuple[dict[str, Any], ...], request: FocusedReview
     )
 
 
-def _focused_acknowledgement_block(
-    requests: dict[str, FocusedReviewRequest],
-    stale: bool,
-    acknowledged: dict[str, int],
-) -> str | None:
-    missing = next((focus for focus in FOCUSES if focus not in requests), None)
-    if missing is not None:
-        prefix = "STALE" if stale and not requests else "MISSING"
-        return f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{missing}"
-    pending = next(
-        (focus for focus in FOCUSES if acknowledged.get(focus) != requests[focus].comment_id),
-        None,
+def _focused_acknowledgement_state(
+    repository: str,
+    pull_number: int,
+    head_sha: str,
+    run_id: int,
+    token: str,
+    opener: Any,
+    acknowledged: set[int],
+) -> tuple[str | None, tuple[int, ...]]:
+    root = f"https://api.github.com/repos/{repository}"
+    comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
+    requests = _focused_review_requests(comments)
+    reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
+    reused = _reusable_lifecycle(
+        repository, root, pull_number, head_sha, requests, comments, reviews, token, opener
     )
-    if pending is None:
-        return None
-    return f"FOCUSED_CODEX_REVIEW_PENDING_{pending}"
+    if reused is not None:
+        return None, tuple(item.request_id for item in reused)
+    current = _lifecycle_requests(requests, head_sha, run_id)
+    if not current:
+        prefix = "STALE" if requests else "MISSING"
+        return f"{prefix}_FOCUSED_CODEX_REVIEW_REQUEST_{FOCUSES[0]}", ()
+    if len(current) != len(requests):
+        raise CodexReviewError("STALE_FOCUSED_CODEX_REVIEW_REQUEST")
+    reactions = _focused_reactions(root, current, token, opener)
+    for request in current:
+        rows = reactions[request.comment_id]
+        if _observed_eyes(rows, request) or any(
+            _reaction_artifact(reaction, request, None) is not None for reaction in rows
+        ):
+            acknowledged.add(request.comment_id)
+    block, evidence, pending = _evaluate_lifecycle(
+        current,
+        head_sha,
+        comments,
+        reviews,
+        reactions,
+        frozenset(acknowledged),
+    )
+    bound = tuple(item.request_id for item in evidence)
+    if pending is not None:
+        bound += (pending.comment_id,)
+    if block is None and len(bound) == len(FOCUSES) and all(item in acknowledged for item in bound):
+        return None, bound
+    return block or f"FOCUSED_CODEX_REVIEW_PENDING_{FOCUSES[-1]}", ()
 
 
 def require_focused_acknowledgements(
@@ -734,28 +872,24 @@ def require_focused_acknowledgements(
     sleeper: Any = time.sleep,
 ) -> tuple[int, ...]:
     """Observe connector acknowledgement on each serial focused request."""
-    root = f"https://api.github.com/repos/{repository}"
-    acknowledged: dict[str, int] = {}
-    last_code = "MISSING_FOCUSED_CODEX_REVIEW_REQUEST_2"
+    acknowledged: set[int] = set()
+    last_code = f"MISSING_FOCUSED_CODEX_REVIEW_REQUEST_{FOCUSES[0]}"
     for attempt in range(attempts):
         try:
             durable = _focused_observer_comment_ids(repository, run_id, head_sha, token, opener)
             if durable is not None:
                 return durable
-            comments = _pages(f"{root}/issues/{pull_number}/comments", token, opener)
-            requests, stale = _focused_review_requests(comments, head_sha, run_id)
-            for focus, request in requests.items():
-                reactions = _pages(
-                    f"{root}/issues/comments/{request.comment_id}/reactions", token, opener
-                )
-                if _observed_eyes(reactions, request) or any(
-                    _reaction_artifact(reaction, request, None) is not None
-                    for reaction in reactions
-                ):
-                    acknowledged[focus] = request.comment_id
-            block = _focused_acknowledgement_block(requests, stale, acknowledged)
+            block, bound = _focused_acknowledgement_state(
+                repository,
+                pull_number,
+                head_sha,
+                run_id,
+                token,
+                opener,
+                acknowledged,
+            )
             if block is None:
-                return tuple(requests[focus].comment_id for focus in FOCUSES)
+                return bound
             last_code = block
         except CodexReviewError as error:
             if error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE":
@@ -777,12 +911,12 @@ def require_focused_completion(
     delay: int = POLL_SECONDS,
     opener: Any = urllib.request.urlopen,
     sleeper: Any = time.sleep,
-) -> None:
-    """Require three distinct observer-bound focused connector completions."""
-    last_code = "FOCUSED_CODEX_REVIEW_PENDING_2"
+) -> tuple[FocusedReviewEvidence, ...]:
+    """Require one eight-focus lifecycle, reusing it after remediation."""
+    last_code = f"FOCUSED_CODEX_REVIEW_PENDING_{FOCUSES[0]}"
     for attempt in range(attempts):
         try:
-            block = _focused_state(
+            block, evidence = _focused_state(
                 repository,
                 pull_number,
                 head_sha,
@@ -794,7 +928,7 @@ def require_focused_completion(
             last_code = error.code
         else:
             if block is None:
-                return
+                return evidence
             last_code = block
         if attempt + 1 < attempts:
             sleeper(delay)
