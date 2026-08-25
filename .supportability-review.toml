@@ -10,7 +10,7 @@ proof = ".supportability-characterization.json scenarios gate-cli, m9-quality-pr
 
 [separation_of_concerns]
 before = "Ordinary complexity-adapter exit 1 was classified as a quality failure, new-location coverage rejected the same authenticated execution, TypeScript function metrics omitted approved classic constructs, decorated Ruff locations used decorator spans, and aggregate function/Ruff collections were independently valid but not cross-bound."
-after = "The leaf contract owns ordinary command-failure classification; quality and modularity consumers reuse it; changed-function collection and complexity measurement remain separate; reporting emits only already-verified touched Ruff rows; and standard-results composition cross-binds exact changed sides and lines, names, spans, metrics, Ruff message complexity, decisions, and policy ownership."
+after = "The leaf contract owns ordinary command-failure classification; quality and modularity consumers reuse it; changed-function collection and complexity measurement remain separate; reporting emits only already-verified touched Python Ruff rows; TypeScript forbids Ruff rows; and standard-results composition cross-binds exact changed sides and lines, names, spans, metrics, applicable Python Ruff message complexity, decisions, and policy ownership."
 
 [architecture]
 dependency_direction = "The dependency-free contract leaf owns fixed adapter identities and command-failure classification. Quality and modularity analysis depend downward on it. The minimal standard-results producer imports standard_results, which now depends only on leaf contract, clause inventory, and block ownership rather than hosted analyzers or tree-sitter packages."
@@ -36,13 +36,13 @@ does_not_own = "Changed-line selection, progressive policy decisions, hosted qua
 
 [incremental_refactor]
 target = "Complete only Project #10 S03 Gate 1 Python and TypeScript/TSX qualification, exact evidence binding, lane isolation, protected canaries, and terminal ledger transaction; do not begin S04 or redesign Gates 2-8."
-completed_step = "One runnable slice corrects existing Gate 1 identities, metrics, Ruff mapping, exit ownership, new-location coverage, touched evidence serialization, aggregate changed-line cross-binding, and the minimal producer dependency while retaining existing schemas, hosted commands, workflows, thresholds, and modules."
+completed_step = "The protected S03 merge corrected Gate 1 identities, metrics, Ruff mapping, exit ownership, coverage, evidence binding, and producer dependencies; this bounded follow-up returns after TypeScript's required empty Ruff set before enforcing Python-only Ruff completeness."
 
 [review_handoff]
-summary = "Issue #146 owner-authorizes this bounded S03 slice. Frozen review head 41499568b5ca42d7a3d8d77d4e0349e99fc35c94 passed exact Python 3.12.13 source proof and protected run 32858319339, including eight serial focused reviews exactly once. The one remediation batch binds function spans to changed head lines, strengthens the already-correct minimal producer with a site-package-free import check, and narrows the Ruff handoff claim to its authorized message-complexity validation. No final-head deterministic, merge, or canary result is claimed."
+summary = "Issue #146 remains the sole active slice. Its frozen review head 41499568b5ca42d7a3d8d77d4e0349e99fc35c94 completed eight focused reviews exactly once, final head c0bfcc863bfb6d25b16166d5088a333ba2847e2a passed deterministic gates, and protected merge 91fe5206cdc4d5aba5fb814d71d1de6cfc496cfa followed. Post-merge frontend canary run 32866480699 then proved TypeScript complexity 11 was misclassified because empty TypeScript Ruff evidence entered Python-only completeness. This correction adds the direct aggregate regression and returns before that Python rule."
 remaining_risks = [
-    "The bounded remediation head still needs the eight hosted deterministic gates, supported-finding replies, zero unresolved threads, and normal merge without bypass; the completed frozen-head reviews must not repeat.",
-    "Protected never-merge Python and frontend/component valid-plus-complexity-11 canaries, shared-artifact poison, durable temporary-ruleset snapshots, rejection proof, and cleanup remain unclaimed until exact GitHub evidence exists.",
+    "Frozen review head bb6cd9fad2821e6c1fad1ff5b646634285e3e414 passed exact local source proof, Source Validation run 32868339299, and required Gate run 32868339195 attempt 4; this remediation head still needs final-head source proof, deterministic hosted gates, normal protected delivery without bypass, and a cleaned repeat of the frontend complexity-10 and complexity-11 canary.",
+    "The completed S03 focused reviews must not repeat. If the protected Gate requires a new advisory lifecycle for this corrective pull request, delivery stops for explicit owner direction rather than weakening or bypassing protection.",
     "Class-field initializers and class-static blocks are ESLint implicit code paths, not S03 Gate 1 function identities; they do not leak into enclosing metrics, and independent enforcement requires separate owner authorization and binding rules.",
     "The Gate never imports or executes target repository code; existing target-native characterization and quality commands execute only inside the isolated hosted target workflow as supporting authenticated evidence.",
     "Codex judgment remains advisory, probabilistic, and non-exhaustive even after all eight focused reviews complete.",
@@ -52,7 +52,7 @@ remaining_risks = [
 naming = "command_failed names the one shared fixed exit classifier; changed-function collection, metrics, reporting, and standard-results binding keep their existing responsibility names without generic helpers."
 cohesion = "Every correction stays in the existing owner of the behavior, and the only shared predicate moves to the existing dependency-free contract leaf used by all consumers."
 intended_behavior = "Issue #146 limits the change to Gate 1 qualification and direct proof. Packages, workflow command vectors, schemas, thresholds, target product code, production rulesets, class-implicit identities, S04, and Gates 2-8 redesign remain excluded."
-reviewability = "Reviewed paths enumerate the exact implementation, proof, review document, and prospective ledger scope. The handoff preserves the frozen review-head identity, limits the final diff to supported remediation, and distinguishes passed proof from every still-unclaimed final-gate, merge, canary, cleanup, and Project fact."
+reviewability = "The corrective diff is limited to the TypeScript early return, the Python/TypeScript aggregate regression, and this current handoff; the original frozen-review identity remains separate and completed focuses are not repeated."
 
 [[module_boundaries]]
 path = "src/supportability_gate/contract.py"
