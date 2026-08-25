@@ -6,7 +6,7 @@ proof = "tests/test_codex_review.py::{test_eight_serial_focuses_return_distinct_
 
 [characterization]
 captured_behavior = "The Codex review boundary remains read-only and exact-head and exact-run bound; focused_review.py contains only the fixed focus contract and completion evidence types; refactor-policy result production is independent of connector completion; workflow tests bind independent connector and deterministic job results."
-proof = "tests/characterization/codex-review-boundary.characterization.py; tests/test_codex_review.py; tests/test_refactor_policy.py::test_refactor_result_is_independent_of_connector_completion; tests/test_standard_results.py; hosted run 32804649766 jobs 97672245305 and 97672245328 passed base and head characterization"
+proof = "tests/characterization/codex-review-boundary.characterization.py; tests/characterization/focused-review-contract.characterization.py; tests/characterization/focused-review-contract.golden.json; tests/test_codex_review.py; tests/test_refactor_policy.py::test_refactor_result_is_independent_of_connector_completion; tests/test_standard_results.py; hosted run 32804649766 jobs 97672245305 and 97672245328 passed base and head capture while its aggregate exposed the then-missing focused_review.py manifest coverage"
 
 [separation_of_concerns]
 before = "codex_review.py owned GitHub transport, the fixed focus contract, connector lifecycle evaluation, and connector evidence types while deterministic refactor evaluation also consumed connector completion state."
@@ -29,20 +29,20 @@ does_not_own = "GitHub API access, polling, lifecycle decisions, deterministic r
 
 [incremental_refactor]
 target = "Complete only Project #10 S01 connector lifecycle separation and eight-focus lifecycle enforcement without starting S02 or changing organization ruleset targets."
-completed_step = "One runnable slice extracted the fixed focus contract into focused_review.py, made deterministic refactor results connector-independent, bound separate results in organization-required.yml, and passed the focused connector, refactor, result-binding, and source proof on commit 7b914499034f6a32dde9bac533f86737e5528b1c."
+completed_step = "One runnable slice extracted the fixed focus contract into focused_review.py, made deterministic refactor results connector-independent, bound separate results in organization-required.yml, added a direct focused-review contract characterization scenario, and passed the focused connector, refactor, result-binding, and source proof on commit 7b914499034f6a32dde9bac533f86737e5528b1c plus local scenario replay and characterization-suite proof for the hosted coverage fix."
 
 [review_handoff]
-summary = "Issue #144 owner-authorizes S01 and PR #156 is the bounded implementation PR that closes it. Changed production boundaries are codex_review.py, focused_review.py, refactor_policy.py, and organization-required.yml, with direct coverage in tests/test_codex_review.py, tests/test_refactor_policy.py, and tests/test_standard_results.py. This handoff does not claim an authenticated refactor-authorization comment, eight live focused reviews, target-repository proof, merge, terminal ledger closure, or S02 activation."
+summary = "Issue #144 owner-authorizes S01 and PR #156 is the bounded implementation PR that closes it. Changed production boundaries are codex_review.py, focused_review.py, refactor_policy.py, and organization-required.yml, with direct coverage in tests/characterization/focused-review-contract.characterization.py, tests/test_codex_review.py, tests/test_refactor_policy.py, and tests/test_standard_results.py. This handoff does not claim an authenticated refactor-authorization comment, exact-head hosted characterization success, eight live focused reviews, target-repository proof, merge, terminal ledger closure, or S02 activation."
 remaining_risks = [
     "No Codex review request has been posted on PR #156, so no live focus acknowledgement or completion is claimed.",
-    "Hosted run 32804649766 job 97672378084 reported MISSING_OWNER_AUTHORIZATION, MISSING_RUNNABILITY_COVERAGE, and NON_RUNNABLE_LOGICAL_STEP; this TOML correction records truthful scope and proof but does not fabricate the separate authenticated authorization or characterization-manifest inputs those checks consume.",
+    "Hosted run 32804649766 job 97672378084 reported MISSING_OWNER_AUTHORIZATION, MISSING_RUNNABILITY_COVERAGE, and NON_RUNNABLE_LOGICAL_STEP; the PR now adds the direct focused_review.py characterization scenario that failure required, while authenticated owner authorization and exact-head hosted revalidation remain unclaimed.",
     "Required target-repository proof, protected merge, terminal ledger update, and Project transition remain controller-owned and incomplete.",
     "Codex judgment remains probabilistic and non-exhaustive even when eight focused completions are required.",
 ]
 
 [human_review]
 naming = "focused_review names the exact shared contract; codex_review remains the GitHub connector and lifecycle owner; refactor_policy remains the deterministic policy owner."
-cohesion = "Each changed production boundary has one named responsibility and focused tests exercise connector sequencing, retry timeout, deterministic independence, and final result binding."
+cohesion = "Each changed production boundary has one named responsibility; the focused-review characterization freezes the extracted contract, and focused tests exercise connector sequencing, retry timeout, deterministic independence, and final result binding."
 intended_behavior = "Owner-authorized issue #144 limits PR #156 to S01 connector separation and eight-focus lifecycle enforcement; S02 and later milestones, organization ruleset targets, target code import, and target execution remain excluded."
 reviewability = "The handoff names exact files, tests, commit, hosted run and job identities, unresolved hosted blocks, and unclaimed delivery evidence so reviewers can distinguish local behavior proof from remaining protected evidence."
 
