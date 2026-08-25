@@ -78,6 +78,15 @@ def _classify_changes(
             (base_production and _is_profile_source(change.old_path, policy.language))
             or (head_production and _is_profile_source(change.new_path, policy.language))
         )
+        short_document = bool(
+            change.status == "ADDED"
+            and change.old_path is None
+            and change.new_path
+            and (
+                change.new_path == "README.md"
+                or (change.new_path.startswith("docs/") and change.new_path.endswith(".md"))
+            )
+        )
         lines = (
             git_changes.changed_head_lines(
                 repository,
@@ -86,7 +95,7 @@ def _classify_changes(
                 change.new_path,
                 records,
             )
-            if profile_source and change.new_path
+            if (profile_source or short_document) and change.new_path
             else ()
         )
         assessments.append(
@@ -198,13 +207,165 @@ def _architecture_sources(
     }
 
 
+def _complexity_evidence(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    records: list[git_changes.CommandRecord],
+    ruff_records: list[complexity_metrics.RuffCommandRecord],
+    errors: list[Exception],
+) -> tuple[
+    tuple[complexity_policy.FunctionDecision, ...],
+    tuple[complexity_metrics.RuffDiagnostic, ...],
+]:
+    try:
+        analyzed = _analyze_changes(repository, identity, policy, assessments, records)
+        base_definitions = _all_definitions(analyzed.analyses, "base")
+        head_definitions = _all_definitions(analyzed.analyses, "head")
+        base_metrics = complexity_metrics.measure_definitions(base_definitions, policy.language)
+        head_metrics = complexity_metrics.measure_definitions(head_definitions, policy.language)
+        ruff = (
+            complexity_metrics.run_ruff(analyzed.head_sources, head_definitions)
+            if policy.language == "python"
+            else complexity_metrics.RuffResult((), None)
+        )
+        if ruff.command:
+            ruff_records.append(ruff.command)
+        if policy.language == "python":
+            complexity_metrics.verify_ruff_parity(head_metrics, ruff.diagnostics)
+        decisions = complexity_policy.decide_functions(
+            policy,
+            _all_deltas(analyzed.analyses),
+            base_metrics,
+            head_metrics,
+        )
+        complexity_policy.validate_reporting(decisions, policy.maximum)
+        return decisions, ruff.diagnostics
+    except (function_changes.PythonSourceError, git_changes.GitError) as error:
+        code = (
+            "COMPLEXITY_SOURCE_UNAVAILABLE"
+            if isinstance(error, git_changes.GitError)
+            else f"COMPLEXITY_{error.code}"
+        )
+        errors.append(function_changes.PythonSourceError(code, str(error)))
+    except (complexity_metrics.MetricsError, complexity_policy.ComplexityPolicyError) as error:
+        errors.append(error)
+    return (), ()
+
+
+def _architecture_evidence(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    records: list[git_changes.CommandRecord],
+    errors: list[Exception],
+) -> architecture_policy.ArchitectureResult | None:
+    try:
+        sources = _architecture_sources(repository, identity.head_sha, policy, records)
+        gate = next(
+            (
+                item
+                for item in policy.gates
+                if item.adapter == architecture_policy.ARCHITECTURE_ADAPTERS[policy.language]
+            ),
+            None,
+        )
+        return architecture_policy.evaluate_architecture(policy, sources, gate)
+    except (function_changes.PythonSourceError, git_changes.GitError) as error:
+        code = (
+            error.code if error.code.startswith("ARCHITECTURE_") else f"ARCHITECTURE_{error.code}"
+        )
+        errors.append(function_changes.PythonSourceError(code, str(error)))
+        return None
+
+
+def _quality_evidence(
+    arguments: argparse.Namespace,
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    records: list[git_changes.CommandRecord],
+    errors: list[Exception],
+) -> tuple[quality_profile.QualityEvidence | None, tuple[str, ...]]:
+    try:
+        sources = quality_profile.production_files(repository, identity.head_sha, policy, records)
+        path = Path(arguments.quality_evidence)
+        if not path.is_absolute():
+            raise quality_profile.QualityProfileError(
+                "RELATIVE_QUALITY_EVIDENCE", "quality evidence path must be absolute"
+            )
+        evidence = quality_profile.verify_evidence_binding(
+            path,
+            metadata_path=Path(arguments.quality_artifact_metadata),
+            repository=str(arguments.quality_repository),
+            repository_id=str(arguments.quality_repository_id),
+            run_id=str(arguments.quality_run_id),
+            run_attempt=str(arguments.quality_run_attempt),
+            job=str(arguments.quality_job),
+            artifact_id=str(arguments.quality_artifact_id),
+            artifact_digest=str(arguments.quality_artifact_digest),
+            capture_sha256=str(arguments.quality_capture_sha256),
+        )
+        blocks = quality_profile.evidence_blocks(
+            evidence,
+            policy,
+            identity,
+            assessments,
+            sources,
+            str(arguments.workflow_sha),
+        )
+        return evidence, blocks
+    except quality_profile.QualityProfileError as error:
+        errors.append(error)
+    except git_changes.GitError as error:
+        errors.append(quality_profile.QualityProfileError(f"QUALITY_{error.code}", str(error)))
+    return None, ()
+
+
+def _modularity_evidence(
+    policy: contract.Contract,
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    structured_review: review_evidence.ReviewEvidence | None,
+    architecture: architecture_policy.ArchitectureResult | None,
+    quality: quality_profile.QualityEvidence | None,
+) -> modularity_policy.ModularityResult | None:
+    if architecture is None or quality is None:
+        return None
+    return modularity_policy.evaluate_modularity(
+        policy, assessments, structured_review, architecture, quality
+    )
+
+
+def _contract_blocks(
+    contract_path: str,
+    policy: contract.Contract,
+    candidate_policy: contract.Contract | None,
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
+) -> tuple[str, ...]:
+    candidate = (
+        (
+            "CANDIDATE_CONTRACT_CHANGE",
+            *gate_policy.contract_change_blocks(policy, candidate_policy),
+        )
+        if any(
+            contract_path in {item.change.old_path, item.change.new_path} for item in assessments
+        )
+        else ()
+    )
+    return (*candidate, *gate_policy.evaluate_contract(policy, assessments))
+
+
 def _result(
     identity: git_changes.RepositoryIdentity,
     contract_path: str,
     blob: git_changes.GitBlob,
     policy: contract.Contract,
-    candidate_policy: contract.Contract | None,
-    analyzed: _AnalyzedChanges,
+    contract_blocks: tuple[str, ...],
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    decisions: tuple[complexity_policy.FunctionDecision, ...],
+    ruff_diagnostics: tuple[complexity_metrics.RuffDiagnostic, ...],
     records: list[git_changes.CommandRecord],
     ruff_records: list[complexity_metrics.RuffCommandRecord],
     structured_review: review_evidence.ReviewEvidence | None,
@@ -214,45 +375,13 @@ def _result(
     quality: quality_profile.QualityEvidence,
     quality_blocks: tuple[str, ...],
 ) -> reporting.EvaluationResult:
-    candidate_blocks = (
-        (
-            "CANDIDATE_CONTRACT_CHANGE",
-            *gate_policy.contract_change_blocks(policy, candidate_policy),
-        )
-        if any(
-            contract_path in {item.change.old_path, item.change.new_path}
-            for item in analyzed.assessments
-        )
-        else ()
-    )
     policy_blocks = (
-        *candidate_blocks,
-        *gate_policy.evaluate_contract(policy, analyzed.assessments),
+        *contract_blocks,
         *architecture.blocks,
         *modularity.blocks,
         *review_blocks,
         *quality_blocks,
     )
-    base_definitions = _all_definitions(analyzed.analyses, "base")
-    head_definitions = _all_definitions(analyzed.analyses, "head")
-    base_metrics = complexity_metrics.measure_definitions(base_definitions, policy.language)
-    head_metrics = complexity_metrics.measure_definitions(head_definitions, policy.language)
-    ruff = (
-        complexity_metrics.run_ruff(analyzed.head_sources, head_definitions)
-        if policy.language == "python"
-        else complexity_metrics.RuffResult((), None)
-    )
-    if ruff.command:
-        ruff_records.append(ruff.command)
-    if policy.language == "python":
-        complexity_metrics.verify_ruff_parity(head_metrics, ruff.diagnostics)
-    decisions = complexity_policy.decide_functions(
-        policy,
-        _all_deltas(analyzed.analyses),
-        base_metrics,
-        head_metrics,
-    )
-    complexity_policy.validate_reporting(decisions, policy.maximum)
     overall = (
         "BLOCK" if policy_blocks or any(item.decision == "BLOCK" for item in decisions) else "PASS"
     )
@@ -264,9 +393,9 @@ def _result(
         policy.production_paths,
         policy.high_risk_paths,
         _gate_coverage(policy),
-        analyzed.assessments,
+        assessments,
         decisions,
-        ruff.diagnostics,
+        ruff_diagnostics,
         (),
         policy_blocks,
         overall,
@@ -285,6 +414,7 @@ def _read_review_evidence(
     repository: Path,
     head_sha: str,
     records: list[git_changes.CommandRecord],
+    errors: list[Exception],
 ) -> tuple[review_evidence.ReviewEvidence | None, tuple[str, ...]]:
     try:
         blob = git_changes.read_regular_blob(
@@ -298,7 +428,8 @@ def _read_review_evidence(
             return review_evidence.evaluate_review_evidence(None)
         if error.code == "SYMLINK_OR_NONFILE":
             return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
-        raise
+        errors.append(function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error)))
+        return None, ()
     return review_evidence.evaluate_review_evidence(blob.content)
 
 
@@ -310,10 +441,29 @@ def _technical_result(
     blob: git_changes.GitBlob | None,
     policy: contract.Contract | None,
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
-    error: Exception,
+    decisions: tuple[complexity_policy.FunctionDecision, ...],
+    ruff_diagnostics: tuple[complexity_metrics.RuffDiagnostic, ...],
+    contract_blocks: tuple[str, ...],
+    structured_review: review_evidence.ReviewEvidence | None,
+    review_blocks: tuple[str, ...],
+    architecture: architecture_policy.ArchitectureResult | None,
+    modularity: modularity_policy.ModularityResult | None,
+    quality: quality_profile.QualityEvidence | None,
+    quality_blocks: tuple[str, ...],
+    errors: tuple[Exception, ...],
 ) -> reporting.EvaluationResult:
-    code = getattr(error, "code", "UNEXPECTED_ERROR")
-    message = str(error) if code != "UNEXPECTED_ERROR" else type(error).__name__
+    technical_errors: list[reporting.TechnicalError] = []
+    for error in errors:
+        code = getattr(error, "code", "UNEXPECTED_ERROR")
+        message = str(error) if code != "UNEXPECTED_ERROR" else type(error).__name__
+        technical_errors.append(reporting.TechnicalError(str(code), message))
+    policy_blocks = (
+        *contract_blocks,
+        *(architecture.blocks if architecture else ()),
+        *(modularity.blocks if modularity else ()),
+        *review_blocks,
+        *quality_blocks,
+    )
     return reporting.EvaluationResult(
         identity,
         contract_path,
@@ -323,17 +473,19 @@ def _technical_result(
         policy.high_risk_paths if policy else (),
         _gate_coverage(policy) if policy else (),
         assessments,
-        (),
-        (),
-        (reporting.TechnicalError(str(code), message),),
-        (),
+        decisions,
+        ruff_diagnostics,
+        tuple(technical_errors),
+        policy_blocks,
         "TECHNICAL_FAILURE",
         _versions(identity),
         tuple(records),
         tuple(ruff_records),
-        None,
+        structured_review,
         policy.language if policy else None,
-        None,
+        architecture,
+        modularity,
+        quality,
     )
 
 
@@ -344,9 +496,16 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
     blob: git_changes.GitBlob | None = None
     policy: contract.Contract | None = None
     assessments: tuple[function_changes.ChangedFileAssessment, ...] = ()
-    candidate_policy: contract.Contract | None = None
+    decisions: tuple[complexity_policy.FunctionDecision, ...] = ()
+    ruff_diagnostics: tuple[complexity_metrics.RuffDiagnostic, ...] = ()
+    contract_blocks: tuple[str, ...] = ()
     structured_review: review_evidence.ReviewEvidence | None = None
     review_blocks: tuple[str, ...] = ()
+    architecture: architecture_policy.ArchitectureResult | None = None
+    modularity: modularity_policy.ModularityResult | None = None
+    quality: quality_profile.QualityEvidence | None = None
+    quality_blocks: tuple[str, ...] = ()
+    evidence_errors: list[Exception] = []
     contract_path = str(arguments.contract_path)
     try:
         contract_path = contract.validate_contract_path(contract_path)
@@ -371,40 +530,13 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
         )
         assessments = _classify_changes(repository, identity, policy, changes, records)
-        architecture_sources = _architecture_sources(repository, identity.head_sha, policy, records)
-        quality_sources = quality_profile.production_files(
-            repository, identity.head_sha, policy, records
-        )
-        quality_path = Path(arguments.quality_evidence)
-        if not quality_path.is_absolute():
-            raise quality_profile.QualityProfileError(
-                "RELATIVE_QUALITY_EVIDENCE", "quality evidence path must be absolute"
-            )
-        quality = quality_profile.verify_evidence_binding(
-            quality_path,
-            metadata_path=Path(arguments.quality_artifact_metadata),
-            repository=str(arguments.quality_repository),
-            repository_id=str(arguments.quality_repository_id),
-            run_id=str(arguments.quality_run_id),
-            run_attempt=str(arguments.quality_run_attempt),
-            job=str(arguments.quality_job),
-            artifact_id=str(arguments.quality_artifact_id),
-            artifact_digest=str(arguments.quality_artifact_digest),
-            capture_sha256=str(arguments.quality_capture_sha256),
-        )
-        quality_blocks = quality_profile.evidence_blocks(
-            quality,
-            policy,
-            identity,
-            assessments,
-            quality_sources,
-            str(arguments.workflow_sha),
-        )
         structured_review, review_blocks = _read_review_evidence(
             repository,
             identity.head_sha,
             records,
+            evidence_errors,
         )
+        candidate_policy: contract.Contract | None = None
         contract_changed = any(
             contract_path in {item.change.old_path, item.change.new_path} for item in assessments
         )
@@ -419,34 +551,61 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
                 candidate_policy = contract.parse_contract(candidate_blob.content)
             except (contract.ContractError, git_changes.GitError):
                 candidate_policy = None
-        analyzed = _analyze_changes(repository, identity, policy, assessments, records)
-        architecture_gate = next(
-            (
-                gate
-                for gate in policy.gates
-                if gate.adapter == architecture_policy.ARCHITECTURE_ADAPTERS[policy.language]
-            ),
-            None,
-        )
-        architecture = architecture_policy.evaluate_architecture(
-            policy,
-            architecture_sources,
-            architecture_gate,
-        )
-        modularity = modularity_policy.evaluate_modularity(
+        contract_blocks = _contract_blocks(contract_path, policy, candidate_policy, assessments)
+        decisions, ruff_diagnostics = _complexity_evidence(
+            repository,
+            identity,
             policy,
             assessments,
-            structured_review,
-            architecture,
-            quality,
+            records,
+            ruff_records,
+            evidence_errors,
         )
+        architecture = _architecture_evidence(
+            repository, identity, policy, records, evidence_errors
+        )
+        quality, quality_blocks = _quality_evidence(
+            arguments,
+            repository,
+            identity,
+            policy,
+            assessments,
+            records,
+            evidence_errors,
+        )
+        modularity = _modularity_evidence(
+            policy, assessments, structured_review, architecture, quality
+        )
+        if evidence_errors:
+            return _technical_result(
+                identity,
+                contract_path,
+                records,
+                ruff_records,
+                blob,
+                policy,
+                assessments,
+                decisions,
+                ruff_diagnostics,
+                contract_blocks,
+                structured_review,
+                review_blocks,
+                architecture,
+                modularity,
+                quality,
+                quality_blocks,
+                tuple(evidence_errors),
+            )
+        assert architecture is not None and modularity is not None and quality is not None
         return _result(
             identity,
             contract_path,
             blob,
             policy,
-            candidate_policy,
-            analyzed,
+            contract_blocks,
+            assessments,
+            decisions,
+            ruff_diagnostics,
             records,
             ruff_records,
             structured_review,
@@ -457,6 +616,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             quality_blocks,
         )
     except Exception as error:  # fail closed at the CLI trust boundary
+        evidence_errors.append(error)
         return _technical_result(
             identity,
             contract_path,
@@ -465,7 +625,16 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             blob,
             policy,
             assessments,
-            error,
+            decisions,
+            ruff_diagnostics,
+            contract_blocks,
+            structured_review,
+            review_blocks,
+            architecture,
+            modularity,
+            quality,
+            quality_blocks,
+            tuple(evidence_errors),
         )
 
 

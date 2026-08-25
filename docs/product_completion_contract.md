@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S01 issue #144 is the sole active slice
-Next milestone authorized: S02 only after exact protected S01 completion and transition readback
+Current authorized work: Project #10 S02 issue #145 is the sole active slice
+Next milestone authorized: S03 only after exact protected S02 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1551,3 +1551,220 @@ Do not create a new terminal label not authorized by an active milestone directi
   evidence, and activates S02 alone.
 - Remaining work: pass final-ledger local and hosted source proof, merge PR #156 normally without
   bypass, complete issue/Project readback, refresh and activate S02 only, then stop S01.
+
+## Project #10 S02 applicability and gate failure isolation
+
+- Terminal result recorded by this protected ledger transaction: Status `COMPLETE`; Evidence
+  `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after PR #157
+  merges normally and every final-head, merge, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gPw`, repository issue #145, and PR #157. Protected-main base was
+  `460297834393d766b1fa439be9366f73b0e0566b`. The owner authorized automatic S03 activation only
+  after this exact protected completion.
+- Responsibility boundary: each deterministic Standard lane independently owns applicability,
+  evidence, policy blocks, technical errors, and result. Shared failure is permitted only for a
+  named, validated common dependency required by every affected lane. The Gate never imports or
+  executes target repository code; advisory Codex review remains separate from deterministic
+  enforcement.
+- Frozen source review: reviewed head `51e5a824d64eb91c03a413fefef643ad00b71974` passed Source
+  Validation run/job `32824078300`/`97728202697` and required run `32824078342` attempt 4. Base/head
+  characterization `97730946162`/`97730946131`, quality `97730945905`, deterministic evidence
+  `97731083002`, observer `97731193586`, collector `97740977435`, and Gate `97741047312` passed.
+  Gate jobs 1-8 were `97731193708`, `97731193662`, `97731193671`, `97731193660`,
+  `97731193901`, `97731193727`, `97731193703`, and `97731193723`. Exact refactor authorization
+  `5407318897` enabled the successful reviewed-head transaction.
+  Artifacts were `9554531197`, `9554535606`, `9554536052`, and authoritative evidence
+  `9554549186` with digest
+  `14a66c84817265dfe0473d0040fd7a89c9e02b96f2023e1595930378721ec7ff`.
+- Source advisory lifecycle: the observer and collector bound eight exact serial triples:
+  `5407391925 / 403592961 / 5407432507`,
+  `5407441552 / 403595521 / review 5016408070`,
+  `5407484907 / 403597770 / review 5016453971`,
+  `5407529403 / 403600242 / review 5016496980`,
+  `5407572671 / 403602665 / review 5016571444`,
+  `5407644153 / 403606464 / review 5016625086`,
+  `5407692851 / 403609138 / review 5016684783`, and
+  `5407748703 / 403612075 / review 5016732912`. Exactly eight owner requests remain; no terminal
+  head received a new review request. The middle eyes-reaction IDs were captured live; reactions are
+  now removed, while durable observer/collector logs bind the request and completion identities.
+- Source findings: findings `3850712993`, `3850713003`, `3850822052`, `3850965961`,
+  `3851067418`, and `3851109632` were supported and fixed. Findings `3850713009`, `3850860315`,
+  `3850898748`, and `3851014643` were rejected with evidence as unsupported or plan-conflicting.
+  Owner replies were `3851526485`, `3851526749`, `3851527050`, `3851527334`, `3851527634`,
+  `3851527925`, `3851228652`, `3851228673`, `3851228654`, and `3851228666`. All ten threads read
+  resolved and unresolved-thread readback was zero before the terminal source transaction.
+- Reviewed-head remediation: runtime head
+  `50e4d80735fa4f848195ba8a231372111c648386` corrects real documentation-line authentication,
+  partial technical-result ownership, common-evidence validation, source-outcome reconciliation,
+  trusted quality provenance, central ownership mapping, workflow outcome fallback, producer-output
+  characterization, and the eight-focus lifecycle contract. Direct failures and contract alignment
+  proved `cli.py`, `AGENTS.md`, `pyproject.toml`, `.supportability-review.toml`,
+  `.supportability-characterization.json`, the characterization driver/golden pair, and
+  `tests/test_evaluate_complexity.py` necessary outside issue #145's primary file list. The
+  immutable Standard remained unchanged.
+- Qualification runtime binding: contemporaneous authenticated API readbacks in the execution
+  transcript recorded temporary Python, frontend, and short-task rulesets `21406060`, `21406336`,
+  and `21408276` as active, strict, and zero-bypass; no standalone pre-deletion ruleset snapshots
+  were retained. Target artifacts independently bind every accepted run below to exact workflow
+  `50e4d80735fa4f848195ba8a231372111c648386`; merge rule suites prove temporary protection was
+  enforced. Current ruleset readback returns `404`, so historical configuration is not independently
+  reproducible from the API now. The terminal source commit adds only this ledger relative to that
+  qualified runtime, so its local and hosted proof verifies the ledger-only delta without changing
+  target-qualified executable code.
+- Protected Python clean proof: `mbh-solutions/supportability-audit` PR #10 used disposable base
+  `4ae53cdabce3ae1c4bc902d577203fb91ff9bc38` and reviewed/final head
+  `8ca289a7b371320d98abf1bc55603bc0283befe7`. Native Validate run/job
+  `32839876665`/`97776797217` and required run `32839876691` passed. Observer `97777052549`,
+  collector `97783082705`, Gate `97783143510`, and artifacts `9560083894`, `9560071077`,
+  `9560067186`, and `9560066010` proved `FULL_PROCESS`, all eight lanes `PASS`, no blocks/errors,
+  and no shared failure. Base/head characterization jobs were `97776797198`/`97776797505`, quality
+  was `97776797307`, deterministic evidence was `97776946812`, and Gate jobs 1-8 were
+  `97777052801`, `97777052806`, `97777052727`, `97777052730`, `97777052773`, `97777052757`,
+  `97777052765`, and `97777052836`.
+- Python advisory and delivery: PR #10 bound eight serial request/completion pairs
+  `5409406998/5409423844`, `5409426579/review 5018122509`, `5409453403/5409470953`,
+  `5409472824/5409499241`, `5409501245/review 5018193213`, `5409541538/5409563835`,
+  `5409566714/review 5018248526`, and `5409600789/review 5018284029`. Findings `3852317478`,
+  `3852378291`, `3852419065`, and `3852445061` received evidence replies `3852457193`,
+  `3852457441`, `3852457686`, and `3852457873`; all threads resolved. Normal two-parent merge
+  `9598f9251a2518130dc5c1c1e59541f9a38ae25a` changed only the disposable base. Rule suite
+  `3811375326` passed required status, workflow, pull-request, non-fast-forward, and deletion rules.
+- Python isolated and shared proof: PR #12 final head
+  `784e462a9fae51cdab4170fa0011c8d903317e1b` passed native run `32843577380`; required run
+  `32843577484` and artifact `9561446309` made Gate 3 alone block with
+  `IMPORT_CYCLE:src/supportability_audit/validate_repository.py:201:supportability_audit`, while
+  Gates 1, 2, and 4-8 passed and `shared_failures` was empty. Its characterization, quality,
+  deterministic, Gate 1-8, and final Gate jobs were `97788198280`, `97788198735`, `97788198639`,
+  `97788339740`, `97788481328`, `97788481243`, `97788481309`, `97788481280`, `97788481208`,
+  `97788481314`, `97788481233`, `97788481217`, and `97788528249`; artifacts were `9561446309`,
+  `9561430443`, `9561427597`, and `9561426859`. PR #13 head
+  `8e6d8a6951c3fbd2aac03ba1dd286802a9b8a7d2` passed native run `32843837879`; required run
+  `32843837890` and artifact `9561540180` made Gates 1-6 and 8 block only on
+  `MALFORMED_REVIEW_EVIDENCE:document`, Gate 7 pass, and recorded dependency
+  `structured-review-document` with exact affected lanes `[1,2,3,4,5,6,8]`. Its characterization,
+  quality, deterministic, Gate 1-8, and final Gate jobs were `97788997395`, `97788997668`,
+  `97788997717`, `97789116796`, `97789255555`, `97789255716`, `97789255790`, `97789255694`,
+  `97789255505`, `97789255803`, `97789255584`, `97789255476`, and `97789313115`; artifacts were
+  `9561540180`, `9561523486`, `9561522670`, and `9561521893`. Both required Gates failed; owner merge
+  commands returned `base branch policy prohibits the merge`, and both PRs are now closed unmerged
+  with zero unresolved threads.
+- Python simultaneous-independent proof: PR #14 used production snapshot base
+  `4ae53cdabce3ae1c4bc902d577203fb91ff9bc38` and head
+  `9bb94dd9a0ddd5aeec6d4ba4a4671592e80afb59`. Pre-deletion ruleset `21422812` read back active with
+  `bypass=[]`, exact repository/base-ref targeting, strict `Supportability Gate` and `Validate`
+  checks, review-thread resolution, and workflow pin
+  `50e4d80735fa4f848195ba8a231372111c648386`. Authorization `5410185141` bound the two-path scope
+  and exact step-3 predecessor. Required run `32846241157` attempt 2 and artifact `9562542772`
+  made Gate 3 block only on
+  `IMPORT_CYCLE:src/supportability_audit/validate_repository.py:201:supportability_audit`, Gate 7
+  block only on `QUALITY_GATE_FAILED:python.pytest.v1`, and Gates 1, 2, 4, 5, 6, and 8 pass with
+  `technical_errors=[]` and `shared_failures=[]`.
+- Simultaneous run identities: head/base characterization, quality, and deterministic jobs were
+  `97797364377`, `97797364820`, `97797364723`, and `97797520666`; Gate jobs 1-8 were
+  `97797679188`, `97797679232`, `97797679195`, `97797679096`, `97797679118`, `97797679150`,
+  `97797679125`, and `97797679142`; observer/collector `97797680659`/`97797680555` skipped and
+  Gate `97797735857` failed. Artifacts were `9562542772`, `9562522648`, `9562522751`, and
+  `9562520869`. Native Validate run/job `32846241132`/`97796477042` failed only from the deliberate
+  pytest poison. Attempt-1 artifact `9562436980` is now unavailable (`404`); durable Gate 6 job
+  `97796811074` logged diagnostic `INVALID_STRANGLER_SEQUENCE` from stale sequence step 1. Finding
+  `3852826765` received reply `3852846298` and its thread resolved. The
+  protected merge command returned `base branch policy prohibits the merge`; PR #14 closed
+  unmerged. Ruleset `21422812` now returns `404`, its base/head refs and worktree are absent,
+  production main/ruleset are unchanged, and target open-PR readback is zero.
+- Python diagnostic boundary: PR #11 artifact `9561024668` is retained only as falsification proof,
+  not isolation evidence. It explicitly recorded common dependency `complexity-result` and
+  `MALFORMED_COMPLEXITY_RESULT` for all eight lanes. Superseded PR #8 and PR #12 intermediate runs
+  remain non-qualification diagnostics. Current readback shows temporary ruleset `21406060` absent,
+  all GUID-specific Python qualification refs/branches and worktrees absent, only the clean production
+  worktree remaining, and temporary evidence downloads removed. Production main remained
+  `4ae53cdabce3ae1c4bc902d577203fb91ff9bc38`; production ruleset `20917183` remained active,
+  strict, zero-bypass, and pinned to workflow
+  `519bdee34a78f50b54bedf8a597f255b727ac173`.
+- Protected frontend clean proof: `mbh-solutions/dc_training` PR #51 used disposable base
+  `4ec4b5fb060632ea4c44feb8349743982d34f14e`, reviewed head
+  `aba31b8774190ad907e79aeabd95c211389e97ab`, reviewed run `32836708782`, and final head
+  `75881fd02ea22c1d8bc081b95da5c39f0195ed86` with a one-file reviewed-to-final compare. The
+  reviewed run passed observer `97767436832`, collector `97777395407`, Gate `97777478890`, and
+  artifacts `9558919561`, `9558903112`, `9558900644`, and `9558895537`. Final required run
+  `32840209583` passed quality
+  `97777815155`, deterministic evidence `97779328006`, observer `97779468951`, collector
+  `97779540303`, and Gate `97779595338`. Artifacts `9560363356`, `9560346250`, `9560191917`, and
+  `9560190552` proved all eight lanes `PASS` and target-native install, lint, format, complexity,
+  typecheck, test/coverage, build, and dependency checks exited zero. Head/base characterization
+  jobs were `97777815291`/`97777815486`; Gate jobs 1-8 were `97779469247`, `97779469258`,
+  `97779469429`, `97779469414`, `97779469277`, `97779469435`, `97779469282`, and `97779469286`.
+- Frontend advisory and delivery: PR #51 bound exact triples
+  `5409038630/403670205/5409055541`, `5409071438/403671909/5409096403`,
+  `5409106797/403673590/5409130004`, `5409146817/403675508/5409170385`,
+  `5409191628/403677758/review 5017951631`, `5409249903/403680713/5409276198`,
+  `5409297505/403683147/review 5018048684`, and
+  `5409381666/403687504/review 5018089725`. Finding `3852166830` was technically valid but
+  plan-conflicting; findings `3852252053` and `3852288625` were fixed by the one-file descendant.
+  The middle eyes-reaction IDs were captured live; reactions are now removed, while durable
+  observer/collector logs bind requests and completions. All three threads resolved. Authorization
+  `5409428524` bound the exact remediation. Normal merge
+  `0ae357efe448cfb346fbc4cc008728b6c20ba3a3` changed only the disposable base; rule suite
+  `3811208721` passed every temporary protection rule. Final refactor authorization `5409430948`
+  bound the exact base-to-final scope.
+- Frontend isolated proof: PR #53 used base `4ec4b5fb060632ea4c44feb8349743982d34f14e`, head
+  `78f29dd8722429b397c5f9aa786fc446c7d6d9d3`, authorization `5409098447`, required run
+  `32837432267`, and artifact `9559191233` to make Gate 3 alone block on
+  `IMPORT_CYCLE:src/WorkoutTracer.tsx:7:./workout-domain.js` and
+  `IMPORT_CYCLE:src/workout-domain.ts:3:./WorkoutTracer.js`, while Gates 1, 2, and 4-8 passed with
+  no shared failure. Quality, base/head characterization, deterministic, Gate 1-8, and final Gate
+  jobs were `97769329140`, `97769329377`, `97769329452`, `97769558447`, `97769670291`,
+  `97769670290`, `97769670347`, `97769670328`, `97769670294`, `97769670276`, `97769670292`,
+  `97769670271`, and `97769717562`; artifacts were `9559191233`, `9559177196`, `9559175684`, and
+  `9559169779`. Rule suite `3810798774` rejected normal merge; the PR closed unmerged. Current
+  readback shows ruleset `21406336`, every GUID-specific frontend qualification ref/branch and
+  worktree, and temporary evidence downloads absent. Production main remained
+  `999bfce6153745205a95432e9555fcc69fed6e04`; production ruleset `20588739` remained active,
+  strict, zero-bypass, review-thread protected, and pinned to workflow
+  `519bdee34a78f50b54bedf8a597f255b727ac173`.
+- Protected short-task proof: `mbh-solutions/dc_training` PR #52 used base
+  `999bfce6153745205a95432e9555fcc69fed6e04` and head
+  `9faa1ff1c70c3c6bc1a269e6f3c8285a709b0131` containing exactly one added line in eligible path
+  `docs/s02-short-qualification-6bb8d2e2.md`. Required run `32836657437` attempt 1, evidence artifact
+  `9558903429`, quality artifact `9558884378`, and Gate `97767357916` authenticated `SHORT_TASK`:
+  Gates 1-6 and 8 emitted
+  `NOT_APPLICABLE_SHORT_TASK`, Gate 7 passed, and no review was requested. Normal merge
+  `7f914a2ea43e109efe9a6c150d26ac692062e074` changed only the disposable base; rule suite
+  `3810687064` passed. Head/base characterization, quality, deterministic, Gate 1-8, observer, and
+  collector jobs were `97766914345`, `97766914676`, `97766914659`, `97767138134`, `97767302772`,
+  `97767302781`, `97767302748`, `97767302788`, `97767302840`, `97767302825`, `97767302721`,
+  `97767302755`, `97767303820`, and `97767303952`; artifacts were `9558903429`, `9558884378`,
+  `9558882550`, and `9558880609`. The approved target stack had no Markdown-specific adapter, so the
+  bounded proof is exact classifier authentication of the added path and line `[1]` plus all nine
+  existing TypeScript quality adapters exiting zero; it does not claim Markdown-content linting.
+  Current readback shows temporary ruleset `21408276` returns `404`; remote refs
+  `refs/heads/codex/s02-short-base-6bb8d2e2` and
+  `refs/heads/codex/s02-short-head-6bb8d2e2`, local branch
+  `codex/s02-short-head-6bb8d2e2`, and both remote-tracking refs are absent. No local base branch was
+  created. Worktree `C:\repos\dc_training-s02-short-6bb8d2e2` and evidence roots
+  `C:\Users\mheck\AppData\Local\Temp\s02-short-final-6bb8d2e2` and
+  `C:\Users\mheck\AppData\Local\Temp\s02-short-diagnostic-6bb8d2e2` are absent; production main
+  and ruleset remained unchanged.
+- Final source proof: the terminal final-ledger head must pass Python 3.12 exact-lock Ruff
+  lint/format/C901, strict mypy, Import Linter, full pytest, compileall, wheel build, fresh exact-lock
+  installation, installed CLI help, focused S02 tests, immutable-Standard tamper proof, and exact
+  source diff check. Generated output and caches must be absent; Standard SHA-256 must remain
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Final reviewed-to-terminal transaction: one immutable owner remediation authorization must bind
+  reviewed head/run, terminal head/run, PR #157, repository, and the exact GitHub-compare scope.
+  Final Source Validation and required Gate must rerun deterministic evidence only, reuse exactly
+  the eight reviewed completions, post zero new review requests, pass with zero unresolved threads,
+  and merge normally without bypass. Exact terminal head, run, job, artifact, authorization, merge,
+  and rule-suite identities belong in issue #145 after they exist.
+- Enforcement readback: source ruleset `19767613` remains active, strict, zero-bypass,
+  review-thread protected, and requires Source Validation plus Gate App `15368`. Production target
+  rulesets `20588739` and `20917183` remain unchanged. Temporary qualification rulesets are absent,
+  target production mains are unchanged, and target open-PR readback is zero.
+- Assurance limit: connector judgment remains advisory, probabilistic, and non-exhaustive.
+  Deterministic enforcement, native target validation, exact artifact binding, and native
+  unresolved-thread protection remain separate. Qualification proves S02 lane isolation and
+  explicit shared dependency only; it does not complete S03-S11.
+- Closure transaction: this protected ledger merge makes S02 canonical. Immediate issue/Project
+  synchronization then records final source identities, sets S02 `Done / Complete / On scope / Yes`,
+  refreshes issue #146 with exact predecessor and remaining-limit evidence, and activates S03 alone.
+- Remaining work: pass final-ledger local and hosted source proof, merge PR #157 normally without
+  bypass, complete issue/Project readback, refresh and activate S03 only, then stop S02.
