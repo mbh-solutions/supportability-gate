@@ -1,48 +1,53 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Record the already-proven Project #9 S07 implementation, canary, consumer-alignment, and ruleset evidence without changing production runtime behavior."
-proof = "docs/product_completion_contract.md::Project #9 S07 focused Codex review assurance; source runs 32688222080 and 32688222103; DC canary run 32689057072"
+intended_behavior = "Project #10 S01 separates advisory Codex connector collection from deterministic evidence ownership, requires eight exact-head and exact-run focuses in strict order with unique trusted completions, permits a same-focus retry only after the deterministic 450-second timeout, rejects review after a successful lifecycle, and reuses that completed lifecycle after remediation."
+proof = "tests/test_codex_review.py::{test_eight_serial_focuses_return_distinct_completion_evidence,test_active_focus_cannot_retry_before_timeout,test_timed_out_focus_may_retry_before_success,test_successful_focus_cannot_be_requested_again,test_completed_review_lifecycle_is_reused_after_remediation,test_second_review_after_remediation_blocks}; tests/test_standard_results.py"
 
 [characterization]
-captured_behavior = "No production source, characterization definition, golden, workflow, dependency, threshold, or gate scope changes in this terminal ledger transaction."
-proof = "git diff against 519bdee34a78f50b54bedf8a597f255b727ac173; required protected exact-head Source Validation and Gate"
+captured_behavior = "The Codex review boundary remains read-only and exact-head and exact-run bound; focused_review.py contains only the fixed focus contract and completion evidence types; refactor-policy result production is independent of connector completion; workflow tests bind independent connector and deterministic job results."
+proof = "tests/characterization/codex-review-boundary.characterization.py; tests/test_codex_review.py; tests/test_refactor_policy.py::test_refactor_result_is_independent_of_connector_completion; tests/test_standard_results.py; hosted run 32804649766 jobs 97672245305 and 97672245328 passed base and head characterization"
 
 [separation_of_concerns]
-before = "S07 terminal evidence was distributed across the implementation PR, canary, consumer PRs, workflow runs, and ruleset readbacks."
-after = "The completion ledger owns the durable consolidated assurance while issue and Project fields own live closure state."
+before = "codex_review.py owned GitHub transport, the fixed focus contract, connector lifecycle evaluation, and connector evidence types while deterministic refactor evaluation also consumed connector completion state."
+after = "focused_review.py owns only the fixed focus contract and connector evidence types; codex_review.py owns read-only GitHub lifecycle collection; refactor_policy.py owns deterministic refactor evaluation without connector input; the workflow binds their separate results."
 
 [architecture]
-dependency_direction = "Documentation records runtime evidence and does not become a dependency of production Gate modules; no production dependency direction changes."
+dependency_direction = "focused_review.py is a dependency-free leaf contract imported by codex_review.py; refactor_policy.py does not import or consume connector state; organization-required.yml consumes separate connector and deterministic result channels."
 reviewed_paths = [
     ".supportability-review.toml",
-    "docs/product_completion_contract.md",
+    ".github/workflows/organization-required.yml",
+    "src/supportability_gate/codex_review.py",
+    "src/supportability_gate/focused_review.py",
+    "src/supportability_gate/refactor_policy.py",
 ]
 
 [responsibility_boundary]
-path = "docs/product_completion_contract.md"
-owns = "Durable product status, exact S07 assurance evidence, remaining work, and successor authorization state."
-does_not_own = "Gate execution, connector judgment, ruleset mutation, target product behavior, or immutable Standard requirements."
+path = "src/supportability_gate/focused_review.py"
+owns = "The fixed eight-focus command contract plus immutable request acknowledgement and completion evidence value types shared by connector collection and workflow binding."
+does_not_own = "GitHub API access, polling, lifecycle decisions, deterministic refactor policy, workflow orchestration, target repository execution, or connector judgment."
 
 [incremental_refactor]
-target = "Close only Project #9 S07 after implementation, canary, consumer alignment, and enforcement readback are directly proven."
-completed_step = "Appended S07 terminal assurance and changed current authorized work from completed S05 to completed S07; no successor work or runtime change was added."
+target = "Complete only Project #10 S01 connector lifecycle separation and eight-focus lifecycle enforcement without starting S02 or changing organization ruleset targets."
+completed_step = "One runnable slice extracted the fixed focus contract into focused_review.py, made deterministic refactor results connector-independent, bound separate results in organization-required.yml, and passed the focused connector, refactor, result-binding, and source proof on commit 7b914499034f6a32dde9bac533f86737e5528b1c."
 
 [review_handoff]
-summary = "Changed files are the completion ledger and this machine-readable handoff only. Required hosted checks parse and evaluate this TOML and apply checkout and diff validation to the ledger; the ledger's completion, canary, and ruleset claims require human verification against their cited live evidence. No production or high-risk file is changed or excluded, and no threshold, scope, waiver, dependency, function, C901 ceiling, or architecture boundary changes."
+summary = "Issue #144 owner-authorizes S01 and PR #156 is the bounded implementation PR that closes it. Changed production boundaries are codex_review.py, focused_review.py, refactor_policy.py, and organization-required.yml, with direct coverage in tests/test_codex_review.py, tests/test_refactor_policy.py, and tests/test_standard_results.py. This handoff does not claim an authenticated refactor-authorization comment, eight live focused reviews, target-repository proof, merge, terminal ledger closure, or S02 activation."
 remaining_risks = [
-    "Codex judgment remains probabilistic and non-exhaustive even when three focused completions are required.",
-    "Clean summaries and submitted reviews omit their triggering request ID, so focus attribution still relies on request-specific eyes acknowledgement, serial request windows, bounded final polling, and unique artifact identity.",
+    "No Codex review request has been posted on PR #156, so no live focus acknowledgement or completion is claimed.",
+    "Hosted run 32804649766 job 97672378084 reported MISSING_OWNER_AUTHORIZATION, MISSING_RUNNABILITY_COVERAGE, and NON_RUNNABLE_LOGICAL_STEP; this TOML correction records truthful scope and proof but does not fabricate the separate authenticated authorization or characterization-manifest inputs those checks consume.",
+    "Required target-repository proof, protected merge, terminal ledger update, and Project transition remain controller-owned and incomplete.",
+    "Codex judgment remains probabilistic and non-exhaustive even when eight focused completions are required.",
 ]
 
 [human_review]
-naming = "The S07 assurance heading and status fields name the exact completed pilot and avoid retired Semantic Review terminology."
-cohesion = "One ledger section consolidates source, canary, consumer, and ruleset proof for one terminal milestone."
-intended_behavior = "The ledger becomes canonical only after protected merge; Project and issue closure follow that merge and no successor starts."
-reviewability = "Exact PR, commit, run, job, request, artifact, ruleset, App, hash, and test identities support direct readback without relying on narrative alone."
+naming = "focused_review names the exact shared contract; codex_review remains the GitHub connector and lifecycle owner; refactor_policy remains the deterministic policy owner."
+cohesion = "Each changed production boundary has one named responsibility and focused tests exercise connector sequencing, retry timeout, deterministic independence, and final result binding."
+intended_behavior = "Owner-authorized issue #144 limits PR #156 to S01 connector separation and eight-focus lifecycle enforcement; S02 and later milestones, organization ruleset targets, target code import, and target execution remain excluded."
+reviewability = "The handoff names exact files, tests, commit, hosted run and job identities, unresolved hosted blocks, and unclaimed delivery evidence so reviewers can distinguish local behavior proof from remaining protected evidence."
 
 [[module_boundaries]]
-path = "docs/product_completion_contract.md"
-owner_path = "docs/product_completion_contract.md"
+path = "src/supportability_gate/focused_review.py"
+owner_path = "src/supportability_gate/focused_review.py"
 basis = "responsibility"
-justification = "This completion ledger owns durable milestone completion evidence and product authorization state; it does not implement or configure runtime enforcement."
+justification = "This new location owns the cohesive, dependency-free eight-focus command contract and immutable connector evidence value types; keeping them outside codex_review.py prevents the GitHub transport and lifecycle module from also owning the shared workflow-facing contract."
