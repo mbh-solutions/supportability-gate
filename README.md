@@ -9,8 +9,9 @@ isolated GitHub-hosted jobs.
 Current product status, authorized work, milestone evidence, and remaining work are recorded only
 in the [Product Completion Contract](docs/product_completion_contract.md).
 
-The [Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3)
-organization project is successor execution authority. Project #2 is historical.
+The [Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10)
+organization project is successor execution authority. Projects #2, #3, #6, and #8 are historical;
+Project #9 becomes historical through the S00 retirement transaction.
 
 ## Requirements
 
