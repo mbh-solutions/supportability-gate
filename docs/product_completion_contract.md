@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S00 issue #143 is the sole active slice
-Next milestone authorized: S01 only after exact protected S00 completion and transition readback
+Current authorized work: Project #10 S01 issue #144 is the sole active slice
+Next milestone authorized: S02 only after exact protected S01 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1442,3 +1442,112 @@ Do not create a new terminal label not authorized by an active milestone directi
   #143 directs, set S00 `Done / Complete / On scope / Yes`, refresh S01 with current evidence, and
   activate S01 alone. If any condition lacks direct proof, S01 remains inactive.
 - Remaining work: complete the protected S00 delivery and exact GitHub transition above; then stop.
+
+## Project #10 S01 connector separation and one-time review lifecycle
+
+- Terminal result recorded by this protected ledger transaction: Status `COMPLETE`; Evidence
+  `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after PR #156
+  merges normally and every required direct-proof and transition readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33ffw`, and repository issue #144. The owner authorized automatic S02
+  activation only after this exact protected completion.
+- Responsibility boundary: `focused_review.py` owns only the fixed eight-focus command and output
+  evidence contract. `codex_review.py` owns read-only GitHub transport, serial request lifecycle,
+  trusted acknowledgement/completion collection, and exact owner-authorized remediation reuse.
+  `refactor_policy.py` and the standard-result producer remain deterministic and connector
+  independent; the required workflow aggregates their separate results.
+- Frozen source review: reviewed head `e9547f89f579473dd5b61f8048760da4c3a39731` passed Source
+  Validation run/job `32805881161`/`97675771503` and required run `32805881163`. Observer
+  `97675772077`, base/head characterization `97675772054`/`97675771893`, quality
+  `97675772065`, deterministic `97675881719`, collector `97680836811`, and Gate `97680878501`
+  passed with artifacts `9548113230`, `9548115735`, `9548118176`, and `9548125930`, and accepted
+  eight serial, unique exact-head/run triples: `5404770876 / 403471691 / 5014743658`,
+  `5404803073 / 403473609 / 5404818258`, `5404819634 / 403474589 / 5404833409`,
+  `5404834898 / 403475576 / 5014778231`, `5404849954 / 403476459 / 5014794262`,
+  `5404874082 / 403477918 / 5014811477`, `5404901812 / 403479657 / 5014825152`, and
+  `5404927839 / 403480972 / 5014835182`.
+- Source findings: findings `3849306257`, `3849387591`, `3849435888`, `3849435895`,
+  `3849452409`, `3849464474`, `3849464478`, and `3849473345` were supported and fixed. Finding
+  `3849420817` was rejected with evidence because `FocusedReviewRequest` is connector transport
+  state, while `focused_review.py` owns the transport-neutral command/output contract. Owner reply
+  IDs were `3849927942`, `3849930146`, `3849930243`, `3849930321`, `3849930437`,
+  `3849930570`, `3849930650`, `3849930759`, and `3849930835`; all nine threads read resolved and
+  unresolved-thread readback was zero.
+- One-time remediation: local head `6db9601d5510367acd8c635d41abe476fa16c8a6` requires one
+  immutable owner authorization bound to exact reviewed/current heads, reviewed/current runs,
+  repository, pull request, and sorted GitHub-compare scope. Divergence, truncation, missing or
+  mutable authorization, scope mismatch, duplicate authorization, unrelated push, and API failure
+  fail closed. The terminal hosted transaction reuses the eight reviewed completions with zero new
+  review requests and reruns deterministic evidence only on the final ledger head; its exact run,
+  job, artifact, authorization, head, and merge identities belong in issue #144 after they exist.
+- Source proof: Python 3.12.13 exact-lock Ruff lint/format/C901, strict mypy, Import Linter, 230
+  tests with 2 skips, compileall, wheel build, fresh exact-lock installation, installed CLI help,
+  immutable-standard tamper proof, and exact source diff check passed on the complete production
+  and test change. The terminal final-ledger head must pass the same proof before push/merge, leave
+  no generated output or cache, and preserve Standard SHA-256
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Protected Python qualification: `mbh-solutions/supportability-audit` repository ID `1336156746`
+  used disposable PR #7 from base `4ae53cdabce3ae1c4bc902d577203fb91ff9bc38`, reviewed H1
+  `5e216429e9de9e923ebaeee99ac9cd8a2ec60123`, and final H2
+  `6c67fab17ba32bd375b3029305e39a880cc5854f`. H1 Validate `32811537279`/`97691648755` and
+  required run `32811537289` passed; observer `97691648888`, collector `97695531308`, Gate
+  `97695559768`, and artifacts `9549952161`, `9549953077`, `9549952758`, and `9549962024`
+  bound triples `5405600907 / 403507333 / 5405627184`,
+  `5405636769 / 403508279 / 5405663474`, `5405667335 / 403509044 / 5405696254`,
+  `5405698210 / 403509784 / 5405725491`, `5405731578 / 403510597 / 5405776860`,
+  `5405781639 / 403511760 / 5405815737`, `5405822279 / 403512611 / 5405865034`, and
+  `5405870205 / 403513710 / 5015248211`.
+- Python remediation and delivery: authorization `5405956425` bound the exact one-file H1-to-H2
+  scope. Final Validate `32813004268`/`97695860138` and required run `32813004267` passed with
+  observer `97695860244`, collector `97695961546`, deterministic `97695963658`, Gate
+  `97696040652`, and artifacts `9550451112`, `9550451142`, `9550453662`, and `9550463141`,
+  reusing exactly the eight H1 reviews. Findings `3849725355` and `3849817713` received replies
+  `3849837144` and `3849837228`; both threads resolved and unresolved readback was zero. Invalid
+  head `a08a0f030cd065380d169dd015d23511cb59d9f3` failed native run `32811418185` before any
+  focused request. Temporary zero-bypass ruleset `21377823` enforced normal merge
+  `a057efa74c33fd1a600e567c5399fbdad6a3a5d8`; rule suite `3807541172` passed. The ruleset,
+  disposable refs, and worktree were deleted; production main remained `4ae53cdabce3ae1c4bc902d577203fb91ff9bc38`,
+  production ruleset `20917183` remained unchanged, and open PR readback was zero.
+- Protected frontend/component qualification: `mbh-solutions/dc_training` repository ID
+  `1326160036` used disposable PR #49 from base
+  `4ec4b5fb060632ea4c44feb8349743982d34f14e`, reviewed H1
+  `b495aaddfbeae02b772f2f78971182f0c0ef6fa1`, and exact historical H2
+  `aba31b8774190ad907e79aeabd95c211389e97ab`. H1 run `32811315325` passed with observer
+  `97691045200`, target-native quality `97691045298`, collector `97696639930`, Gate
+  `97696672266`, and artifacts `9549886357`, `9549889266`, `9549888223`, and `9549900429`.
+  Its eight triples were `5405581371 / 403506871 / 5405609061`,
+  `5405615650 / 403507700 / 5405656495`, `5405661834 / 403508892 / 5405693511`,
+  `5405696220 / 403509696 / 5405722775`, `5405728315 / 403510514 / 5015202045`,
+  `5405784398 / 403511781 / 5405817103`, `5405821063 / 403512587 / 5015251874`, and
+  `5405942682 / 403515462 / 5015280283`.
+- Frontend findings and final proof: findings `3849779647` and `3849820612` were technically valid
+  but plan-conflicting because S01 prohibited novel target test/product changes; replies
+  `3849851014` and `3849851945` preserve their visual and registration limits. Finding
+  `3849844757` was supported and fixed by H2, with reply `3849862292`. All three threads resolved
+  and unresolved readback was zero. Remediation authorization `5406032947` bound the exact
+  two-path H1-to-H2 delta. Final run `32813475734` attempt 1 failed only stale refactor
+  authorization; exact authorization `5406056679` made attempt 2 pass with target-native quality
+  `97698037560`, observer `97698037806`, collector `97698062794`, deterministic `97698182963`,
+  Gate `97698279568`, and artifacts `9550709416`, `9550708574`, `9550711048`, and `9550722084`.
+  The quality artifact proves npm installation, ESLint, Prettier, complexity at most 10, TypeScript
+  checking, Node tests with coverage, build, and dependency-boundary checks all executed with exit
+  zero; it does not claim raster/mobile visual proof.
+- Frontend delivery and cleanup: temporary zero-bypass ruleset `21376106` enforced normal merge
+  `800412eea299e2ade2098f526bd4717a772f7b48`; merge rule suite `3807632207` passed. The
+  ruleset, disposable refs, and worktree were deleted. Production main remained
+  `999bfce6153745205a95432e9555fcc69fed6e04`, production ruleset `20588739` remained unchanged,
+  and open PR readback was zero. Target product code was never merged to production and target code
+  was executed only by the isolated required workflow's stack-native validation.
+- Enforcement readback: source ruleset `19767613` remains active, strict, zero-bypass, requires
+  review-thread resolution, Source Validation, and Gate App `15368`. Production target rulesets
+  `20588739` and `20917183` remain active, strict, zero-bypass, review-thread protected, and pinned
+  to workflow SHA `519bdee34a78f50b54bedf8a597f255b727ac173`. Temporary qualification rulesets are absent.
+- Assurance limit: connector judgment remains advisory, probabilistic, and non-exhaustive.
+  Deterministic Supportability enforcement and native unresolved-thread protection remain separate;
+  individual transient eyes reactions are preserved by live capture and durable observer logs.
+- Closure transaction: this protected ledger merge makes S01 canonical. Immediate issue/Project
+  synchronization then records exact final source head/run/authorization/job/artifact/merge facts,
+  sets S01 `Done / Complete / On scope / Yes`, refreshes S02 with the completed predecessor
+  evidence, and activates S02 alone.
+- Remaining work: pass final-ledger local and hosted source proof, merge PR #156 normally without
+  bypass, complete issue/Project readback, refresh and activate S02 only, then stop S01.
