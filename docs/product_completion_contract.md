@@ -12,8 +12,9 @@ Global skills, memory, prior chats, former Governance repositories, unrelated re
 agent assumptions are not product requirement sources.
 
 Successor execution authority is
-[Supportability Standard Enforcement](https://github.com/orgs/mbh-solutions/projects/3). Historical
-Project #2 remains unchanged and is not authority for successor enforcement work.
+[Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10).
+Projects #2, #3, #6, and #8 are historical and remain unchanged. Project #9 becomes historical
+through the exact S00 retirement transaction and is not authority for successor work.
 
 ## Final product objective
 
@@ -1273,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: NONE — Project #9 S07 is complete; stop
-Next milestone authorized: NO — no successor work is authorized
+Current authorized work: Project #10 S00 issue #143 is the sole active slice
+Next milestone authorized: S01 only after exact protected S00 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1286,8 +1287,11 @@ Next milestone authorized: NO — no successor work is authorized
 - A milestone status changes to `COMPLETE` only after direct evidence satisfies its active execution
   directive.
 - Completion evidence must be recorded in this contract before the milestone is considered closed.
-- After a milestone reaches `COMPLETE`, stop.
-- The next milestone may begin only after the owner provides and authorizes its execution directive.
+- After a Project #10 slice completes its transition transaction and activates any permitted
+  immediate successor, stop without implementing successor work in the same session.
+- For Project #10 S00-S11 only, owner authorization covers sequential activation. Refresh and
+  activate only the immediate successor after the predecessor's protected merge, ledger, issue,
+  and Project readback prove `Done / Complete / On scope / Yes`; otherwise no successor begins.
 - Do not add cleanup, hardening, future-proofing, abstractions, adapters, infrastructure, or
   follow-up work outside the active directive.
 
@@ -1411,3 +1415,30 @@ Do not create a new terminal label not authorized by an active milestone directi
   synchronization then sets S07 to `Done / Complete / On scope / Yes`, closes issue #138 and Project
   #9, and authorizes no successor work.
 - Remaining work: None. Stop; no successor milestone is authorized.
+
+## Project #10 S00 authority migration
+
+- Terminal result recorded by this protected ledger transaction: Status `COMPLETE`; Evidence
+  `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after the S00 pull
+  request merges normally and every required direct-proof and transition readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK` and repository issue #143. Owner
+  authorization covers automatic sequential S00-S11 activation only after each predecessor's exact
+  protected completion.
+- Project setup: Project #10 is private and open, links this repository, and contains twelve ordered
+  durable issues #143-#154. Execution view `PVTV_lADOEmzFKc4BhXlKzgLautY` exposes Title, Status,
+  Linked pull requests, Evidence, Scope, and Stop confirmed. Initial readback showed S00 alone
+  `In progress / Missing / On scope / No` and S01-S11 `Backlog / Missing / On scope / No`.
+- Prototype preservation: PR #142 closed unmerged at head
+  `08f10730f0d9dc01e677da8ea92a38a6fa632849`; remote branch
+  `codex/eight-supportability-checks`, conversations, runs, and evidence remain available.
+- Authorized source change: only `AGENTS.md`, `README.md`, and this ledger migrate live authority to
+  Project #10. The immutable Standard, frozen roadmap, production source, workflows, rulesets,
+  target repositories, and historical evidence remain unchanged.
+- Protected completion: the S00 pull request must pass the full Python 3.12 source proof and current
+  required checks, bind distinct trusted exact-head/run completions for transitional focuses
+  `2 -> 4 -> 8`, resolve every conversation, and merge normally without bypass. Exact pull-request,
+  run, request, completion, head, and merge identities are recorded in issue #143 after they exist.
+- Closure transaction: after protected merge/readback, retire only Project #9 S08 exactly as issue
+  #143 directs, set S00 `Done / Complete / On scope / Yes`, refresh S01 with current evidence, and
+  activate S01 alone. If any condition lacks direct proof, S01 remains inactive.
+- Remaining work: complete the protected S00 delivery and exact GitHub transition above; then stop.

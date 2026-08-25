@@ -11,7 +11,9 @@
 
 ## Product boundary
 
-- Execute Enforcement Milestone 10 only under `docs/enforcement_milestone_10.md`.
+- Execute only the single slice marked `In progress` in the
+  [Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10)
+  project under its repository issue.
 - Never import or execute target repository code.
 - Git and Ruff use fixed argument vectors, finite timeouts, captured output, and no shell.
 - Do not add commands, executable paths, environment controls, exclusions, waivers, or threshold
@@ -121,8 +123,10 @@ Stop condition:
 Before editing:
 
 1. Identify the single slice marked `In progress` in the
-   [Semantic Review Retirement and Gate Simplification](https://github.com/orgs/mbh-solutions/projects/9)
-   project. Projects #2, #3, #6, and #8 are historical and must not be changed.
+   [Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10)
+   project. Projects #2, #3, #6, and #8 are historical and must not be changed. Project #9 becomes
+   historical through the exact S00 retirement transaction and must not be used as successor
+   authority.
 2. Read its milestone issue completely.
 3. State:
    - terminal capability;
@@ -140,7 +144,9 @@ Before editing:
    - Evidence is Complete;
    - Scope is On scope;
    - Stop confirmed is Yes.
-9. Do not automatically begin the next milestone.
+9. For Project #10 S00-S11 only, activate the immediate successor automatically after its issue is
+   refreshed and the predecessor's protected merge, ledger, issue, and Project readback prove
+   `Done / Complete / On scope / Yes`. Otherwise do not begin the successor.
 
 ## Required source proof
 
