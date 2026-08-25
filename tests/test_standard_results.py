@@ -263,6 +263,49 @@ def _inputs(
     return complexity, characterization, _refactor(characterization, path), _quality()
 
 
+def _metric(path: str, qualified_name: str, complexity: int) -> dict[str, object]:
+    return {
+        "complexity": complexity,
+        "end_line": 30,
+        "path": path,
+        "qualified_name": qualified_name,
+        "start_line": 1,
+    }
+
+
+def _function(
+    base: dict[str, object] | None,
+    head: dict[str, object] | None,
+    *,
+    state: str,
+    decision: str,
+    debt: int | None,
+    next_target: int | None,
+) -> dict[str, object]:
+    return {
+        "base": base,
+        "decision": decision,
+        "ending_complexity": head["complexity"] if head else None,
+        "head": head,
+        "next_target": next_target,
+        "remaining_debt": debt,
+        "remaining_gap": debt,
+        "starting_complexity": base["complexity"] if base else None,
+        "state": state,
+    }
+
+
+def _ruff(metric: dict[str, object]) -> dict[str, object]:
+    return {
+        "code": "C901",
+        "complexity": metric["complexity"],
+        "line": metric["start_line"],
+        "message": f"function is too complex ({metric['complexity']} > 10)",
+        "path": metric["path"],
+        "qualified_name": metric["qualified_name"],
+    }
+
+
 def _compose(
     inputs: tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]],
     *,
@@ -801,6 +844,161 @@ def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
     outcomes["quality"] = "failure"
 
     payload = _compose(inputs, source_outcomes=outcomes)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+def test_complexity_policy_exit_blocks_gate_one_only() -> None:
+    inputs = _inputs()
+    head = _metric("src/sample.py", "too_complex", 11)
+    inputs[0]["functions"] = [
+        _function(None, head, state="NEW", decision="BLOCK", debt=None, next_target=None)
+    ]
+    inputs[0]["overall_result"] = "BLOCK"
+    inputs[0]["ruff_diagnostics"] = [_ruff(head)]
+    inputs[0]["touched_qualified_functions"] = ["too_complex"]
+    profile_command = inputs[0]["quality_profile"]["commands"][0]
+    profile_command["adapter"] = "python.c901-touched.v1"
+    profile_command["exit_code"] = 1
+    inputs[3]["commands"][0]["adapter"] = "python.c901-touched.v1"
+    outcomes = dict(SUCCESS_OUTCOMES)
+    outcomes["complexity"] = "failure"
+
+    payload = _compose(inputs, source_outcomes=outcomes)
+
+    assert _results(payload) == ["BLOCK", *("PASS",) * 7]
+    assert _entry(payload, 1)["policy_blocks"] == ["FUNCTION_COMPLEXITY:too_complex"]
+    assert payload["shared_failures"] == []
+    assert standard_results.review_required(payload) is False
+
+    forged = copy.deepcopy(inputs)
+    forged[0]["policy_blocks"] = ["QUALITY_GATE_FAILED:python.c901-touched.v1"]
+    forged_payload = _compose(forged, source_outcomes=outcomes)
+    assert _technical_standards(forged_payload) == set(range(1, 9))
+
+
+def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> None:
+    inputs = _inputs()
+    base = _metric("src/sample.py", "legacy", 14)
+    head = _metric("src/sample.py", "legacy", 12)
+    inputs[0]["functions"] = [
+        _function(
+            base,
+            head,
+            state="EXISTING_LEGACY",
+            decision="PASS_PROGRESSIVE",
+            debt=2,
+            next_target=10,
+        )
+    ]
+    inputs[0]["ruff_diagnostics"] = [_ruff(head)]
+    inputs[0]["touched_qualified_functions"] = ["legacy"]
+    profile_command = inputs[0]["quality_profile"]["commands"][0]
+    profile_command["adapter"] = "python.c901-touched.v1"
+    profile_command["exit_code"] = 1
+    inputs[3]["commands"][0]["adapter"] = "python.c901-touched.v1"
+
+    payload = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
+
+    assert _results(payload) == ["PASS"] * 8
+    assert payload["source_outcomes"]["quality"] == "success"
+    assert standard_results.review_required(payload) is True
+
+
+def test_complexity_adapter_tool_failure_still_blocks_gate_seven() -> None:
+    inputs = _inputs()
+    block = "QUALITY_GATE_FAILED:python.c901-touched.v1"
+    profile_command = inputs[0]["quality_profile"]["commands"][0]
+    profile_command["adapter"] = "python.c901-touched.v1"
+    profile_command["exit_code"] = 2
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+    inputs[3]["commands"][0]["adapter"] = "python.c901-touched.v1"
+
+    payload = _compose(inputs)
+
+    assert _entry(payload, 7)["result"] == "BLOCK"
+    assert _entry(payload, 7)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+
+
+@pytest.mark.parametrize(
+    "poison",
+    [
+        "base-name",
+        "head-path",
+        "touched-name",
+        "missing-ruff",
+        "duplicate-function",
+        "duplicate-ruff",
+    ],
+)
+def test_function_evidence_must_cross_bind_to_changed_paths_and_ruff(poison: str) -> None:
+    inputs = _inputs()
+    base = _metric("src/sample.py", "legacy", 14)
+    head = _metric("src/sample.py", "legacy", 12)
+    function = _function(
+        base,
+        head,
+        state="EXISTING_LEGACY",
+        decision="PASS_PROGRESSIVE",
+        debt=2,
+        next_target=10,
+    )
+    inputs[0]["functions"] = [function]
+    inputs[0]["ruff_diagnostics"] = [_ruff(head)]
+    inputs[0]["touched_qualified_functions"] = ["legacy"]
+    if poison == "base-name":
+        base["qualified_name"] = "unrelated"
+    elif poison == "head-path":
+        head["path"] = "src/unrelated.py"
+    elif poison == "touched-name":
+        inputs[0]["touched_qualified_functions"] = ["unrelated"]
+    elif poison == "missing-ruff":
+        inputs[0]["ruff_diagnostics"] = []
+    elif poison == "duplicate-function":
+        inputs[0]["functions"].append(copy.deepcopy(function))
+        inputs[0]["touched_qualified_functions"].append("legacy")
+    else:
+        inputs[0]["ruff_diagnostics"].append(copy.deepcopy(inputs[0]["ruff_diagnostics"][0]))
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+@pytest.mark.parametrize("poison", ["line", "message", "surplus"])
+def test_ruff_evidence_must_bind_to_touched_function(poison: str) -> None:
+    inputs = _inputs()
+    base = _metric("src/sample.py", "legacy", 14)
+    head = _metric("src/sample.py", "legacy", 12)
+    inputs[0]["functions"] = [
+        _function(
+            base,
+            head,
+            state="EXISTING_LEGACY",
+            decision="PASS_PROGRESSIVE",
+            debt=2,
+            next_target=10,
+        )
+    ]
+    inputs[0]["ruff_diagnostics"] = [_ruff(head)]
+    inputs[0]["touched_qualified_functions"] = ["legacy"]
+    if poison == "line":
+        inputs[0]["ruff_diagnostics"][0]["line"] = 31
+    elif poison == "message":
+        inputs[0]["ruff_diagnostics"][0]["message"] = "function is too complex (11 > 10)"
+    else:
+        surplus = _ruff(_metric("src/sample.py", "untouched", 11))
+        inputs[0]["ruff_diagnostics"].append(surplus)
+
+    payload = _compose(inputs)
 
     assert _technical_standards(payload) == set(range(1, 9))
     assert all(

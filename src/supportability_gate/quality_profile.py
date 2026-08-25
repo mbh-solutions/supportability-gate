@@ -720,6 +720,13 @@ def _covers(result: GateResult, path: str) -> bool:
     return path in result.observed_paths or path in result.zero_statement_paths
 
 
+def command_failed(language: str, adapter: str, executed: bool, exit_code: int) -> bool:
+    """Return whether a quality command failed outside Gate 1 policy evidence."""
+    return not executed or (
+        exit_code != 0 and (adapter != contract.COMPLEXITY_ADAPTERS[language] or exit_code != 1)
+    )
+
+
 def _command_blocks(
     evidence: QualityEvidence,
     policy: contract.Contract,
@@ -745,7 +752,7 @@ def _command_blocks(
             blocks.append(f"QUALITY_PROOF_KIND_MISMATCH:{adapter}")
         if not result.executed:
             blocks.append(f"DECLARED_TOOL_NOT_EXECUTED:{adapter}")
-        elif result.exit_code:
+        elif command_failed(policy.language, result.adapter, result.executed, result.exit_code):
             blocks.append(f"QUALITY_GATE_FAILED:{adapter}")
         if result.proof_kind != "provisioning":
             blocks.extend(

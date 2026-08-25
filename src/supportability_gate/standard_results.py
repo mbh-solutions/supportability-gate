@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from supportability_gate import clause_inventory, standard_block_ownership
+from supportability_gate import clause_inventory, quality_profile, standard_block_ownership
 
 CHECK_CONTEXTS = (
     "Supportability 1 - Cyclomatic Complexity",
@@ -405,7 +405,9 @@ def _s02_profile_command(row: dict[str, Any], code: str) -> str:
     return adapter
 
 
-def _s02_profile(value: object, identity: RunIdentity, code: str) -> tuple[tuple[str, ...], str]:
+def _s02_profile(
+    value: object, identity: RunIdentity, code: str
+) -> tuple[tuple[str, ...], str, tuple[str, ...]]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
         row[name] for name in ("base_sha", "head_sha", "repository_remote", "workflow_sha")
@@ -446,10 +448,29 @@ def _s02_profile(value: object, identity: RunIdentity, code: str) -> tuple[tuple
         _s02_strings(row[name], code)
     result = (
         "BLOCK"
-        if any(not command["executed"] or command["exit_code"] for command in commands)
+        if any(
+            quality_profile.command_failed(
+                row["language"],
+                command["adapter"],
+                command["executed"],
+                command["exit_code"],
+            )
+            for command in commands
+        )
         else "PASS"
     )
-    return adapters, result
+    failed = tuple(
+        command["adapter"]
+        for command in commands
+        if command["executed"]
+        and quality_profile.command_failed(
+            row["language"],
+            command["adapter"],
+            command["executed"],
+            command["exit_code"],
+        )
+    )
+    return adapters, result, failed
 
 
 def _s02_review_section(
@@ -618,14 +639,113 @@ def _s02_complexity_lists(row: dict[str, Any], code: str) -> None:
             raise StandardResultsError(code)
 
 
-def _s02_ruff(value: object, code: str) -> None:
+def _s02_ruff(value: object, code: str) -> list[dict[str, Any]]:
     keys = {"code", "complexity", "line", "message", "path", "qualified_name"}
-    for row in _s02_rows(value, keys, code):
+    rows = _s02_rows(value, keys, code)
+    for row in rows:
         if any(
             not isinstance(row[name], str) or not row[name]
             for name in ("code", "message", "path", "qualified_name")
         ) or any(type(row[name]) is not int or row[name] < 1 for name in ("complexity", "line")):
             raise StandardResultsError(code)
+    return rows
+
+
+def _s02_change_bindings(
+    row: dict[str, Any],
+    changed: tuple[dict[str, Any], ...],
+    code: str,
+) -> tuple[set[str], set[str], set[tuple[str, str]]]:
+    rename_rows = _s02_rows(row["rename_bindings"], {"new_path", "old_path"}, code)
+    renames = {(item["old_path"], item["new_path"]) for item in rename_rows}
+    expected = {
+        (item["old_path"], item["new_path"]) for item in changed if item["status"] == "RENAMED"
+    }
+    if len(renames) != len(rename_rows) or renames != expected:
+        raise StandardResultsError(code)
+    base_paths = {
+        item["old_path"] for item in changed if item["base_production"] and item["old_path"]
+    }
+    head_paths = {
+        item["new_path"] for item in changed if item["head_production"] and item["new_path"]
+    }
+    return base_paths, head_paths, renames
+
+
+def _s02_function_bindings(
+    value: object,
+    base_paths: set[str],
+    head_paths: set[str],
+    renames: set[tuple[str, str]],
+    touched: object,
+    code: str,
+) -> tuple[dict[str, Any], ...]:
+    base_identities: set[tuple[str, str]] = set()
+    head_identities: set[tuple[str, str]] = set()
+    heads: list[dict[str, Any]] = []
+    for row in _s02_rows(value, _S02_FUNCTION_KEYS, code):
+        base = _s02_metric(row["base"], code)
+        head = _s02_metric(row["head"], code)
+        if base is not None:
+            identity = (base["path"], base["qualified_name"])
+            if base["path"] not in base_paths or identity in base_identities:
+                raise StandardResultsError(code)
+            base_identities.add(identity)
+        if head is not None:
+            identity = (head["path"], head["qualified_name"])
+            if head["path"] not in head_paths or identity in head_identities:
+                raise StandardResultsError(code)
+            head_identities.add(identity)
+            heads.append(head)
+        if (
+            base is not None
+            and head is not None
+            and (
+                base["qualified_name"] != head["qualified_name"]
+                or (base["path"] != head["path"] and (base["path"], head["path"]) not in renames)
+            )
+        ):
+            raise StandardResultsError(code)
+    if touched != sorted(item["qualified_name"] for item in heads):
+        raise StandardResultsError(code)
+    return tuple(heads)
+
+
+def _s02_ruff_bindings(
+    rows: list[dict[str, Any]],
+    language: str,
+    heads: tuple[dict[str, Any], ...],
+    head_paths: set[str],
+    code: str,
+) -> None:
+    if language == "typescript" and rows:
+        raise StandardResultsError(code)
+    touched = {(item["path"], item["qualified_name"]): item for item in heads}
+    matched: dict[tuple[str, str], int] = {}
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        identity = (row["path"], row["qualified_name"])
+        metric = touched.get(identity)
+        message = re.search(r"\((\d+) > 10\)$", row["message"])
+        if (
+            row["code"] != "C901"
+            or row["path"] not in head_paths
+            or identity in seen
+            or metric is None
+            or not metric["start_line"] <= row["line"] <= metric["end_line"]
+            or message is None
+            or int(message.group(1)) != row["complexity"]
+        ):
+            raise StandardResultsError(code)
+        seen.add(identity)
+        matched[identity] = row["complexity"]
+    required = {
+        identity: metric["complexity"]
+        for identity, metric in touched.items()
+        if metric["complexity"] > 10
+    }
+    if matched != required:
+        raise StandardResultsError(code)
 
 
 def _s02_gate_coverage(value: object, code: str, required: bool) -> None:
@@ -677,13 +797,20 @@ def _s02_complexity_components(
     profile = (
         _s02_profile(row["quality_profile"], identity, code)
         if row["quality_profile"] is not None
-        else ((), None)
+        else ((), None, ())
     )
+    failed = {
+        block.removeprefix("QUALITY_GATE_FAILED:")
+        for block in blocks
+        if block.startswith("QUALITY_GATE_FAILED:")
+    }
+    if failed != set(profile[2]):
+        raise StandardResultsError(code)
     if profile[1] == "BLOCK" and not any(
         7 in standard_block_ownership.owners(block) for block in blocks
     ):
         raise StandardResultsError(code)
-    return profile
+    return profile[0], profile[1]
 
 
 def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
@@ -726,13 +853,23 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         )
     ):
         raise StandardResultsError(code)
+    _s02_complexity_lists(row, code)
+    base_paths, head_paths, renames = _s02_change_bindings(row, changed, code)
+    heads = _s02_function_bindings(
+        row["functions"],
+        base_paths,
+        head_paths,
+        renames,
+        row["touched_qualified_functions"],
+        code,
+    )
+    ruff = _s02_ruff(row["ruff_diagnostics"], code)
+    _s02_ruff_bindings(ruff, row["language"], heads, head_paths, code)
     _s02_commands(row["commands"], code, True)
     _s02_gate_coverage(row["gate_coverage"], code, common_required)
     quality_adapters, quality_result = _s02_complexity_components(
         row, blocks, technical, identity, code
     )
-    _s02_complexity_lists(row, code)
-    _s02_ruff(row["ruff_diagnostics"], code)
     return _S02Complexity(
         tuple((*blocks, *function_blocks)),
         tuple(technical),

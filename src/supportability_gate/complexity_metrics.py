@@ -42,6 +42,12 @@ _TYPESCRIPT_FUNCTIONS = {
     "generator_function_declaration",
     "method_definition",
 }
+_TYPESCRIPT_ASSIGNMENT_PATTERNS = {
+    "assignment_pattern",
+    "object_assignment_pattern",
+}
+_TYPESCRIPT_PARAMETERS = {"optional_parameter", "required_parameter"}
+_TYPESCRIPT_OPTIONAL_MEMBERS = {"member_expression", "subscript_expression"}
 
 
 class MetricsError(RuntimeError):
@@ -118,6 +124,29 @@ def measure_definitions(
     return tuple(sorted(metrics, key=lambda item: (item.span.path, item.span.qualified_name)))
 
 
+def _typescript_complexity_increment(node: Node) -> int:
+    if node.type in _TYPESCRIPT_BRANCHES | _TYPESCRIPT_ASSIGNMENT_PATTERNS:
+        return 1
+    if node.type in _TYPESCRIPT_PARAMETERS and node.child_by_field_name("value") is not None:
+        return 1
+    if node.type == "binary_expression" and any(
+        child.type in {"&&", "||", "??"} for child in node.children
+    ):
+        return 1
+    if node.type == "augmented_assignment_expression" and any(
+        child.type in {"&&=", "||=", "??="} for child in node.children
+    ):
+        return 1
+    if (
+        node.type in _TYPESCRIPT_OPTIONAL_MEMBERS
+        and node.child_by_field_name("optional_chain") is not None
+    ):
+        return 1
+    return int(
+        node.type == "call_expression" and any(child.type == "?." for child in node.children)
+    )
+
+
 def _typescript_complexity(node: Node) -> int:
     complexity = 1
 
@@ -125,18 +154,23 @@ def _typescript_complexity(node: Node) -> int:
         nonlocal complexity
         if current is not node and current.type in _TYPESCRIPT_FUNCTIONS:
             return
-        if current.type in _TYPESCRIPT_BRANCHES:
-            complexity += 1
-        if current.type == "binary_expression" and any(
-            child.type in {"&&", "||", "??"} for child in current.children
-        ):
-            complexity += 1
+        if current.type == "class_static_block":
+            return
+        if current.type == "public_field_definition":
+            name = current.child_by_field_name("name")
+            if name is not None:
+                visit(name)
+            return
+        complexity += _typescript_complexity_increment(current)
         for child in current.named_children:
             visit(child)
 
     body = node.child_by_field_name("body")
     if body is None:
         raise MetricsError("MISSING_FUNCTION_BODY", str(node.start_point.row + 1))
+    parameters = node.child_by_field_name("parameters") or node.child_by_field_name("parameter")
+    if parameters is not None:
+        visit(parameters)
     visit(body)
     return complexity
 
@@ -192,8 +226,12 @@ def _parse_diagnostics(
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise MetricsError("RUFF_JSON", "Ruff did not return valid JSON") from error
     by_location = {
-        (item.span.path, item.span.start_line): item.span.qualified_name for item in definitions
+        (item.span.path, item.node.lineno): item.span.qualified_name
+        for item in definitions
+        if isinstance(item.node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
+    if len(by_location) != len(definitions):
+        raise MetricsError("PROFILE_NODE_MISMATCH", "Ruff requires Python definitions")
     diagnostics: list[RuffDiagnostic] = []
     for item in payload:
         path = _diagnostic_path(str(item["filename"]), root)

@@ -265,6 +265,9 @@ class _TypeScriptFunctionCollector:
         )
         self.functions.append(FunctionDefinition(span, node))
         self.context.append(name)
+        parameters = node.child_by_field_name("parameters") or node.child_by_field_name("parameter")
+        if parameters is not None:
+            self.visit(parameters)
         body = node.child_by_field_name("body")
         if body is not None:
             self.visit(body)
