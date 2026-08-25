@@ -25,4 +25,7 @@ def test_required_gate_binds_connector_and_deterministic_results() -> None:
 
     assert "name: Supportability Gate" in gate
     assert "needs: [collect-codex-review, deterministic-evidence]" in gate
+    assert "CONNECTOR_RESULT: ${{ needs.collect-codex-review.result }}" in gate
+    assert "DETERMINISTIC_RESULT: ${{ needs.deterministic-evidence.result }}" in gate
+    assert 'for result in "$CONNECTOR_RESULT" "$DETERMINISTIC_RESULT"; do' in gate
     assert 'if [ "$result" != "success" ]; then status=1; fi' in gate

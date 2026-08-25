@@ -1,22 +1,23 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Project #10 S01 separates advisory Codex connector collection from deterministic evidence ownership, requires eight exact-head and exact-run focuses in strict order with unique trusted completions, permits a same-focus retry only after the deterministic 450-second timeout, rejects review after a successful lifecycle, and reuses that completed lifecycle after remediation."
-proof = "tests/test_codex_review.py::{test_eight_serial_focuses_return_distinct_completion_evidence,test_active_focus_cannot_retry_before_timeout,test_timed_out_focus_may_retry_before_success,test_successful_focus_cannot_be_requested_again,test_completed_review_lifecycle_is_reused_after_remediation,test_second_review_after_remediation_blocks}; tests/test_standard_results.py"
+intended_behavior = "Project #10 S01 separates advisory Codex connector collection from deterministic evidence ownership, requires eight exact-head and exact-run focuses in strict order with unique trusted completions, permits a same-focus retry only after the deterministic 450-second timeout, rejects review after a successful lifecycle, and reuses that completed lifecycle only for an owner-authorized exact reviewed-head/current-head and reviewed-run/current-run remediation scope proved by GitHub compare."
+proof = "tests/test_codex_review.py::{test_eight_serial_focuses_return_distinct_completion_evidence,test_active_focus_cannot_retry_before_timeout,test_timed_out_focus_may_retry_before_success,test_successful_focus_cannot_be_requested_again,test_completed_review_lifecycle_is_reused_after_remediation,test_remediation_authorization_fails_closed,test_second_review_after_remediation_blocks}; tests/test_standard_results.py"
 
 [characterization]
 captured_behavior = "The Codex review boundary remains read-only and exact-head and exact-run bound; focused_review.py contains only the fixed focus contract and completion evidence types; refactor-policy result production is independent of connector completion; workflow tests bind independent connector and deterministic job results."
-proof = "tests/characterization/codex-review-boundary.characterization.py; tests/characterization/focused-review-contract.characterization.py; tests/characterization/focused-review-contract.golden.json; tests/test_codex_review.py; tests/test_refactor_policy.py::test_refactor_result_is_independent_of_connector_completion; tests/test_standard_results.py; hosted run 32804649766 jobs 97672245305 and 97672245328 passed base and head capture while its aggregate exposed the then-missing focused_review.py manifest coverage"
+proof = "tests/characterization/codex-review-boundary.characterization.py; tests/characterization/focused-review-contract.characterization.py; tests/characterization/focused-review-contract.golden.json; tests/test_codex_review.py; tests/test_refactor_policy.py::test_refactor_result_is_independent_of_connector_completion; tests/test_standard_results.py; exact reviewed head e9547f89f579473dd5b61f8048760da4c3a39731 passed Source Validation run 32805881161 job 97675771503 and required run 32805881163 base/head characterization jobs 97675772054 and 97675771893"
 
 [separation_of_concerns]
 before = "codex_review.py owned GitHub transport, the fixed focus contract, connector lifecycle evaluation, and connector evidence types while deterministic refactor evaluation also consumed connector completion state."
-after = "focused_review.py owns only the fixed focus contract and connector evidence types; codex_review.py owns read-only GitHub lifecycle collection; refactor_policy.py owns deterministic refactor evaluation without connector input; the workflow binds their separate results."
+after = "focused_review.py owns only the fixed focus contract and connector evidence types; codex_review.py owns read-only GitHub lifecycle collection and exact remediation reuse binding; refactor_policy.py owns deterministic refactor evaluation without connector input; the workflow binds their separate results."
 
 [architecture]
-dependency_direction = "focused_review.py is a dependency-free leaf contract imported by codex_review.py; refactor_policy.py does not import or consume connector state; organization-required.yml consumes separate connector and deterministic result channels."
+dependency_direction = "contract.py and focused_review.py are leaf boundaries imported by codex_review.py for repository-path validation and focused evidence; refactor_policy.py does not import or consume connector state; organization-required.yml consumes separate connector and deterministic result channels. Import Linter now names focused_review.py because review finding 3849306257 proved that omission left the new dependency outside the enforced sibling layer."
 reviewed_paths = [
     ".supportability-review.toml",
     ".github/workflows/organization-required.yml",
+    "pyproject.toml",
     "src/supportability_gate/codex_review.py",
     "src/supportability_gate/focused_review.py",
     "src/supportability_gate/refactor_policy.py",
@@ -29,22 +30,22 @@ does_not_own = "GitHub API access, polling, lifecycle decisions, deterministic r
 
 [incremental_refactor]
 target = "Complete only Project #10 S01 connector lifecycle separation and eight-focus lifecycle enforcement without starting S02 or changing organization ruleset targets."
-completed_step = "One runnable slice extracted the fixed focus contract into focused_review.py, made deterministic refactor results connector-independent, bound separate results in organization-required.yml, added a direct focused-review contract characterization scenario, and passed the focused connector, refactor, result-binding, and source proof on commit 7b914499034f6a32dde9bac533f86737e5528b1c plus local scenario replay and characterization-suite proof for the hosted coverage fix."
+completed_step = "One runnable slice extracted the fixed focus contract into focused_review.py, made deterministic refactor results connector-independent, bound separate results in organization-required.yml, added direct characterization, and obtained eight serial trusted focused completions on exact reviewed head e9547f89f579473dd5b61f8048760da4c3a39731 and run 32805881163. Supported review findings are implemented locally; final remediation-head proof remains unclaimed."
 
 [review_handoff]
-summary = "Issue #144 owner-authorizes S01 and PR #156 is the bounded implementation PR that closes it. Changed production boundaries are codex_review.py, focused_review.py, refactor_policy.py, and organization-required.yml, with direct coverage in tests/characterization/focused-review-contract.characterization.py, tests/test_codex_review.py, tests/test_refactor_policy.py, and tests/test_standard_results.py. This handoff does not claim an authenticated refactor-authorization comment, exact-head hosted characterization success, eight live focused reviews, target-repository proof, merge, terminal ledger closure, or S02 activation."
+summary = "Issue #144 owner-authorizes S01 and PR #156 is the bounded implementation PR that closes it. Exact reviewed head e9547f89f579473dd5b61f8048760da4c3a39731 passed Source Validation run 32805881161 and required run 32805881163; observer job 97675772077 and collection job 97680836811 bound eight serial owner requests to eight unique trusted completions, and Gate job 97680878501 passed. Findings 3849306257, 3849387591, 3849435888, 3849435895, 3849452409, 3849464474, 3849464478, and 3849473345 are supported and addressed locally; finding 3849420817 is rejected because FocusedReviewRequest is connector transport state rather than the output-only shared contract. This handoff does not claim final remediation-head hosted proof, target-repository proof, resolved conversations, merge, terminal ledger closure, or S02 activation."
 remaining_risks = [
-    "No Codex review request has been posted on PR #156, so no live focus acknowledgement or completion is claimed.",
-    "Hosted run 32804649766 job 97672378084 reported MISSING_OWNER_AUTHORIZATION, MISSING_RUNNABILITY_COVERAGE, and NON_RUNNABLE_LOGICAL_STEP; the PR now adds the direct focused_review.py characterization scenario that failure required, while authenticated owner authorization and exact-head hosted revalidation remain unclaimed.",
-    "Required target-repository proof, protected merge, terminal ledger update, and Project transition remain controller-owned and incomplete.",
+    "The local remediation head has not been pushed; its exact owner authorization, source proof, required workflow reuse, and deterministic final-head rerun remain unclaimed.",
+    "The nine review conversations remain unresolved until their in-thread evidence replies and final-head proof are available.",
+    "Required Python and frontend target-repository proof, protected merge, terminal ledger update, and Project transition remain controller-owned and incomplete.",
     "Codex judgment remains probabilistic and non-exhaustive even when eight focused completions are required.",
 ]
 
 [human_review]
 naming = "focused_review names the exact shared contract; codex_review remains the GitHub connector and lifecycle owner; refactor_policy remains the deterministic policy owner."
-cohesion = "Each changed production boundary has one named responsibility; the focused-review characterization freezes the extracted contract, and focused tests exercise connector sequencing, retry timeout, deterministic independence, and final result binding."
+cohesion = "Each changed production boundary has one named responsibility; the focused-review characterization freezes the extracted contract, and focused tests exercise connector sequencing, exact retry timeout, owner-authorized remediation reuse, deterministic independence, and final result binding."
 intended_behavior = "Owner-authorized issue #144 limits PR #156 to S01 connector separation and eight-focus lifecycle enforcement; S02 and later milestones, organization ruleset targets, target code import, and target execution remain excluded."
-reviewability = "The handoff names exact files, tests, commit, hosted run and job identities, unresolved hosted blocks, and unclaimed delivery evidence so reviewers can distinguish local behavior proof from remaining protected evidence."
+reviewability = "The handoff names exact files, tests, reviewed commit, hosted run and job identities, finding dispositions, and unclaimed delivery evidence so reviewers can distinguish completed one-time review proof from remaining final-head and protected delivery proof."
 
 [[module_boundaries]]
 path = "src/supportability_gate/focused_review.py"

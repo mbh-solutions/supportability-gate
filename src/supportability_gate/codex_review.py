@@ -10,8 +10,9 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
+from supportability_gate import contract
 from supportability_gate.focused_review import (
     FOCUSED_REVIEWS,
     FOCUSES,
@@ -29,6 +30,8 @@ OBSERVER_JOB = "Observe Codex Review"
 OBSERVER_MARKER = "CODEX_REVIEW_ACKNOWLEDGED:"
 FOCUSED_OBSERVER_MARKER = "CODEX_FOCUSED_REVIEW_ACKNOWLEDGED:"
 FOCUSED_COMPLETION_MARKER = "CODEX_FOCUSED_REVIEW_COMPLETED:"
+REMEDIATION_PREFIX = "Codex-Remediation-Authorization: "
+REMEDIATION_SCHEMA = "1.0"
 WORKFLOW_NAME = "Organization Required Supportability Gate"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 REVIEWED_COMMIT = re.compile(r"(?m)^\*\*Reviewed commit:\*\* `([0-9a-f]{10})`$")
@@ -88,6 +91,10 @@ class FocusedReviewRequest:
     run_id: int
 
 
+def _positive_integer(value: object) -> bool:
+    return type(value) is int and value > 0
+
+
 def _timestamp(value: object) -> datetime:
     if not isinstance(value, str):
         raise CodexReviewError("MALFORMED_CODEX_REVIEW_EVIDENCE")
@@ -133,6 +140,25 @@ def _pages(endpoint: str, token: str, opener: Any) -> tuple[dict[str, Any], ...]
         if len(current) < 100:
             return tuple(rows)
     raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+
+
+def _object(endpoint: str, token: str, opener: Any) -> dict[str, Any]:
+    request = urllib.request.Request(
+        endpoint,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with opener(request, timeout=30) as response:
+            value: object = json.loads(response.read())
+    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as error:
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE") from error
+    if not isinstance(value, dict):
+        raise CodexReviewError("GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE")
+    return value
 
 
 def _job_page(
@@ -648,7 +674,7 @@ def _focused_state(
     requests = _focused_review_requests(comments)
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
     reused = _reusable_lifecycle(
-        repository, root, pull_number, head_sha, requests, comments, reviews, token, opener
+        repository, root, pull_number, head_sha, run_id, requests, comments, reviews, token, opener
     )
     if reused is not None:
         return None, reused
@@ -678,18 +704,197 @@ def _focused_state(
     return block, evidence
 
 
+def _remediation_paths(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list) or not value:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+    try:
+        paths = tuple(
+            contract.normalize_repository_path(item, "remediation.scope") for item in value
+        )
+    except contract.ContractError as error:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION") from error
+    if list(paths) != sorted(set(paths)):
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+    return paths
+
+
+def _parse_remediation(body: object) -> dict[str, Any] | None:
+    if not isinstance(body, str):
+        return None
+    rows = [
+        line.removeprefix(REMEDIATION_PREFIX)
+        for line in body.splitlines()
+        if line.startswith(REMEDIATION_PREFIX)
+    ]
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+    try:
+        value: object = json.loads(rows[0])
+    except json.JSONDecodeError as error:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION") from error
+    keys = {
+        "current_head_sha",
+        "current_run_id",
+        "pull_number",
+        "repository",
+        "review_head_sha",
+        "review_run_id",
+        "schema_version",
+        "scope",
+    }
+    if not isinstance(value, dict) or set(value) != keys:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+    valid = all(
+        (
+            value["schema_version"] == REMEDIATION_SCHEMA,
+            isinstance(value["repository"], str),
+            _positive_integer(value["pull_number"]),
+            _positive_integer(value["review_run_id"]),
+            _positive_integer(value["current_run_id"]),
+            isinstance(value["review_head_sha"], str),
+            SHA.fullmatch(str(value["review_head_sha"])) is not None,
+            isinstance(value["current_head_sha"], str),
+            SHA.fullmatch(str(value["current_head_sha"])) is not None,
+        )
+    )
+    if not valid:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+    value["scope"] = _remediation_paths(value["scope"])
+    return value
+
+
+def _remediation_authorization(
+    comments: tuple[dict[str, Any], ...],
+    expected: tuple[str, int, str, int, str, int],
+    completed_at: datetime,
+) -> tuple[str, ...]:
+    candidates: list[dict[str, Any]] = []
+    seen = False
+    for comment in comments:
+        authorization = _parse_remediation(comment.get("body"))
+        if authorization is None:
+            continue
+        seen = True
+        if not _trusted_owner(comment):
+            raise CodexReviewError("UNAUTHENTICATED_CODEX_REMEDIATION_AUTHORIZATION")
+        created_at = _timestamp(comment.get("created_at"))
+        if (
+            created_at != _timestamp(comment.get("updated_at"))
+            or created_at <= completed_at
+            or not _positive_integer(comment.get("id"))
+        ):
+            raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+        if (authorization["current_head_sha"], authorization["current_run_id"]) == (
+            expected[4],
+            expected[5],
+        ):
+            candidates.append(authorization)
+    if not candidates:
+        code = (
+            "STALE_CODEX_REMEDIATION_AUTHORIZATION"
+            if seen
+            else "MISSING_CODEX_REMEDIATION_AUTHORIZATION"
+        )
+        raise CodexReviewError(code)
+    if len(candidates) != 1:
+        raise CodexReviewError("MALFORMED_CODEX_REMEDIATION_AUTHORIZATION")
+    authorization = candidates[0]
+    if (
+        authorization["repository"],
+        authorization["pull_number"],
+        authorization["review_head_sha"],
+        authorization["review_run_id"],
+        authorization["current_head_sha"],
+        authorization["current_run_id"],
+    ) != expected:
+        raise CodexReviewError("CODEX_REMEDIATION_AUTHORIZATION_MISMATCH")
+    return cast(tuple[str, ...], authorization["scope"])
+
+
+def _comparison_scope(files: object) -> tuple[str, ...]:
+    if not isinstance(files, list) or not files or len(files) >= 300:
+        raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA")
+    paths: set[str] = set()
+    for item in files:
+        if not isinstance(item, dict) or item.get("status") not in {
+            "added",
+            "changed",
+            "copied",
+            "modified",
+            "removed",
+            "renamed",
+            "unchanged",
+        }:
+            raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA")
+        try:
+            paths.add(contract.normalize_repository_path(item.get("filename"), "compare.filename"))
+            if item.get("status") == "renamed":
+                paths.add(
+                    contract.normalize_repository_path(
+                        item.get("previous_filename"), "compare.previous_filename"
+                    )
+                )
+            elif "previous_filename" in item:
+                raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA")
+        except contract.ContractError as error:
+            raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA") from error
+    return tuple(sorted(paths))
+
+
+def _remediation_scope(
+    root: str, reviewed_head: str, current_head: str, token: str, opener: Any
+) -> tuple[str, ...]:
+    value = _object(f"{root}/compare/{reviewed_head}...{current_head}", token, opener)
+    commits = value.get("commits")
+    base = value.get("base_commit")
+    merge_base = value.get("merge_base_commit")
+    ahead = value.get("ahead_by")
+    if not _positive_integer(ahead) or not isinstance(commits, list):
+        raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA")
+    valid = all(
+        (
+            value.get("status") == "ahead",
+            type(value.get("behind_by")) is int and value.get("behind_by") == 0,
+            value.get("total_commits") == ahead,
+            len(commits) == value.get("total_commits"),
+            isinstance(base, dict) and base.get("sha") == reviewed_head,
+            isinstance(merge_base, dict) and merge_base.get("sha") == reviewed_head,
+        )
+    )
+    if (
+        not valid
+        or not commits
+        or any(
+            not isinstance(item, dict) or SHA.fullmatch(str(item.get("sha"))) is None
+            for item in commits
+        )
+    ):
+        raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA")
+    if commits[-1].get("sha") != current_head:
+        raise CodexReviewError("UNSAFE_CODEX_REMEDIATION_DELTA")
+    return _comparison_scope(value.get("files"))
+
+
 def _reusable_lifecycle(
     repository: str,
     root: str,
     pull_number: int,
     head_sha: str,
+    run_id: int,
     requests: tuple[FocusedReviewRequest, ...],
     comments: tuple[dict[str, Any], ...],
     reviews: tuple[dict[str, Any], ...],
     token: str,
     opener: Any,
 ) -> tuple[FocusedReviewEvidence, ...] | None:
-    completed = _completed_lifecycles(repository, root, requests, comments, reviews, token, opener)
+    historical = tuple(
+        request for request in requests if (request.head_sha, request.run_id) != (head_sha, run_id)
+    )
+    completed = _completed_lifecycles(
+        repository, root, historical, comments, reviews, token, opener
+    )
     if len(completed) > 1:
         raise CodexReviewError("REPEATED_COMPLETED_CODEX_REVIEW_LIFECYCLE")
     if not completed:
@@ -699,12 +904,19 @@ def _reusable_lifecycle(
         (request.head_sha, request.run_id) != (reviewed_head, reviewed_run) for request in requests
     ):
         raise CodexReviewError("REPEATED_COMPLETED_CODEX_REVIEW_LIFECYCLE")
-    if reviewed_head != head_sha:
-        commits = {
-            item.get("sha") for item in _pages(f"{root}/pulls/{pull_number}/commits", token, opener)
-        }
-        if reviewed_head not in commits or head_sha not in commits:
-            raise CodexReviewError("STALE_COMPLETED_CODEX_REVIEW_LIFECYCLE")
+    expected = (
+        repository,
+        pull_number,
+        reviewed_head,
+        reviewed_run,
+        head_sha,
+        run_id,
+    )
+    completed_at = max(item.completion.completed_at for item in evidence)
+    authorized_scope = _remediation_authorization(comments, expected, completed_at)
+    scope = _remediation_scope(root, reviewed_head, head_sha, token, opener)
+    if authorized_scope != scope:
+        raise CodexReviewError("CODEX_REMEDIATION_SCOPE_MISMATCH")
     return evidence
 
 
@@ -834,7 +1046,7 @@ def _focused_acknowledgement_state(
     requests = _focused_review_requests(comments)
     reviews = _pages(f"{root}/pulls/{pull_number}/reviews", token, opener)
     reused = _reusable_lifecycle(
-        repository, root, pull_number, head_sha, requests, comments, reviews, token, opener
+        repository, root, pull_number, head_sha, run_id, requests, comments, reviews, token, opener
     )
     if reused is not None:
         return None, tuple(item.request_id for item in reused)

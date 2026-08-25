@@ -210,6 +210,7 @@ def _focused_opener(
     *,
     reactions: dict[int, list[dict[str, object]]] | None = None,
     reviews: list[dict[str, object]] | None = None,
+    comparison: object | None = None,
     jobs: list[dict[str, object]] | None = None,
     log: bytes | None = None,
 ) -> Callable[..., _Reply]:
@@ -225,7 +226,11 @@ def _focused_opener(
             return _Reply(log or _focused_log())
         if url.path.endswith("jobs"):
             return _Reply(_jobs(job_rows[start : start + 100]))
-        if url.path.endswith("comments"):
+        if "/compare/" in url.path:
+            if isinstance(comparison, Exception):
+                raise comparison
+            return _Reply(comparison)
+        if "/issues/" in url.path and url.path.endswith("comments"):
             return _Reply(comments[start : start + 100])
         if url.path.endswith("reviews"):
             return _Reply((reviews or [])[start : start + 100])
@@ -235,6 +240,80 @@ def _focused_opener(
         raise AssertionError(url.path)
 
     return open_request
+
+
+def _remediation_authorization(
+    current_head: str,
+    current_run: int,
+    *,
+    scope: list[str] | None = None,
+    created_at: str = "2026-08-11T12:20:01Z",
+    updated_at: str | None = None,
+    user_id: int = codex_review.REQUESTER_ID,
+    **overrides: object,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "current_head_sha": current_head,
+        "current_run_id": current_run,
+        "pull_number": 7,
+        "repository": "example/repository",
+        "review_head_sha": HEAD,
+        "review_run_id": RUN_ID,
+        "schema_version": "1.0",
+        "scope": scope or ["src/remediated.py"],
+    }
+    payload.update(overrides)
+    return {
+        "body": (
+            f"{codex_review.REMEDIATION_PREFIX}"
+            f"{json.dumps(payload, sort_keys=True, separators=(',', ':'))}"
+        ),
+        "created_at": created_at,
+        "id": 901,
+        "updated_at": updated_at or created_at,
+        "user": {"id": user_id},
+    }
+
+
+def _remediation_compare(
+    current_head: str,
+    *,
+    files: list[dict[str, object]] | None = None,
+    **overrides: object,
+) -> dict[str, object]:
+    value: dict[str, object] = {
+        "ahead_by": 1,
+        "base_commit": {"sha": HEAD},
+        "behind_by": 0,
+        "commits": [{"sha": current_head}],
+        "files": (
+            [{"filename": "src/remediated.py", "status": "modified"}] if files is None else files
+        ),
+        "merge_base_commit": {"sha": HEAD},
+        "status": "ahead",
+        "total_commits": 1,
+    }
+    value.update(overrides)
+    return value
+
+
+def _reuse(
+    comments: list[dict[str, object]],
+    reactions: dict[int, list[dict[str, object]]],
+    comparison: object,
+    log: bytes,
+) -> tuple[codex_review.FocusedReviewEvidence, ...]:
+    return codex_review.require_focused_completion(
+        "example/repository",
+        7,
+        "c" * 40,
+        RUN_ID + 1,
+        "token",
+        attempts=1,
+        delay=0,
+        opener=_focused_opener(comments, reactions=reactions, comparison=comparison, log=log),
+        sleeper=lambda _: None,
+    )
 
 
 def _verify_focused(opener: Callable[..., _Reply]) -> None:
@@ -256,10 +335,11 @@ def _s01_request(
     *,
     comment_id: int,
     minute: int,
+    second: int = 0,
     head: str = HEAD,
     run_id: int = RUN_ID,
 ) -> dict[str, object]:
-    timestamp = f"2026-08-11T12:{minute:02d}:00Z"
+    timestamp = f"2026-08-11T12:{minute:02d}:{second:02d}Z"
     return {
         "body": (
             f"{S01_FOCUSED_REVIEWS[focus]}\n"
@@ -876,6 +956,14 @@ def test_focused_completion_waits_for_final_eyes_to_clear() -> None:
 
 def test_eight_serial_focuses_return_distinct_completion_evidence() -> None:
     comments, reactions, log = _s01_evidence()
+    base_opener = _focused_opener(comments, reactions=reactions, log=log)
+    reaction_calls = 0
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        nonlocal reaction_calls
+        if urllib.parse.urlparse(request.full_url).path.endswith("/reactions"):
+            reaction_calls += 1
+        return base_opener(request, **kwargs)
 
     evidence = codex_review.require_focused_completion(
         "example/repository",
@@ -885,17 +973,18 @@ def test_eight_serial_focuses_return_distinct_completion_evidence() -> None:
         "token",
         attempts=1,
         delay=0,
-        opener=_focused_opener(comments, reactions=reactions, log=log),
+        opener=opener,
         sleeper=lambda _: None,
     )
 
     assert tuple(item.focus for item in evidence) == tuple(str(item) for item in range(1, 9))
     assert len({item.completion.artifact_id for item in evidence}) == 8
+    assert reaction_calls == 8
 
 
 def test_active_focus_cannot_retry_before_timeout() -> None:
-    comments, reactions, log = _s01_evidence(first_request_id=201, first_minute=4)
-    comments.insert(0, _s01_request("1", comment_id=101, minute=0))
+    comments, reactions, log = _s01_evidence(first_request_id=201, first_minute=8)
+    comments.insert(0, _s01_request("1", comment_id=101, minute=0, second=31))
 
     with pytest.raises(
         codex_review.CodexReviewError,
@@ -916,7 +1005,7 @@ def test_active_focus_cannot_retry_before_timeout() -> None:
 
 def test_timed_out_focus_may_retry_before_success() -> None:
     comments, reactions, _ = _s01_evidence(first_request_id=201, first_minute=8)
-    first_attempt = _s01_request("1", comment_id=101, minute=0)
+    first_attempt = _s01_request("1", comment_id=101, minute=0, second=30)
     comments.insert(0, first_attempt)
     log = "".join(
         f"2026-08-11T12:20:00Z {codex_review.FOCUSED_OBSERVER_MARKER}{standard}:{200 + standard}\n"
@@ -965,27 +1054,67 @@ def test_completed_review_lifecycle_is_reused_after_remediation() -> None:
     final_head = "c" * 40
     final_run = RUN_ID + 1
     comments, reactions, log = _s01_evidence()
-    base_opener = _focused_opener(comments, reactions=reactions, log=log)
-
-    def opener(request: Any, **kwargs: object) -> _Reply:
-        path = urllib.parse.urlparse(request.full_url).path
-        if path.endswith("/commits"):
-            return _Reply([{"sha": HEAD}, {"sha": final_head}])
-        return base_opener(request, **kwargs)
-
-    evidence = codex_review.require_focused_completion(
-        "example/repository",
-        7,
+    comments.append(
+        _remediation_authorization(final_head, final_run, scope=["src/new.py", "src/old.py"])
+    )
+    comparison = _remediation_compare(
         final_head,
-        final_run,
-        "token",
-        attempts=1,
-        delay=0,
-        opener=opener,
-        sleeper=lambda _: None,
+        files=[{"filename": "src/new.py", "previous_filename": "src/old.py", "status": "renamed"}],
     )
 
+    evidence = _reuse(comments, reactions, comparison, log)
     assert tuple(item.request_id for item in evidence) == tuple(range(101, 109))
+
+
+@pytest.mark.parametrize(
+    ("case", "code"),
+    [
+        ("missing", "MISSING_CODEX_REMEDIATION_AUTHORIZATION"),
+        ("untrusted", "UNAUTHENTICATED_CODEX_REMEDIATION_AUTHORIZATION"),
+        ("mutated", "MALFORMED_CODEX_REMEDIATION_AUTHORIZATION"),
+        ("stale", "STALE_CODEX_REMEDIATION_AUTHORIZATION"),
+        ("duplicate", "MALFORMED_CODEX_REMEDIATION_AUTHORIZATION"),
+        ("scope", "CODEX_REMEDIATION_SCOPE_MISMATCH"),
+        ("diverged", "UNSAFE_CODEX_REMEDIATION_DELTA"),
+        ("truncated", "UNSAFE_CODEX_REMEDIATION_DELTA"),
+        ("malformed", "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"),
+        ("api", "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"),
+    ],
+)
+def test_remediation_authorization_fails_closed(case: str, code: str) -> None:
+    final_head = "c" * 40
+    final_run = RUN_ID + 1
+    comments, reactions, log = _s01_evidence()
+    comparison = _remediation_compare(final_head)
+    if case != "missing":
+        authorization = _remediation_authorization(
+            final_head, final_run, current_run_id=final_run + (case == "stale")
+        )
+        if case == "untrusted":
+            authorization["user"] = {"id": codex_review.CONNECTOR_ID}
+        if case == "mutated":
+            authorization["updated_at"] = "2026-08-11T12:20:02Z"
+        comments.append(authorization)
+        if case == "duplicate":
+            comments.append({**authorization, "id": 902})
+        if case == "scope":
+            comparison = _remediation_compare(
+                final_head, files=[{"filename": "src/other.py", "status": "modified"}]
+            )
+        if case == "diverged":
+            comparison = _remediation_compare(final_head, status="diverged")
+        if case == "truncated":
+            comparison = _remediation_compare(
+                final_head,
+                files=[{"filename": f"src/{item}.py", "status": "modified"} for item in range(300)],
+            )
+        if case == "malformed":
+            comparison = None
+        if case == "api":
+            comparison = urllib.error.URLError("offline")
+
+    with pytest.raises(codex_review.CodexReviewError, match=code):
+        _reuse(comments, reactions, comparison, log)
 
 
 def test_second_review_after_remediation_blocks() -> None:
@@ -993,14 +1122,6 @@ def test_second_review_after_remediation_blocks() -> None:
     final_run = RUN_ID + 1
     comments, reactions, log = _s01_evidence()
     comments.append(_s01_request("1", comment_id=201, minute=18, head=final_head, run_id=final_run))
-    base_opener = _focused_opener(comments, reactions=reactions, log=log)
-
-    def opener(request: Any, **kwargs: object) -> _Reply:
-        path = urllib.parse.urlparse(request.full_url).path
-        if path.endswith("/commits"):
-            return _Reply([{"sha": HEAD}, {"sha": final_head}])
-        return base_opener(request, **kwargs)
-
     with pytest.raises(
         codex_review.CodexReviewError,
         match="REPEATED_COMPLETED_CODEX_REVIEW_LIFECYCLE",
@@ -1013,6 +1134,6 @@ def test_second_review_after_remediation_blocks() -> None:
             "token",
             attempts=1,
             delay=0,
-            opener=opener,
+            opener=_focused_opener(comments, reactions=reactions, log=log),
             sleeper=lambda _: None,
         )
