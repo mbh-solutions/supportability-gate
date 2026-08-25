@@ -9,7 +9,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from supportability_gate.focused_review import (
@@ -36,6 +36,7 @@ MAX_PAGES = 10
 POLL_ATTEMPTS = 30
 POLL_SECONDS = 15
 FOCUSED_POLL_ATTEMPTS = 240
+FOCUSED_RETRY_TIMEOUT = timedelta(seconds=POLL_ATTEMPTS * POLL_SECONDS)
 
 
 class CodexReviewError(ValueError):
@@ -749,6 +750,13 @@ def _evaluate_lifecycle(
             completed_before,
         )
         if artifact is None:
+            retry = requests[index + 1] if index + 1 < len(requests) else None
+            if (
+                retry is not None
+                and retry.focus == request.focus
+                and retry.created_at - request.created_at < FOCUSED_RETRY_TIMEOUT
+            ):
+                raise CodexReviewError(f"PREMATURE_FOCUSED_CODEX_REVIEW_RETRY_{request.focus}")
             pending = request
             continue
         evidence.append(

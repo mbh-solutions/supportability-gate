@@ -893,8 +893,29 @@ def test_eight_serial_focuses_return_distinct_completion_evidence() -> None:
     assert len({item.completion.artifact_id for item in evidence}) == 8
 
 
-def test_failed_focus_may_retry_before_success() -> None:
-    comments, reactions, _ = _s01_evidence(first_request_id=201, first_minute=4)
+def test_active_focus_cannot_retry_before_timeout() -> None:
+    comments, reactions, log = _s01_evidence(first_request_id=201, first_minute=4)
+    comments.insert(0, _s01_request("1", comment_id=101, minute=0))
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="PREMATURE_FOCUSED_CODEX_REVIEW_RETRY_1",
+    ):
+        codex_review.require_focused_completion(
+            "example/repository",
+            7,
+            HEAD,
+            RUN_ID,
+            "token",
+            attempts=1,
+            delay=0,
+            opener=_focused_opener(comments, reactions=reactions, log=log),
+            sleeper=lambda _: None,
+        )
+
+
+def test_timed_out_focus_may_retry_before_success() -> None:
+    comments, reactions, _ = _s01_evidence(first_request_id=201, first_minute=8)
     first_attempt = _s01_request("1", comment_id=101, minute=0)
     comments.insert(0, first_attempt)
     log = "".join(
@@ -910,12 +931,7 @@ def test_failed_focus_may_retry_before_success() -> None:
         "token",
         attempts=1,
         delay=0,
-        opener=_focused_opener(
-            comments,
-            reactions=reactions,
-            reviews=[_focused_review("1", state="DISMISSED")],
-            log=log,
-        ),
+        opener=_focused_opener(comments, reactions=reactions, log=log),
         sleeper=lambda _: None,
     )
 
