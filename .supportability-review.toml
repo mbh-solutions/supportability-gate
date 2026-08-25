@@ -1,54 +1,79 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Project #10 S01 separates advisory Codex connector collection from deterministic evidence ownership, requires eight exact-head and exact-run focuses in strict order with unique trusted completions, permits a same-focus retry only after the deterministic 450-second timeout, rejects review after a successful lifecycle, and reuses that completed lifecycle only for an owner-authorized exact reviewed-head/current-head and reviewed-run/current-run remediation scope proved by GitHub compare."
-proof = "tests/test_codex_review.py::{test_eight_serial_focuses_return_distinct_completion_evidence,test_active_focus_cannot_retry_before_timeout,test_timed_out_focus_may_retry_before_success,test_successful_focus_cannot_be_requested_again,test_completed_review_lifecycle_is_reused_after_remediation,test_remediation_authorization_fails_closed,test_second_review_after_remediation_blocks}; tests/test_standard_results.py"
+intended_behavior = "Project #10 S02 makes each deterministic Standard lane own its applicability, evidence, policy blocks, technical errors, and result. A lane-specific poison changes only its owning lane, simultaneous poisons remain independent, and only a named validated dependency failure may affect its exact dependent lane set. One authenticated added documentation line may use NOT_APPLICABLE_SHORT_TASK; uncertain or broader changes use the full process."
+proof = "tests/test_standard_results.py::{test_gate_three_cycle_blocks_only_gate_three,test_quality_provenance_binding_mismatch_is_gate_seven_technical_only,test_simultaneous_gate_three_and_gate_seven_poisons_remain_independent,test_malformed_shared_review_document_names_only_affected_lanes,test_one_added_document_line_is_authenticated_short_task,test_forged_short_results_are_rejected_by_applicability_evidence,test_install_failure_suppresses_all_derived_source_errors}; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json"
 
 [characterization]
-captured_behavior = "The Codex review boundary remains read-only and exact-head and exact-run bound; focused_review.py contains only the fixed focus contract and completion evidence types; refactor-policy result production is independent of connector completion; workflow tests bind independent connector and deterministic job results."
-proof = "tests/characterization/codex-review-boundary.characterization.py; tests/characterization/focused-review-contract.characterization.py; tests/characterization/focused-review-contract.golden.json; tests/test_codex_review.py; tests/test_refactor_policy.py::test_refactor_result_is_independent_of_connector_completion; tests/test_standard_results.py; exact reviewed head e9547f89f579473dd5b61f8048760da4c3a39731 passed Source Validation run 32805881161 job 97675771503 and required run 32805881163 base/head characterization jobs 97675772054 and 97675771893"
+captured_behavior = "The standard-results boundary freezes clean full-process output, isolated gate-3 and gate-7 poison, simultaneous independent poison, explicit complexity and review shared dependencies, and authenticated one-line documentation short-task output. Focused tests also freeze malformed, missing, duplicate, stale, spoofed, and misbound input rejection plus exact per-lane enforcement exits."
+proof = ".supportability-characterization.json scenario standard-results-boundary; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "codex_review.py owned GitHub transport, the fixed focus contract, connector lifecycle evaluation, and connector evidence types while deterministic refactor evaluation also consumed connector completion state."
-after = "focused_review.py owns only the fixed focus contract and connector evidence types; codex_review.py owns read-only GitHub lifecycle collection and exact remediation reuse binding; refactor_policy.py owns deterministic refactor evaluation without connector input; the workflow binds their separate results."
+before = "The aggregate result path flattened deterministic blocks and technical failures into one workflow result, so one source failure could obscure unaffected lane outcomes and eligible short work had no authenticated per-lane NOT_APPLICABLE result."
+after = "standard_block_ownership.py owns exact block and shared-dependency lane mapping; standard_results.py owns canonical lane composition plus exact identity and schema validation; standard_results_producer.py owns strict artifact loading and canonical output; standard_results_enforcer.py owns strict input reading, delegates validation to standard_results.py, and translates one selected lane result to its exit; organization-required.yml wires the independent matrix and requests advisory review only when deterministic applicability requires it."
 
 [architecture]
-dependency_direction = "contract.py and focused_review.py are leaf boundaries imported by codex_review.py for repository-path validation and focused evidence; refactor_policy.py does not import or consume connector state; organization-required.yml consumes separate connector and deterministic result channels. Import Linter now names focused_review.py because review finding 3849306257 proved that omission left the new dependency outside the enforced sibling layer."
+dependency_direction = "standard_results_producer.py and standard_results_enforcer.py depend only on standard_results.py; standard_results.py depends on the leaf clause_inventory.py and standard_block_ownership.py boundaries. The workflow invokes producer and enforcer as command modules and cannot decide a lane result. Import Linter names all four new production modules and enforces this direction."
 reviewed_paths = [
-    ".supportability-review.toml",
     ".github/workflows/organization-required.yml",
+    ".supportability-characterization.json",
+    ".supportability-review.toml",
+    "docs/product_completion_contract.md",
     "pyproject.toml",
-    "src/supportability_gate/codex_review.py",
-    "src/supportability_gate/focused_review.py",
-    "src/supportability_gate/refactor_policy.py",
+    "src/supportability_gate/standard_block_ownership.py",
+    "src/supportability_gate/standard_results.py",
+    "src/supportability_gate/standard_results_enforcer.py",
+    "src/supportability_gate/standard_results_producer.py",
+    "tests/characterization/standard-results-boundary.characterization.py",
+    "tests/characterization/standard-results-boundary.golden.json",
+    "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/focused_review.py"
-owns = "The fixed eight-focus command contract plus immutable request acknowledgement and completion evidence value types shared by connector collection and workflow binding."
-does_not_own = "GitHub API access, polling, lifecycle decisions, deterministic refactor policy, workflow orchestration, target repository execution, or connector judgment."
+path = "src/supportability_gate/standard_results.py"
+owns = "Canonical standard-results.v2 composition, exact schema and identity validation, authenticated applicability, per-lane policy and technical state, explicit shared-dependency representation, and the deterministic review-required decision."
+does_not_own = "Block-family ownership data, filesystem or command-line input handling, source-artifact generation, workflow orchestration, Codex connector judgment, GitHub mutation, target repository import, or target repository execution."
 
 [incremental_refactor]
-target = "Complete only Project #10 S01 connector lifecycle separation and eight-focus lifecycle enforcement without starting S02 or changing organization ruleset targets."
-completed_step = "One runnable slice extracted the fixed focus contract into focused_review.py, made deterministic refactor results connector-independent, bound separate results in organization-required.yml, added direct characterization, and obtained eight serial trusted focused completions on exact reviewed head e9547f89f579473dd5b61f8048760da4c3a39731 and run 32805881163. Supported findings are implemented, the unsupported boundary move is rejected with evidence, all nine source conversations are resolved, and protected Python and frontend qualification completed without changing production target branches."
+target = "Complete only Project #10 S02 independent lane applicability, evidence, block, technical-error, and result ownership plus explicit genuine shared-dependency behavior; do not begin S03 or change production target code or rulesets."
+completed_step = "One runnable slice adds the four named standard-results responsibilities, converts the required workflow to an independent eight-lane matrix, conditionally requests advisory review, and adds focused plus regression characterization for isolated, simultaneous, shared, malformed, and authenticated short-task cases."
 
 [review_handoff]
-summary = "Issue #144 owner-authorizes S01 and PR #156 is the bounded implementation PR that closes it. Exact reviewed head e9547f89f579473dd5b61f8048760da4c3a39731 passed Source Validation run 32805881161 and required run 32805881163; observer 97675772077, collector 97680836811, and Gate 97680878501 bound eight serial owner requests to eight unique trusted completions. Findings 3849306257, 3849387591, 3849435888, 3849435895, 3849452409, 3849464474, 3849464478, and 3849473345 were supported and fixed; 3849420817 was rejected because FocusedReviewRequest is connector transport state rather than the output-only shared contract. Every source thread has an owner reply and is resolved. Protected Python PR mbh-solutions/supportability-audit#7 merged only to its disposable base as a057efa74c33fd1a600e567c5399fbdad6a3a5d8; protected frontend PR mbh-solutions/dc_training#49 merged only to its disposable base as 800412eea299e2ade2098f526bd4717a772f7b48. Both final heads reused their original eight reviews, passed deterministic and stack-native validation, removed temporary rulesets/refs/worktrees, and left production target mains unchanged. Exact final source hosted proof, normal merge, terminal Project readback, and S02 activation remain transactionally unclaimed."
+summary = "Issue #145 owner-authorizes this bounded S02 slice. Changed responsibilities implement deterministic lane isolation and explicit shared dependencies; focused tests and standard-results-boundary characterization name the required clean, poisoned, simultaneous, shared, and short-task outcomes. This repository evidence does not claim its own immutable final head, hosted runs, eight focused completions, protected target qualification, normal merge, or terminal Project readback; those identities are recorded only after direct proof."
 remaining_risks = [
-    "This commit does not claim its own exact hosted source run, owner remediation/refactor authorizations, workflow reuse, deterministic final-head rerun, or normal merge; those identities require the immutable commit and are recorded in issue #144 after protected completion.",
-    "Normal merge, terminal issue and Project readback, and conditional S02 activation are outside this commit's evidence claim and require post-merge synchronization.",
-    "Frontend findings 3849779647 and 3849820612 remain explicit plan-conflicting assurance limits: the disposable proof did not add pixel-level PNG characterization or directly register the historical end-to-end script.",
+    "Exact final-head source validation, eight serial focused completions, finding disposition, zero unresolved threads, and normal merge remain unclaimed until protected GitHub evidence exists.",
+    "Protected clean and poisoned Python and frontend qualification plus the real eligible short-task run remain unclaimed until their exact runs, jobs, artifacts, lane JSON, ruleset state, and cleanup are read back.",
+    "The authenticated short-task rule is deliberately narrow: exactly one added nonproduction documentation file with one positive changed head line. Uncertain, modified, deleted, renamed, production, immutable, frozen-roadmap, or ledger changes use the full process.",
+    "Only genuinely multi-lane common identity, aggregate, characterization, installation, or structured-review document and section dependencies may be shared; refactor evidence is owned only by Gate 6. Unmapped, generic, copied, malformed, stale, spoofed, duplicate, or misbound evidence fails closed.",
     "Codex judgment remains probabilistic and non-exhaustive even when eight focused completions are required.",
 ]
 
 [human_review]
-naming = "focused_review names the exact shared contract; codex_review remains the GitHub connector and lifecycle owner; refactor_policy remains the deterministic policy owner."
-cohesion = "Each changed production boundary has one named responsibility; the focused-review characterization freezes the extracted contract, and focused tests exercise connector sequencing, exact retry timeout, owner-authorized remediation reuse, deterministic independence, and final result binding."
-intended_behavior = "Owner-authorized issue #144 limits PR #156 to S01 connector separation and eight-focus lifecycle enforcement; S02 and later milestones, organization ruleset targets, target code import, and target execution remain excluded."
-reviewability = "The handoff names exact files, tests, reviewed commit, hosted run and job identities, finding dispositions, and unclaimed delivery evidence so reviewers can distinguish completed one-time review proof from remaining final-head and protected delivery proof."
+naming = "standard_block_ownership names ownership data; standard_results names canonical composition and validation; producer names artifact creation; enforcer names one-lane enforcement."
+cohesion = "Each new module has one self-owned responsibility, one enforced dependency direction, focused direct tests, and one shared standard-results-boundary characterization instead of a generalized framework."
+intended_behavior = "Owner-authorized issue #145 limits this change to S02 lane isolation and explicit shared dependencies. S03-S11, package additions, target-product changes, target code import or execution, weakened thresholds, and production ruleset changes remain excluded."
+reviewability = "Reviewed paths enumerate every planned S02 source, workflow, focused test, characterization, contract, and terminal-ledger change; handoff text distinguishes code evidence from still-unclaimed hosted and protected-target proof."
 
 [[module_boundaries]]
-path = "src/supportability_gate/focused_review.py"
-owner_path = "src/supportability_gate/focused_review.py"
+path = "src/supportability_gate/standard_block_ownership.py"
+owner_path = "src/supportability_gate/standard_block_ownership.py"
 basis = "responsibility"
-justification = "This new location owns the cohesive, dependency-free eight-focus command contract and immutable connector evidence value types; keeping them outside codex_review.py prevents the GitHub transport and lifecycle module from also owning the shared workflow-facing contract."
+justification = "This dependency-free leaf owns the exact mapping from deterministic block families, review fields, and technical source failures to their owning lane sets and named shared dependencies."
+
+[[module_boundaries]]
+path = "src/supportability_gate/standard_results.py"
+owner_path = "src/supportability_gate/standard_results.py"
+basis = "responsibility"
+justification = "This module owns canonical standard-results.v2 composition and validation so workflow wiring, artifact loading, and one-lane process exits cannot independently reinterpret lane outcomes."
+
+[[module_boundaries]]
+path = "src/supportability_gate/standard_results_enforcer.py"
+owner_path = "src/supportability_gate/standard_results_enforcer.py"
+basis = "responsibility"
+justification = "This command module owns strict reading of one canonical standard-results artifact, delegates exact identity and schema validation to standard_results.py, and translates one selected lane result to its process exit."
+
+[[module_boundaries]]
+path = "src/supportability_gate/standard_results_producer.py"
+owner_path = "src/supportability_gate/standard_results_producer.py"
+basis = "responsibility"
+justification = "This command module owns strict deterministic source-artifact loading, source-outcome capture, canonical composition invocation, and one standard-results artifact write."

@@ -10,66 +10,6 @@ permissions:
   pull-requests: read
 
 jobs:
-  observe-codex-review:
-    name: Observe Codex Review
-    permissions:
-      actions: read
-      contents: read
-      issues: read
-      pull-requests: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 70
-    steps:
-      - name: Check out exact gate source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: mbh-solutions/supportability-gate
-          ref: ${{ github.workflow_sha }}
-          persist-credentials: false
-          path: gate
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-
-      - name: Observe serial focused connector reviews
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PULL_NUMBER: ${{ github.event.pull_request.number }}
-          PYTHONPATH: ${{ github.workspace }}/gate/src
-        run: |
-          python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_OBSERVER_MARKER, FOCUSES, require_focused_acknowledgements; comment_ids = require_focused_acknowledgements(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_OBSERVER_MARKER}{focus}:{comment_id}" for focus, comment_id in zip(FOCUSES, comment_ids, strict=True)))'
-
-  collect-codex-review:
-    name: Collect Codex Review
-    needs: observe-codex-review
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out exact gate source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: mbh-solutions/supportability-gate
-          ref: ${{ github.workflow_sha }}
-          persist-credentials: false
-          path: gate
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-
-      - name: Collect one-time focused connector completions
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PULL_NUMBER: ${{ github.event.pull_request.number }}
-          PYTHONPATH: ${{ github.workspace }}/gate/src
-        run: |
-          python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_COMPLETION_MARKER, require_focused_completion; evidence = require_focused_completion(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_COMPLETION_MARKER}{item.focus}:{item.request_id}:{item.completion.kind}:{item.completion.artifact_id}" for item in evidence))'
-
   characterize-base:
     name: Characterize Base
     runs-on: ubuntu-latest
@@ -233,6 +173,7 @@ jobs:
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      capture-outcome: ${{ steps.capture.outcome }}
       capture-sha256: ${{ steps.capture.outputs.sha256 }}
     steps:
       - name: Check out exact target head
@@ -267,6 +208,7 @@ jobs:
 
       - name: Capture fixed stack-native quality profile
         id: capture
+        continue-on-error: true
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -284,12 +226,14 @@ jobs:
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --output "$RUNNER_TEMP/quality/quality-gates.json"
-          echo "status=$?" >> "$GITHUB_OUTPUT"
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
           echo "sha256=$(sha256sum "$RUNNER_TEMP/quality/quality-gates.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-          exit 0
+          exit "$status"
 
       - name: Upload authenticated quality evidence
         id: upload
+        if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: quality-profile-${{ github.run_id }}-${{ github.run_attempt }}
@@ -302,6 +246,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      artifact-digest: ${{ steps.upload_evidence.outputs.artifact-digest }}
+      artifact-id: ${{ steps.upload_evidence.outputs.artifact-id }}
+      review-required: ${{ steps.standard_results.outputs.review-required }}
     steps:
       - name: Check out target pull-request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -374,8 +322,8 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID" \
             --output "$RUNNER_TEMP/quality/artifact-metadata.json"
 
-      - name: Verify exact behavior and refactor policy
-        id: refactor_policy
+      - name: Verify exact behavior characterization
+        id: characterization
         if: >-
           steps.install.outcome == 'success' &&
           steps.download_base.outcome == 'success' &&
@@ -390,7 +338,6 @@ jobs:
           HEAD_ARTIFACT_ID: ${{ needs.characterize-head.outputs.artifact-id }}
           HEAD_CAPTURE_SHA256: ${{ needs.characterize-head.outputs.capture-sha256 }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         working-directory: ${{ runner.temp }}
         run: |
@@ -413,17 +360,30 @@ jobs:
             --head-artifact-digest "$HEAD_ARTIFACT_DIGEST" \
             --head-capture-sha256 "$HEAD_CAPTURE_SHA256" \
             --output "$RUNNER_TEMP/evidence/characterization-result.json"
-          characterization_status=$?
+          status=$?
           cat "$RUNNER_TEMP/evidence/characterization-result.json"
+          exit "$status"
+
+      - name: Enforce refactor policy
+        id: refactor_policy
+        if: >-
+          steps.install.outcome == 'success' &&
+          steps.download_base.outcome == 'success' &&
+          steps.download_head.outcome == 'success'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          set +e
           "$RUNNER_TEMP/gate-venv/bin/python" -P -m supportability_gate.refactor_policy \
             --repository "$GITHUB_WORKSPACE/target" \
             --event "$GITHUB_EVENT_PATH" \
             --characterization-result "$RUNNER_TEMP/evidence/characterization-result.json" \
             --output "$RUNNER_TEMP/evidence/refactor-policy-result.json"
-          refactor_status=$?
+          status=$?
           cat "$RUNNER_TEMP/evidence/refactor-policy-result.json"
-          if [ "$characterization_status" -ne 0 ]; then exit "$characterization_status"; fi
-          exit "$refactor_status"
+          exit "$status"
 
       - name: Evaluate immutable pull-request commits
         id: evaluate
@@ -462,6 +422,46 @@ jobs:
           cat "$RUNNER_TEMP/evidence/complexity-result.json"
           exit "$status"
 
+      - name: Compose eight independently enforceable results
+        id: standard_results
+        if: always()
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+        run: |
+          set +e
+          review_required=$(python -P -m supportability_gate.standard_results_producer \
+            --repository "$GITHUB_REPOSITORY" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --base-sha "$BASE_SHA" \
+            --head-sha "$HEAD_SHA" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --install-outcome "${{ steps.install.outcome }}" \
+            --complexity-outcome "${{ steps.evaluate.outcome }}" \
+            --characterization-outcome "${{ steps.characterization.outcome }}" \
+            --refactor-outcome "${{ steps.refactor_policy.outcome }}" \
+            --quality-outcome "${{ needs.quality-profile.outputs.capture-outcome }}" \
+            --expected-quality-artifact-id "${{ needs.quality-profile.outputs.artifact-id }}" \
+            --expected-quality-artifact-digest "${{ needs.quality-profile.outputs.artifact-digest }}" \
+            --expected-quality-capture-sha256 "${{ needs.quality-profile.outputs.capture-sha256 }}" \
+            --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
+            --characterization-result "$RUNNER_TEMP/evidence/characterization-result.json" \
+            --refactor-result "$RUNNER_TEMP/evidence/refactor-policy-result.json" \
+            --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
+            --output "$RUNNER_TEMP/evidence/standard-results.json")
+          status=$?
+          if [ "$status" -ne 0 ]; then exit "$status"; fi
+          case "$review_required" in
+            true|false) ;;
+            *) echo "INVALID_REVIEW_REQUIRED_OUTPUT"; exit 2 ;;
+          esac
+          echo "review-required=$review_required" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/evidence/standard-results.json"
+
       - name: Upload authoritative supportability evidence
         id: upload_evidence
         if: always()
@@ -472,44 +472,196 @@ jobs:
           path: ${{ runner.temp }}/evidence
           if-no-files-found: error
 
-      - name: Enforce aggregate result
+      - name: Require authoritative result artifact
         if: always()
         env:
-          BASE_RESULT: ${{ needs.characterize-base.result }}
-          HEAD_RESULT: ${{ needs.characterize-head.result }}
-          QUALITY_RESULT: ${{ needs.quality-profile.result }}
-          INSTALL_OUTCOME: ${{ steps.install.outcome }}
-          BASE_DOWNLOAD_OUTCOME: ${{ steps.download_base.outcome }}
-          HEAD_DOWNLOAD_OUTCOME: ${{ steps.download_head.outcome }}
-          QUALITY_DOWNLOAD_OUTCOME: ${{ steps.download_quality.outcome }}
-          METADATA_OUTCOME: ${{ steps.artifact_metadata.outcome }}
-          REFACTOR_OUTCOME: ${{ steps.refactor_policy.outcome }}
-          EVALUATE_OUTCOME: ${{ steps.evaluate.outcome }}
+          ARTIFACT_DIGEST: ${{ steps.upload_evidence.outputs.artifact-digest }}
+          ARTIFACT_ID: ${{ steps.upload_evidence.outputs.artifact-id }}
+          REVIEW_REQUIRED: ${{ steps.standard_results.outputs.review-required }}
+          STANDARD_RESULTS_OUTCOME: ${{ steps.standard_results.outcome }}
           UPLOAD_OUTCOME: ${{ steps.upload_evidence.outcome }}
         run: |
           status=0
-          for result in "$BASE_RESULT" "$HEAD_RESULT" "$QUALITY_RESULT" \
-            "$INSTALL_OUTCOME" "$BASE_DOWNLOAD_OUTCOME" "$HEAD_DOWNLOAD_OUTCOME" \
-            "$QUALITY_DOWNLOAD_OUTCOME" "$METADATA_OUTCOME" "$REFACTOR_OUTCOME" \
-            "$EVALUATE_OUTCOME" "$UPLOAD_OUTCOME"; do
+          for result in "$STANDARD_RESULTS_OUTCOME" "$UPLOAD_OUTCOME"; do
             if [ "$result" != "success" ]; then status=1; fi
           done
+          case "$REVIEW_REQUIRED" in true|false) ;; *) status=1 ;; esac
+          if ! [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then status=1; fi
+          if ! [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]; then status=1; fi
           exit "$status"
+
+  observe-codex-review:
+    name: Observe Codex Review
+    needs: deterministic-evidence
+    if: needs.deterministic-evidence.outputs.review-required == 'true'
+    permissions:
+      actions: read
+      contents: read
+      issues: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Check out exact gate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Observe serial focused connector reviews
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+        run: |
+          python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_OBSERVER_MARKER, FOCUSES, require_focused_acknowledgements; comment_ids = require_focused_acknowledgements(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_OBSERVER_MARKER}{focus}:{comment_id}" for focus, comment_id in zip(FOCUSES, comment_ids, strict=True)))'
+
+  collect-codex-review:
+    name: Collect Codex Review
+    needs: [deterministic-evidence, observe-codex-review]
+    if: >-
+      needs.deterministic-evidence.outputs.review-required == 'true' &&
+      needs.observe-codex-review.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact gate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Collect one-time focused connector completions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+        run: |
+          python -P -c 'import os; from supportability_gate.codex_review import FOCUSED_COMPLETION_MARKER, require_focused_completion; evidence = require_focused_completion(os.environ["GITHUB_REPOSITORY"], int(os.environ["PULL_NUMBER"]), os.environ["HEAD_SHA"], int(os.environ["GITHUB_RUN_ID"]), os.environ["GITHUB_TOKEN"]); print("\n".join(f"{FOCUSED_COMPLETION_MARKER}{item.focus}:{item.request_id}:{item.completion.kind}:{item.completion.artifact_id}" for item in evidence))'
+
+  standard-results:
+    name: ${{ matrix.context }}
+    needs: deterministic-evidence
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - standard: 1
+            context: Supportability 1 - Cyclomatic Complexity
+          - standard: 2
+            context: Supportability 2 - Separation of Concerns
+          - standard: 3
+            context: Supportability 3 - Dependency Direction
+          - standard: 4
+            context: Supportability 4 - Domain Modularity
+          - standard: 5
+            context: Supportability 5 - Characterization
+          - standard: 6
+            context: Supportability 6 - Incremental Refactor
+          - standard: 7
+            context: Supportability 7 - Quality Gates
+          - standard: 8
+            context: Supportability 8 - Review Handoff
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact gate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Download exact authoritative evidence artifact
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          artifact-ids: ${{ needs.deterministic-evidence.outputs.artifact-id }}
+          path: ${{ runner.temp }}/evidence
+
+      - name: Enforce one Standard result
+        if: always()
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+          STANDARD: ${{ matrix.standard }}
+        run: |
+          if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
+            echo "MISSING_STANDARD_RESULTS_ARTIFACT"
+            exit 2
+          fi
+          python -P -m supportability_gate.standard_results_enforcer \
+            --repository "$GITHUB_REPOSITORY" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --base-sha "$BASE_SHA" \
+            --head-sha "$HEAD_SHA" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --input "$RUNNER_TEMP/evidence/standard-results.json" \
+            --standard "$STANDARD"
 
   supportability-gate:
     name: Supportability Gate
-    needs: [collect-codex-review, deterministic-evidence]
+    needs:
+      [deterministic-evidence, observe-codex-review, collect-codex-review, standard-results]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Enforce separated connector and deterministic results
+      - name: Enforce deterministic lanes and conditional connector results
         env:
-          CONNECTOR_RESULT: ${{ needs.collect-codex-review.result }}
+          ARTIFACT_DIGEST: ${{ needs.deterministic-evidence.outputs.artifact-digest }}
+          ARTIFACT_ID: ${{ needs.deterministic-evidence.outputs.artifact-id }}
+          COLLECTOR_RESULT: ${{ needs.collect-codex-review.result }}
           DETERMINISTIC_RESULT: ${{ needs.deterministic-evidence.result }}
+          OBSERVER_RESULT: ${{ needs.observe-codex-review.result }}
+          REVIEW_REQUIRED: ${{ needs.deterministic-evidence.outputs.review-required }}
+          STANDARD_RESULTS_RESULT: ${{ needs.standard-results.result }}
         run: |
           status=0
-          for result in "$CONNECTOR_RESULT" "$DETERMINISTIC_RESULT"; do
+          for result in "$DETERMINISTIC_RESULT" "$STANDARD_RESULTS_RESULT"; do
             if [ "$result" != "success" ]; then status=1; fi
           done
+          if ! [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then status=1; fi
+          if ! [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]; then status=1; fi
+          case "$REVIEW_REQUIRED" in
+            true)
+              if [ "$OBSERVER_RESULT" != "success" ] || [ "$COLLECTOR_RESULT" != "success" ]; then
+                status=1
+              fi
+              ;;
+            false)
+              if [ "$OBSERVER_RESULT" != "skipped" ] || [ "$COLLECTOR_RESULT" != "skipped" ]; then
+                status=1
+              fi
+              ;;
+            *) status=1 ;;
+          esac
           exit "$status"

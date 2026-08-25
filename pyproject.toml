@@ -62,6 +62,8 @@ root_package = "supportability_gate"
 name = "Supportability gate dependency direction"
 type = "layers"
 layers = [
+    "supportability_gate.standard_results_producer | supportability_gate.standard_results_enforcer",
+    "supportability_gate.standard_results",
     "supportability_gate.__main__",
     "supportability_gate.cli",
     "supportability_gate.reporting",
@@ -73,5 +75,5 @@ layers = [
     "supportability_gate.codex_review",
     "supportability_gate.function_changes",
     "supportability_gate.characterization",
-    "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.focused_review | supportability_gate.git_changes | supportability_gate.review_evidence",
+    "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.focused_review | supportability_gate.git_changes | supportability_gate.review_evidence | supportability_gate.standard_block_ownership",
 ]
