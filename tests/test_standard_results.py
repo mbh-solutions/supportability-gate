@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import re
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,9 @@ import pytest
 
 from supportability_gate import (
     clause_inventory,
+    cli,
+    contract,
+    git_changes,
     standard_block_ownership,
     standard_results,
     standard_results_enforcer,
@@ -265,12 +269,24 @@ def _compose(
     source_errors: dict[str, str] | None = None,
     source_outcomes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    if source_outcomes is None:
+        source_outcomes = dict(SUCCESS_OUTCOMES)
+        for source, value in zip(("complexity", "characterization", "refactor"), inputs[:3]):
+            source_outcomes[source] = (
+                "success" if value.get("overall_result") == "PASS" else "failure"
+            )
+        profile = inputs[0].get("quality_profile")
+        if isinstance(profile, dict) and any(
+            not command["executed"] or command["exit_code"]
+            for command in profile.get("commands", [])
+        ):
+            source_outcomes["quality"] = "failure"
     return standard_results.compose_results(
         *inputs,
         IDENTITY,
         expected_quality_artifact=EXPECTED_QUALITY_ARTIFACT,
         source_errors=source_errors,
-        source_outcomes=source_outcomes or SUCCESS_OUTCOMES,
+        source_outcomes=source_outcomes,
     )
 
 
@@ -427,14 +443,22 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
     inputs = _inputs()
     inputs[0]["technical_errors"] = [{"code": "SYNTAX_ERROR", "message": "invalid syntax"}]
     inputs[0]["overall_result"] = "TECHNICAL_FAILURE"
+    for field in ("architecture", "modularity"):
+        inputs[0][field] = None
 
     payload = _compose(inputs)
 
     expected = {1, 2, 3, 4, 7, 8}
     code = "COMPLEXITY_RESULT:SYNTAX_ERROR"
     assert _technical_standards(payload) == expected
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in expected)
     assert _entry(payload, 5)["result"] == "PASS"
     assert _entry(payload, 6)["result"] == "PASS"
+    assert payload["quality_artifact"] == {
+        "capture_sha256": "c" * 64,
+        "digest": "d" * 64,
+        "id": 789,
+    }
     assert payload["shared_failures"] == [
         {
             "affected_standards": sorted(expected),
@@ -443,6 +467,74 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
             "kind": "TECHNICAL_ERROR",
         }
     ]
+
+    mixed = copy.deepcopy(inputs)
+    mixed[0]["architecture"] = {"invalid": True}
+    mixed_payload = _compose(mixed)
+    assert _technical_standards(mixed_payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"]
+        for entry in mixed_payload["entries"]
+    )
+
+    isolated = copy.deepcopy(inputs)
+    isolated[0]["technical_errors"] = [
+        {"code": "MCCABE_GRAPH_MISMATCH", "message": "graph mismatch"}
+    ]
+    isolated[0]["architecture"] = _complexity()["architecture"]
+    isolated[0]["modularity"] = _complexity()["modularity"]
+    isolated_payload = _compose(isolated)
+    assert _technical_standards(isolated_payload) == {1}
+    assert _entry(isolated_payload, 1)["technical_errors"] == [
+        "COMPLEXITY_RESULT:MCCABE_GRAPH_MISMATCH"
+    ]
+    assert _entry(isolated_payload, 7)["result"] == "PASS"
+    assert isolated_payload["quality_artifact"] == {
+        "capture_sha256": "c" * 64,
+        "digest": "d" * 64,
+        "id": 789,
+    }
+    assert standard_results.validate_payload(isolated_payload, IDENTITY) is None
+
+    for field in ("changed_files", "commands", "gate_coverage", "quality_profile"):
+        forged = copy.deepcopy(isolated)
+        forged[0][field] = None if field == "quality_profile" else []
+        forged_payload = _compose(forged)
+        assert _technical_standards(forged_payload) == set(range(1, 9))
+        assert all(
+            entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"]
+            for entry in forged_payload["entries"]
+        )
+
+    quality = _inputs()
+    quality[0]["technical_errors"] = [
+        {"code": "MISSING_QUALITY_EVIDENCE", "message": "quality evidence missing"}
+    ]
+    quality[0]["overall_result"] = "TECHNICAL_FAILURE"
+    quality[0]["modularity"] = None
+    quality[0]["quality_profile"] = None
+    quality_payload = _compose(quality)
+    assert _technical_standards(quality_payload) == {4, 7}
+
+    simultaneous = copy.deepcopy(quality)
+    simultaneous[0]["technical_errors"].insert(
+        0, {"code": "MCCABE_GRAPH_MISMATCH", "message": "graph mismatch"}
+    )
+    simultaneous_payload = _compose(simultaneous)
+    assert _technical_standards(simultaneous_payload) == {1, 4, 7}
+
+    syntax = _inputs()
+    syntax[0]["technical_errors"] = [
+        {"code": "COMPLEXITY_SYNTAX_ERROR", "message": "invalid syntax"},
+        {"code": "ARCHITECTURE_SYNTAX_ERROR", "message": "invalid syntax"},
+    ]
+    syntax[0]["overall_result"] = "TECHNICAL_FAILURE"
+    syntax[0]["architecture"] = None
+    syntax[0]["modularity"] = None
+    syntax_payload = _compose(syntax)
+    assert _technical_standards(syntax_payload) == {1, 3, 4}
+    assert _entry(syntax_payload, 7)["result"] == "PASS"
+    assert _entry(syntax_payload, 8)["result"] == "PASS"
 
 
 def test_wrong_source_block_affects_source_dependents_and_claimed_owner_only() -> None:
@@ -484,6 +576,17 @@ def test_malformed_shared_review_document_names_only_affected_lanes() -> None:
             "kind": "POLICY_BLOCK",
         }
     ]
+
+    subset = _inputs()
+    subset[0]["review_evidence"] = None
+    subset[0]["policy_blocks"] = ["INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.before"]
+    subset[0]["overall_result"] = "BLOCK"
+    subset_payload = _compose(subset)
+    assert _technical_standards(subset_payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"]
+        for entry in subset_payload["entries"]
+    )
 
 
 def test_unknown_root_review_key_is_shared_document_defect() -> None:
@@ -539,6 +642,188 @@ def test_one_added_document_line_is_authenticated_short_task() -> None:
     assert "quality-provenance.json" in _entry(payload, 7)["evidence_sources"]
     assert payload["source_outcomes"]["quality"] == "success"
     assert standard_results.review_required(payload) is False
+
+
+def test_cli_captures_one_added_document_line_without_broadening_other_files(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "target"
+    repository.mkdir()
+
+    def git(*arguments: str) -> str:
+        completed = subprocess.run(
+            ["git", *arguments],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return completed.stdout.strip()
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Fixture")
+    git("config", "user.email", "fixture@example.invalid")
+    git("config", "core.autocrlf", "false")
+    git("remote", "add", "origin", "https://github.com/example/repository.git")
+    (repository / "notes.txt").write_text("base\n", encoding="utf-8")
+    git("add", "--all")
+    git("commit", "-m", "base")
+    base_sha = git("rev-parse", "HEAD")
+
+    document = repository / "docs" / "release-note.md"
+    document.parent.mkdir()
+    document.write_text("release\n", encoding="utf-8")
+    git("add", "--all")
+    git("commit", "-m", "document")
+    document_sha = git("rev-parse", "HEAD")
+
+    policy = contract.parse_contract(
+        (Path(__file__).parents[1] / ".supportability.toml").read_bytes()
+    )
+    records: list[git_changes.CommandRecord] = []
+    identity = git_changes.inspect_repository(repository, base_sha, document_sha, records)
+    assessments = cli._classify_changes(
+        repository,
+        identity,
+        policy,
+        git_changes.changed_paths(repository, base_sha, document_sha, records),
+        records,
+    )
+
+    assert assessments[0].changed_head_lines == (1,)
+    inputs = _inputs("docs/release-note.md", [1], status="ADDED")
+    inputs[0]["changed_files"] = [
+        {
+            "base_production": assessments[0].base_production,
+            "changed_head_lines": list(assessments[0].changed_head_lines),
+            "complexity_assessed": assessments[0].complexity_assessed,
+            "head_production": assessments[0].head_production,
+            "new_path": assessments[0].change.new_path,
+            "old_path": assessments[0].change.old_path,
+            "status": assessments[0].change.status,
+        }
+    ]
+    assert _compose(inputs)["short_task"] is True
+
+    (repository / "notes.txt").write_text("head\n", encoding="utf-8")
+    git("add", "--all")
+    git("commit", "-m", "broad file")
+    broad_sha = git("rev-parse", "HEAD")
+    records = []
+    identity = git_changes.inspect_repository(repository, document_sha, broad_sha, records)
+    broad = cli._classify_changes(
+        repository,
+        identity,
+        policy,
+        git_changes.changed_paths(repository, document_sha, broad_sha, records),
+        records,
+    )
+
+    assert broad[0].change.new_path == "notes.txt"
+    assert broad[0].changed_head_lines == ()
+
+
+@pytest.mark.parametrize(
+    ("source", "outcome", "code", "expected"),
+    [
+        ("complexity", "failure", "MALFORMED_COMPLEXITY_RESULT", set(range(1, 9))),
+        ("complexity", "cancelled", "MALFORMED_COMPLEXITY_RESULT", set(range(1, 9))),
+        ("complexity", "skipped", "MALFORMED_COMPLEXITY_RESULT", set(range(1, 9))),
+        (
+            "characterization",
+            "failure",
+            "MALFORMED_CHARACTERIZATION_RESULT",
+            {5, 6},
+        ),
+        ("refactor", "failure", "MALFORMED_REFACTOR_RESULT", {6}),
+        ("quality", "failure", "MALFORMED_QUALITY_PROVENANCE", {7}),
+    ],
+)
+def test_completed_passing_source_requires_success_outcome(
+    source: str,
+    outcome: str,
+    code: str,
+    expected: set[int],
+    tmp_path: Path,
+) -> None:
+    outcomes = dict(SUCCESS_OUTCOMES)
+    outcomes[source] = outcome
+
+    payload = _compose(_inputs(), source_outcomes=outcomes)
+
+    assert _technical_standards(payload) == expected
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in expected)
+
+    forged = _compose(_inputs())
+    forged["source_outcomes"][source] = outcome
+    path = tmp_path / f"forged-{source}-{outcome}.json"
+    path.write_text(json.dumps(forged), encoding="utf-8")
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 1)) == 2
+
+
+def test_blocked_refactor_source_requires_failure_and_remains_a_policy_block() -> None:
+    inputs = _inputs()
+    block = "MISSING_OWNER_AUTHORIZATION"
+    inputs[2]["policy_blocks"] = [block]
+    inputs[2]["overall_result"] = "BLOCK"
+    outcomes = dict(SUCCESS_OUTCOMES)
+    outcomes["refactor"] = "failure"
+
+    payload = _compose(inputs, source_outcomes=outcomes)
+
+    assert _entry(payload, 6)["result"] == "BLOCK"
+    assert _entry(payload, 6)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+
+    mismatched = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
+    assert _entry(mismatched, 6)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]
+
+
+def test_failed_quality_capture_authenticates_its_gate_seven_block() -> None:
+    inputs = _inputs()
+    block = "QUALITY_GATE_FAILED:python.pytest.v1"
+    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _entry(payload, 7)["result"] == "BLOCK"
+    assert _entry(payload, 7)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+
+
+def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
+    outcomes = dict(SUCCESS_OUTCOMES)
+    outcomes["quality"] = "failure"
+
+    payload = _compose(inputs, source_outcomes=outcomes)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+def test_short_task_ignores_irrelevant_characterization_and_refactor_outcomes() -> None:
+    outcomes = dict(SUCCESS_OUTCOMES)
+    outcomes["characterization"] = "cancelled"
+    outcomes["refactor"] = "skipped"
+
+    payload = _compose(
+        _inputs("docs/release-note.md", [1], status="ADDED"),
+        source_outcomes=outcomes,
+    )
+
+    assert payload["short_task"] is True
+    assert _results(payload) == [
+        *("NOT_APPLICABLE_SHORT_TASK",) * 6,
+        "PASS",
+        "NOT_APPLICABLE_SHORT_TASK",
+    ]
 
 
 def test_corrupt_complexity_binding_cannot_authenticate_short_task() -> None:
@@ -1007,16 +1292,6 @@ def test_producer_rejects_duplicate_json_keys(
     )
 
 
-def test_non_success_outcome_does_not_override_valid_lane_evidence() -> None:
-    outcomes = dict(SUCCESS_OUTCOMES)
-    outcomes["quality"] = "failure"
-
-    payload = _compose(_inputs(), source_outcomes=outcomes)
-
-    assert _results(payload) == ["PASS"] * 8
-    assert payload["source_outcomes"] == outcomes
-
-
 def _cycle_payload() -> dict[str, Any]:
     inputs = _inputs()
     block = "IMPORT_CYCLE:src/a.py:1:src.b"
@@ -1092,7 +1367,26 @@ def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() 
     assert "review-required: ${{ steps.standard_results.outputs.review-required }}" in evidence
     assert "python -P -m supportability_gate.standard_results_producer" in evidence
     assert '--install-outcome "${{ steps.install.outcome }}"' in evidence
-    assert '--quality-outcome "${{ needs.quality-profile.outputs.capture-outcome }}"' in evidence
+    download_quality = evidence.split("- name: Download authenticated quality evidence", 1)[
+        1
+    ].split("- name: Read back GitHub artifact metadata", 1)[0]
+    artifact_metadata = evidence.split("- name: Read back GitHub artifact metadata", 1)[1].split(
+        "- name: Verify exact behavior characterization", 1
+    )[0]
+    assert "continue-on-error: true" in download_quality
+    assert "continue-on-error: true" in artifact_metadata
+    evaluate = evidence.split("- name: Evaluate immutable pull-request commits", 1)[1].split(
+        "- name: Compose eight independently enforceable results", 1
+    )[0]
+    assert "if: ${{ always() && steps.install.outcome == 'success' }}" in evaluate
+    assert "steps.download_quality.outcome == 'success'" not in evaluate
+    assert "steps.artifact_metadata.outcome == 'success'" not in evaluate
+    assert (
+        "--quality-outcome \"${{ needs.quality-profile.outputs.capture-outcome != 'success' "
+        "&& needs.quality-profile.outputs.capture-outcome || "
+        "steps.download_quality.outcome != 'success' && steps.download_quality.outcome || "
+        'steps.artifact_metadata.outcome }}"' in evidence
+    )
     assert (
         '--expected-quality-artifact-id "${{ needs.quality-profile.outputs.artifact-id }}"'
         in evidence

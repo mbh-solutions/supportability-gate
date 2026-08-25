@@ -261,13 +261,24 @@ def _run_case(
     identity: Any,
     producer: Any,
     enforcer: Any,
-    standard_results: Any,
 ) -> dict[str, object]:
     source_paths = {source: directory / f"{name}-{source}.json" for source in inputs}
     for source, value in inputs.items():
         _write(source_paths[source], value)
     output = directory / f"{name}-standard-results.json"
     common = _common(identity)
+    outcomes = {
+        source: "success" if inputs[source]["overall_result"] == "PASS" else "failure"
+        for source in ("complexity", "characterization", "refactor")
+    }
+    outcomes["quality"] = (
+        "failure"
+        if any(
+            not command["executed"] or command["exit_code"]
+            for command in inputs["complexity"]["quality_profile"]["commands"]
+        )
+        else "success"
+    )
     arguments = [
         *common,
         "--complexity-result",
@@ -285,20 +296,22 @@ def _run_case(
         "--expected-quality-capture-sha256",
         "c" * 64,
         "--complexity-outcome",
-        "success",
+        outcomes["complexity"],
         "--characterization-outcome",
-        "success",
+        outcomes["characterization"],
         "--install-outcome",
         "success",
         "--refactor-outcome",
-        "success",
+        outcomes["refactor"],
         "--quality-outcome",
-        "success",
+        outcomes["quality"],
         "--output",
         str(output),
     ]
-    with contextlib.redirect_stdout(io.StringIO()):
+    producer_stdout = io.StringIO()
+    with contextlib.redirect_stdout(producer_stdout):
         producer_exit = producer.main(arguments)
+    with contextlib.redirect_stdout(io.StringIO()):
         enforcer_exits = [
             enforcer.main([*common, "--input", str(output), "--standard", str(standard)])
             for standard in range(1, 9)
@@ -317,7 +330,7 @@ def _run_case(
             if entry["policy_blocks"] or entry["technical_errors"]
         ],
         "producer_exit": producer_exit,
-        "review_required": standard_results.review_required(payload),
+        "review_required": producer_stdout.getvalue().rstrip("\n"),
         "rows": [
             {
                 "applicable": entry["applicable"],
@@ -403,7 +416,6 @@ def main() -> None:
                 identity,
                 standard_results_producer,
                 standard_results_enforcer,
-                standard_results,
             )
             for name, inputs in cases.items()
         }

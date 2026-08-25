@@ -31,7 +31,7 @@
       ],
       "lane_failures": [],
       "producer_exit": 0,
-      "review_required": true,
+      "review_required": "true",
       "rows": [
         {
           "applicable": true,
@@ -145,7 +145,7 @@
         }
       ],
       "producer_exit": 0,
-      "review_required": false,
+      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -259,7 +259,7 @@
         }
       ],
       "producer_exit": 0,
-      "review_required": false,
+      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -410,7 +410,7 @@
         }
       ],
       "producer_exit": 0,
-      "review_required": false,
+      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -582,7 +582,7 @@
         }
       ],
       "producer_exit": 0,
-      "review_required": false,
+      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -703,7 +703,7 @@
       ],
       "lane_failures": [],
       "producer_exit": 0,
-      "review_required": false,
+      "review_required": "false",
       "rows": [
         {
           "applicable": false,
@@ -824,7 +824,7 @@
         }
       ],
       "producer_exit": 0,
-      "review_required": false,
+      "review_required": "false",
       "rows": [
         {
           "applicable": true,

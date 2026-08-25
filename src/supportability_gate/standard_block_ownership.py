@@ -122,7 +122,7 @@ _REVIEW_PREFIXES = (
     "MALFORMED_REVIEW_EVIDENCE:",
     "INSUFFICIENT_REVIEW_EVIDENCE:",
 )
-_ALL_REVIEW_STANDARDS = frozenset({1, 2, 3, 4, 5, 6, 8})
+REVIEW_STANDARDS = frozenset({1, 2, 3, 4, 5, 6, 8})
 _REVIEW_SECTIONS = frozenset(field.partition(".")[0] for field in REVIEW_FIELD_OWNERS)
 _REVIEW_ROOT_FIELDS = frozenset({"schema_version", *_REVIEW_SECTIONS})
 _MODULE_BOUNDARY_FIELDS = frozenset({"basis", "justification", "owner_path", "path"})
@@ -248,10 +248,10 @@ def review_owners(block: str) -> frozenset[int]:
         return frozenset()
     kind, location = defect
     if location in {"document", "schema_version"}:
-        return _ALL_REVIEW_STANDARDS
+        return REVIEW_STANDARDS
     if location.startswith("review_evidence."):
         if kind == "MALFORMED":
-            return _ALL_REVIEW_STANDARDS
+            return REVIEW_STANDARDS
         location = location.removeprefix("review_evidence.")
     if location == "module_boundaries" or location.startswith("module_boundaries["):
         return frozenset({4})
@@ -303,6 +303,12 @@ def technical_owners(code: str) -> frozenset[int]:
     """Return one lane for technical codes with stable, unique ownership."""
     raw = code.removeprefix("COMPLEXITY_RESULT:")
     if raw in {
+        "COMPLEXITY_AMBIGUOUS_FUNCTION_IDENTITY",
+        "COMPLEXITY_EMPTY_FUNCTION_DELTA",
+        "COMPLEXITY_MISSING_AST_SPAN",
+        "COMPLEXITY_SOURCE_ENCODING",
+        "COMPLEXITY_SOURCE_UNAVAILABLE",
+        "COMPLEXITY_SYNTAX_ERROR",
         "INCOMPLETE_REMAINING_GAP",
         "MCCABE_GRAPH_MISMATCH",
         "MISSING_FUNCTION_BODY",
@@ -310,9 +316,11 @@ def technical_owners(code: str) -> frozenset[int]:
     } or raw.startswith(("C901_", "RUFF_")):
         return frozenset({1})
     if raw.startswith("ARCHITECTURE_"):
-        return frozenset({3})
+        return frozenset({3, 4})
+    if raw == "REVIEW_EVIDENCE_UNAVAILABLE":
+        return REVIEW_STANDARDS
     if raw == "INVALID_WORKFLOW_SHA" or raw.startswith(_QUALITY_TECHNICAL_PREFIXES):
-        return frozenset({7})
+        return frozenset({4, 7})
     return frozenset()
 
 

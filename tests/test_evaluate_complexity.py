@@ -1071,7 +1071,12 @@ def test_syntax_error_is_technical_failure(tmp_path: Path) -> None:
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 2
-    assert result["technical_errors"][0]["code"] == "SYNTAX_ERROR"
+    assert [item["code"] for item in result["technical_errors"]] == [
+        "COMPLEXITY_SYNTAX_ERROR",
+        "ARCHITECTURE_SYNTAX_ERROR",
+    ]
+    assert result["quality_profile"] is not None
+    assert (tmp_path / "result" / "quality-provenance.json").is_file()
 
 
 def test_ruff_parity_mismatch_is_technical_failure(tmp_path: Path) -> None:

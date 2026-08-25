@@ -387,10 +387,7 @@ jobs:
 
       - name: Evaluate immutable pull-request commits
         id: evaluate
-        if: >-
-          steps.install.outcome == 'success' &&
-          steps.download_quality.outcome == 'success' &&
-          steps.artifact_metadata.outcome == 'success'
+        if: ${{ always() && steps.install.outcome == 'success' }}
         continue-on-error: true
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -444,7 +441,7 @@ jobs:
             --complexity-outcome "${{ steps.evaluate.outcome }}" \
             --characterization-outcome "${{ steps.characterization.outcome }}" \
             --refactor-outcome "${{ steps.refactor_policy.outcome }}" \
-            --quality-outcome "${{ needs.quality-profile.outputs.capture-outcome }}" \
+            --quality-outcome "${{ needs.quality-profile.outputs.capture-outcome != 'success' && needs.quality-profile.outputs.capture-outcome || steps.download_quality.outcome != 'success' && steps.download_quality.outcome || steps.artifact_metadata.outcome }}" \
             --expected-quality-artifact-id "${{ needs.quality-profile.outputs.artifact-id }}" \
             --expected-quality-artifact-digest "${{ needs.quality-profile.outputs.artifact-digest }}" \
             --expected-quality-capture-sha256 "${{ needs.quality-profile.outputs.capture-sha256 }}" \

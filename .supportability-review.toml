@@ -2,10 +2,10 @@ schema_version = "1.0"
 
 [behavior]
 intended_behavior = "Project #10 S02 makes each deterministic Standard lane own its applicability, evidence, policy blocks, technical errors, and result. A lane-specific poison changes only its owning lane, simultaneous poisons remain independent, and only a named validated dependency failure may affect its exact dependent lane set. One authenticated added documentation line may use NOT_APPLICABLE_SHORT_TASK; uncertain or broader changes use the full process."
-proof = "tests/test_standard_results.py::{test_gate_three_cycle_blocks_only_gate_three,test_quality_provenance_binding_mismatch_is_gate_seven_technical_only,test_simultaneous_gate_three_and_gate_seven_poisons_remain_independent,test_malformed_shared_review_document_names_only_affected_lanes,test_one_added_document_line_is_authenticated_short_task,test_forged_short_results_are_rejected_by_applicability_evidence,test_install_failure_suppresses_all_derived_source_errors}; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json"
+proof = "tests/test_standard_results.py::{test_gate_three_cycle_blocks_only_gate_three,test_quality_provenance_binding_mismatch_is_gate_seven_technical_only,test_simultaneous_gate_three_and_gate_seven_poisons_remain_independent,test_malformed_shared_review_document_names_only_affected_lanes,test_cli_captures_one_added_document_line_without_broadening_other_files,test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners,test_completed_passing_source_requires_success_outcome,test_blocked_refactor_source_requires_failure_and_remains_a_policy_block,test_failed_quality_capture_without_gate_seven_block_is_malformed,test_short_task_ignores_irrelevant_characterization_and_refactor_outcomes,test_forged_short_results_are_rejected_by_applicability_evidence,test_install_failure_suppresses_all_derived_source_errors}; tests/test_evaluate_complexity.py::test_syntax_error_is_technical_failure; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json"
 
 [characterization]
-captured_behavior = "The standard-results boundary freezes clean full-process output, isolated gate-3 and gate-7 poison, simultaneous independent poison, explicit complexity and review shared dependencies, and authenticated one-line documentation short-task output. Focused tests also freeze malformed, missing, duplicate, stale, spoofed, and misbound input rejection plus exact per-lane enforcement exits."
+captured_behavior = "The standard-results boundary freezes clean full-process output, isolated gate-3 and gate-7 poison, simultaneous independent poison, explicit complexity and review shared dependencies, authenticated one-line documentation short-task output, authentic source outcomes, and the producer's exact review-required stdout. Focused tests also freeze malformed, missing, duplicate, stale, spoofed, misbound, partial-technical, and outcome-contradictory input handling plus exact per-lane enforcement exits."
 proof = ".supportability-characterization.json scenario standard-results-boundary; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json; tests/test_standard_results.py"
 
 [separation_of_concerns]
@@ -18,14 +18,17 @@ reviewed_paths = [
     ".github/workflows/organization-required.yml",
     ".supportability-characterization.json",
     ".supportability-review.toml",
+    "AGENTS.md",
     "docs/product_completion_contract.md",
     "pyproject.toml",
+    "src/supportability_gate/cli.py",
     "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",
     "src/supportability_gate/standard_results_enforcer.py",
     "src/supportability_gate/standard_results_producer.py",
     "tests/characterization/standard-results-boundary.characterization.py",
     "tests/characterization/standard-results-boundary.golden.json",
+    "tests/test_evaluate_complexity.py",
     "tests/test_standard_results.py",
 ]
 
@@ -39,9 +42,9 @@ target = "Complete only Project #10 S02 independent lane applicability, evidence
 completed_step = "One runnable slice adds the four named standard-results responsibilities, converts the required workflow to an independent eight-lane matrix, conditionally requests advisory review, and adds focused plus regression characterization for isolated, simultaneous, shared, malformed, and authenticated short-task cases."
 
 [review_handoff]
-summary = "Issue #145 owner-authorizes this bounded S02 slice. Changed responsibilities implement deterministic lane isolation and explicit shared dependencies; focused tests and standard-results-boundary characterization name the required clean, poisoned, simultaneous, shared, and short-task outcomes. This repository evidence does not claim its own immutable final head, hosted runs, eight focused completions, protected target qualification, normal merge, or terminal Project readback; those identities are recorded only after direct proof."
+summary = "Issue #145 owner-authorizes this bounded S02 slice. Frozen deterministic-green full-process head 51e5a824d64eb91c03a413fefef643ad00b71974 and required run 32824078342 completed one serial eight-focus lifecycle with unique trusted completions. The owner recorded supported findings 3850712993, 3850713003, 3850822052, 3850965961, 3851067418, and the contract inconsistency in 3851109632 for remediation; findings 3850713009, 3850860315, 3850898748, and 3851014643 were rejected with evidence. Successful focuses will not be rerun. This evidence does not claim the final remediation head or authorization, final source or protected-target proof, normal merge, or terminal Project readback."
 remaining_risks = [
-    "Exact final-head source validation, eight serial focused completions, finding disposition, zero unresolved threads, and normal merge remain unclaimed until protected GitHub evidence exists.",
+    "The reviewed lifecycle and finding disposition are recorded, but the exact final remediation head, immutable reviewed-to-final authorization, final-head source validation, supported remediation proof, zero unresolved threads, and normal merge remain unclaimed until protected GitHub evidence exists.",
     "Protected clean and poisoned Python and frontend qualification plus the real eligible short-task run remain unclaimed until their exact runs, jobs, artifacts, lane JSON, ruleset state, and cleanup are read back.",
     "The authenticated short-task rule is deliberately narrow: exactly one added nonproduction documentation file with one positive changed head line. Uncertain, modified, deleted, renamed, production, immutable, frozen-roadmap, or ledger changes use the full process.",
     "Only genuinely multi-lane common identity, aggregate, characterization, installation, or structured-review document and section dependencies may be shared; refactor evidence is owned only by Gate 6. Unmapped, generic, copied, malformed, stale, spoofed, duplicate, or misbound evidence fails closed.",

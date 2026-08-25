@@ -251,6 +251,8 @@ class _S02Complexity:
     technical: tuple[str, ...]
     changed_files: tuple[dict[str, Any], ...]
     quality_adapters: tuple[str, ...]
+    quality_result: str | None
+    result: str
     source_sha256: str
 
 
@@ -330,8 +332,8 @@ def _s02_rows(
     return rows
 
 
-def _s02_changed(value: object, code: str) -> tuple[dict[str, Any], ...]:
-    rows = _s02_dict_list(value, code)
+def _s02_changed(value: object, code: str, required: bool = False) -> tuple[dict[str, Any], ...]:
+    rows = _s02_dict_list(value, code, required)
     for row in rows:
         lines = row.get("changed_head_lines")
         if (
@@ -403,7 +405,7 @@ def _s02_profile_command(row: dict[str, Any], code: str) -> str:
     return adapter
 
 
-def _s02_profile(value: object, identity: RunIdentity, code: str) -> tuple[str, ...]:
+def _s02_profile(value: object, identity: RunIdentity, code: str) -> tuple[tuple[str, ...], str]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
         row[name] for name in ("base_sha", "head_sha", "repository_remote", "workflow_sha")
@@ -442,7 +444,12 @@ def _s02_profile(value: object, identity: RunIdentity, code: str) -> tuple[str, 
         "production_paths",
     ):
         _s02_strings(row[name], code)
-    return adapters
+    result = (
+        "BLOCK"
+        if any(not command["executed"] or command["exit_code"] for command in commands)
+        else "PASS"
+    )
+    return adapters, result
 
 
 def _s02_review_section(
@@ -472,12 +479,12 @@ def _s02_review_boundaries(value: object, code: str) -> None:
 
 
 def _s02_review(value: object, blocks: list[str], code: str) -> None:
-    review_block = any(standard_block_ownership.review_owners(block) for block in blocks)
+    owners = frozenset().union(*(standard_block_ownership.review_owners(block) for block in blocks))
     if value is None:
-        if review_block:
+        if owners == standard_block_ownership.REVIEW_STANDARDS:
             return
         raise StandardResultsError(code)
-    if review_block:
+    if owners:
         raise StandardResultsError(code)
     keys = {"module_boundaries", "schema_version", *_S02_REVIEW_SECTIONS}
     row = _s02_exact(value, keys, code)
@@ -629,6 +636,56 @@ def _s02_gate_coverage(value: object, code: str, required: bool) -> None:
         _s02_strings(row["paths"], code, True)
 
 
+def _s02_complexity_technical_standards(technical: list[str]) -> frozenset[int]:
+    return frozenset().union(
+        *(
+            standard_block_ownership.technical_owners(f"COMPLEXITY_RESULT:{item}")
+            or standard_block_ownership.COMPLEXITY_TECHNICAL_STANDARDS
+            for item in technical
+        )
+    )
+
+
+def _s02_complexity_components(
+    row: dict[str, Any],
+    blocks: list[str],
+    technical: list[str],
+    identity: RunIdentity,
+    code: str,
+) -> tuple[tuple[str, ...], str | None]:
+    affected = _s02_complexity_technical_standards(technical)
+    review_owners = frozenset().union(
+        *(standard_block_ownership.review_owners(block) for block in blocks)
+    )
+    if (
+        (row["architecture"] is None and 3 not in affected)
+        or (row["modularity"] is None and 4 not in affected)
+        or (row["quality_profile"] is None and 7 not in affected)
+        or (
+            row["review_evidence"] is None
+            and review_owners != standard_block_ownership.REVIEW_STANDARDS
+            and not standard_block_ownership.REVIEW_STANDARDS.issubset(affected)
+        )
+    ):
+        raise StandardResultsError(code)
+    if row["architecture"] is not None:
+        _s02_architecture(row["architecture"], blocks, code)
+    if row["modularity"] is not None:
+        _s02_modularity(row["modularity"], blocks, code)
+    if row["review_evidence"] is not None or review_owners:
+        _s02_review(row["review_evidence"], blocks, code)
+    profile = (
+        _s02_profile(row["quality_profile"], identity, code)
+        if row["quality_profile"] is not None
+        else ((), None)
+    )
+    if profile[1] == "BLOCK" and not any(
+        7 in standard_block_ownership.owners(block) for block in blocks
+    ):
+        raise StandardResultsError(code)
+    return profile
+
+
 def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     code = "MALFORMED_COMPLEXITY_RESULT"
     row = _s02_exact(value, _S02_COMPLEXITY_KEYS, code)
@@ -650,7 +707,9 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         for item in technical_rows
     ):
         raise StandardResultsError(code)
-    changed = _s02_changed(row["changed_files"], code)
+    affected = _s02_complexity_technical_standards(technical)
+    common_required = not technical or affected != standard_block_ownership.ALL_STANDARDS
+    changed = _s02_changed(row["changed_files"], code, common_required)
     result = "TECHNICAL_FAILURE" if technical else "BLOCK" if blocks or function_blocks else "PASS"
     if row["overall_result"] != result:
         raise StandardResultsError(code)
@@ -667,12 +726,11 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         )
     ):
         raise StandardResultsError(code)
-    _s02_architecture(row["architecture"], blocks, code)
-    _s02_modularity(row["modularity"], blocks, code)
-    _s02_review(row["review_evidence"], blocks, code)
-    _s02_commands(row["commands"], code, not technical)
-    _s02_gate_coverage(row["gate_coverage"], code, not technical)
-    quality_adapters = _s02_profile(row["quality_profile"], identity, code)
+    _s02_commands(row["commands"], code, True)
+    _s02_gate_coverage(row["gate_coverage"], code, common_required)
+    quality_adapters, quality_result = _s02_complexity_components(
+        row, blocks, technical, identity, code
+    )
     _s02_complexity_lists(row, code)
     _s02_ruff(row["ruff_diagnostics"], code)
     return _S02Complexity(
@@ -680,6 +738,8 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         tuple(technical),
         changed,
         quality_adapters,
+        quality_result,
+        result,
         hashlib.sha256(_canonical(row)).hexdigest(),
     )
 
@@ -688,8 +748,6 @@ def _s02_apply_block(
     state: _S02State,
     block: str,
     source: str,
-    allowed: frozenset[int],
-    dependents: frozenset[int],
 ) -> None:
     owners = standard_block_ownership.owners(block)
     shared = standard_block_ownership.shared_dependency(block)
@@ -705,12 +763,10 @@ def _s02_apply_block(
             "standard-block-ownership",
             standard_block_ownership.ALL_STANDARDS,
         )
-    elif not owners.issubset(allowed):
-        state.technical(
-            f"STANDARD_BLOCK_SOURCE_MISMATCH:{block}",
-            f"{source}:policy-blocks",
-            dependents | owners,
-        )
+    elif expected := standard_block_ownership.expected_technical_dependency(
+        f"STANDARD_BLOCK_SOURCE_MISMATCH:{block}", f"{source}:policy-blocks"
+    ):
+        state.technical(f"STANDARD_BLOCK_SOURCE_MISMATCH:{block}", expected[0], expected[1])
     elif shared:
         state.policy(block, shared[0], shared[1])
     else:
@@ -944,6 +1000,10 @@ def _s02_outcomes(value: object) -> dict[str, str]:
     return dict(value)
 
 
+def _s02_outcome_matches(outcome: str, result: str) -> bool:
+    return outcome == ("success" if result == "PASS" else "failure")
+
+
 def _s02_errors(value: object) -> dict[str, str]:
     if value is None:
         return {}
@@ -967,6 +1027,7 @@ def _s02_source_failure(state: _S02State, source: str, code: str) -> None:
     dependency = {
         "gate_install": "gate-install",
         "complexity": "complexity-result",
+        "complexity_technical": "complexity-result:technical-errors",
         "characterization": "characterization-result",
         "refactor": "refactor-policy-result",
         "quality_provenance": "quality-profile:artifact-binding",
@@ -1007,7 +1068,10 @@ def _s02_entries(state: _S02State) -> list[dict[str, object]]:
 
 
 def _s02_load_complexity(
-    value: object, identity: RunIdentity, errors: dict[str, str]
+    value: object,
+    identity: RunIdentity,
+    errors: dict[str, str],
+    outcomes: dict[str, str],
 ) -> tuple[_S02Complexity | None, str | None]:
     if "gate_install" in errors:
         return None, None
@@ -1015,7 +1079,10 @@ def _s02_load_complexity(
     if source_error is not None:
         return None, source_error
     try:
-        return _s02_complexity(value, identity), None
+        data = _s02_complexity(value, identity)
+        if not _s02_outcome_matches(outcomes["complexity"], data.result):
+            return None, "MALFORMED_COMPLEXITY_RESULT"
+        return data, None
     except StandardResultsError as error:
         return None, error.code
 
@@ -1039,26 +1106,15 @@ def _s02_add_complexity(
         _s02_source_failure(state, "gate_install", errors["gate_install"])
         return
     if source_error is not None:
-        state.technical(source_error, "complexity-result", standard_block_ownership.ALL_STANDARDS)
+        _s02_source_failure(state, "complexity", source_error)
         return
     if data is None:
         return
     for block in data.blocks:
-        _s02_apply_block(
-            state,
-            block,
-            "complexity-result",
-            standard_block_ownership.ALL_STANDARDS,
-            standard_block_ownership.ALL_STANDARDS,
-        )
+        _s02_apply_block(state, block, "complexity-result")
     for code in data.technical:
         rendered = f"COMPLEXITY_RESULT:{code}"
-        owners = standard_block_ownership.technical_owners(rendered)
-        state.technical(
-            rendered,
-            "complexity-result:technical-errors",
-            owners or standard_block_ownership.COMPLEXITY_TECHNICAL_STANDARDS,
-        )
+        _s02_source_failure(state, "complexity_technical", rendered)
 
 
 def _s02_add_behavior(
@@ -1067,43 +1123,61 @@ def _s02_add_behavior(
     refactor: object,
     identity: RunIdentity,
     errors: dict[str, str],
+    outcomes: dict[str, str],
     short: bool,
 ) -> None:
     if "gate_install" in errors or short:
         return
+    if not _s02_add_characterization(state, characterization, identity, errors, outcomes):
+        return
+    _s02_add_refactor(state, refactor, characterization, identity, errors, outcomes)
+
+
+def _s02_add_characterization(
+    state: _S02State,
+    characterization: object,
+    identity: RunIdentity,
+    errors: dict[str, str],
+    outcomes: dict[str, str],
+) -> bool:
     char_error = errors.get("characterization")
     if char_error is not None:
         _s02_source_failure(state, "characterization", char_error)
-        return
+        return False
     try:
         blocks = _s02_characterization(characterization, identity)
     except StandardResultsError as error:
-        state.technical(error.code, "characterization-result", frozenset({5, 6}))
-        return
+        _s02_source_failure(state, "characterization", error.code)
+        return False
+    if not _s02_outcome_matches(outcomes["characterization"], "BLOCK" if blocks else "PASS"):
+        _s02_source_failure(state, "characterization", "MALFORMED_CHARACTERIZATION_RESULT")
+        return False
     for block in blocks:
-        _s02_apply_block(
-            state,
-            block,
-            "characterization-result",
-            frozenset({5}),
-            frozenset({5, 6}),
-        )
+        _s02_apply_block(state, block, "characterization-result")
+    return True
+
+
+def _s02_add_refactor(
+    state: _S02State,
+    refactor: object,
+    characterization: object,
+    identity: RunIdentity,
+    errors: dict[str, str],
+    outcomes: dict[str, str],
+) -> None:
     if "refactor" in errors:
         _s02_source_failure(state, "refactor", errors["refactor"])
         return
     try:
         refactor_blocks = _s02_refactor(refactor, characterization, identity)
     except StandardResultsError as error:
-        state.technical(error.code, "refactor-policy-result", frozenset({6}))
+        _s02_source_failure(state, "refactor", error.code)
+        return
+    if not _s02_outcome_matches(outcomes["refactor"], "BLOCK" if refactor_blocks else "PASS"):
+        _s02_source_failure(state, "refactor", "MALFORMED_REFACTOR_RESULT")
         return
     for block in refactor_blocks:
-        _s02_apply_block(
-            state,
-            block,
-            "refactor-policy-result",
-            frozenset({6}),
-            frozenset({6}),
-        )
+        _s02_apply_block(state, block, "refactor-policy-result")
 
 
 def _s02_add_quality(
@@ -1113,12 +1187,24 @@ def _s02_add_quality(
     data: _S02Complexity | None,
     identity: RunIdentity,
     errors: dict[str, str],
+    outcomes: dict[str, str],
     complexity_error: str | None,
 ) -> dict[str, object] | None:
     if "gate_install" in errors or complexity_error is not None:
         return None
     if "quality_provenance" in errors:
         _s02_source_failure(state, "quality_provenance", errors["quality_provenance"])
+        return None
+    if data is not None and data.quality_result is None and data.technical:
+        if not state.errors[7]:
+            _s02_source_failure(state, "quality_provenance", "MALFORMED_QUALITY_PROVENANCE")
+        return None
+    if (
+        data is not None
+        and data.quality_result is not None
+        and not _s02_outcome_matches(outcomes["quality"], data.quality_result)
+    ):
+        _s02_source_failure(state, "quality_provenance", "MALFORMED_QUALITY_PROVENANCE")
         return None
     try:
         return _s02_quality_artifact(
@@ -1128,7 +1214,7 @@ def _s02_add_quality(
             identity,
         )
     except StandardResultsError as error:
-        state.technical(error.code, "quality-profile:artifact-binding", frozenset({7}))
+        _s02_source_failure(state, "quality_provenance", error.code)
         return None
 
 
@@ -1147,11 +1233,13 @@ def compose_results(
     _s02_identity(identity)
     outcomes = _s02_outcomes(source_outcomes)
     errors = _s02_errors(source_errors)
-    data, complexity_error = _s02_load_complexity(complexity, identity, errors)
+    if outcomes["install"] != "success":
+        errors = {"gate_install": "GATE_INSTALL_FAILURE"}
+    data, complexity_error = _s02_load_complexity(complexity, identity, errors, outcomes)
     short = _s02_authenticated_short(data)
     state = _S02State(frozenset({7}) if short else standard_block_ownership.ALL_STANDARDS)
     _s02_add_complexity(state, data, complexity_error, errors)
-    _s02_add_behavior(state, characterization, refactor, identity, errors, short)
+    _s02_add_behavior(state, characterization, refactor, identity, errors, outcomes, short)
     artifact = _s02_add_quality(
         state,
         quality_provenance,
@@ -1159,6 +1247,7 @@ def compose_results(
         data,
         identity,
         errors,
+        outcomes,
         complexity_error,
     )
     source_validated = bool(data and not data.technical)
@@ -1400,7 +1489,7 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> None
         or type(row["short_task"]) is not bool
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
-    _s02_outcomes(row["source_outcomes"])
+    outcomes = _s02_outcomes(row["source_outcomes"])
     eligible_short = _s02_applicability(row["applicability_evidence"], row["short_task"])
     if not isinstance(row["entries"], list) or len(row["entries"]) != 8:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
@@ -1408,6 +1497,13 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> None
         _s02_entry(item, standard, row["short_task"])
         for standard, item in enumerate(row["entries"], start=1)
     ]
+    required_success = {"complexity", "install", "quality"}
+    if not row["short_task"]:
+        required_success.update({"characterization", "refactor"})
+    if all(entry["result"] in {"PASS", "NOT_APPLICABLE_SHORT_TASK"} for entry in entries) and any(
+        outcomes[source] != "success" for source in required_success
+    ):
+        raise StandardResultsError("MALFORMED_STANDARD_RESULTS_SOURCE_OUTCOMES")
     shared = _s02_shared(row["shared_failures"])
     _s02_ownership(entries, shared)
     if row["short_task"] is not (eligible_short and not _s02_source_uncertain(entries)):
