@@ -1,75 +1,57 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Project #10 S05 makes Gate 3 emit deterministic static Python and TypeScript/TSX import graphs from immutable source blobs, resolve supported exact-head root tsconfig aliases without executing target code, and isolate ordinary architecture policy failures to Gate 3."
-proof = "tests/test_architecture_policy.py; tests/test_evaluate_complexity.py::{test_typescript_architecture_reads_exact_head_tsconfig_alias,test_unresolved_typescript_alias_blocks_gate_three_through_real_evaluator}; tests/test_quality_profile.py::test_architecture_policy_exit_emits_gate_three_evidence; tests/test_standard_results.py::{test_gate_three_architecture_blocks_only_gate_three,test_architecture_policy_exit_blocks_gate_three_only,test_architecture_policy_exit_without_gate_three_evidence_is_malformed}"
+intended_behavior = "Project #10 S06 makes Gate 4 independently bind exact new and changed production locations, ownership claims, coupling edges, architecture coverage, declared adapters, authenticated command results, and Gate 4 blocks before composing the eight Standard results."
+proof = "tests/test_modularity_policy.py; tests/test_standard_results.py::{test_gate_four_vocabulary_is_exact_and_ordered,test_added_location_cannot_hide_missing_gate_four_evidence,test_gate_four_aggregate_evidence_is_bound_to_source_facts,test_authentic_gate_four_poison_blocks_only_gate_four,test_malformed_module_boundaries_evidence_blocks_only_gate_four}"
 
 [characterization]
-captured_behavior = "Existing Python and relative TypeScript graph behavior remains covered while focused tests capture alias-preserving Python imports, JavaScript-suffix rewrites, package identity, exact and wildcard TypeScript aliases, baseUrl and index candidates, invalid configuration, unresolved configured aliases, Gate 3 ownership, and byte-identical valid and poison evidence."
-proof = ".supportability-characterization.json; tests/characterization/architecture-modularity-baseline.characterization.py; tests/characterization/architecture-modularity-baseline.golden.json; tests/test_architecture_policy.py; tests/test_standard_results.py"
+captured_behavior = "Existing Gate 4 evaluator behavior remains covered while focused tests prove cohesive Python and TypeScript locations, modified-path coupling without a new-location claim, every declared ownership/location/coverage block family, malformed boundary ownership, aggregate source binding, and lane isolation."
+proof = ".supportability-characterization.json; tests/characterization/architecture-modularity-baseline.characterization.py; tests/characterization/architecture-modularity-baseline.golden.json; tests/test_modularity_policy.py; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "Static graph evaluation resolved Python and relative TypeScript imports, but CLI orchestration did not supply exact-head root tsconfig bytes, bare TypeScript specifiers could be mistaken for repository paths, ordinary architecture-tool exit 1 contaminated quality enforcement, and alias defects had no Gate 3 ownership."
-after = "CLI orchestration reads only immutable production blobs plus optional root tsconfig. Architecture policy alone validates supported JSON and resolves exact, longest-prefix wildcard, ordered fallback, explicit baseUrl, suffix, and index candidates. Authenticated architecture-adapter policy exits emit Gate 3 evidence; aggregate validation rejects missing evidence; block ownership maps declared architecture defects only to Gate 3."
+before = "The Gate 4 evaluator produced deterministic modularity evidence, but aggregate composition validated only its shape and allowed internally forged locations, claims, coupling, coverage, or blocks to pass."
+after = "The existing evaluator still owns Gate 4 policy. The aggregate result contract now independently reconstructs the same Gate 4 facts from changed files, structured review, architecture, declared gates, and authenticated commands, then requires exact parity before lane composition."
 boundaries = [
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_alias_capture", before = "No TypeScript alias capture boundary existed.", after = "Captures the single supported wildcard substitution deterministically." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_matching_alias", before = "No TypeScript alias-selection boundary existed.", after = "Selects exact matches first, then the wildcard with the longest prefix." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_typescript_aliases", before = "No fixed TypeScript paths parser existed.", after = "Validates exact and single-wildcard path rows without plugins or extensions." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_typescript_candidates", before = "TypeScript candidates were built inline for relative imports.", after = "Provides one fixed suffix-rewrite and index candidate order for relative and configured imports." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_typescript_config", before = "Gate 3 ignored root tsconfig.", after = "Parses supported compilerOptions baseUrl and paths or emits declared fail-closed blocks." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_typescript_edges", before = "Returned edges only from relative or repository-looking imports.", after = "Returns edges plus exact unresolved-configured-alias blocks." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_typescript_package", before = "Bare target identity used only the first slash segment.", after = "Preserves complete scoped-package identity while retaining unscoped package identity." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_typescript_target", before = "Treated non-relative specifiers as possible repository paths.", after = "Resolves only relative or explicitly configured aliases internally and leaves unmatched packages external." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "evaluate_architecture", before = "Accepted source blobs and an adapter only.", after = "Accepts optional exact-head TypeScript configuration and incorporates deterministic configuration and alias blocks." },
-    { path = "src/supportability_gate/architecture_policy.py", kind = "module", symbol = "src/supportability_gate/architecture_policy.py", before = "Owned static import graphs without TypeScript configuration identities.", after = "Owns fixed static graph and supported TypeScript alias semantics without target execution." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_architecture_evidence", before = "Passed source blobs without root TypeScript configuration.", after = "Passes exact-head root tsconfig bytes to the existing architecture-policy owner." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_architecture_inputs", before = "No architecture input boundary included optional root configuration.", after = "Reads fixed immutable production blobs plus optional root tsconfig and separates source from configuration bytes." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_architecture_sources", before = "Read only production source blobs.", after = "Replaced by _architecture_inputs so exact-head configuration remains explicit." },
-    { path = "src/supportability_gate/contract.py", kind = "function", symbol = "command_failed", before = "Allowed policy exit 1 only for Gate 1 complexity adapters.", after = "Allows fixed Gate 1 and Gate 3 policy exits while preserving every execution and tool failure." },
-    { path = "src/supportability_gate/contract.py", kind = "module", symbol = "src/supportability_gate/contract.py", before = "Owned fixed complexity policy-exit classification.", after = "Maps fixed ordinary policy-exit adapters to their Standard owners." },
-    { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_command_exit_block", before = "No command-exit evidence classifier separated Gate 3 policy exits from Gate 7 failures.", after = "Maps authenticated architecture policy exits to Gate 3 evidence and all remaining command failures to Gate 7 evidence." },
-    { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_command_blocks", before = "Suppressed an authenticated architecture-adapter policy exit without emitting an owned block.", after = "Emits an authenticated architecture-adapter policy exit as Gate 3 evidence while preserving Gate 7 tool failures." },
-    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Had no owner for declared TypeScript configuration, unresolved-alias, or architecture-adapter policy blocks.", after = "Assigns those ordinary blocks only to Gate 3." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity_components", before = "Authenticated Gate 7 command failures but not suppressed Gate 3 policy exits.", after = "Requires exact parity between authenticated architecture policy exits and their Gate 3 blocks." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_profile", before = "Returned only adapters, technical command result, and Gate 7 failures.", after = "Also returns authenticated Gate 3 architecture policy exits for aggregate parity validation." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity", before = "Validated aggregate fields without passing authenticated changed-file facts into modularity validation.", after = "Passes the already validated changed-file tuple into the Gate 4 binding boundary." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity_components", before = "Validated modularity shape before review and quality facts were authenticated.", after = "Validates review and quality facts first, then binds modularity to those facts." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity", before = "Accepted shape-valid modularity fields that were only a subset of aggregate policy blocks.", after = "Requires one exact tuple of derived locations, claims, coupling, coverage, and Gate 4 blocks." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_blocks", before = "No independent aggregate Gate 4 block reconstruction existed.", after = "Reconstructs exact vague-location, claim, and coverage blocks from authenticated facts." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_claim_blocks", before = "No independent aggregate ownership-claim verification existed.", after = "Checks exact normalized owners, existing nodes, new-owner use, and package identity." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_coverage", before = "No independent aggregate coverage reconstruction existed.", after = "Reconstructs per-location architecture and successful declared-adapter coverage." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_package", before = "No aggregate package-identity boundary existed for Gate 4.", after = "Derives the owning production package from the longest matching production root." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_paths", before = "No aggregate derivation bound modularity paths to changed-file classifications.", after = "Derives exact sorted changed and new production paths from authenticated change rows." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_rows", before = "Gate 4 shape checks lived inside the unbound modularity validator.", after = "Validates only the fixed serialized row shapes before independent source binding." },
+    { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "The aggregate contract had no local path primitive or fixed vague-location vocabulary for independent Gate 4 verification.", after = "Uses stdlib path identity and the existing fixed Gate 4 vocabulary without importing analysis dependencies." },
 ]
 
 [architecture]
-dependency_direction = "CLI orchestration acquires exact-head immutable blobs through existing fixed-vector Git helpers and passes bytes inward to architecture_policy. architecture_policy depends only on contract types, parser libraries already locked by the product, and stdlib JSON/path logic. contract and standard_block_ownership remain leaf policy modules. No target repository code is imported or executed."
+dependency_direction = "The aggregate result contract remains independent of analysis dependencies. It consumes only serialized exact-head evidence, reuses contract path/command semantics and canonical block ownership, and uses stdlib path handling. It does not import modularity_policy or execute target code."
 reviewed_paths = [
     ".supportability-review.toml",
     "docs/product_completion_contract.md",
-    "src/supportability_gate/architecture_policy.py",
-    "src/supportability_gate/cli.py",
-    "src/supportability_gate/contract.py",
-    "src/supportability_gate/quality_profile.py",
-    "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",
-    "tests/test_architecture_policy.py",
-    "tests/test_evaluate_complexity.py",
-    "tests/test_quality_profile.py",
+    "tests/test_modularity_policy.py",
     "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/architecture_policy.py"
-owns = "Fixed static Python and TypeScript/TSX import graph construction, supported exact-head TypeScript alias resolution, graph policy defects, and deterministic Gate 3 evidence."
-does_not_own = "Git acquisition, command execution, target imports, target runtime semantics, generalized TypeScript compiler emulation, aggregate lane composition, workflows, GitHub mutation, or advisory review."
+path = "src/supportability_gate/standard_results.py"
+owns = "Independent validation and composition of the eight serialized Standard results, including exact Gate 4 parity against already authenticated source facts."
+does_not_own = "Git acquisition, source parsing, modularity policy generation, target imports or execution, workflow orchestration, GitHub mutation, canary repositories, or advisory review."
 
 [incremental_refactor]
-target = "Complete only Project #10 S05 Gate 3 graph, alias, ownership, lane-isolation, direct-proof, and prospective terminal-ledger requirements."
-completed_step = "Added exact-head root tsconfig acquisition, fixed supported alias and explicit-baseUrl resolution, external package identity, deterministic alias poison, authenticated Gate 3 adapter-exit evidence, and aggregate parity validation using existing modules and dependencies."
+target = "Complete only Project #10 S06 Gate 4 ownership, location, coupling, coverage, aggregate-binding, lane-isolation, direct-proof, and prospective terminal-ledger requirements."
+completed_step = "Added one independent aggregate parity check in the existing result owner plus focused Python/frontend, forged-evidence, block-vocabulary, malformed-review, and isolation tests."
 
 [review_handoff]
-summary = "Issue #148 is the sole active slice. Frozen review head fe96e108fb730fd41459be23c1c8ec132791948a passed the complete exact-lock source proof, hosted deterministic evidence, and eight serial focused reviews. Four accepted findings now have targeted RED/GREEN remediation for adapter-exit ownership, explicit baseUrl resolution, real-evaluator alias poison, and proof-status accuracy. Final-head exact-lock and hosted deterministic proof, protected merge, canary, cleanup, issue, and Project evidence remain pending and are not claimed here."
+summary = "Issue #149 is the sole active slice. The committed change qualifies Gate 4 aggregate binding in one existing result owner; external protected checks, focused reviews, merge, canaries, cleanup, issue, and Project state remain live evidence and are not claimed by this file."
 remaining_risks = [
-    "The remediation head still requires the full exact-lock source proof and deterministic-only hosted rerun; completed focused reviews must not be repeated.",
-    "Normal protected merge and post-merge Python/frontend canaries remain required before S05 completion.",
-    "Supported tsconfig handling is intentionally bounded to root compilerOptions.baseUrl and paths with exact or one-wildcard rows; extends, plugins, malformed rows, multi-wildcards, and unresolved configured aliases fail closed.",
+    "Exact protected workflow, eight one-time focused reviews, normal merge, Python/frontend canaries, and cleanup must be verified from live GitHub evidence before S06 completion.",
+    "The aggregate verifier intentionally reconstructs only the existing fixed Gate 4 semantics and adds no new package, command, exclusion, waiver, threshold, or target execution.",
 ]
 
 [human_review]
-naming = "TypeScript configuration, alias, candidate, package, and target helpers name one fixed responsibility each; declared block codes name exact fail-closed conditions."
-cohesion = "Static graph and alias semantics stay in architecture_policy; immutable blob acquisition stays in cli; command capture classification stays in contract and quality_profile; aggregate parity stays in standard_results; lane ownership stays in standard_block_ownership."
-intended_behavior = "Issue #148 limits this change to Gate 3 qualification and direct proof. No packages, commands, executable paths, environment controls, exclusions, waivers, thresholds, workflow changes, generalized compiler emulation, target execution, immutable documents, or later-slice behavior are added."
-reviewability = "One bounded S05 change uses existing modules, stdlib JSON, fixed candidates, explicit blocks, and direct tests for every supported and rejected alias case."
+naming = "Each added function names one Gate 4 fact it derives or validates; the existing canonical block names remain unchanged."
+cohesion = "Modularity policy generation stays in modularity_policy; independent serialized-result verification stays in standard_results; canonical lane ownership stays in standard_block_ownership."
+intended_behavior = "Issue #149 limits this change to Gate 4 qualification and direct proof. No packages, commands, executable paths, controls, exclusions, waivers, thresholds, workflow changes, target execution, immutable documents, or later-slice behavior are added."
+reviewability = "One bounded S06 production change reuses existing contract and ownership primitives and has direct positive, poison, forged-evidence, and isolation checks."
