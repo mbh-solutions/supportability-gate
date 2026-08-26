@@ -663,11 +663,12 @@ def test_malformed_shared_review_document_names_only_affected_lanes() -> None:
     subset[0]["policy_blocks"] = ["INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.before"]
     subset[0]["overall_result"] = "BLOCK"
     subset_payload = _compose(subset)
-    assert _technical_standards(subset_payload) == set(range(1, 9))
-    assert all(
-        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"]
-        for entry in subset_payload["entries"]
-    )
+    assert _results(subset_payload) == ["PASS", "BLOCK", *["PASS"] * 6]
+    assert _entry(subset_payload, 2)["policy_blocks"] == [
+        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.before"
+    ]
+    assert _technical_standards(subset_payload) == set()
+    assert subset_payload["shared_failures"] == []
 
 
 def test_unknown_root_review_key_is_shared_document_defect() -> None:

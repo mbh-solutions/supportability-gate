@@ -175,7 +175,14 @@ def _typescript_source(name: str, complexity: int, return_value: int = 0) -> str
 def _commit(repository: Path, message: str) -> str:
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", message)
-    if message != "base":
+    has_parent = subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD~1"],
+        cwd=repository,
+        check=False,
+        capture_output=True,
+        timeout=10,
+    ).returncode == 0
+    if message != "base" and has_parent:
         review_path = repository / ".supportability-review.toml"
         review = review_path.read_text(encoding="utf-8")
         if "[separation_of_concerns]" in review and "boundaries =" not in review:
@@ -208,12 +215,12 @@ def _commit(repository: Path, message: str) -> str:
                 % tuple(json.dumps(value) for value in (*boundary, "Before.", "After."))
                 for boundary in boundaries
             )
-            review_path.write_text(
+            _write(
+                review_path,
                 review.replace(
                     "\n[architecture]",
                     f"\nboundaries = [{rows}]\n\n[architecture]",
                 ),
-                encoding="utf-8",
             )
             _run_git(repository, "add", ".supportability-review.toml")
             _run_git(repository, "commit", "--amend", "--no-edit")
