@@ -28,6 +28,8 @@
     },
     {
       "covers": [
+        "src/supportability_gate/quality_profile.py",
+        "src/supportability_gate/quality_runner.py",
         "src/supportability_gate/refactor_policy.py",
         "src/supportability_gate/review_evidence.py",
         "src/supportability_gate/refactor_targets.py",
@@ -36,7 +38,7 @@
         "src/supportability_gate/standard_results_enforcer.py",
         "src/supportability_gate/standard_results_producer.py"
       ],
-      "id": "gate6-standard-results-boundary",
+      "id": "gate7-standard-results-boundary",
       "kind": "regression"
     },
     {

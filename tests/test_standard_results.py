@@ -34,7 +34,7 @@ SUCCESS_OUTCOMES = {
     "quality": "success",
 }
 EXPECTED_QUALITY_ARTIFACT = {
-    "capture_sha256": "c" * 64,
+    "capture_sha256": "37ae64177833c7779cc569b9fdaf1fd6207b184c8cfc0e0e02fa7918693f59f0",
     "digest": "d" * 64,
     "id": "789",
 }
@@ -171,7 +171,7 @@ def _complexity(
             "production_files": ["src/sample.py"],
             "production_paths": ["src"],
             "repository_remote": f"github.com/{IDENTITY.repository}",
-            "schema_version": "quality-gates.v3",
+            "schema_version": "quality-gates.v4",
             "workflow_sha": IDENTITY.workflow_sha,
         },
         "rename_bindings": [],
@@ -280,10 +280,11 @@ def _quality() -> dict[str, Any]:
     return {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
-        "capture_sha256": "c" * 64,
+        "capture_sha256": "37ae64177833c7779cc569b9fdaf1fd6207b184c8cfc0e0e02fa7918693f59f0",
         "commands": [
             {
                 "adapter": "python.pytest.v1",
+                "executed_arguments": ["python", "-I", "-m", "pytest", "-q"],
                 "raw_proof_sha256": "a" * 64,
                 "stderr_sha256": "b" * 64,
                 "stdout_sha256": "c" * 64,
@@ -307,6 +308,42 @@ def _inputs(
     complexity = _complexity(path, lines, status=status)
     characterization = _characterization(path)
     return complexity, characterization, _refactor(characterization, path), _quality()
+
+
+def _quality_capture(inputs: tuple[dict[str, Any], ...]) -> str:
+    profile = copy.deepcopy(inputs[0]["quality_profile"])
+    provenance = inputs[3]
+    proof = {item["adapter"]: item for item in provenance["commands"]}
+    profile["commands"] = [
+        {**command, **proof[command["adapter"]]} for command in profile["commands"]
+    ]
+    profile.update(
+        {
+            name: provenance[name]
+            for name in (
+                "job",
+                "repository",
+                "repository_id",
+                "run_attempt",
+                "run_id",
+                "runner_environment",
+            )
+        }
+    )
+    profile.update({"artifact_digest": "", "artifact_id": "", "capture_sha256": ""})
+    return hashlib.sha256(
+        (json.dumps(profile, indent=2, sort_keys=True) + "\n").encode()
+    ).hexdigest()
+
+
+def _bind_quality(inputs: tuple[dict[str, Any], ...]) -> dict[str, str]:
+    capture = _quality_capture(inputs)
+    inputs[3]["capture_sha256"] = capture
+    return {
+        "capture_sha256": capture,
+        "digest": inputs[3]["artifact_digest"],
+        "id": inputs[3]["artifact_id"],
+    }
 
 
 def _step_two_refactor(inputs: tuple[dict[str, Any], ...]) -> dict[str, Any]:
@@ -428,9 +465,15 @@ def _compose(
     inputs: tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]],
     *,
     expected_characterization_artifacts: dict[str, Any] | None = None,
+    expected_quality_artifact: dict[str, Any] | None = None,
     source_errors: dict[str, str] | None = None,
     source_outcomes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    if expected_quality_artifact is None:
+        try:
+            expected_quality_artifact = _bind_quality(inputs)
+        except (KeyError, TypeError):
+            expected_quality_artifact = EXPECTED_QUALITY_ARTIFACT
     if source_outcomes is None:
         source_outcomes = dict(SUCCESS_OUTCOMES)
         for source, value in zip(("complexity", "characterization", "refactor"), inputs[:3]):
@@ -451,7 +494,7 @@ def _compose(
             if expected_characterization_artifacts is None
             else expected_characterization_artifacts
         ),
-        expected_quality_artifact=EXPECTED_QUALITY_ARTIFACT,
+        expected_quality_artifact=expected_quality_artifact,
         source_errors=source_errors,
         source_outcomes=source_outcomes,
     )
@@ -1004,11 +1047,7 @@ def test_refactor_runnability_blocks_remain_gate_six_blocks(block: str) -> None:
 def test_quality_artifact_has_exact_authenticated_identity() -> None:
     payload = _compose(_inputs())
 
-    assert payload["quality_artifact"] == {
-        "capture_sha256": "c" * 64,
-        "digest": "d" * 64,
-        "id": 789,
-    }
+    assert payload["quality_artifact"] == {**EXPECTED_QUALITY_ARTIFACT, "id": 789}
     forged = copy.deepcopy(payload)
     forged["quality_artifact"]["id"] = True
     with pytest.raises(standard_results.StandardResultsError):
@@ -1425,10 +1464,10 @@ def test_high_risk_paths_require_authenticated_profile_binding() -> None:
 
     payload = _compose(inputs)
 
-    assert _technical_standards(payload) == set(range(1, 9))
-    assert all(
-        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
-    )
+    assert _technical_standards(payload) == {4, 7}
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["technical_errors"] == [code]
 
 
 def test_gate_four_aggregate_requires_authentic_changed_path_coupling() -> None:
@@ -1554,14 +1593,92 @@ def test_refactor_target_derivation_failure_is_gate_six_technical_only() -> None
     assert _entry(unrelated_payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
 
 
-def test_quality_provenance_binding_mismatch_is_gate_seven_technical_only() -> None:
+@pytest.mark.parametrize(
+    ("field", "poison"),
+    [
+        ("repository", "other/repository"),
+        ("repository_id", "999"),
+        ("run_id", "999"),
+        ("run_attempt", "2"),
+        ("job", "other-job"),
+        ("runner_environment", "owner-workstation"),
+    ],
+)
+def test_quality_provenance_binding_mismatch_is_gate_seven_technical_only(
+    field: str, poison: str
+) -> None:
     inputs = _inputs()
-    inputs[3]["run_id"] = "999"
+    inputs[3][field] = poison
 
     payload = _compose(inputs)
 
     assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
     assert "QUALITY_RESULT_BINDING_MISMATCH" in _entry(payload, 7)["technical_errors"]
+
+
+def test_malformed_quality_profile_affects_only_its_explicit_dependents() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["schema_version"] = "quality-gates.v3"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [
+        "PASS",
+        "PASS",
+        "PASS",
+        "TECHNICAL_FAILURE",
+        "PASS",
+        "PASS",
+        "TECHNICAL_FAILURE",
+        "PASS",
+    ]
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["technical_errors"] == [code]
+
+
+def test_malformed_quality_profile_cannot_abort_added_path_isolation() -> None:
+    inputs = _owned_new_location_inputs()
+    inputs[0]["quality_profile"].pop("commands")
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == {4, 7}
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["technical_errors"] == [code]
+
+
+@pytest.mark.parametrize(
+    ("field", "poison"),
+    [
+        ("raw_proof_sha256", "f" * 64),
+        ("executed_arguments", ["python", "unsafe.py"]),
+    ],
+)
+def test_quality_capture_rejects_valid_shaped_split_forgery_in_gate_seven_only(
+    field: str, poison: object
+) -> None:
+    inputs = _inputs()
+    trusted = _bind_quality(inputs)
+    assert _results(_compose(inputs, expected_quality_artifact=trusted)) == ["PASS"] * 8
+    inputs[3]["commands"][0][field] = poison
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
+    assert _entry(payload, 7)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
+    assert payload["quality_artifact"] is None
+
+
+def test_missing_executed_argv_is_gate_seven_technical_only() -> None:
+    inputs = _inputs()
+    del inputs[3]["commands"][0]["executed_arguments"]
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
+    assert _entry(payload, 7)["technical_errors"] == ["MALFORMED_QUALITY_RESULT_BINDING"]
 
 
 @pytest.mark.parametrize(
@@ -1576,9 +1693,10 @@ def test_valid_looking_quality_artifact_poison_is_gate_seven_technical_only(
     field: str, poison: str
 ) -> None:
     inputs = _inputs()
+    trusted = _bind_quality(inputs)
     inputs[3][field] = poison
 
-    payload = _compose(inputs)
+    payload = _compose(inputs, expected_quality_artifact=trusted)
 
     assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
     assert _entry(payload, 7)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
@@ -1622,11 +1740,7 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
     assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in expected)
     assert _entry(payload, 5)["result"] == "PASS"
     assert _entry(payload, 6)["result"] == "PASS"
-    assert payload["quality_artifact"] == {
-        "capture_sha256": "c" * 64,
-        "digest": "d" * 64,
-        "id": 789,
-    }
+    assert payload["quality_artifact"] == {**EXPECTED_QUALITY_ARTIFACT, "id": 789}
     assert payload["shared_failures"] == [
         {
             "affected_standards": sorted(expected),
@@ -1657,11 +1771,7 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
         "COMPLEXITY_RESULT:MCCABE_GRAPH_MISMATCH"
     ]
     assert _entry(isolated_payload, 7)["result"] == "PASS"
-    assert isolated_payload["quality_artifact"] == {
-        "capture_sha256": "c" * 64,
-        "digest": "d" * 64,
-        "id": 789,
-    }
+    assert isolated_payload["quality_artifact"] == {**EXPECTED_QUALITY_ARTIFACT, "id": 789}
     assert standard_results.validate_payload(isolated_payload, IDENTITY) is None
 
     for field in ("changed_files", "commands", "gate_coverage", "quality_profile"):
@@ -1995,10 +2105,10 @@ def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
 
     payload = _compose(inputs, source_outcomes=outcomes)
 
-    assert _technical_standards(payload) == set(range(1, 9))
-    assert all(
-        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
-    )
+    assert _technical_standards(payload) == {4, 7}
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["technical_errors"] == [code]
 
 
 @pytest.mark.parametrize(
@@ -2050,7 +2160,7 @@ def test_complexity_policy_exit_blocks_gate_one_only(
     forged = copy.deepcopy(inputs)
     forged[0]["policy_blocks"] = [f"QUALITY_GATE_FAILED:{adapter}"]
     forged_payload = _compose(forged, source_outcomes=outcomes)
-    assert _technical_standards(forged_payload) == set(range(1, 9))
+    assert _technical_standards(forged_payload) == {4, 7}
 
 
 @pytest.mark.parametrize(
@@ -2100,12 +2210,13 @@ def test_architecture_policy_exit_without_gate_three_evidence_is_malformed() -> 
     inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
     inputs[3]["commands"][0]["adapter"] = "python.import-linter.v1"
 
-    payload = _compose(inputs)
+    payload = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
 
-    assert _technical_standards(payload) == set(range(1, 9))
-    assert all(
-        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
-    )
+    assert _technical_standards(payload) == {3, 4}
+    code = "COMPLEXITY_RESULT:ARCHITECTURE_RESULT_BINDING_MISMATCH"
+    assert _entry(payload, 3)["technical_errors"] == [code]
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["result"] == "PASS"
 
 
 def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> None:
@@ -2351,7 +2462,12 @@ def test_uncertain_or_broad_docs_default_to_full_process(path: str, lines: list[
             "MALFORMED_COMPLEXITY_RESULT",
             "complexity-result",
         ),
-        ("quality_profile", set(range(1, 9)), "MALFORMED_COMPLEXITY_RESULT", "complexity-result"),
+        (
+            "quality_profile",
+            {4, 7},
+            "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE",
+            "complexity-result:technical-errors",
+        ),
         (
             "characterization",
             {5, 6},
@@ -2542,6 +2658,7 @@ def test_exact_result_artifact_identity_mismatch_is_shared_via_enforcer(tmp_path
 
 def _producer_arguments(tmp_path: Path) -> tuple[list[str], dict[str, Path], Path]:
     inputs = _inputs()
+    _bind_quality(inputs)
     sources = {
         "complexity": inputs[0],
         "characterization": inputs[1],

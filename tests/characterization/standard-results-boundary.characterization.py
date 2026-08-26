@@ -262,6 +262,16 @@ def _run_case(
     producer: Any,
     enforcer: Any,
 ) -> dict[str, object]:
+    expected_capture = "c" * 64
+    if hasattr(producer.standard_results, "_s02_quality_capture"):
+        profile = inputs["complexity"]["quality_profile"]
+        profile["schema_version"] = "quality-gates.v4"
+        for decision, proof in zip(profile["commands"], inputs["quality"]["commands"], strict=True):
+            proof["executed_arguments"] = list(decision["arguments"])
+        expected_capture = producer.standard_results._s02_quality_capture(
+            profile, inputs["quality"]
+        )
+        inputs["quality"]["capture_sha256"] = expected_capture
     source_paths = {source: directory / f"{name}-{source}.json" for source in inputs}
     for source, value in inputs.items():
         _write(source_paths[source], value)
@@ -294,7 +304,7 @@ def _run_case(
         "--expected-quality-artifact-digest",
         "d" * 64,
         "--expected-quality-capture-sha256",
-        "c" * 64,
+        expected_capture,
         "--complexity-outcome",
         outcomes["complexity"],
         "--characterization-outcome",
@@ -427,7 +437,7 @@ def main() -> None:
                 *cases["clean"].values(),
                 identity,
                 expected_quality_artifact={
-                    "capture_sha256": "c" * 64,
+                    "capture_sha256": cases["clean"]["quality"]["capture_sha256"],
                     "digest": "d" * 64,
                     "id": "789",
                 },

@@ -71,6 +71,7 @@ def _commands() -> tuple[quality_profile.GateResult, ...]:
             EMPTY_SHA,
             EMPTY_SHA,
             EMPTY_SHA,
+            arguments,
         )
         for adapter, arguments in quality_profile.command_templates("python")
     )
@@ -198,6 +199,7 @@ def test_unexecuted_python_file_is_derived_as_untested() -> None:
         stderr_sha256=EMPTY_SHA,
         stdout_sha256=EMPTY_SHA,
         raw_proof_sha256=EMPTY_SHA,
+        executed_arguments=dict(quality_profile.command_templates("python"))["python.pytest.v1"],
     )
     commands = tuple(
         pytest_result if item.adapter == "python.pytest.v1" else item for item in _commands()
@@ -293,6 +295,9 @@ def test_decision_payload_excludes_run_specific_provenance() -> None:
     assert quality_profile.decision_payload(_evidence()) == quality_profile.decision_payload(
         changed
     )
+    assert quality_profile.provenance_payload(_evidence())["commands"][0][
+        "executed_arguments"
+    ] == list(_commands()[0].executed_arguments)
 
 
 def test_quality_artifact_requires_external_github_binding(tmp_path: Path) -> None:
@@ -393,6 +398,10 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
     arguments = [argument for command in commands for argument in command]
     assert all(command[0] not in {"bash", "cmd", "pwsh", "sh"} for command in commands)
     assert all("$(" not in argument and "`" not in argument for argument in arguments)
+    assert (
+        "--no-editorconfig"
+        in dict(quality_profile.command_templates("typescript"))["typescript.prettier.v1"]
+    )
 
 
 def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: Path) -> None:
@@ -406,6 +415,16 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert all(plan.actual[1] == "-I" for plan in plans[:-1])
     assert Path(plans[-1].actual[0]).is_absolute()
     assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
+    rcfile = next(
+        item.removeprefix("--rcfile=")
+        for item in pytest_plan.actual
+        if item.startswith("--rcfile=")
+    )
+    assert Path(rcfile) == output / "coverage.ini"
+    assert (output / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
+    (output / "coverage.ini").write_text("[report]\nexclude_lines =\n    .+\n")
+    assert quality_runner._write_coverage_config(output) == output / "coverage.ini"
+    assert (output / "coverage.ini").read_bytes() == b"[report]\nexclude_lines =\n"
     assert "testpaths = tests" in (output / "pytest.ini").read_text()
     assert (
         f"pythonpath =\n    {repository / 'src'}\n    {repository}"
@@ -452,6 +471,9 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         encoding="utf-8",
         newline="\n",
     )
+    (repository / ".coveragerc").write_text(
+        "[report]\nexclude_lines =\n    .+\n", encoding="utf-8", newline="\n"
+    )
     package = repository / "src" / "sample"
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
@@ -461,7 +483,13 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
     tests = repository / "tests"
     tests.mkdir()
     (tests / "test_covered.py").write_text(
-        "from sample.covered import score\n\n\ndef test_score() -> None:\n    assert score(1) == 2\n",
+        "import os\n"
+        "from pathlib import Path\n\n"
+        "from sample.covered import score\n\n\n"
+        "def test_score() -> None:\n"
+        '    output = Path(os.environ["PYTHONPYCACHEPREFIX"]).parent\n'
+        '    (output / "coverage.ini").write_text("[report]\\nexclude_lines =\\n    .+\\n")\n'
+        "    assert score(1) == 2\n",
         encoding="utf-8",
     )
     _run_git(repository, "add", "--all")
@@ -504,9 +532,13 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
+    assert completed.returncode != 2, completed.stderr.decode(errors="replace")
+    raw_evidence = quality_profile.load_evidence(output)
+    assert completed.returncode == 0, [
+        (item.adapter, item.exit_code) for item in raw_evidence.commands
+    ]
     evidence = replace(
-        quality_profile.load_evidence(output),
+        raw_evidence,
         artifact_id="789",
         artifact_digest="d" * 64,
         capture_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
@@ -520,10 +552,25 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         evidence, policy, identity, (assessment,), evidence.production_files, WORKFLOW_SHA
     )
     test_result = next(item for item in evidence.commands if item.adapter == "python.pytest.v1")
+    plans = quality_runner.command_plans(
+        "python",
+        repository,
+        output.parent,
+        ("tests/test_covered.py",),
+        evidence.production_files,
+    )
 
+    assert tuple(item.arguments for item in evidence.commands) == tuple(
+        plan.evidence for plan in plans
+    )
+    assert tuple(item.executed_arguments for item in evidence.commands) == tuple(
+        plan.actual for plan in plans
+    )
     assert poison not in test_result.observed_paths
+    assert poison not in test_result.zero_statement_paths
     assert f"UNTESTED_AREA:{poison}" in blocks
     assert f"QUALITY_CHANGED_FILE_COVERAGE:python.pytest.v1:{poison}" in blocks
+    assert f"QUALITY_HIGH_RISK_FILE_COVERAGE:python.pytest.v1:{poison}" in blocks
 
 
 @pytest.mark.skipif(
@@ -547,6 +594,7 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
             "test": "node -e \"require('node:fs').writeFileSync('target-command-ran', '')\"",
         },
         "dependencies": {"fixture-dependency": "file:vendor/fixture-dependency"},
+        "devDependencies": {"typescript": "5.9.3"},
     }
     (repository / "package.json").write_text(
         json.dumps(package, indent=2) + "\n", encoding="utf-8", newline="\n"
@@ -596,7 +644,7 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
         """schema_version = "1.0"
 language = "typescript"
 production_paths = ["src"]
-high_risk_paths = ["src/domain/unexecuted.ts"]
+high_risk_paths = ["src/presentation/Card.tsx"]
 
 [[gates]]
 adapter = "typescript.c901-equivalent-touched.v1"
@@ -621,13 +669,67 @@ maximum = 10
         encoding="utf-8",
         newline="\n",
     )
+    component = repository / "src" / "presentation" / "Card.tsx"
+    component.parent.mkdir(parents=True)
+    component.write_text(
+        "declare global {\n"
+        "  namespace JSX {\n"
+        "    interface IntrinsicElements {\n"
+        "      section: { children?: unknown };\n"
+        "    }\n"
+        "  }\n"
+        "}\n\n"
+        "const React = {\n"
+        "  createElement(type: string, properties: object | null, child: unknown) {\n"
+        "    return { child, properties, type };\n"
+        "  },\n"
+        "};\n\n"
+        "export default function Card({ label }: { label: string }) {\n"
+        "  return <section>{label}</section>;\n"
+        "}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     tests = repository / "tests"
     tests.mkdir()
     (tests / "quality.test.mjs").write_text(
         'import assert from "node:assert/strict";\n'
+        'import { readFileSync } from "node:fs";\n'
+        'import { registerHooks } from "node:module";\n'
         'import test from "node:test";\n\n'
-        'import { score } from "../src/domain/model.ts";\n\n'
-        'test("score", () => {\n  assert.equal(score(1), 2);\n});\n',
+        'import { fileURLToPath } from "node:url";\n'
+        'import ts from "typescript";\n\n'
+        "registerHooks({\n"
+        "  load(url, context, nextLoad) {\n"
+        '    if (url.endsWith(".ts") || url.endsWith(".tsx")) {\n'
+        "      const fileName = fileURLToPath(url);\n"
+        '      const source = readFileSync(fileName, "utf8");\n'
+        "      return {\n"
+        '        format: "module",\n'
+        "        shortCircuit: true,\n"
+        "        source: ts.transpileModule(source, {\n"
+        "          compilerOptions: {\n"
+        "            inlineSourceMap: true,\n"
+        "            inlineSources: true,\n"
+        "            jsx: ts.JsxEmit.React,\n"
+        "            module: ts.ModuleKind.ESNext,\n"
+        "            target: ts.ScriptTarget.ES2022,\n"
+        "          },\n"
+        "          fileName,\n"
+        "        }).outputText,\n"
+        "      };\n"
+        "    }\n"
+        "    return nextLoad(url, context);\n"
+        "  },\n"
+        "});\n\n"
+        'test("covered component", async () => {\n'
+        "  const [{ score }, { default: Card }] = await Promise.all([\n"
+        '    import("../src/domain/model.ts"),\n'
+        '    import("../src/presentation/Card.tsx"),\n'
+        "  ]);\n"
+        "  assert.equal(score(1), 2);\n"
+        '  assert.equal(Card({ label: " ready " }).child, "ready");\n'
+        "});\n",
         encoding="utf-8",
         newline="\n",
     )
@@ -639,6 +741,9 @@ maximum = 10
         "export function score(value: number): number {\n  return increment(value);\n}\n",
         encoding="utf-8",
         newline="\n",
+    )
+    component.write_text(
+        component.read_text().replace("{label}", "{label.trim()}"), encoding="utf-8", newline="\n"
     )
     poison = "src/domain/unexecuted.ts"
     (repository / poison).write_text(
@@ -679,8 +784,9 @@ maximum = 10
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
+    assert completed.returncode != 2, completed.stderr.decode(errors="replace")
     evidence = quality_profile.load_evidence(output)
+    assert completed.returncode == 0, [(item.adapter, item.exit_code) for item in evidence.commands]
 
     install_result = next(
         item for item in evidence.commands if item.adapter == "typescript.target-install.v1"
@@ -693,18 +799,21 @@ maximum = 10
         repository / "node_modules" / "fixture-dependency" / "dependency-script-ran"
     ).exists()
 
-    source_files = ("src/domain/model.ts", poison)
-    install_plan = next(
-        plan
-        for plan in quality_runner.command_plans(
-            "typescript",
-            repository,
-            output.parent,
-            ("tests/quality.test.mjs",),
-            source_files,
-        )
-        if plan.adapter == "typescript.target-install.v1"
+    source_files = evidence.production_files
+    plans = quality_runner.command_plans(
+        "typescript",
+        repository,
+        output.parent,
+        ("tests/quality.test.mjs",),
+        source_files,
     )
+    assert tuple(item.arguments for item in evidence.commands) == tuple(
+        plan.evidence for plan in plans
+    )
+    assert tuple(item.executed_arguments for item in evidence.commands) == tuple(
+        plan.actual for plan in plans
+    )
+    install_plan = next(plan for plan in plans if plan.adapter == "typescript.target-install.v1")
     package_text = (repository / "package.json").read_text(encoding="utf-8")
     lock_text = (repository / "package-lock.json").read_text(encoding="utf-8")
 
@@ -750,6 +859,15 @@ maximum = 10
         ChangedFileAssessment(
             git_changes.ChangedPath("ADDED", None, poison), False, True, True, (1,)
         ),
+        ChangedFileAssessment(
+            git_changes.ChangedPath(
+                "MODIFIED", "src/presentation/Card.tsx", "src/presentation/Card.tsx"
+            ),
+            True,
+            True,
+            True,
+            (15,),
+        ),
     )
     blocks = quality_profile.evidence_blocks(
         authenticated,
@@ -761,6 +879,12 @@ maximum = 10
     )
 
     assert poison not in test_result.observed_paths
+    assert "src/presentation/Card.tsx" in test_result.observed_paths
+    assert not any(
+        block.endswith(":src/presentation/Card.tsx")
+        and block.startswith("QUALITY_HIGH_RISK_FILE_COVERAGE:")
+        for block in blocks
+    )
     assert f"UNTESTED_AREA:{poison}" in blocks
     assert f"QUALITY_CHANGED_FILE_COVERAGE:typescript.test.v1:{poison}" in blocks
     assert all(command.executed and command.exit_code == 0 for command in evidence.commands)

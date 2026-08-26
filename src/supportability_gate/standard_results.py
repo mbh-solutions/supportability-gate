@@ -278,6 +278,7 @@ class _S02Complexity:
     changed_files: tuple[dict[str, Any], ...]
     characterization_paths: tuple[str, ...]
     quality_adapters: tuple[str, ...]
+    quality_profile: dict[str, Any] | None
     quality_result: str | None
     responsibility_targets: tuple[str, ...]
     result: str
@@ -462,7 +463,7 @@ def _s02_profile(
     adapters = tuple(_s02_profile_command(command, code) for command in commands)
     if (
         actual != expected
-        or row["schema_version"] != "quality-gates.v3"
+        or row["schema_version"] != "quality-gates.v4"
         or row["maximum_complexity"] != 10
         or len(adapters) != len(set(adapters))
     ):
@@ -1002,11 +1003,17 @@ def _s02_complexity_components(
         _s02_architecture(row["architecture"], blocks, code)
     if row["review_evidence"] is not None or review_owners:
         _s02_review(row["review_evidence"], blocks, code)
-    profile = (
-        _s02_profile(row["quality_profile"], identity, row["language"], code)
-        if row["quality_profile"] is not None
-        else ((), None, (), ())
-    )
+    try:
+        profile = (
+            _s02_profile(row["quality_profile"], identity, row["language"], code)
+            if row["quality_profile"] is not None
+            else ((), None, (), ())
+        )
+    except StandardResultsError:
+        technical[:] = list(dict.fromkeys((*technical, "MALFORMED_QUALITY_EVIDENCE")))
+        profile = ((), None, (), ())
+    if profile[1] is None:
+        return (), None
     if row["modularity"] is not None:
         _s02_modularity(row["modularity"], row, changed, blocks, code)
     failed = {
@@ -1014,24 +1021,26 @@ def _s02_complexity_components(
         for block in blocks
         if block.startswith("QUALITY_GATE_FAILED:")
     }
-    if failed != set(profile[2]):
-        raise StandardResultsError(code)
+    quality_invalid = failed != set(profile[2])
     architecture_failed = {
         block.removeprefix("ARCHITECTURE_GATE_FAILED:")
         for block in blocks
         if block.startswith("ARCHITECTURE_GATE_FAILED:")
     }
     if architecture_failed != set(profile[3]):
-        raise StandardResultsError(code)
-    if profile[1] == "BLOCK" and not any(
-        7 in standard_block_ownership.owners(block) for block in blocks
-    ):
-        raise StandardResultsError(code)
-    if (
+        technical.append("ARCHITECTURE_RESULT_BINDING_MISMATCH")
+    quality_invalid = (
+        quality_invalid
+        or profile[1] == "BLOCK"
+        and not any(7 in standard_block_ownership.owners(block) for block in blocks)
+    )
+    quality_invalid = quality_invalid or (
         row["quality_profile"] is not None
         and row["high_risk_paths"] != row["quality_profile"]["high_risk_paths"]
-    ):
-        raise StandardResultsError(code)
+    )
+    if quality_invalid:
+        technical.append("MALFORMED_QUALITY_EVIDENCE")
+        return (), None
     return profile[0], profile[1]
 
 
@@ -1133,6 +1142,7 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         changed,
         _s02_characterization_paths(row, changed),
         quality_adapters,
+        row["quality_profile"],
         quality_result,
         tuple(responsibility_targets),
         result,
@@ -1618,7 +1628,13 @@ def _s02_refactor(
 
 
 def _s02_provenance_adapters(value: object, code: str) -> tuple[str, ...]:
-    keys = {"adapter", "raw_proof_sha256", "stderr_sha256", "stdout_sha256"}
+    keys = {
+        "adapter",
+        "executed_arguments",
+        "raw_proof_sha256",
+        "stderr_sha256",
+        "stdout_sha256",
+    }
     commands = _s02_rows(value, keys, code, True)
     adapters: list[str] = []
     for command in commands:
@@ -1629,6 +1645,7 @@ def _s02_provenance_adapters(value: object, code: str) -> tuple[str, ...]:
                 not _s02_sha(command[name], _S02_SHA64)
                 for name in ("raw_proof_sha256", "stderr_sha256", "stdout_sha256")
             )
+            or not _s02_strings(command["executed_arguments"], code, True)
         ):
             raise StandardResultsError(code)
         adapters.append(command["adapter"])
@@ -1637,10 +1654,39 @@ def _s02_provenance_adapters(value: object, code: str) -> tuple[str, ...]:
     return tuple(adapters)
 
 
+def _s02_quality_capture(profile: dict[str, Any], provenance: dict[str, Any]) -> str:
+    commands = [
+        {**decision, **proof}
+        for decision, proof in zip(profile["commands"], provenance["commands"], strict=True)
+    ]
+    original = {
+        **profile,
+        **{
+            name: provenance[name]
+            for name in (
+                "job",
+                "repository",
+                "repository_id",
+                "run_attempt",
+                "run_id",
+                "runner_environment",
+            )
+        },
+        "artifact_digest": "",
+        "artifact_id": "",
+        "capture_sha256": "",
+        "commands": commands,
+    }
+    return hashlib.sha256(
+        (json.dumps(original, indent=2, sort_keys=True) + "\n").encode()
+    ).hexdigest()
+
+
 def _s02_quality_artifact(
     provenance: object,
     expected_artifact: object,
     profile_adapters: tuple[str, ...],
+    profile: dict[str, Any] | None,
     identity: RunIdentity,
 ) -> dict[str, object]:
     code = "MALFORMED_QUALITY_RESULT_BINDING"
@@ -1668,6 +1714,8 @@ def _s02_quality_artifact(
     adapters = _s02_provenance_adapters(row["commands"], code)
     if adapters != profile_adapters:
         raise StandardResultsError(code)
+    if profile is None:
+        raise StandardResultsError(code)
     if expected_artifact is None:
         raise StandardResultsError("MISSING_EXTERNAL_QUALITY_ARTIFACT")
     trusted = _s02_exact(
@@ -1687,7 +1735,7 @@ def _s02_quality_artifact(
         trusted["id"],
         trusted["digest"],
         trusted["capture_sha256"],
-    ):
+    ) or _s02_quality_capture(profile, row) != trusted["capture_sha256"]:
         raise StandardResultsError("QUALITY_ARTIFACT_IDENTITY_MISMATCH")
     return {
         "capture_sha256": trusted["capture_sha256"],
@@ -1931,6 +1979,7 @@ def _s02_add_quality(
             provenance,
             expected_artifact,
             data.quality_adapters if data is not None else (),
+            data.quality_profile if data is not None else None,
             identity,
         )
     except StandardResultsError as error:

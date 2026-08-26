@@ -452,6 +452,7 @@ def _evaluate(
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
+                arguments,
             )
             for adapter, arguments in quality_profile.command_templates(policy.language)
         )
@@ -655,6 +656,7 @@ def _compose_cli_result(
         "commands": [
             {
                 "adapter": command["adapter"],
+                "executed_arguments": command["arguments"],
                 "raw_proof_sha256": "a" * 64,
                 "stderr_sha256": "b" * 64,
                 "stdout_sha256": "c" * 64,
@@ -668,6 +670,31 @@ def _compose_cli_result(
         "run_id": "456",
         "runner_environment": "github-hosted",
     }
+    capture_profile = {
+        **profile,
+        **{
+            name: provenance[name]
+            for name in (
+                "job",
+                "repository",
+                "repository_id",
+                "run_attempt",
+                "run_id",
+                "runner_environment",
+            )
+        },
+        "artifact_digest": "",
+        "artifact_id": "",
+        "capture_sha256": "",
+        "commands": [
+            {**command, **proof}
+            for command, proof in zip(commands, provenance["commands"], strict=True)
+        ],
+    }
+    capture_sha256 = hashlib.sha256(
+        (json.dumps(capture_profile, indent=2, sort_keys=True) + "\n").encode()
+    ).hexdigest()
+    provenance["capture_sha256"] = capture_sha256
     return standard_results.compose_results(
         result,
         characterization,
@@ -675,7 +702,7 @@ def _compose_cli_result(
         provenance,
         identity,
         expected_quality_artifact={
-            "capture_sha256": "c" * 64,
+            "capture_sha256": capture_sha256,
             "digest": "d" * 64,
             "id": "789",
         },

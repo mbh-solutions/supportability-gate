@@ -11,7 +11,7 @@ from pathlib import Path
 from supportability_gate import contract, git_changes
 from supportability_gate.function_changes import ChangedFileAssessment
 
-SCHEMA_VERSION = "quality-gates.v3"
+SCHEMA_VERSION = "quality-gates.v4"
 TIMEOUT_SECONDS = 180
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {
@@ -99,6 +99,7 @@ _PYTHON_COMMANDS = (
             "-m",
             "coverage",
             "run",
+            "--rcfile=$OUTPUT/coverage.ini",
             "--branch",
             "--source=src",
             "--data-file=$OUTPUT/.coverage",
@@ -171,6 +172,7 @@ _TYPESCRIPT_COMMANDS = (
             "--check",
             "--config",
             "$TOOLS/prettier.json",
+            "--no-editorconfig",
             "--ignore-path",
             "$TOOLS/prettier.ignore",
             "$SOURCE_FILES",
@@ -270,6 +272,7 @@ class GateResult:
     stderr_sha256: str
     stdout_sha256: str
     raw_proof_sha256: str
+    executed_arguments: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -419,6 +422,7 @@ def _gate_result(value: object) -> GateResult:
         "zero_statement_paths",
         "executed",
         "exit_code",
+        "executed_arguments",
         "stderr_sha256",
         "stdout_sha256",
         "raw_proof_sha256",
@@ -434,6 +438,9 @@ def _gate_result(value: object) -> GateResult:
         or not isinstance(value["raw_proof_sha256"], str)
     ):
         raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid command result types")
+    executed_arguments = _string_tuple(value["executed_arguments"], "executed_arguments")
+    if not executed_arguments:
+        raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "executed argv missing")
     return GateResult(
         value["adapter"],
         _string_tuple(value["arguments"], "arguments"),
@@ -445,6 +452,7 @@ def _gate_result(value: object) -> GateResult:
         value["stderr_sha256"],
         value["stdout_sha256"],
         value["raw_proof_sha256"],
+        executed_arguments,
     )
 
 
@@ -880,6 +888,7 @@ def provenance_payload(evidence: QualityEvidence) -> dict[str, object]:
         "commands": [
             {
                 "adapter": item.adapter,
+                "executed_arguments": list(item.executed_arguments),
                 "raw_proof_sha256": item.raw_proof_sha256,
                 "stderr_sha256": item.stderr_sha256,
                 "stdout_sha256": item.stdout_sha256,

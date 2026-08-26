@@ -11,6 +11,8 @@ from pathlib import Path
 
 from supportability_gate import contract, git_changes, quality_profile
 
+_COVERAGE_CONFIGURATION = b"[report]\nexclude_lines =\n"
+
 
 @dataclass(frozen=True)
 class CommandPlan:
@@ -135,6 +137,7 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         encoding="utf-8",
         newline="\n",
     )
+    _write_coverage_config(output)
     roots = tuple(
         sorted(
             {
@@ -157,6 +160,14 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         encoding="utf-8",
         newline="\n",
     )
+
+
+def _write_coverage_config(output: Path) -> Path:
+    path = output / "coverage.ini"
+    path.write_bytes(_COVERAGE_CONFIGURATION)
+    if path.read_bytes() != _COVERAGE_CONFIGURATION:
+        raise OSError("trusted coverage configuration mismatch")
+    return path
 
 
 def command_plans(
