@@ -202,6 +202,39 @@ def test_gate_five_policy_block_does_not_manufacture_gate_six_block(tmp_path: Pa
     assert result["policy_blocks"] == []
 
 
+@pytest.mark.parametrize(
+    ("defect", "expected"),
+    [
+        ("authorization", "STALE_OWNER_AUTHORIZATION"),
+        ("schema", "UNAUTHENTICATED_RUNNABILITY_EVIDENCE"),
+        ("identity", "STALE_RUNNABILITY_EVIDENCE"),
+    ],
+)
+def test_gate_five_block_preserves_independent_gate_six_blocks(
+    tmp_path: Path, defect: str, expected: str
+) -> None:
+    repository, base_sha, head_sha = _repository(tmp_path)
+    path = "src/sample.py"
+    target = f"{path}::function:calculate:1-2"
+    authorized_head = "f" * 40 if defect == "authorization" else head_sha
+    event = _event(
+        base_sha,
+        head_sha,
+        _authorization(base_sha, authorized_head, [path], [target]),
+    )
+    characterization = _characterization(base_sha, head_sha, [path], runnable=False)
+    if defect == "schema":
+        characterization["schema_version"] = "0.0"
+    elif defect == "identity":
+        characterization["head_sha"] = "f" * 40
+
+    result = _verify(repository, event, characterization)
+
+    assert expected in result["policy_blocks"]
+    assert "NON_RUNNABLE_LOGICAL_STEP" not in result["policy_blocks"]
+    assert "MISSING_RUNNABILITY_COVERAGE" not in result["policy_blocks"]
+
+
 def test_repo_wide_cleanup_requires_exact_broad_authorization(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)

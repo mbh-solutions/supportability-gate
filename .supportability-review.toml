@@ -1,8 +1,8 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "A canonical Gate 5 policy block remains owned by Gate 5 and cannot manufacture an ordinary Gate 6 result; Gate 6 still rejects stale, malformed, or incompatible evidence that falsely claims PASS."
-proof = "tests/test_refactor_policy.py::{test_gate_five_policy_block_does_not_manufacture_gate_six_block,test_non_runnable_intermediate_state_blocks,test_pass_claim_with_policy_blocks_checks_remaining_runnability}; tests/test_standard_results.py::test_authentic_gate_five_poison_blocks_only_gate_five"
+intended_behavior = "A canonical Gate 5 policy block cannot manufacture or suppress an ordinary Gate 6 result. Gate 6 always checks schema and exact repository/base/head identity; evidence claiming PASS also receives policy-block consistency, production-path coverage, and scenario compatibility checks."
+proof = "tests/test_refactor_policy.py::{test_gate_five_policy_block_does_not_manufacture_gate_six_block,test_gate_five_block_preserves_independent_gate_six_blocks,test_non_runnable_intermediate_state_blocks,test_pass_claim_with_policy_blocks_checks_remaining_runnability}; tests/test_standard_results.py::test_authentic_gate_five_poison_blocks_only_gate_five"
 
 [characterization]
 captured_behavior = "The retained refactor-policy CLI baseline remains unchanged. Direct tests distinguish a canonical Gate 5 BLOCK from forged Gate 5 PASS claims carrying incompatible or internally contradictory runnability facts."
@@ -43,5 +43,5 @@ remaining_risks = [
 [human_review]
 naming = "The changed function and two direct tests name the exact characterization-to-refactor ownership boundary."
 cohesion = "Gate 5 policy stays in characterization and standard_results; refactor_policy retains only Gate 6 authorization and claimed-PASS runnability checks."
-intended_behavior = "A genuine Gate 5 block does not suppress or manufacture Gate 6; a forged PASS remains fail-closed in Gate 6."
+intended_behavior = "A genuine Gate 5 block does not suppress or manufacture Gate 6; a claimed-PASS policy, coverage, or scenario defect remains fail-closed in Gate 6."
 reviewability = "The production change is one existing condition split at its ownership boundary, with one observed RED/GREEN regression and direct fail-closed PASS-claim cases."
