@@ -20,7 +20,14 @@ _LIST_FIELDS = {
     "architecture": ("reviewed_paths",),
     "review_handoff": ("remaining_risks",),
 }
+_SECTION_EXTRA_FIELDS = {"separation_of_concerns": ("boundaries",)}
 _MODULE_BOUNDARY_FIELDS = {"basis", "justification", "owner_path", "path"}
+_SEPARATION_BOUNDARY_FIELDS = {"after", "before", "kind", "path", "symbol"}
+_GATE_TWO_INDEPENDENT_SECTIONS = {
+    *_TEXT_FIELDS,
+    *_LIST_FIELDS,
+    "module_boundaries",
+} - {"separation_of_concerns"}
 
 ReviewEvidence = dict[str, object]
 
@@ -82,7 +89,33 @@ def _validate_module_boundaries(value: object) -> list[dict[str, Any]]:
     return value
 
 
-def parse_review_evidence(content: bytes) -> ReviewEvidence:
+def _validate_separation_boundaries(
+    value: object, expected: tuple[tuple[str, str, str], ...] | None
+) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise ReviewEvidenceError("MALFORMED", "separation_of_concerns.boundaries")
+    identities: set[tuple[str, str, str]] = set()
+    for index, item in enumerate(value):
+        location = f"separation_of_concerns.boundaries[{index}]"
+        if not isinstance(item, dict):
+            raise ReviewEvidenceError("MALFORMED", location)
+        _require_keys(item, _SEPARATION_BOUNDARY_FIELDS, location)
+        for field in sorted(_SEPARATION_BOUNDARY_FIELDS):
+            _validate_text(item[field], f"{location}.{field}")
+        if item["kind"] not in {"function", "component", "module"}:
+            raise ReviewEvidenceError("MALFORMED", f"{location}.kind")
+        identity = (item["path"], item["kind"], item["symbol"])
+        if identity in identities:
+            raise ReviewEvidenceError("MALFORMED", "separation_of_concerns.boundaries")
+        identities.add(identity)
+    if expected is not None and identities != set(expected):
+        raise ReviewEvidenceError("INSUFFICIENT", "separation_of_concerns.boundaries")
+    return value
+
+
+def parse_review_evidence(
+    content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...] | None
+) -> ReviewEvidence:
     """Parse the only supported structured-review evidence schema."""
     try:
         data = tomllib.loads(content.decode("utf-8"))
@@ -102,22 +135,47 @@ def parse_review_evidence(content: bytes) -> ReviewEvidence:
         section = _section(data, name)
         text_fields = _TEXT_FIELDS.get(name, ())
         list_fields = _LIST_FIELDS.get(name, ())
-        _require_keys(section, {*text_fields, *list_fields}, name)
+        fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
+        _require_keys(section, fields, name)
         for field in text_fields:
             _validate_text(section[field], f"{name}.{field}")
         for field in list_fields:
             _validate_text_list(section[field], f"{name}.{field}")
+        if name == "separation_of_concerns":
+            _validate_separation_boundaries(section["boundaries"], expected_boundaries)
     data["module_boundaries"] = _validate_module_boundaries(data.get("module_boundaries", []))
     return data
 
 
 def evaluate_review_evidence(
     content: bytes | None,
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
 ) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
-    """Return normalized evidence or one deterministic blocking reason."""
+    """Return normalized evidence or deterministic blocking reasons."""
     if content is None:
         return None, ("MISSING_REVIEW_EVIDENCE:document",)
+    gate_two_block: str | None = None
+    gate_two_review: ReviewEvidence | None = None
     try:
-        return parse_review_evidence(content), ()
+        data = tomllib.loads(content.decode("utf-8"))
+        section = _section(data, "separation_of_concerns")
+        fields = {*_TEXT_FIELDS["separation_of_concerns"], "boundaries"}
+        _require_keys(section, fields, "separation_of_concerns")
+        for field in _TEXT_FIELDS["separation_of_concerns"]:
+            _validate_text(section[field], f"separation_of_concerns.{field}")
+        _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+        gate_two_review = {"separation_of_concerns": section}
+    except (KeyError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        pass
     except ReviewEvidenceError as error:
-        return None, (f"{error.kind}_REVIEW_EVIDENCE:{error.location}",)
+        gate_two_block = f"{error.kind}_REVIEW_EVIDENCE:{error.location}"
+    try:
+        return parse_review_evidence(content, expected_boundaries), ()
+    except ReviewEvidenceError as error:
+        block = f"{error.kind}_REVIEW_EVIDENCE:{error.location}"
+        location = error.location.removeprefix("review_evidence.")
+        root = location.partition(".")[0].partition("[")[0]
+        review = gate_two_review if root in _GATE_TWO_INDEPENDENT_SECTIONS else None
+        if gate_two_block is not None and gate_two_block != block:
+            return review, (block, gate_two_block)
+        return review, (block,)

@@ -70,7 +70,11 @@ def _review_evidence() -> dict[str, object]:
         },
         "review_handoff": {"remaining_risks": ["None known."], "summary": "Ready."},
         "schema_version": "1.0",
-        "separation_of_concerns": {"after": "One owner.", "before": "Mixed owners."},
+        "separation_of_concerns": {
+            "after": "One owner.",
+            "before": "Mixed owners.",
+            "boundaries": [],
+        },
     }
 
 
@@ -449,6 +453,56 @@ def test_gate_three_cycle_blocks_only_gate_three() -> None:
     assert _entry(payload, 3)["policy_blocks"] == [block]
 
 
+def test_boundary_evidence_poison_blocks_gate_two_only() -> None:
+    inputs = _inputs()
+    block = "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
+    inputs[0]["review_evidence"] = None
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS", "BLOCK", *["PASS"] * 6]
+    assert _entry(payload, 2)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.boundaries[0].after",
+        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries[0].before",
+    ],
+)
+def test_indexed_boundary_evidence_poison_blocks_gate_two_only(block: str) -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence"] = None
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS", "BLOCK", *["PASS"] * 6]
+    assert _entry(payload, 2)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
+
+
+def test_boundary_derivation_failure_is_gate_two_technical_only() -> None:
+    inputs = _inputs()
+    code = "SEPARATION_BOUNDARY_DERIVATION_FAILURE"
+    inputs[0]["technical_errors"] = [{"code": code, "message": "invalid source"}]
+    inputs[0]["overall_result"] = "TECHNICAL_FAILURE"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS", "TECHNICAL_FAILURE", *["PASS"] * 6]
+    assert _entry(payload, 2)["technical_errors"] == [f"COMPLEXITY_RESULT:{code}"]
+    assert standard_block_ownership.expected_technical_dependency(
+        f"COMPLEXITY_RESULT:{code}", "complexity-result:technical-errors"
+    ) == ("complexity-result:technical-errors", frozenset({2}))
+    assert payload["shared_failures"] == []
+
+
 def test_quality_provenance_binding_mismatch_is_gate_seven_technical_only() -> None:
     inputs = _inputs()
     inputs[3]["run_id"] = "999"
@@ -645,10 +699,25 @@ def test_malformed_shared_review_document_names_only_affected_lanes() -> None:
     subset[0]["policy_blocks"] = ["INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.before"]
     subset[0]["overall_result"] = "BLOCK"
     subset_payload = _compose(subset)
-    assert _technical_standards(subset_payload) == set(range(1, 9))
+    assert _results(subset_payload) == ["PASS", "BLOCK", *["PASS"] * 6]
+    assert _entry(subset_payload, 2)["policy_blocks"] == [
+        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.before"
+    ]
+    assert _technical_standards(subset_payload) == set()
+    assert subset_payload["shared_failures"] == []
+
+
+def test_other_lane_poison_cannot_excuse_missing_gate_two_review_evidence() -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence"] = None
+    inputs[0]["policy_blocks"] = ["MALFORMED_REVIEW_EVIDENCE:architecture.dependency_direction"]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
     assert all(
-        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"]
-        for entry in subset_payload["entries"]
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
     )
 
 
@@ -680,10 +749,16 @@ def test_metric_technical_failures_belong_only_to_gate_one(code: str) -> None:
 def test_review_location_kind_must_be_emittable() -> None:
     impossible = "MISSING_REVIEW_EVIDENCE:architecture.not_a_field"
     emitted = "MALFORMED_REVIEW_EVIDENCE:architecture.not_a_field"
+    indexed = "MISSING_REVIEW_EVIDENCE:separation_of_concerns.boundaries[0].after"
+    invalid_index = "MALFORMED_REVIEW_EVIDENCE:separation_of_concerns.boundaries[01].after"
+    invalid_suffix = "MALFORMED_REVIEW_EVIDENCE:separation_of_concerns.boundaries.invalid"
 
     assert standard_block_ownership.review_owners(impossible) == frozenset()
     assert standard_block_ownership.shared_dependency(impossible) is None
     assert standard_block_ownership.review_owners(emitted) == frozenset({3})
+    assert standard_block_ownership.review_owners(indexed) == frozenset({2})
+    assert standard_block_ownership.review_owners(invalid_index) == frozenset()
+    assert standard_block_ownership.review_owners(invalid_suffix) == frozenset()
 
 
 def test_one_added_document_line_is_authenticated_short_task() -> None:

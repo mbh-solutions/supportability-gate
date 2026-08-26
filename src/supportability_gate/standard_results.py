@@ -499,20 +499,47 @@ def _s02_review_boundaries(value: object, code: str) -> None:
         raise StandardResultsError(code)
 
 
+def _s02_separation_boundaries(value: object, code: str) -> None:
+    section = _s02_exact(value, {"after", "before", "boundaries"}, code)
+    if any(
+        not isinstance(section[field], str) or not section[field].strip()
+        for field in ("after", "before")
+    ):
+        raise StandardResultsError(code)
+    rows = _s02_rows(section["boundaries"], {"after", "before", "kind", "path", "symbol"}, code)
+    identities: set[tuple[str, str, str]] = set()
+    for row in rows:
+        if row["kind"] not in {"function", "component", "module"} or any(
+            not isinstance(row[name], str) or not row[name].strip() for name in row
+        ):
+            raise StandardResultsError(code)
+        identity = (row["path"], row["kind"], row["symbol"])
+        if identity in identities:
+            raise StandardResultsError(code)
+        identities.add(identity)
+
+
 def _s02_review(value: object, blocks: list[str], code: str) -> None:
     owners = frozenset().union(*(standard_block_ownership.review_owners(block) for block in blocks))
     if value is None:
-        if owners == standard_block_ownership.REVIEW_STANDARDS:
+        if 2 in owners:
             return
         raise StandardResultsError(code)
     if owners:
-        raise StandardResultsError(code)
+        if 2 in owners:
+            raise StandardResultsError(code)
+        row = _s02_exact(value, {"separation_of_concerns"}, code)
+        _s02_separation_boundaries(row["separation_of_concerns"], code)
+        return
     keys = {"module_boundaries", "schema_version", *_S02_REVIEW_SECTIONS}
     row = _s02_exact(value, keys, code)
     if row["schema_version"] != "1.0":
         raise StandardResultsError(code)
     for name, (text_fields, list_fields) in _S02_REVIEW_SECTIONS.items():
-        _s02_review_section(row[name], text_fields, list_fields, code)
+        if name == "separation_of_concerns":
+            _s02_separation_boundaries(row[name], code)
+        else:
+            _s02_review_section(row[name], text_fields, list_fields, code)
     _s02_review_boundaries(row["module_boundaries"], code)
 
 
@@ -809,7 +836,7 @@ def _s02_complexity_components(
         or (row["quality_profile"] is None and 7 not in affected)
         or (
             row["review_evidence"] is None
-            and review_owners != standard_block_ownership.REVIEW_STANDARDS
+            and not review_owners
             and not standard_block_ownership.REVIEW_STANDARDS.issubset(affected)
         )
     ):

@@ -410,27 +410,161 @@ def _result(
     )
 
 
+def _separation_boundaries(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[tuple[str, str, str], ...]:
+    boundaries: set[tuple[str, str, str]] = set()
+    for assessment in assessments:
+        if not assessment.complexity_assessed:
+            continue
+        change = assessment.change
+        if change.old_path is None and change.new_path:
+            path = change.new_path
+            content = _regular_source(
+                repository,
+                identity.head_sha,
+                change.new_path,
+                assessment.head_production,
+                policy.language,
+                records,
+            )
+            if content is None:
+                continue
+            spans = function_changes.responsibility_spans(
+                path, content, set(range(1, len(content.splitlines()) + 1))
+            )
+        elif change.new_path is None and change.old_path:
+            path = change.old_path
+            content = _regular_source(
+                repository,
+                identity.base_sha,
+                change.old_path,
+                assessment.base_production,
+                policy.language,
+                records,
+            )
+            if content is None:
+                continue
+            spans = function_changes.responsibility_spans(
+                path, content, set(range(1, len(content.splitlines()) + 1))
+            )
+        elif change.old_path != change.new_path:
+            base = _regular_source(
+                repository,
+                identity.base_sha,
+                change.old_path,
+                assessment.base_production,
+                policy.language,
+                records,
+            )
+            head = _regular_source(
+                repository,
+                identity.head_sha,
+                change.new_path,
+                assessment.head_production,
+                policy.language,
+                records,
+            )
+            base_spans = (
+                function_changes.responsibility_spans(
+                    change.old_path or "", base, set(range(1, len(base.splitlines()) + 1))
+                )
+                if base is not None
+                else ()
+            )
+            head_spans = (
+                function_changes.responsibility_spans(
+                    change.new_path or "", head, set(range(1, len(head.splitlines()) + 1))
+                )
+                if head is not None
+                else ()
+            )
+            spans = (*base_spans, *head_spans)
+            boundaries.update((change.old_path or "", span.kind, span.name) for span in base_spans)
+            boundaries.update((change.new_path or "", span.kind, span.name) for span in head_spans)
+            continue
+        else:
+            retained_path = change.new_path or change.old_path
+            if retained_path is None:
+                continue
+            path = retained_path
+            base = _regular_source(
+                repository,
+                identity.base_sha,
+                path,
+                assessment.base_production,
+                policy.language,
+                records,
+            )
+            head = _regular_source(
+                repository,
+                identity.head_sha,
+                path,
+                assessment.head_production,
+                policy.language,
+                records,
+            )
+            base_lines = set(
+                git_changes.changed_base_lines(
+                    repository, identity.base_sha, identity.head_sha, path, records
+                )
+            )
+            head_lines = set(
+                git_changes.changed_head_lines(
+                    repository,
+                    identity.base_sha,
+                    identity.head_sha,
+                    path,
+                    records,
+                    include_deletion_anchor=False,
+                )
+            )
+            if base is None or head is None:
+                continue
+            surviving, deleted = function_changes.changed_responsibility_spans(
+                path, base, head, base_lines, head_lines
+            )
+            spans = (*surviving, *deleted)
+        boundaries.update((path, span.kind, span.name) for span in spans)
+    return tuple(sorted(boundaries))
+
+
 def _read_review_evidence(
     repository: Path,
-    head_sha: str,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    assessments: tuple[function_changes.ChangedFileAssessment, ...],
     records: list[git_changes.CommandRecord],
     errors: list[Exception],
 ) -> tuple[review_evidence.ReviewEvidence | None, tuple[str, ...]]:
     try:
+        expected_boundaries = _separation_boundaries(
+            repository, identity, policy, assessments, records
+        )
+    except (function_changes.PythonSourceError, git_changes.GitError) as error:
+        errors.append(
+            function_changes.PythonSourceError("SEPARATION_BOUNDARY_DERIVATION_FAILURE", str(error))
+        )
+        expected_boundaries = None
+    try:
         blob = git_changes.read_regular_blob(
             repository,
-            head_sha,
+            identity.head_sha,
             review_evidence.REVIEW_EVIDENCE_PATH,
             records,
         )
     except git_changes.GitError as error:
         if error.code == "MISSING_BLOB":
-            return review_evidence.evaluate_review_evidence(None)
+            return review_evidence.evaluate_review_evidence(None, ())
         if error.code == "SYMLINK_OR_NONFILE":
             return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
         errors.append(function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error)))
         return None, ()
-    return review_evidence.evaluate_review_evidence(blob.content)
+    return review_evidence.evaluate_review_evidence(blob.content, expected_boundaries)
 
 
 def _technical_result(
@@ -532,7 +666,9 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
         assessments = _classify_changes(repository, identity, policy, changes, records)
         structured_review, review_blocks = _read_review_evidence(
             repository,
-            identity.head_sha,
+            identity,
+            policy,
+            assessments,
             records,
             evidence_errors,
         )

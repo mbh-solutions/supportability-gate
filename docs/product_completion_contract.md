@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S03 issue #146 is the sole active slice
-Next milestone authorized: S04 only after exact protected S03 completion and transition readback
+Current authorized work: Project #10 S04 issue #147 is the sole active slice
+Next milestone authorized: S05 only after exact protected S04 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1816,3 +1816,21 @@ Do not create a new terminal label not authorized by an active milestone directi
 - Remaining work: pass exact source and protected review proof, merge normally without bypass,
   complete both protected never-merge canaries and cleanup, finish issue/Project readback, refresh
   and activate S04 only, then stop S03.
+
+## Project #10 S04 Gate 2 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
+  completes, live S04 remains `In progress / Missing / On scope / No`. These prospective values
+  become canonical only after the protected pull request closing issue #147 merges normally and
+  every required Python and frontend canary, exact source proof, focused review, cleanup, issue,
+  and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gRE`, and repository issue #147.
+- Responsibility boundary: Gate 2 owns fixed `separation_of_concerns.boundaries` shape and exact
+  immutable-diff binding for changed Python and TypeScript/TSX responsibility identities. Ordinary
+  boundary defects block Gate 2 only; shared source or artifact defects remain explicit technical
+  failures.
+- Remaining work: resolve all focused-review findings, pass final-head deterministic proof, merge
+  normally without bypass, complete and clean the Python/frontend canaries, finish
+  issue/Project/ledger readback, refresh S05, set S04 `Done / Complete / On scope / Yes`, and stop.
