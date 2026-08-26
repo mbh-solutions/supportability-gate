@@ -1438,6 +1438,28 @@ def test_deleted_boundary_binds_base_identity(tmp_path: Path) -> None:
     assert _boundary_identities(result) == [("src/sample.py", "function", "removed")]
 
 
+def test_deleted_boundary_in_retained_file_does_not_bind_unchanged_neighbor(
+    tmp_path: Path,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(
+        repository / "src" / "sample.py",
+        _function_source("removed", 1) + _function_source("retained", 1),
+    )
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("retained", 1))
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(("src/sample.py", "function", "removed")),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert _boundary_identities(result) == [("src/sample.py", "function", "removed")]
+
+
 def test_renamed_boundary_binds_base_and_head_identities(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path)
     _write(repository / "src" / "old.py", _function_source("existing", 1))
@@ -1650,6 +1672,71 @@ def test_real_indexed_boundary_poison_blocks_only_gate_two_after_aggregation(
         *["PASS"] * 6,
     ]
     assert aggregate["entries"][1]["policy_blocks"] == [block]
+    assert all(entry["technical_errors"] == [] for entry in aggregate["entries"])
+    assert aggregate["shared_failures"] == []
+
+
+def test_cross_lane_review_poison_still_validates_gate_two_boundaries(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("current", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("current", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        REVIEW_EVIDENCE.replace(
+            'dependency_direction = "Dependencies continue to point toward domain policy."',
+            "dependency_direction = 1",
+        ),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "MALFORMED_REVIEW_EVIDENCE:architecture.dependency_direction",
+        "MISSING_REVIEW_EVIDENCE:separation_of_concerns.boundaries",
+    ]
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        "PASS",
+        "BLOCK",
+        "BLOCK",
+        *["PASS"] * 5,
+    ]
+    assert all(entry["technical_errors"] == [] for entry in aggregate["entries"])
+    assert aggregate["shared_failures"] == []
+
+
+def test_cross_lane_review_poison_preserves_valid_gate_two_evidence(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("current", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("current", 1, 1))
+    review = _review_evidence_with_boundaries(("src/sample.py", "function", "current"))
+    _write(
+        repository / ".supportability-review.toml",
+        review.replace(
+            'dependency_direction = "Dependencies continue to point toward domain policy."',
+            "dependency_direction = 1",
+        ),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "MALFORMED_REVIEW_EVIDENCE:architecture.dependency_direction"
+    ]
+    assert _boundary_identities(result) == [("src/sample.py", "function", "current")]
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        "PASS",
+        "PASS",
+        "BLOCK",
+        *["PASS"] * 5,
+    ]
     assert all(entry["technical_errors"] == [] for entry in aggregate["entries"])
     assert aggregate["shared_failures"] == []
 

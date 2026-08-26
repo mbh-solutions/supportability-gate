@@ -23,6 +23,11 @@ _LIST_FIELDS = {
 _SECTION_EXTRA_FIELDS = {"separation_of_concerns": ("boundaries",)}
 _MODULE_BOUNDARY_FIELDS = {"basis", "justification", "owner_path", "path"}
 _SEPARATION_BOUNDARY_FIELDS = {"after", "before", "kind", "path", "symbol"}
+_GATE_TWO_INDEPENDENT_SECTIONS = {
+    *_TEXT_FIELDS,
+    *_LIST_FIELDS,
+    "module_boundaries",
+} - {"separation_of_concerns"}
 
 ReviewEvidence = dict[str, object]
 
@@ -146,10 +151,31 @@ def evaluate_review_evidence(
     content: bytes | None,
     expected_boundaries: tuple[tuple[str, str, str], ...] | None,
 ) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
-    """Return normalized evidence or one deterministic blocking reason."""
+    """Return normalized evidence or deterministic blocking reasons."""
     if content is None:
         return None, ("MISSING_REVIEW_EVIDENCE:document",)
+    gate_two_block: str | None = None
+    gate_two_review: ReviewEvidence | None = None
+    try:
+        data = tomllib.loads(content.decode("utf-8"))
+        section = _section(data, "separation_of_concerns")
+        fields = {*_TEXT_FIELDS["separation_of_concerns"], "boundaries"}
+        _require_keys(section, fields, "separation_of_concerns")
+        for field in _TEXT_FIELDS["separation_of_concerns"]:
+            _validate_text(section[field], f"separation_of_concerns.{field}")
+        _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+        gate_two_review = {"separation_of_concerns": section}
+    except (KeyError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        pass
+    except ReviewEvidenceError as error:
+        gate_two_block = f"{error.kind}_REVIEW_EVIDENCE:{error.location}"
     try:
         return parse_review_evidence(content, expected_boundaries), ()
     except ReviewEvidenceError as error:
-        return None, (f"{error.kind}_REVIEW_EVIDENCE:{error.location}",)
+        block = f"{error.kind}_REVIEW_EVIDENCE:{error.location}"
+        location = error.location.removeprefix("review_evidence.")
+        root = location.partition(".")[0].partition("[")[0]
+        review = gate_two_review if root in _GATE_TWO_INDEPENDENT_SECTIONS else None
+        if gate_two_block is not None and gate_two_block != block:
+            return review, (block, gate_two_block)
+        return review, (block,)

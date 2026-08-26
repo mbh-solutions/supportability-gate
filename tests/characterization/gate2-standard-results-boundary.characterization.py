@@ -13,6 +13,7 @@ from types import ModuleType
 from typing import Any
 
 LEGACY_DRIVER_SHA256 = "c735557ea56b8c1af081610eef042052a8db18fc863efa1108d39263284ffaf3"
+FORGED_BOUNDARIES = (("tests/characterization/forged.py", "function", "forged"),)
 
 
 def _legacy_driver(definition: Path) -> ModuleType:
@@ -63,6 +64,11 @@ def main() -> None:
         in inspect.signature(review_evidence.evaluate_review_evidence).parameters
     ):
         parsed, blocks = review_evidence.evaluate_review_evidence(content, None)
+        forged, forged_blocks = review_evidence.evaluate_review_evidence(content, FORGED_BOUNDARIES)
+        if forged is not None or forged_blocks != (
+            "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",
+        ):
+            raise RuntimeError("Gate 2 boundary comparison is not enforced")
     else:
         parsed, blocks = review_evidence.evaluate_review_evidence(content)
     payload["behavior"]["review_evidence"] = {

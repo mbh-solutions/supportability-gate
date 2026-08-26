@@ -707,6 +707,20 @@ def test_malformed_shared_review_document_names_only_affected_lanes() -> None:
     assert subset_payload["shared_failures"] == []
 
 
+def test_other_lane_poison_cannot_excuse_missing_gate_two_review_evidence() -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence"] = None
+    inputs[0]["policy_blocks"] = ["MALFORMED_REVIEW_EVIDENCE:architecture.dependency_direction"]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
 def test_unknown_root_review_key_is_shared_document_defect() -> None:
     block = "MALFORMED_REVIEW_EVIDENCE:review_evidence.unexpected"
     expected = frozenset({1, 2, 3, 4, 5, 6, 8})

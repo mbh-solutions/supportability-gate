@@ -513,7 +513,16 @@ def _separation_boundaries(
                     repository, identity.base_sha, identity.head_sha, path, records
                 )
             )
-            head_lines = set(assessment.changed_head_lines)
+            head_lines = set(
+                git_changes.changed_head_lines(
+                    repository,
+                    identity.base_sha,
+                    identity.head_sha,
+                    path,
+                    records,
+                    include_deletion_anchor=False,
+                )
+            )
             if base is None or head is None:
                 continue
             surviving, deleted = function_changes.changed_responsibility_spans(
