@@ -443,7 +443,9 @@ def _characterization_blocks(
         or value.get("head_sha") != head_sha
     ):
         blocks.append("STALE_RUNNABILITY_EVIDENCE")
-    if value.get("overall_result") != "PASS" or value.get("policy_blocks") != []:
+    if value.get("overall_result") != "PASS":
+        return blocks
+    if value.get("policy_blocks") != []:
         blocks.append("NON_RUNNABLE_LOGICAL_STEP")
     coverage = value.get("coverage")
     if not isinstance(coverage, dict):

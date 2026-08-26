@@ -1,75 +1,47 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Project #10 S07 makes Gate 5 independently validate exact base/head characterization artifacts, deterministic scenario compatibility, immutable golden behavior, changed/high-risk coverage, and external artifact binding before composing the eight Standard results."
-proof = "tests/test_characterization.py; tests/test_standard_results.py::{test_gate_five_vocabulary_is_exact_and_ordered,test_authentic_gate_five_poison_blocks_only_gate_five,test_characterization_aggregate_rejects_semantic_forgery,test_characterization_artifacts_require_external_binding,test_high_risk_paths_require_authenticated_profile_binding}"
+intended_behavior = "A canonical Gate 5 policy block cannot manufacture or suppress an ordinary Gate 6 result. Gate 6 always checks schema and exact repository/base/head identity; evidence claiming PASS also receives policy-block consistency, production-path coverage, and scenario compatibility checks."
+proof = "tests/test_refactor_policy.py::{test_gate_five_policy_block_does_not_manufacture_gate_six_block,test_gate_five_block_preserves_independent_gate_six_blocks,test_non_runnable_intermediate_state_blocks,test_pass_claim_with_policy_blocks_checks_remaining_runnability}; tests/test_standard_results.py::test_authentic_gate_five_poison_blocks_only_gate_five"
 
 [characterization]
-captured_behavior = "Existing Gate CLI behavior remains unchanged. The aggregate boundary now rejects semantic or artifact forgeries and disagreement with authenticated high-risk profile facts; direct tests cover Python and TypeScript positives, every ordered Gate 5 block family, zero-valued artifact identity, corrected missing-head classification, external artifact binding, and Gate-5-only isolation."
-proof = ".supportability-characterization.json; tests/characterization/gate-cli.characterization.py; tests/characterization/gate-cli.golden.json; tests/characterization/gate2-standard-results-boundary.characterization.py; tests/characterization/gate2-standard-results-boundary.golden.json; tests/test_characterization.py; tests/test_standard_results.py"
+captured_behavior = "The retained refactor-policy CLI baseline remains unchanged. Direct tests distinguish a canonical Gate 5 BLOCK from forged Gate 5 PASS claims carrying incompatible or internally contradictory runnability facts."
+proof = ".supportability-characterization.json; tests/characterization/refactor-policy-retained.characterization.py; tests/characterization/refactor-policy-retained.golden.json; tests/test_refactor_policy.py; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "The characterization verifier owned repository and capture validation, but accepted zero artifact IDs, mislabeled a missing head capture, and exposed serialized facts that aggregate composition validated only by shape."
-after = "The existing Gate 5 owner now exposes pure required-path and serialized-result validation. The repository verifier produces and self-validates those facts; aggregate composition independently supplies authenticated change and external-artifact facts and delegates only Gate 5 derivation to its owner."
+before = "Gate 6 reclassified every canonical Gate 5 policy BLOCK as non-runnable and rechecked Gate 5 coverage, creating ordinary cross-lane blocks."
+after = "Gate 5 retains its ordinary policy result. Gate 6 preserves independent schema and identity checks, then validates coverage and compatibility only when characterization claims PASS."
 boundaries = [
-    { path = "src/supportability_gate/characterization.py", kind = "module", symbol = "src/supportability_gate/characterization.py", before = "Owned repository-backed Gate 5 evaluation without an aggregate-safe serialized-fact boundary.", after = "Owns both repository-backed evaluation and pure dependency-light validation of its serialized Gate 5 result." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_coverage_blocks", before = "Derived required coverage inline from changed and high-risk paths.", after = "Uses the canonical Gate 5 required-path derivation shared with aggregate validation." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "derive_required_paths", before = "No pure Gate 5 required-path derivation was reusable by aggregate composition.", after = "Returns the exact sorted union of changed paths and retained high-risk paths." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_paths", before = "Serialized characterization paths were checked only for list shape by the aggregate.", after = "Validates normalized, unique repository-relative serialized paths." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_scenario", before = "Serialized scenario facts were accepted without canonical identifier, command, kind, hash, or coverage validation.", after = "Validates one exact dependency-light serialized scenario row." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_scenarios", before = "Scenario ordering, uniqueness, count, and compatibility truth were not independently bound.", after = "Binds exact ordered unique scenarios and reconstructs compatibility from base/head hashes." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_artifact", before = "Aggregate artifact rows used a separate permissive shape check.", after = "Validates one serialized Gate 5 artifact row while preserving policy evidence for unavailable captures." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_artifacts", before = "Serialized characterization artifacts were not compared with workflow-provided external identities.", after = "Binds base/head IDs and digests to external workflow facts and derives capture mismatch, invalid identity, and head-only blocks." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_policy_blocks", before = "Aggregate code separately checked only block list shape and overall result.", after = "Validates canonical sorted unique Gate 5 block output and exact overall result." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_coverage", before = "Coverage lists were not bound to scenario covers or independently derived required paths.", after = "Reconstructs covered paths, binds required paths, and derives exact missing-coverage blocks." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_scenario_blocks", before = "Aggregate composition trusted declared compatibility and golden relationships.", after = "Derives incompatible behavior and requires explicit golden-mismatch evidence from serialized hashes." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "validate_result", before = "No canonical pure boundary validated serialized Gate 5 facts before lane composition.", after = "Validates identity, manifest hashes, artifacts, scenarios, fingerprint, coverage, and derivable blocks without repository or target execution." },
-    { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verify_evidence", before = "Accepted artifact ID zero and classified a missing head capture as a head-only claim.", after = "Requires positive artifact IDs, classifies missing head evidence as incomplete, and self-validates the canonical result." },
-    { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "Duplicated permissive Gate 5 shape checks without depending on the canonical Gate 5 owner.", after = "Imports only the dependency-light Gate 5 validation boundary while retaining aggregate orchestration." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_characterization_paths", before = "Aggregate composition did not independently derive changed/high-risk characterization requirements.", after = "Derives exact required Gate 5 paths from authenticated changed-file and contract facts." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity", before = "Returned authenticated complexity facts without the Gate 5 required-path projection.", after = "Carries the independently derived Gate 5 required-path tuple and rejects disagreement between top-level and authenticated quality-profile high-risk paths." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_characterization", before = "Validated characterization result shape but not internal or external semantic binding.", after = "Delegates canonical Gate 5 validation with exact aggregate identity, required paths, and external artifact facts." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_characterization_artifact", before = "Separately shape-checked one serialized characterization artifact row.", after = "Removed; canonical Gate 5 result validation now owns artifact shape and external identity binding." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_characterization_scenario", before = "Separately shape-checked one serialized characterization scenario row.", after = "Removed; canonical Gate 5 result validation now owns scenario structure and semantic parity." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_behavior", before = "Added characterization results without authenticated complexity or external artifact context.", after = "Passes authenticated aggregate facts into Gate 5 validation before refactor-policy composition." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_characterization", before = "Loaded Gate 5 blocks through a shape-only validator.", after = "Requires canonical Gate 5 fact parity before applying ordinary blocks to their sole lane." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "compose_results", before = "Accepted no external base/head characterization artifact identities.", after = "Accepts workflow-authenticated characterization artifact facts for independent Gate 5 binding." },
-    { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_expected_characterization", before = "The producer supplied no external characterization artifact binding to aggregate composition.", after = "Builds the exact optional base/head artifact fact pair while preserving the existing direct-library boundary." },
-    { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_compose", before = "Composed Gate 5 from its result file alone.", after = "Supplies independently sourced base/head artifact facts to aggregate composition." },
-    { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_parser", before = "Accepted only external quality artifact binding arguments.", after = "Also accepts the six fixed base/head characterization artifact binding arguments used by the hosted workflow." },
+    { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_characterization_blocks", before = "Converted a canonical Gate 5 BLOCK into Gate 6 non-runnable and missing-coverage blocks.", after = "Returns after Gate 6 identity checks when Gate 5 already owns an ordinary policy BLOCK; claimed PASS evidence still receives full Gate 6 validation." },
 ]
 
 [architecture]
-dependency_direction = "characterization owns canonical Gate 5 derivation and remains below standard_results in the existing dependency layers. standard_results reconstructs authenticated aggregate facts and calls only that pure boundary; standard_results_producer passes fixed workflow facts. No path imports or executes target code."
+dependency_direction = "refactor_policy consumes the existing characterization result without importing Gate 5 implementation. It validates only Gate 6 identity and claimed-PASS runnability facts; standard_results independently applies the Gate 5 policy result to Gate 5."
 reviewed_paths = [
-    ".github/workflows/organization-required.yml",
     ".supportability-review.toml",
     "docs/product_completion_contract.md",
-    "src/supportability_gate/characterization.py",
-    "src/supportability_gate/standard_results.py",
-    "src/supportability_gate/standard_results_producer.py",
-    "tests/test_characterization.py",
-    "tests/test_standard_results.py",
+    "src/supportability_gate/refactor_policy.py",
+    "tests/test_refactor_policy.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/characterization.py"
-owns = "Canonical Gate 5 manifest, capture, artifact, scenario, fingerprint, compatibility, golden, and coverage validation plus deterministic serialized result derivation."
-does_not_own = "Aggregate lane composition, refactor policy, workflow scheduling, GitHub mutation, advisory review, target imports or execution, canary repositories, or later gates."
+path = "src/supportability_gate/refactor_policy.py"
+owns = "Exact owner authorization, bounded refactor identity, sequence, and validation of runnability evidence that claims PASS."
+does_not_own = "Gate 5 characterization policy, characterization coverage enforcement, aggregate lane composition, target execution, thresholds, exclusions, waivers, or later-slice behavior."
 
 [incremental_refactor]
-target = "Complete only Project #10 S07 Gate 5 exact characterization, aggregate binding, all-family isolation, direct-proof, and prospective terminal-ledger requirements."
-completed_step = "Corrected positive artifact identity and missing-head classification, added one canonical pure result validator, wired exact external artifact facts, removed duplicate aggregate shape logic, and added focused all-family and forgery proof."
+target = "Correct only the S07 Gate 5-to-Gate 6 ordinary-policy ownership leak exposed by canary preflight."
+completed_step = "Stop Gate 6 semantic reclassification after a canonical Gate 5 policy BLOCK while retaining Gate 6 checks for stale, malformed, or forged PASS evidence."
 
 [review_handoff]
-summary = "Issue #150 is the sole active slice. The bounded candidate qualifies Gate 5 through its existing policy owner and aggregate result owner; final protected checks, one-time focused review, normal merge, canaries, cleanup, issue, and Project state remain live evidence and are not claimed by this file."
+summary = "Corrective S07 PR after #163: one production line changes `NON_RUNNABLE_LOGICAL_STEP` propagation into an ownership-preserving return. One RED/GREEN regression proves missing characterization coverage remains Gate 5 only; a companion test proves incompatible evidence that falsely claims PASS still blocks Gate 6. The corrective PR requires its own eight serial focused reviews and must merge normally before the Python/frontend canaries resume."
 remaining_risks = [
-    "Exact final-head protected workflow, normal merge, Python/frontend canaries, and cleanup must be verified from live GitHub evidence before S07 completion.",
-    "Repository-only definition, driver, golden, authentication, stale-artifact, replay, and execution defects remain trusted verifier outputs; aggregate validation independently reconstructs every semantic fact present in the serialized result and binds external artifact identities.",
+    "The post-merge Python and frontend canaries remain the terminal proof that real hosted missing coverage blocks Gate 5 alone.",
+    "S08 Gate 6 qualification remains separate and is not implemented by this correction.",
 ]
 
 [human_review]
-naming = "Each added function names one Gate 5 fact it validates or derives; the existing canonical block names remain unchanged."
-cohesion = "Canonical Gate 5 rules stay in characterization; aggregate reconstruction stays in standard_results; workflow argument assembly stays in standard_results_producer."
-intended_behavior = "Issue #150 limits this change to Gate 5 qualification and direct proof. No package, executable path, command, control, exclusion, waiver, threshold, target execution, immutable document, or later-slice behavior is added."
-reviewability = "One bounded S07 change reuses existing contract, artifact, result, ownership, and workflow boundaries and has direct Python/frontend-applicable, all-family poison, semantic-forgery, external-binding, and lane-isolation checks."
+naming = "The changed function and two direct tests name the exact characterization-to-refactor ownership boundary."
+cohesion = "Gate 5 policy stays in characterization and standard_results; refactor_policy retains only Gate 6 authorization and claimed-PASS runnability checks."
+intended_behavior = "A genuine Gate 5 block does not suppress or manufacture Gate 6; a claimed-PASS policy, coverage, or scenario defect remains fail-closed in Gate 6."
+reviewability = "The production change is one existing condition split at its ownership boundary, with one observed RED/GREEN regression and direct fail-closed PASS-claim cases."
