@@ -90,6 +90,9 @@ EVIDENCE_SOURCES = (
     ),
     (
         "refactor-policy-result.json",
+        "characterization-result.json:refactor_runnability",
+        "complexity-result.json:responsibility_targets",
+        "complexity-result.json:unbounded_production_paths",
         "complexity-result.json:review_evidence.incremental_refactor",
     ),
     (
@@ -145,6 +148,7 @@ _S02_COMPLEXITY_KEYS = {
     "production_paths",
     "quality_profile",
     "rename_bindings",
+    "responsibility_targets",
     "repository_remote",
     "review_evidence",
     "review_evidence_path",
@@ -154,6 +158,7 @@ _S02_COMPLEXITY_KEYS = {
     "technical_errors",
     "tool_versions",
     "touched_qualified_functions",
+    "unbounded_production_paths",
 }
 _S02_CHANGED_KEYS = {
     "base_production",
@@ -175,10 +180,40 @@ _S02_REFACTOR_KEYS = {
     "other_standard_clauses_waived",
     "overall_result",
     "policy_blocks",
+    "predecessor",
     "repository",
     "schema_version",
     "targets",
     "unbounded_paths",
+}
+_S02_REFACTOR_TARGET = re.compile(
+    r"(?P<path>.+)::(?:component|function|module):.+:(?P<start>[1-9][0-9]*)-(?P<end>[1-9][0-9]*)\Z"
+)
+_S02_REFACTOR_AUTHORIZATION_BLOCKS = {
+    "AUTHORIZATION_REPOSITORY_MISMATCH",
+    "BROAD_AUTHORIZATION_REQUIRED",
+    "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+    "INVALID_STRANGLER_SEQUENCE",
+    "MALFORMED_OWNER_AUTHORIZATION",
+    "MISSING_BOUNDED_PRODUCTION_TARGET",
+    "MISSING_OWNER_AUTHORIZATION",
+    "STALE_OWNER_AUTHORIZATION",
+    "UNAUTHENTICATED_OWNER_AUTHORIZATION",
+    "UNFOCUSED_DIFF_SCOPE",
+    "UNVERIFIABLE_BOUNDED_TARGET",
+}
+_S02_REFACTOR_CURRENT_AUTHORIZATION_BLOCKS = {
+    "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+    "MALFORMED_OWNER_AUTHORIZATION",
+    "MISSING_OWNER_AUTHORIZATION",
+    "STALE_OWNER_AUTHORIZATION",
+    "UNAUTHENTICATED_OWNER_AUTHORIZATION",
+}
+_S02_REFACTOR_RUNNABILITY_BLOCKS = {
+    "MISSING_RUNNABILITY_COVERAGE",
+    "NON_RUNNABLE_LOGICAL_STEP",
+    "STALE_RUNNABILITY_EVIDENCE",
+    "UNAUTHENTICATED_RUNNABILITY_EVIDENCE",
 }
 _S02_QUALITY_KEYS = {
     "artifact_digest",
@@ -244,8 +279,10 @@ class _S02Complexity:
     characterization_paths: tuple[str, ...]
     quality_adapters: tuple[str, ...]
     quality_result: str | None
+    responsibility_targets: tuple[str, ...]
     result: str
     source_sha256: str
+    unbounded_production_paths: tuple[str, ...]
 
 
 class _S02State:
@@ -990,6 +1027,11 @@ def _s02_complexity_components(
         7 in standard_block_ownership.owners(block) for block in blocks
     ):
         raise StandardResultsError(code)
+    if (
+        row["quality_profile"] is not None
+        and row["high_risk_paths"] != row["quality_profile"]["high_risk_paths"]
+    ):
+        raise StandardResultsError(code)
     return profile[0], profile[1]
 
 
@@ -1052,6 +1094,22 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     ):
         raise StandardResultsError(code)
     _s02_complexity_lists(row, code)
+    responsibility_targets = _s02_strings(row["responsibility_targets"], code)
+    unbounded_production_paths = _s02_strings(row["unbounded_production_paths"], code)
+    if responsibility_targets != sorted(
+        set(responsibility_targets)
+    ) or unbounded_production_paths != sorted(set(unbounded_production_paths)):
+        raise StandardResultsError(code)
+    _s02_refactor_target_paths(responsibility_targets, code)
+    try:
+        normalized_unbounded = [
+            contract.normalize_repository_path(path, "unbounded_production_paths")
+            for path in unbounded_production_paths
+        ]
+    except contract.ContractError:
+        raise StandardResultsError(code) from None
+    if normalized_unbounded != unbounded_production_paths:
+        raise StandardResultsError(code)
     base_paths, head_lines, renames = _s02_change_bindings(row, changed, code)
     heads = _s02_function_bindings(
         row["functions"],
@@ -1069,11 +1127,6 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     quality_adapters, quality_result = _s02_complexity_components(
         row, blocks, technical, changed, identity, code
     )
-    if (
-        row["quality_profile"] is not None
-        and row["high_risk_paths"] != row["quality_profile"]["high_risk_paths"]
-    ):
-        raise StandardResultsError(code)
     return _S02Complexity(
         tuple((*blocks, *function_blocks)),
         tuple(technical),
@@ -1081,8 +1134,10 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         _s02_characterization_paths(row, changed),
         quality_adapters,
         quality_result,
+        tuple(responsibility_targets),
         result,
         hashlib.sha256(_canonical(row)).hexdigest(),
+        tuple(unbounded_production_paths),
     )
 
 
@@ -1140,11 +1195,13 @@ def _s02_characterization(
         raise StandardResultsError(code) from None
 
 
-def _s02_refactor_authorization(value: object, comment_id: object, code: str) -> None:
+def _s02_refactor_authorization(
+    value: object, comment_id: object, code: str
+) -> dict[str, Any] | None:
     if value is None:
         if comment_id is not None:
             raise StandardResultsError(code)
-        return
+        return None
     keys = {"base_sha", "broad", "head_sha", "repository", "scope", "sequence", "targets"}
     row = _s02_exact(value, keys, code)
     sequence = _s02_exact(row["sequence"], {"predecessor_sha", "step"}, code)
@@ -1160,14 +1217,353 @@ def _s02_refactor_authorization(value: object, comment_id: object, code: str) ->
         or sequence["step"] < 1
     ):
         raise StandardResultsError(code)
-    _s02_strings(row["scope"], code, True)
-    _s02_strings(row["targets"], code, True)
+    scope = _s02_strings(row["scope"], code, True)
+    try:
+        normalized = [
+            contract.normalize_repository_path(path, "authorization.scope") for path in scope
+        ]
+    except contract.ContractError:
+        raise StandardResultsError(code) from None
+    targets = _s02_strings(row["targets"], code, True)
+    if (
+        scope != sorted(set(normalized))
+        or targets != sorted(set(targets))
+        or any("::" not in target for target in targets)
+    ):
+        raise StandardResultsError(code)
+    return row
+
+
+def _s02_refactor_predecessor(
+    value: object, identity: RunIdentity, code: str
+) -> tuple[dict[str, Any] | None, str | None]:
+    keys = {
+        "authorization",
+        "authorization_comment_id",
+        "base_sha",
+        "block",
+        "head_sha",
+        "merge_sha",
+        "pull_number",
+    }
+    row = _s02_exact(value, keys, code)
+    authorization = _s02_refactor_authorization(
+        row["authorization"], row["authorization_comment_id"], code
+    )
+    block = row["block"]
+    identity_values = (row["base_sha"], row["head_sha"], row["merge_sha"])
+    if block not in {None, "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE", "INVALID_STRANGLER_SEQUENCE"}:
+        raise StandardResultsError(code)
+    if authorization is None:
+        if any(item is not None for item in (*identity_values, row["pull_number"])):
+            raise StandardResultsError(code)
+        return None, block
+    if (
+        block is not None
+        or any(not _s02_sha(item, _S02_SHA40) for item in identity_values)
+        or type(row["pull_number"]) is not int
+        or row["pull_number"] < 1
+        or authorization["repository"] != identity.repository
+        or authorization["base_sha"] != row["base_sha"]
+        or authorization["head_sha"] != row["head_sha"]
+        or authorization["sequence"]["predecessor_sha"] != row["base_sha"]
+        or row["merge_sha"] != identity.base_sha
+    ):
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    return authorization, None
+
+
+def _s02_refactor_change_paths(
+    changed: tuple[dict[str, Any], ...],
+) -> tuple[list[str], list[str], list[str]]:
+    scope = sorted({path for row in changed for path in (row["old_path"], row["new_path"]) if path})
+    required = sorted(
+        {
+            path
+            for row in changed
+            if (
+                path := row["new_path"]
+                if row["head_production"]
+                else row["old_path"]
+                if row["base_production"]
+                else None
+            )
+        }
+    )
+    allowed = sorted(
+        {
+            path
+            for row in changed
+            for path, production in (
+                (row["old_path"], row["base_production"]),
+                (row["new_path"], row["head_production"]),
+            )
+            if path and production
+        }
+    )
+    return scope, required, allowed
+
+
+def _s02_refactor_target_paths(
+    targets: list[str], code: str = "MALFORMED_REFACTOR_RESULT"
+) -> list[str]:
+    paths: list[str] = []
+    for target in targets:
+        match = _S02_REFACTOR_TARGET.fullmatch(target)
+        if match is None or int(match["start"]) > int(match["end"]):
+            raise StandardResultsError(code)
+        paths.append(match["path"])
+    return paths
+
+
+def _s02_refactor_proof_path(path: str) -> bool:
+    return path in {
+        ".supportability-characterization.json",
+        ".supportability-review.toml",
+    } or path.startswith("tests/characterization/")
+
+
+def _s02_refactor_authorization_blocks(
+    authorization: dict[str, Any], identity: RunIdentity
+) -> set[str]:
+    blocks: set[str] = set()
+    if authorization["repository"] != identity.repository:
+        blocks.add("AUTHORIZATION_REPOSITORY_MISMATCH")
+    if (
+        authorization["base_sha"] != identity.base_sha
+        or authorization["head_sha"] != identity.head_sha
+    ):
+        blocks.add("STALE_OWNER_AUTHORIZATION")
+    return blocks
+
+
+def _s02_refactor_sequence_blocks(
+    authorization: dict[str, Any],
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+    identity: RunIdentity,
+) -> set[str]:
+    blocks: set[str] = set()
+    if authorization["sequence"]["predecessor_sha"] != identity.base_sha:
+        blocks.add("INVALID_STRANGLER_SEQUENCE")
+    if predecessor_block is not None:
+        blocks.add(predecessor_block)
+        return blocks
+    step = authorization["sequence"]["step"]
+    if step == 1:
+        if predecessor is not None:
+            blocks.add("INVALID_STRANGLER_SEQUENCE")
+        return blocks
+    if predecessor is None or predecessor["sequence"]["step"] != step - 1:
+        blocks.add("INVALID_STRANGLER_SEQUENCE")
+    return blocks
+
+
+def _s02_refactor_focus_blocks(
+    row: dict[str, Any],
+    authorization: dict[str, Any],
+    scope: list[str],
+    production: list[str],
+    target_paths: list[str],
+) -> set[str]:
+    blocks: set[str] = set()
+    if authorization["scope"] != scope:
+        blocks.add("UNFOCUSED_DIFF_SCOPE")
+    if authorization["targets"] != row["targets"] or row["unbounded_paths"]:
+        blocks.add("UNVERIFIABLE_BOUNDED_TARGET")
+    unrelated = [
+        path for path in scope if path not in target_paths and not _s02_refactor_proof_path(path)
+    ]
+    if (len(row["targets"]) != 1 or len(set(target_paths)) != 1 or unrelated) and not authorization[
+        "broad"
+    ]:
+        blocks.add("BROAD_AUTHORIZATION_REQUIRED")
+    if not row["targets"] or any(path not in production for path in target_paths):
+        blocks.add("MISSING_BOUNDED_PRODUCTION_TARGET")
+    return blocks
+
+
+def _s02_refactor_runnability_blocks(
+    characterization_result: object,
+    identity: RunIdentity,
+    targets: list[str],
+    unbounded_paths: list[str],
+) -> set[str]:
+    if (
+        not isinstance(characterization_result, dict)
+        or characterization_result.get("overall_result") != "PASS"
+    ):
+        return set()
+    evidence = characterization_result.get("refactor_runnability")
+    keys = {
+        "base_sha",
+        "head_sha",
+        "repository",
+        "runnable",
+        "schema_version",
+        "targets",
+        "unbounded_paths",
+        "workflow_sha",
+    }
+    if not isinstance(evidence, dict) or set(evidence) != keys:
+        return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
+    evidence_targets = evidence["targets"]
+    evidence_unbounded = evidence["unbounded_paths"]
+    if (
+        evidence["schema_version"] != characterization.RUNNABILITY_SCHEMA
+        or type(evidence["runnable"]) is not bool
+        or not _s02_sha(evidence["base_sha"], _S02_SHA40)
+        or not _s02_sha(evidence["head_sha"], _S02_SHA40)
+        or not _s02_sha(evidence["workflow_sha"], _S02_SHA40)
+        or not isinstance(evidence["repository"], str)
+        or not isinstance(evidence_targets, list)
+        or any(not isinstance(item, str) for item in evidence_targets)
+        or evidence_targets != sorted(set(evidence_targets))
+        or not isinstance(evidence_unbounded, list)
+        or any(not isinstance(item, str) for item in evidence_unbounded)
+        or evidence_unbounded != sorted(set(evidence_unbounded))
+    ):
+        return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
+    try:
+        _s02_refactor_target_paths(evidence_targets)
+        normalized_unbounded = [
+            contract.normalize_repository_path(path, "refactor_runnability.unbounded_paths")
+            for path in evidence_unbounded
+        ]
+    except (StandardResultsError, contract.ContractError):
+        return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
+    if (
+        evidence_targets != targets
+        or evidence_unbounded != unbounded_paths
+        or evidence_unbounded != normalized_unbounded
+    ):
+        return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
+    stale = (
+        evidence["repository"] != f"github.com/{identity.repository}"
+        or evidence["base_sha"] != identity.base_sha
+        or evidence["head_sha"] != identity.head_sha
+        or evidence["workflow_sha"] != identity.workflow_sha
+    )
+    blocks = {"STALE_RUNNABILITY_EVIDENCE"} if stale else set()
+    target_paths = set(_s02_refactor_target_paths(targets))
+    covered = set(characterization_result["coverage"]["covered_paths"])
+    if target_paths - covered:
+        blocks.add("MISSING_RUNNABILITY_COVERAGE")
+    elif not evidence["runnable"]:
+        blocks.add("NON_RUNNABLE_LOGICAL_STEP")
+    if characterization_result["policy_blocks"]:
+        blocks.add("NON_RUNNABLE_LOGICAL_STEP")
+    return blocks
+
+
+def _s02_refactor_shape(
+    row: dict[str, Any],
+    changed: tuple[dict[str, Any], ...],
+    responsibility_targets: tuple[str, ...] | None,
+    unbounded_production_paths: tuple[str, ...] | None,
+) -> tuple[list[str], list[str], list[str]]:
+    scope, required, allowed = _s02_refactor_change_paths(changed)
+    target_paths = _s02_refactor_target_paths(row["targets"])
+    bounded_paths = set((*target_paths, *row["unbounded_paths"]))
+    if (
+        any(
+            row[name] != sorted(set(row[name]))
+            for name in ("changed_paths", "targets", "unbounded_paths")
+        )
+        or row["changed_paths"] != scope
+        or (
+            responsibility_targets is not None
+            and (
+                row["targets"] != list(responsibility_targets)
+                or row["unbounded_paths"] != list(unbounded_production_paths or ())
+            )
+        )
+        or row["applicable"] is not bool(required)
+        or not set(required).issubset(bounded_paths)
+        or not bounded_paths.issubset(allowed)
+        or set(target_paths) & set(row["unbounded_paths"])
+    ):
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    return scope, allowed, target_paths
+
+
+def _s02_refactor_absent_authorization(
+    row: dict[str, Any],
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+) -> None:
+    if predecessor is not None or predecessor_block is not None:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    if not row["applicable"]:
+        if row["policy_blocks"]:
+            raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+        return
+    authorization_blocks = set(row["policy_blocks"]) & _S02_REFACTOR_AUTHORIZATION_BLOCKS
+    current = authorization_blocks & _S02_REFACTOR_CURRENT_AUTHORIZATION_BLOCKS
+    if len(current) != 1 or authorization_blocks != current:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+
+
+def _s02_refactor_authenticated_authorization(
+    row: dict[str, Any],
+    authorization: dict[str, Any],
+    identity: RunIdentity,
+    scope: list[str],
+    allowed: list[str],
+    target_paths: list[str],
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+) -> None:
+    if not row["applicable"]:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    if set(row["policy_blocks"]) & {
+        "MALFORMED_OWNER_AUTHORIZATION",
+        "MISSING_OWNER_AUTHORIZATION",
+        "UNAUTHENTICATED_OWNER_AUTHORIZATION",
+    }:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    expected = _s02_refactor_authorization_blocks(authorization, identity)
+    expected.update(_s02_refactor_focus_blocks(row, authorization, scope, allowed, target_paths))
+    expected.update(
+        _s02_refactor_sequence_blocks(authorization, predecessor, predecessor_block, identity)
+    )
+    if set(row["policy_blocks"]) & _S02_REFACTOR_AUTHORIZATION_BLOCKS != expected:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+
+
+def _s02_refactor_binding(
+    row: dict[str, Any],
+    authorization: dict[str, Any] | None,
+    identity: RunIdentity,
+    changed: tuple[dict[str, Any], ...],
+    responsibility_targets: tuple[str, ...] | None,
+    unbounded_production_paths: tuple[str, ...] | None,
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+) -> None:
+    scope, allowed, target_paths = _s02_refactor_shape(
+        row, changed, responsibility_targets, unbounded_production_paths
+    )
+    if authorization is None:
+        _s02_refactor_absent_authorization(row, predecessor, predecessor_block)
+        return
+    _s02_refactor_authenticated_authorization(
+        row,
+        authorization,
+        identity,
+        scope,
+        allowed,
+        target_paths,
+        predecessor,
+        predecessor_block,
+    )
 
 
 def _s02_refactor(
     value: object,
     characterization: object,
     identity: RunIdentity,
+    complexity: _S02Complexity | None,
 ) -> list[str]:
     code = "MALFORMED_REFACTOR_RESULT"
     row = _s02_exact(value, _S02_REFACTOR_KEYS, code)
@@ -1182,15 +1578,41 @@ def _s02_refactor(
         row["schema_version"] != "refactor-policy-result.v1"
         or type(row["applicable"]) is not bool
         or row["other_standard_clauses_waived"] is not False
+        or blocks != sorted(blocks)
         or row["overall_result"] != ("BLOCK" if blocks else "PASS")
         or not _s02_sha(row["characterization_sha256"], _S02_SHA64)
     ):
         raise StandardResultsError(code)
     for name in ("changed_paths", "targets", "unbounded_paths"):
         _s02_strings(row[name], code)
-    _s02_refactor_authorization(row["authorization"], row["authorization_comment_id"], code)
+    authorization = _s02_refactor_authorization(
+        row["authorization"], row["authorization_comment_id"], code
+    )
+    predecessor, predecessor_block = _s02_refactor_predecessor(row["predecessor"], identity, code)
+    if complexity is not None:
+        targets_unavailable = "REFACTOR_TARGET_DERIVATION_FAILURE" in complexity.technical
+        _s02_refactor_binding(
+            row,
+            authorization,
+            identity,
+            complexity.changed_files,
+            None if targets_unavailable else complexity.responsibility_targets,
+            None if targets_unavailable else complexity.unbounded_production_paths,
+            predecessor,
+            predecessor_block,
+        )
     expected = hashlib.sha256(_canonical(characterization)).hexdigest()
-    if row["characterization_sha256"] != expected:
+    expected_runnability = (
+        _s02_refactor_runnability_blocks(
+            characterization, identity, row["targets"], row["unbounded_paths"]
+        )
+        if row["applicable"]
+        else set()
+    )
+    if (
+        row["characterization_sha256"] != expected
+        or set(blocks) & _S02_REFACTOR_RUNNABILITY_BLOCKS != expected_runnability
+    ):
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
     return blocks
 
@@ -1420,7 +1842,7 @@ def _s02_add_behavior(
         state, characterization, identity, data, expected_artifacts, errors, outcomes
     ):
         return
-    _s02_add_refactor(state, refactor, characterization, identity, errors, outcomes)
+    _s02_add_refactor(state, refactor, characterization, identity, data, errors, outcomes)
 
 
 def _s02_add_characterization(
@@ -1459,6 +1881,7 @@ def _s02_add_refactor(
     refactor: object,
     characterization: object,
     identity: RunIdentity,
+    data: _S02Complexity | None,
     errors: dict[str, str],
     outcomes: dict[str, str],
 ) -> None:
@@ -1466,7 +1889,7 @@ def _s02_add_refactor(
         _s02_source_failure(state, "refactor", errors["refactor"])
         return
     try:
-        refactor_blocks = _s02_refactor(refactor, characterization, identity)
+        refactor_blocks = _s02_refactor(refactor, characterization, identity, data)
     except StandardResultsError as error:
         _s02_source_failure(state, "refactor", error.code)
         return

@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S07 issue #150 is the sole active slice
-Next milestone authorized: S08 only after exact protected S07 correction, canaries, and transition readback
+Current authorized work: Project #10 S08 issue #151 is the sole active slice
+Next milestone authorized: S09 only after exact protected S08 completion, canaries, and transition readback
 ```
 
 ## Milestone transition rules
@@ -1956,3 +1956,78 @@ Do not create a new terminal label not authorized by an active milestone directi
   eight-focus lifecycle on the corrective PR, resolve every finding, merge normally without bypass,
   complete and clean the Python/frontend missing-coverage canaries, finish issue/Project/ledger
   readback, refresh and activate S08 only, and set S07 `Done / Complete / On scope / Yes`.
+
+## Project #10 S08 Gate 6 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
+  completes, live S08 remains `In progress / Missing / On scope / No`. These prospective values
+  become canonical only after the protected pull request closing issue #151 merges normally and
+  every required Python and frontend canary, lane-isolation proof, exact source proof, focused
+  review, cleanup, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gTg`, repository issue #151, and protected source base
+  `e2d291df297b106cc34f4a7bb3cb6b5a4ff487fc`.
+- Responsibility boundary: Gate 6 owns one authenticated owner authorization for the exact
+  repository, base, head, complete sorted scope, source-derived responsibility targets, truthful
+  broad classification, immediate predecessor, sequence step, and authenticated Gate 5
+  runnability evidence. Python and TypeScript/TSX targets are derived from immutable Git blobs
+  without executing target code; unparseable or non-regular production paths fail closed as
+  unbounded. Aggregate composition shape-validates every serialized Gate 6 fact; cross-binds
+  applicability, scope, targets, run identity, and characterization identity to other authenticated
+  workflow evidence; and checks internal predecessor, authorization-block, and runnability
+  consistency before composing Gate 6.
+- Direct source evidence: the issue-mandated targeted command exercised 295 cases. Its first run
+  passed 293 and exposed one duplicate unbounded-path serialization and one pre-Gate-6 Gate 4
+  fixture missing the newly required exact target facts. The duplicate was removed at the common
+  result boundary, the fixture was bound to its complete two-file scope and targets, and each exact
+  failed node then passed independently. The proof covers all 15 ordered Gate 6 families, Python
+  and frontend targets, additions, deletions, renames, multiline identities, malformed source,
+  non-regular paths, authenticated comment pagination and transport failures, predecessor
+  sequencing, exact runnability coverage, aggregate rejection of shape and cross-binding forgeries,
+  and Gate-6-only poison.
+  A final static diff audit exposed one asymmetric rename fallback; each rename side is now derived
+  independently, the valid side's responsibilities remain exact, only the invalid production side
+  is unbounded, and all three exact regression cases pass.
+- Versioned boundary proof: the retained exact pre-S08 target and the candidate target both match
+  the Gate 6 golden behavior digest
+  `932ff6566051e702e11d17c79fa2fdf04ee211d2d9e4ad4d1f24414d26e7917c`. Every changed production
+  path is covered by a scenario whose base/head command is the exact driver derived from its
+  authenticated scenario identity and language; each scenario executes against the complete
+  checkout for its captured side. The Gate 6 scenario directly exercises the refactor-policy
+  producer on fixed authenticated evidence on both sides instead of inferring producer coverage
+  from the package help command.
+  Legacy fallback is bound to exact protected pre-S08 `standard_results.py` SHA-256
+  `43b1e96099a314aac1f2059589705161b5681157e07a752674aac9748d551f5b`; an exact feature-revert
+  simulation was rejected with `Gate 6 binding is missing outside the exact pre-S08 baseline`.
+- Frozen source review: PR #165 exact head `7b13e3f13bee2beae7975412842bad194428fb8e`
+  passed Source Validation run/job `32992885984`/`98254603902` and required run `32992885912`.
+  Observer job `98255139688`, collector job `98267836175`, and final Gate job `98267911449`
+  succeeded after the
+  eight exact serial request/completion pairs `5428582650/5033186477`,
+  `5428634100/5033229818`, `5428692938/5428724356`, `5428737491/5428768340`,
+  `5428780179/5033342052`, `5428832893/5033392705`, `5428902581/5033436781`, and
+  `5428962488/5033506520`. The third and fourth completions were clean comments; the other six were
+  submitted reviews. No artifact from another pull request is reused.
+- Review adjudication: findings `3865078554`, `3865210051`, `3865255033`, `3865292500`, and
+  `3865347132` were supported and handled together in one bounded remediation batch. Aggregate
+  validation now has named shape, absent-authorization, and authenticated-authorization phases;
+  GitHub pagination fails closed at a finite bound; rename matching uses the existing timeout-bound
+  Git diff; versioned characterization directly executes the Gate 6 producer and accepts only the
+  exact scenario driver; and TypeScript keeps the established Gate 1 function-node span while Gate
+  6 keeps its declarator-inclusive responsibility span. The adjacent target-derivation isolation
+  finding was also supported: its exact technical failure is Gate-6-only, cannot suppress
+  established aggregate evidence, and cannot abort otherwise valid Gate 5 characterization.
+  Predecessor serialization and exact sequence reconstruction were
+  already implemented and required no further change. Finding `3865114431` was rejected as
+  plan-conflicting: authenticated runnability is intentionally produced by Gate 5 and independently
+  cross-bound by Gate 6; moving it into refactor policy would collapse that trust boundary.
+- Qualification limit: Gate 6 consumes authenticated Gate 5 evidence and GitHub facts but does not
+  execute target repository code. No third-party package dependency, contract command, policy
+  threshold, exclusion, waiver, workflow redesign, consumer activation, or S09-S11 behavior is
+  added by this slice.
+- Remaining work: pass exact final-head source and hosted deterministic proof through one immutable
+  remediation authorization with zero repeated focused reviews; reply to and resolve every
+  conversation; merge normally without bypass; complete and clean the Python/frontend Gate 6
+  canaries; finish issue/Project/ledger readback; refresh and activate S09 only; and set S08
+  `Done / Complete / On scope / Yes`.
