@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S05 issue #148 is the sole active slice
-Next milestone authorized: S06 only after exact protected S05 completion and transition readback
+Current authorized work: Project #10 S06 issue #149 is the sole active slice
+Next milestone authorized: S07 only after exact protected S06 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1857,3 +1857,42 @@ Do not create a new terminal label not authorized by an active milestone directi
   merge normally without bypass, complete and clean the Python/frontend canaries plus shared
   configuration-identity poison, finish issue/Project/ledger readback, refresh and activate S06
   only, set S05 `Done / Complete / On scope / Yes`, and stop S05.
+
+## Project #10 S06 Gate 4 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
+  completes, live S06 remains `In progress / Missing / On scope / No`. These prospective values
+  become canonical only after the protected pull request closing issue #149 merges normally and
+  every required Python and frontend canary, lane-isolation proof, exact source proof, focused
+  review, cleanup, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gSU`, repository issue #149, and protected source base
+  `a1b486634a023f2b94a6c9bedf72fea27ea3fcb0`.
+- Responsibility boundary: Gate 4 owns exact new production locations, non-vague ownership,
+  resolved existing owners, package identity, changed-path coupling, architecture coverage, and
+  complete successful declared-adapter coverage. The independent aggregate result contract binds
+  every serialized Gate 4 field and ordinary block to changed files, structured review,
+  architecture, declared gates, and authenticated commands before composing lane results.
+- Direct source evidence: the exact targeted S06 command passed `133` tests. It includes cohesive
+  Python and TypeScript locations, modified-path coupling without a new-location claim, the exact
+  ordered Gate 4 vocabulary, invalid/missing/unresolved/new/parallel/vague ownership, incomplete
+  coverage, malformed module-boundary ownership, forged aggregate evidence rejection, and an
+  authentic ordinary poison isolated to Gate 4.
+- Frozen source review: exact head `7d7ba1cef828e143883aae1154da5458f434bfac` passed Source
+  Validation run/job `32946358532`/`98107793389` and required run `32946360285` attempt 2. Observer
+  `98110886702`, collector `98118640712`, and aggregate Gate `98118682143` passed after eight
+  exact serial request/completion pairs: `5422599142/5422624734`, `5422632138/5422659525`,
+  `5422667327/5422690435`, `5422695162/review 5028338998`,
+  `5422739659/review 5028373725`, `5422787660/5422810208`,
+  `5422814639/review 5028428397`, and `5422851259/5422886774`.
+- Review remediation: findings `3860999699`, `3861029855`, and `3861076828` were supported and
+  handled together. Canonical block derivation moved behind the existing Gate 4 policy owner while
+  aggregate fact reconstruction remained independent; aggregate tests now cover every authentic
+  Gate 4 block family, a TypeScript owned location, and real changed-path coupling acceptance plus
+  omission rejection. No new module, dependency, command, threshold, exclusion, waiver, or later
+  slice behavior was added.
+- Remaining work: pass exact final-head source and hosted deterministic proof with zero repeated
+  focused reviews, reply to and resolve all three findings, merge normally without bypass, complete
+  and clean the Python and frontend canaries, finish issue/Project/ledger readback, refresh and
+  activate S07 only, set S06 `Done / Complete / On scope / Yes`, and stop S06.

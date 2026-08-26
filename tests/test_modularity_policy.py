@@ -45,6 +45,32 @@ maximum = 10
     )
 
 
+def _typescript_policy():
+    return parse_contract(
+        b"""schema_version = "1.0"
+language = "typescript"
+production_paths = ["src"]
+high_risk_paths = []
+
+[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "typescript.test-coverage.v1"
+paths = ["src"]
+
+[complexity]
+adapter = "typescript.c901-equivalent-touched.v1"
+maximum = 10
+"""
+    )
+
+
 def _assessment(path: str) -> ChangedFileAssessment:
     return ChangedFileAssessment(ChangedPath("ADDED", None, path), False, True, True, (1,))
 
@@ -110,6 +136,51 @@ def test_cohesive_owned_location_passes(path: str, basis: str) -> None:
     assert result.new_paths == (path,)
     assert result.coverage[0].architecture is True
     assert len(result.coverage[0].adapters) == 5
+
+
+def test_cohesive_owned_typescript_location_passes() -> None:
+    path = "src/components/order-card.tsx"
+    policy = _typescript_policy()
+    result = evaluate_modularity(
+        policy,
+        (_assessment(path),),
+        _review(path, "responsibility"),
+        _architecture(path),
+        SimpleNamespace(
+            commands=tuple(
+                SimpleNamespace(
+                    adapter=gate.adapter,
+                    observed_paths=(path,),
+                    zero_statement_paths=(),
+                    executed=True,
+                    exit_code=0,
+                )
+                for gate in policy.gates
+            )
+        ),
+    )
+
+    assert result.blocks == ()
+    assert result.new_paths == (path,)
+    assert len(result.coverage[0].adapters) == 3
+
+
+def test_modified_path_supplies_coupling_without_new_location_claim() -> None:
+    path = "src/orders/model.py"
+    owner = "src/orders/owner.py"
+    assessment = ChangedFileAssessment(ChangedPath("MODIFIED", path, path), True, True, True, (1,))
+
+    result = evaluate_modularity(
+        _policy(),
+        (assessment,),
+        None,
+        _architecture(path, owner_path=owner),
+        _quality(path),
+    )
+
+    assert result.blocks == ()
+    assert result.new_paths == ()
+    assert result.coupling_edges == (ImportEdge(path, owner, 1, "owner", True),)
 
 
 @pytest.mark.parametrize("name", ["utils", "helpers", "common", "misc", "stuff"])
@@ -180,6 +251,19 @@ def test_missing_or_unresolved_justification_blocks() -> None:
     )
     assert missing.blocks == (f"MISSING_NEW_LOCATION_JUSTIFICATION:{path}",)
     assert unresolved.blocks == (f"UNRESOLVED_MODULE_OWNER:{path}:src/orders/missing.py",)
+
+
+def test_invalid_owner_path_blocks() -> None:
+    path = "src/orders/model.py"
+    result = evaluate_modularity(
+        _policy(),
+        (_assessment(path),),
+        _review(path, "domain", "../owner.py"),
+        _architecture(path, owner_path="../owner.py"),
+        _quality(path),
+    )
+
+    assert result.blocks == (f"INVALID_NEW_LOCATION_JUSTIFICATION:{path}",)
 
 
 def test_independent_new_location_can_own_itself() -> None:

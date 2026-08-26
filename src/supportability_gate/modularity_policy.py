@@ -4,17 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import PurePosixPath
+from typing import TYPE_CHECKING
 
-from supportability_gate.architecture_policy import ArchitectureResult, ImportEdge
-from supportability_gate.contract import (
-    Contract,
-    ContractError,
-    command_failed,
-    normalize_repository_path,
-)
-from supportability_gate.function_changes import ChangedFileAssessment
-from supportability_gate.quality_profile import QualityEvidence
-from supportability_gate.review_evidence import ReviewEvidence
+from supportability_gate.contract import ContractError, command_failed, normalize_repository_path
+
+if TYPE_CHECKING:
+    from supportability_gate.architecture_policy import ArchitectureResult, ImportEdge
+    from supportability_gate.contract import Contract
+    from supportability_gate.function_changes import ChangedFileAssessment
+    from supportability_gate.quality_profile import QualityEvidence
+    from supportability_gate.review_evidence import ReviewEvidence
 
 VAGUE_LOCATION_NAMES = frozenset({"common", "helpers", "misc", "stuff", "utils"})
 
@@ -93,9 +92,9 @@ def _justifications(review: ReviewEvidence | None) -> tuple[LocationJustificatio
     )
 
 
-def _package(path: str, policy: Contract) -> str:
+def _package(path: str, production_paths: tuple[str, ...]) -> str:
     root = max(
-        (root for root in policy.production_paths if path == root or path.startswith(f"{root}/")),
+        (root for root in production_paths if path == root or path.startswith(f"{root}/")),
         key=len,
     )
     relative = PurePosixPath(path).relative_to(root)
@@ -111,7 +110,7 @@ def _path_blocks(path: str) -> tuple[str, ...]:
 
 
 def _claim_blocks(
-    policy: Contract,
+    production_paths: tuple[str, ...],
     new_paths: tuple[str, ...],
     justifications: tuple[LocationJustification, ...],
     nodes: tuple[str, ...],
@@ -133,9 +132,28 @@ def _claim_blocks(
             blocks.append(f"UNRESOLVED_MODULE_OWNER:{path}:{claim.owner_path}")
         elif claim.owner_path in new_paths and claim.owner_path != path:
             blocks.append(f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{claim.owner_path}")
-        elif _package(claim.owner_path, policy) != _package(path, policy):
+        elif _package(claim.owner_path, production_paths) != _package(path, production_paths):
             blocks.append(f"PARALLEL_PACKAGE:{path}:{claim.owner_path}")
     return tuple(blocks)
+
+
+def derive_modularity_blocks(
+    production_paths: tuple[str, ...],
+    new_paths: tuple[str, ...],
+    justifications: tuple[LocationJustification, ...],
+    nodes: tuple[str, ...],
+    coverage: tuple[LocationCoverage, ...],
+    required_gate_count: int,
+) -> tuple[str, ...]:
+    """Derive canonical Gate 4 policy blocks from authenticated facts."""
+    blocks = [block for path in new_paths for block in _path_blocks(path)]
+    blocks.extend(_claim_blocks(production_paths, new_paths, justifications, nodes))
+    blocks.extend(
+        f"NEW_LOCATION_GATE_COVERAGE:{item.path}"
+        for item in coverage
+        if len(item.adapters) != required_gate_count or not item.architecture
+    )
+    return tuple(sorted(blocks))
 
 
 def evaluate_modularity(
@@ -169,12 +187,13 @@ def evaluate_modularity(
         )
         for path in new_paths
     )
-    blocks = [block for path in new_paths for block in _path_blocks(path)]
-    blocks.extend(_claim_blocks(policy, new_paths, justifications, architecture.nodes))
-    blocks.extend(
-        f"NEW_LOCATION_GATE_COVERAGE:{item.path}"
-        for item in coverage
-        if len(item.adapters) != len(policy.gates) or not item.architecture
+    blocks = derive_modularity_blocks(
+        policy.production_paths,
+        new_paths,
+        justifications,
+        architecture.nodes,
+        coverage,
+        len(policy.gates),
     )
     coupling = tuple(edge for edge in architecture.edges if edge.source in changed_paths)
     return ModularityResult(
@@ -183,5 +202,5 @@ def evaluate_modularity(
         justifications,
         coupling,
         coverage,
-        tuple(sorted(blocks)),
+        blocks,
     )

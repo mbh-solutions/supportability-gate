@@ -81,7 +81,7 @@ def _review_evidence() -> dict[str, object]:
 def _changed_file(path: str, lines: list[int], *, status: str = "MODIFIED") -> dict[str, object]:
     production = path.startswith("src/")
     return {
-        "base_production": production,
+        "base_production": production and status != "ADDED",
         "changed_head_lines": lines,
         "complexity_assessed": production,
         "head_production": production,
@@ -266,6 +266,52 @@ def _inputs(
     complexity = _complexity(path, lines, status=status)
     characterization = _characterization(path)
     return complexity, characterization, _refactor(characterization, path), _quality()
+
+
+def _owned_new_location_inputs(
+    path: str = "src/orders/model.py",
+    *,
+    language: str = "python",
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    inputs = _inputs(path, status="ADDED")
+    complexity = inputs[0]
+    adapters = {
+        "python": ("python.c901-touched.v1", "python.ast-imports.v1"),
+        "typescript": (
+            "typescript.c901-equivalent-touched.v1",
+            "typescript.import-boundaries.v1",
+        ),
+    }[language]
+    complexity["language"] = language
+    complexity["architecture"]["adapter"] = adapters[1]
+    complexity["gate_coverage"] = [{"adapter": adapter, "paths": ["src"]} for adapter in adapters]
+    complexity["quality_profile"]["language"] = language
+    complexity["quality_profile"]["production_files"] = [path]
+    complexity["review_evidence"]["architecture"]["reviewed_paths"] = [path]
+    complexity["review_evidence"]["responsibility_boundary"]["path"] = path
+    claim = {
+        "basis": "domain",
+        "justification": "Exact source path owns one cohesive boundary.",
+        "owner_path": path,
+        "path": path,
+    }
+    sorted_adapters = sorted(adapters)
+    profile_command = complexity["quality_profile"]["commands"][0]
+    complexity["quality_profile"]["commands"] = [
+        {**profile_command, "adapter": adapter, "observed_paths": [path]} for adapter in adapters
+    ]
+    provenance_command = inputs[3]["commands"][0]
+    inputs[3]["commands"] = [{**provenance_command, "adapter": adapter} for adapter in adapters]
+    complexity["review_evidence"]["module_boundaries"] = [claim]
+    complexity["modularity"] = {
+        "blocks": [],
+        "changed_paths": [path],
+        "coupling_edges": [],
+        "coverage": [{"adapters": sorted_adapters, "architecture": True, "path": path}],
+        "justifications": [claim],
+        "new_paths": [path],
+    }
+    return inputs
 
 
 def _metric(path: str, qualified_name: str, complexity: int) -> dict[str, object]:
@@ -459,6 +505,183 @@ def test_gate_three_architecture_blocks_only_gate_three(block: str) -> None:
 
     assert _results(payload) == ["PASS", "PASS", "BLOCK", *("PASS",) * 5]
     assert _entry(payload, 3)["policy_blocks"] == [block]
+
+
+def test_gate_four_vocabulary_is_exact_and_ordered() -> None:
+    assert standard_block_ownership.BLOCK_FAMILIES[3] == (
+        "INVALID_NEW_LOCATION_JUSTIFICATION:",
+        "MISSING_NEW_LOCATION_JUSTIFICATION:",
+        "NEW_LOCATION_GATE_COVERAGE:",
+        "NEW_MODULE_OWNER_NOT_PREEXISTING:",
+        "PARALLEL_PACKAGE:",
+        "UNRESOLVED_MODULE_OWNER:",
+        "VAGUE_PRODUCTION_LOCATION:",
+    )
+
+
+def test_added_location_cannot_hide_missing_gate_four_evidence() -> None:
+    payload = _compose(_inputs("src/orders/model.py", status="ADDED"))
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "forged"),
+    [
+        ("changed_paths", []),
+        ("new_paths", []),
+        ("justifications", []),
+        (
+            "coupling_edges",
+            [
+                {
+                    "internal": True,
+                    "line": 1,
+                    "source": "src/orders/model.py",
+                    "specifier": "orders.owner",
+                    "target": "src/orders/owner.py",
+                }
+            ],
+        ),
+        ("coverage", []),
+        ("blocks", ["MISSING_NEW_LOCATION_JUSTIFICATION:src/orders/model.py"]),
+    ],
+)
+def test_gate_four_aggregate_evidence_is_bound_to_source_facts(field: str, forged: object) -> None:
+    inputs = _owned_new_location_inputs()
+    inputs[0]["modularity"][field] = forged
+    if field == "blocks":
+        inputs[0]["policy_blocks"] = forged
+        inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["invalid", "missing", "coverage", "new_owner", "parallel", "unresolved", "vague"],
+)
+def test_authentic_gate_four_poison_blocks_only_gate_four(case: str) -> None:
+    path = "src/utils/format.py" if case == "vague" else "src/orders/model.py"
+    inputs = _owned_new_location_inputs(path)
+    complexity = inputs[0]
+    claim = complexity["review_evidence"]["module_boundaries"][0]
+    if case == "invalid":
+        claim["owner_path"] = "../owner.py"
+        block = f"INVALID_NEW_LOCATION_JUSTIFICATION:{path}"
+    elif case == "missing":
+        complexity["review_evidence"]["module_boundaries"] = []
+        complexity["modularity"]["justifications"] = []
+        block = f"MISSING_NEW_LOCATION_JUSTIFICATION:{path}"
+    elif case == "coverage":
+        complexity["architecture"]["covered_paths"] = []
+        complexity["modularity"]["coverage"][0]["architecture"] = False
+        block = f"NEW_LOCATION_GATE_COVERAGE:{path}"
+    elif case == "new_owner":
+        owner = "src/orders/owner.py"
+        claim["owner_path"] = owner
+        owner_claim = {
+            "basis": "domain",
+            "justification": "Exact source path owns one cohesive boundary.",
+            "owner_path": owner,
+            "path": owner,
+        }
+        complexity["review_evidence"]["module_boundaries"].append(owner_claim)
+        complexity["modularity"]["justifications"].append(owner_claim)
+        complexity["changed_files"].append(_changed_file(owner, [1], status="ADDED"))
+        complexity["architecture"]["covered_paths"].append(owner)
+        complexity["architecture"]["nodes"].append(owner)
+        complexity["quality_profile"]["changed_paths"].append(owner)
+        complexity["quality_profile"]["production_files"].append(owner)
+        for command in complexity["quality_profile"]["commands"]:
+            command["observed_paths"].append(owner)
+        complexity["modularity"]["changed_paths"].append(owner)
+        complexity["modularity"]["new_paths"].append(owner)
+        complexity["modularity"]["coverage"].append(
+            {
+                "adapters": complexity["modularity"]["coverage"][0]["adapters"],
+                "architecture": True,
+                "path": owner,
+            }
+        )
+        block = f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{owner}"
+    elif case == "parallel":
+        owner = "src/inventory/model.py"
+        claim["owner_path"] = owner
+        complexity["architecture"]["nodes"].append(owner)
+        block = f"PARALLEL_PACKAGE:{path}:{owner}"
+    elif case == "unresolved":
+        owner = "src/orders/missing.py"
+        claim["owner_path"] = owner
+        block = f"UNRESOLVED_MODULE_OWNER:{path}:{owner}"
+    else:
+        block = f"VAGUE_PRODUCTION_LOCATION:{path}:utils"
+    complexity["modularity"]["blocks"] = [block]
+    complexity["policy_blocks"] = [block]
+    complexity["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS", "PASS", "PASS", "BLOCK", *["PASS"] * 4]
+    assert _entry(payload, 4)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
+
+
+def test_typescript_owned_new_location_passes_aggregate_validation() -> None:
+    payload = _compose(
+        _owned_new_location_inputs("src/components/order-card.tsx", language="typescript")
+    )
+
+    assert _results(payload) == ["PASS"] * 8
+
+
+def test_gate_four_aggregate_requires_authentic_changed_path_coupling() -> None:
+    path = "src/sample.py"
+    owner = "src/owner.py"
+    edge = {
+        "internal": True,
+        "line": 1,
+        "source": path,
+        "specifier": "owner",
+        "target": owner,
+    }
+    inputs = _inputs()
+    inputs[0]["architecture"]["nodes"].append(owner)
+    inputs[0]["architecture"]["edges"] = [edge]
+    inputs[0]["quality_profile"]["production_files"].append(owner)
+    inputs[0]["modularity"]["coupling_edges"] = [edge]
+
+    assert _results(_compose(inputs)) == ["PASS"] * 8
+
+    inputs[0]["modularity"]["coupling_edges"] = []
+    payload = _compose(inputs)
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
+
+
+def test_malformed_module_boundaries_evidence_blocks_only_gate_four() -> None:
+    inputs = _inputs()
+    block = "MALFORMED_REVIEW_EVIDENCE:module_boundaries"
+    separation = inputs[0]["review_evidence"]["separation_of_concerns"]
+    inputs[0]["review_evidence"] = {"separation_of_concerns": separation}
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS", "PASS", "PASS", "BLOCK", *["PASS"] * 4]
+    assert _entry(payload, 4)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
 
 
 def test_boundary_evidence_poison_blocks_gate_two_only() -> None:

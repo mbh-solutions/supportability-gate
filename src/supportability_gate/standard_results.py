@@ -8,7 +8,12 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from supportability_gate import clause_inventory, contract, standard_block_ownership
+from supportability_gate import (
+    clause_inventory,
+    contract,
+    modularity_policy,
+    standard_block_ownership,
+)
 
 CHECK_CONTEXTS = (
     "Supportability 1 - Cyclomatic Complexity",
@@ -639,7 +644,56 @@ def _s02_architecture(value: object, policy_blocks: list[str], code: str) -> Non
     _s02_edges(row["edges"], code)
 
 
-def _s02_modularity(value: object, policy_blocks: list[str], code: str) -> None:
+def _s02_modularity_paths(
+    changed: tuple[dict[str, Any], ...],
+) -> tuple[list[str], list[str]]:
+    changed_paths = sorted(
+        {
+            item["new_path"]
+            for item in changed
+            if item["head_production"] and item["new_path"] and item["complexity_assessed"]
+        }
+    )
+    new_paths = sorted(
+        {
+            item["new_path"]
+            for item in changed
+            if item["head_production"]
+            and item["new_path"]
+            and item["complexity_assessed"]
+            and (not item["base_production"] or item["old_path"] != item["new_path"])
+        }
+    )
+    return changed_paths, new_paths
+
+
+def _s02_modularity_coverage(source: dict[str, Any], new_paths: list[str]) -> list[dict[str, Any]]:
+    return [
+        {
+            "adapters": sorted(
+                gate["adapter"]
+                for gate in source["gate_coverage"]
+                for command in source["quality_profile"]["commands"]
+                if gate["adapter"] == command["adapter"]
+                and contract.GateAdapter(gate["adapter"], tuple(gate["paths"])).covers(path)
+                and not contract.command_failed(
+                    source["language"],
+                    command["adapter"],
+                    command["executed"],
+                    command["exit_code"],
+                )
+                and path in (*command["observed_paths"], *command["zero_statement_paths"])
+            ),
+            "architecture": path in source["architecture"]["covered_paths"],
+            "path": path,
+        }
+        for path in new_paths
+    ]
+
+
+def _s02_modularity_rows(
+    value: object, policy_blocks: list[str], code: str
+) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
     keys = {"blocks", "changed_paths", "coupling_edges", "coverage", "justifications", "new_paths"}
     row = _s02_exact(value, keys, code)
     blocks = _string_list(row["blocks"], code)
@@ -653,11 +707,82 @@ def _s02_modularity(value: object, policy_blocks: list[str], code: str) -> None:
             raise StandardResultsError(code)
         _s02_strings(coverage["adapters"], code)
     justification_keys = {"basis", "justification", "owner_path", "path"}
-    for item in _s02_rows(row["justifications"], justification_keys, code):
+    justifications = _s02_rows(row["justifications"], justification_keys, code)
+    for item in justifications:
         if item["basis"] not in {"domain", "responsibility"} or any(
             not isinstance(item[name], str) or not item[name] for name in justification_keys
         ):
             raise StandardResultsError(code)
+    return row, blocks, justifications
+
+
+def _s02_modularity(
+    value: object,
+    source: dict[str, Any],
+    changed: tuple[dict[str, Any], ...],
+    policy_blocks: list[str],
+    code: str,
+) -> None:
+    row, blocks, justifications = _s02_modularity_rows(value, policy_blocks, code)
+    if not isinstance(source["architecture"], dict) or not isinstance(
+        source["quality_profile"], dict
+    ):
+        raise StandardResultsError(code)
+    changed_paths, new_paths = _s02_modularity_paths(changed)
+    review = source["review_evidence"]
+    expected_justifications = (
+        review.get("module_boundaries", []) if isinstance(review, dict) else []
+    )
+    expected_coupling = [
+        edge for edge in source["architecture"]["edges"] if edge["source"] in changed_paths
+    ]
+    expected_coverage = _s02_modularity_coverage(source, new_paths)
+    try:
+        expected_blocks = list(
+            modularity_policy.derive_modularity_blocks(
+                tuple(source["production_paths"]),
+                tuple(new_paths),
+                tuple(
+                    modularity_policy.LocationJustification(**item)
+                    for item in expected_justifications
+                ),
+                tuple(source["architecture"]["nodes"]),
+                tuple(
+                    modularity_policy.LocationCoverage(
+                        item["path"], tuple(item["adapters"]), item["architecture"]
+                    )
+                    for item in expected_coverage
+                ),
+                len(source["gate_coverage"]),
+            )
+        )
+    except (contract.ContractError, ValueError):
+        raise StandardResultsError(code) from None
+    gate_four_blocks = sorted(
+        block
+        for block in policy_blocks
+        if any(block.startswith(family) for family in standard_block_ownership.BLOCK_FAMILIES[3])
+    )
+    actual = (
+        row["changed_paths"],
+        row["new_paths"],
+        row["justifications"],
+        row["coupling_edges"],
+        row["coverage"],
+        blocks,
+        gate_four_blocks,
+    )
+    expected = (
+        changed_paths,
+        new_paths,
+        expected_justifications,
+        expected_coupling,
+        expected_coverage,
+        expected_blocks,
+        expected_blocks,
+    )
+    if actual != expected:
+        raise StandardResultsError(code)
 
 
 def _s02_complexity_lists(row: dict[str, Any], code: str) -> None:
@@ -830,6 +955,7 @@ def _s02_complexity_components(
     row: dict[str, Any],
     blocks: list[str],
     technical: list[str],
+    changed: tuple[dict[str, Any], ...],
     identity: RunIdentity,
     code: str,
 ) -> tuple[tuple[str, ...], str | None]:
@@ -850,8 +976,6 @@ def _s02_complexity_components(
         raise StandardResultsError(code)
     if row["architecture"] is not None:
         _s02_architecture(row["architecture"], blocks, code)
-    if row["modularity"] is not None:
-        _s02_modularity(row["modularity"], blocks, code)
     if row["review_evidence"] is not None or review_owners:
         _s02_review(row["review_evidence"], blocks, code)
     profile = (
@@ -859,6 +983,8 @@ def _s02_complexity_components(
         if row["quality_profile"] is not None
         else ((), None, (), ())
     )
+    if row["modularity"] is not None:
+        _s02_modularity(row["modularity"], row, changed, blocks, code)
     failed = {
         block.removeprefix("QUALITY_GATE_FAILED:")
         for block in blocks
@@ -936,7 +1062,7 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     _s02_commands(row["commands"], code, True)
     _s02_gate_coverage(row["gate_coverage"], row["language"], code, common_required)
     quality_adapters, quality_result = _s02_complexity_components(
-        row, blocks, technical, identity, code
+        row, blocks, technical, changed, identity, code
     )
     return _S02Complexity(
         tuple((*blocks, *function_blocks)),
