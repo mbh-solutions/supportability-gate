@@ -442,6 +442,12 @@ jobs:
             --characterization-outcome "${{ steps.characterization.outcome }}" \
             --refactor-outcome "${{ steps.refactor_policy.outcome }}" \
             --quality-outcome "${{ needs.quality-profile.outputs.capture-outcome != 'success' && needs.quality-profile.outputs.capture-outcome || steps.download_quality.outcome != 'success' && steps.download_quality.outcome || steps.artifact_metadata.outcome }}" \
+            --expected-base-characterization-artifact-id "${{ needs.characterize-base.outputs.artifact-id }}" \
+            --expected-base-characterization-artifact-digest "${{ needs.characterize-base.outputs.artifact-digest }}" \
+            --expected-base-characterization-capture-sha256 "${{ needs.characterize-base.outputs.capture-sha256 }}" \
+            --expected-head-characterization-artifact-id "${{ needs.characterize-head.outputs.artifact-id }}" \
+            --expected-head-characterization-artifact-digest "${{ needs.characterize-head.outputs.artifact-digest }}" \
+            --expected-head-characterization-capture-sha256 "${{ needs.characterize-head.outputs.capture-sha256 }}" \
             --expected-quality-artifact-id "${{ needs.quality-profile.outputs.artifact-id }}" \
             --expected-quality-artifact-digest "${{ needs.quality-profile.outputs.artifact-digest }}" \
             --expected-quality-capture-sha256 "${{ needs.quality-profile.outputs.capture-sha256 }}" \

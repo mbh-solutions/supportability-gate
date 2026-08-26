@@ -1896,3 +1896,37 @@ Do not create a new terminal label not authorized by an active milestone directi
   focused reviews, reply to and resolve all three findings, merge normally without bypass, complete
   and clean the Python and frontend canaries, finish issue/Project/ledger readback, refresh and
   activate S07 only, set S06 `Done / Complete / On scope / Yes`, and stop S06.
+
+## Project #10 S07 Gate 5 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
+  completes, live S07 remains `In progress / Missing / On scope / No`. These prospective values
+  become canonical only after the protected pull request closing issue #150 merges normally and
+  every required Python and frontend canary, lane-isolation proof, exact source proof, focused
+  review, cleanup, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gS4`, repository issue #150, and protected source base
+  `ae705cc860118a5f1b12383703dae28174cc1da8`.
+- Responsibility boundary: Gate 5 owns exact manifest identity, authenticated base/head captures,
+  positive artifact identities, artifact and capture digests, driver and golden identities,
+  deterministic replay, behavior compatibility, and changed/high-risk coverage. The independent
+  aggregate result contract binds serialized Gate 5 identity, artifacts, scenarios, fingerprint,
+  coverage, and derivable blocks to authenticated change and external workflow artifact facts
+  before composing lane results.
+- Direct source evidence: the first exact S07 targeted run passed 165 cases and exposed 26 stale
+  aggregate-fixture assumptions; after correcting only those fixture facts, the exact 26 previously
+  failing nodes passed. The proof covers Python and TypeScript positives, every ordered Gate 5 block
+  family, zero-valued artifact identity, base/head digest mismatch, corrected missing-head
+  classification, semantic-forgery rejection, external-artifact binding, and authentic poison
+  isolated to Gate 5. Final full-source proof remains required on the frozen terminal head.
+- Qualification limit: repository-only definition, driver, golden, authentication, stale-artifact,
+  replay, and execution defects remain trusted outputs of the repository-backed verifier. Aggregate
+  composition independently reconstructs every semantic fact present in the serialized result and
+  binds external artifact identities; it does not reread the target repository or execute target
+  code.
+- Remaining work: pass exact source and hosted deterministic proof, complete eight focused reviews
+  serially on one frozen head, resolve all findings in one bounded remediation batch if needed,
+  merge normally without bypass, complete and clean the Python/frontend missing-coverage canaries,
+  finish issue/Project/ledger readback, refresh and activate S08 only, set S07
+  `Done / Complete / On scope / Yes`, and stop S07.

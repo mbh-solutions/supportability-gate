@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from supportability_gate import (
+    characterization,
     clause_inventory,
     contract,
     modularity_policy,
@@ -163,21 +164,6 @@ _S02_CHANGED_KEYS = {
     "old_path",
     "status",
 }
-_S02_CHARACTERIZATION_KEYS = {
-    "artifacts",
-    "base_sha",
-    "behavior_fingerprint",
-    "coverage",
-    "head_sha",
-    "manifest_blob_sha",
-    "manifest_sha256",
-    "overall_result",
-    "policy_blocks",
-    "repository",
-    "scenarios",
-    "schema_version",
-    "workflow_sha",
-}
 _S02_REFACTOR_KEYS = {
     "applicable",
     "authorization",
@@ -255,6 +241,7 @@ class _S02Complexity:
     blocks: tuple[str, ...]
     technical: tuple[str, ...]
     changed_files: tuple[dict[str, Any], ...]
+    characterization_paths: tuple[str, ...]
     quality_adapters: tuple[str, ...]
     quality_result: str | None
     result: str
@@ -1006,6 +993,24 @@ def _s02_complexity_components(
     return profile[0], profile[1]
 
 
+def _s02_characterization_paths(
+    row: dict[str, Any], changed: tuple[dict[str, Any], ...]
+) -> tuple[str, ...]:
+    head_paths = {
+        item["new_path"] for item in changed if item["head_production"] and item["new_path"]
+    }
+    deleted_paths = {
+        item["old_path"]
+        for item in changed
+        if item["base_production"] and item["old_path"] and item["new_path"] is None
+    }
+    return tuple(
+        characterization.derive_required_paths(
+            head_paths, set(row["high_risk_paths"]), deleted_paths
+        )
+    )
+
+
 def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     code = "MALFORMED_COMPLEXITY_RESULT"
     row = _s02_exact(value, _S02_COMPLEXITY_KEYS, code)
@@ -1068,6 +1073,7 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         tuple((*blocks, *function_blocks)),
         tuple(technical),
         changed,
+        _s02_characterization_paths(row, changed),
         quality_adapters,
         quality_result,
         result,
@@ -1104,85 +1110,29 @@ def _s02_apply_block(
         state.policy(block, f"{source}:policy-blocks", owners)
 
 
-def _s02_characterization_artifact(value: object, passing: bool, code: str) -> None:
-    row = _s02_exact(value, {"capture_sha256", "digest", "id"}, code)
-    capture = row["capture_sha256"]
-    if (
-        not isinstance(row["id"], str)
-        or not row["id"].isdecimal()
-        or int(row["id"]) < 1
-        or not _s02_sha(row["digest"], _S02_SHA64)
-        or (capture is not None and not _s02_sha(capture, _S02_SHA64))
-        or (passing and capture is None)
-    ):
-        raise StandardResultsError(code)
-
-
-def _s02_characterization_scenario(value: object, passing: bool, code: str) -> None:
-    keys = {
-        "base_behavior_sha256",
-        "command",
-        "compatibility",
-        "covers",
-        "golden_behavior_sha256",
-        "head_behavior_sha256",
-        "id",
-        "kind",
-    }
-    row = _s02_exact(value, keys, code)
-    hashes = tuple(row[name] for name in keys if name.endswith("_sha256"))
-    command = row["command"]
-    if (
-        not isinstance(row["id"], str)
-        or not row["id"]
-        or row["kind"] not in {"test", "sample_io", "snapshot", "golden", "cli", "regression"}
-        or row["compatibility"] not in {"PASS", "BLOCK"}
-        or any(item is not None and not _s02_sha(item, _S02_SHA64) for item in hashes)
-        or (command is not None and not isinstance(command, list))
-    ):
-        raise StandardResultsError(code)
-    _s02_strings(row["covers"], code, True)
-    if command is not None:
-        _s02_strings(command, code, True)
-    if passing and (
-        row["compatibility"] != "PASS" or command is None or any(item is None for item in hashes)
-    ):
-        raise StandardResultsError(code)
-
-
-def _s02_characterization(value: object, identity: RunIdentity) -> list[str]:
-    code = "MALFORMED_CHARACTERIZATION_RESULT"
-    row = _s02_exact(value, _S02_CHARACTERIZATION_KEYS, code)
-    actual = tuple(row[name] for name in ("repository", "base_sha", "head_sha", "workflow_sha"))
-    expected = (
-        f"github.com/{identity.repository}",
-        identity.base_sha,
-        identity.head_sha,
-        identity.workflow_sha,
-    )
-    if actual != expected:
-        raise StandardResultsError("CHARACTERIZATION_RESULT_BINDING_MISMATCH")
-    blocks = _string_list(row["policy_blocks"], code)
-    if row["schema_version"] != "characterization-result.v1":
-        raise StandardResultsError(code)
-    if row["overall_result"] != ("BLOCK" if blocks else "PASS"):
-        raise StandardResultsError(code)
-    passing = not blocks
-    if (
-        not _s02_sha(row["behavior_fingerprint"], _S02_SHA64)
-        or not _s02_sha(row["manifest_blob_sha"], _S02_SHA40)
-        or not _s02_sha(row["manifest_sha256"], _S02_SHA64)
-    ):
-        raise StandardResultsError(code)
-    artifacts = _s02_exact(row["artifacts"], {"base", "head"}, code)
-    for side in ("base", "head"):
-        _s02_characterization_artifact(artifacts[side], passing, code)
-    coverage = _s02_exact(row["coverage"], {"covered_paths", "required_paths"}, code)
-    _s02_strings(coverage["covered_paths"], code)
-    _s02_strings(coverage["required_paths"], code)
-    for scenario in _s02_dict_list(row["scenarios"], code, True):
-        _s02_characterization_scenario(scenario, passing, code)
-    return blocks
+def _s02_characterization(
+    value: object,
+    identity: RunIdentity,
+    required_paths: tuple[str, ...] | None,
+    expected_artifacts: object,
+) -> list[str]:
+    try:
+        return characterization.validate_result(
+            value,
+            repository=f"github.com/{identity.repository}",
+            base_sha=identity.base_sha,
+            head_sha=identity.head_sha,
+            workflow_sha=identity.workflow_sha,
+            required_paths=required_paths,
+            expected_artifacts=expected_artifacts,
+        )
+    except characterization.CharacterizationError as error:
+        code = (
+            error.code
+            if error.code == "CHARACTERIZATION_RESULT_BINDING_MISMATCH"
+            else "MALFORMED_CHARACTERIZATION_RESULT"
+        )
+        raise StandardResultsError(code) from None
 
 
 def _s02_refactor_authorization(value: object, comment_id: object, code: str) -> None:
@@ -1453,13 +1403,17 @@ def _s02_add_behavior(
     characterization: object,
     refactor: object,
     identity: RunIdentity,
+    data: _S02Complexity | None,
+    expected_artifacts: object,
     errors: dict[str, str],
     outcomes: dict[str, str],
     short: bool,
 ) -> None:
     if "gate_install" in errors or short:
         return
-    if not _s02_add_characterization(state, characterization, identity, errors, outcomes):
+    if not _s02_add_characterization(
+        state, characterization, identity, data, expected_artifacts, errors, outcomes
+    ):
         return
     _s02_add_refactor(state, refactor, characterization, identity, errors, outcomes)
 
@@ -1468,6 +1422,8 @@ def _s02_add_characterization(
     state: _S02State,
     characterization: object,
     identity: RunIdentity,
+    data: _S02Complexity | None,
+    expected_artifacts: object,
     errors: dict[str, str],
     outcomes: dict[str, str],
 ) -> bool:
@@ -1476,7 +1432,12 @@ def _s02_add_characterization(
         _s02_source_failure(state, "characterization", char_error)
         return False
     try:
-        blocks = _s02_characterization(characterization, identity)
+        blocks = _s02_characterization(
+            characterization,
+            identity,
+            data.characterization_paths if data is not None else None,
+            expected_artifacts,
+        )
     except StandardResultsError as error:
         _s02_source_failure(state, "characterization", error.code)
         return False
@@ -1557,6 +1518,7 @@ def compose_results(
     identity: RunIdentity,
     *,
     expected_quality_artifact: dict[str, object] | None,
+    expected_characterization_artifacts: dict[str, object] | None = None,
     source_outcomes: dict[str, str] | None = None,
     source_errors: dict[str, str] | None = None,
 ) -> dict[str, object]:
@@ -1570,7 +1532,17 @@ def compose_results(
     short = _s02_authenticated_short(data)
     state = _S02State(frozenset({7}) if short else standard_block_ownership.ALL_STANDARDS)
     _s02_add_complexity(state, data, complexity_error, errors)
-    _s02_add_behavior(state, characterization, refactor, identity, errors, outcomes, short)
+    _s02_add_behavior(
+        state,
+        characterization,
+        refactor,
+        identity,
+        data,
+        expected_characterization_artifacts,
+        errors,
+        outcomes,
+        short,
+    )
     artifact = _s02_add_quality(
         state,
         quality_provenance,

@@ -277,6 +277,11 @@ def _verify(
     head_sha: str,
     base_path: Path,
     head_path: Path,
+    *,
+    base_artifact_id: str = "10",
+    head_artifact_id: str = "11",
+    base_capture_sha256: str | None = None,
+    head_capture_sha256: str | None = None,
 ) -> dict[str, object]:
     return characterization.verify_evidence(
         repository,
@@ -289,15 +294,23 @@ def _verify(
         workflow_sha="f" * 40,
         run_id="456",
         run_attempt="1",
-        base_artifact_id="10",
+        base_artifact_id=base_artifact_id,
         base_artifact_digest="a" * 64,
         base_capture_sha256=(
-            hashlib.sha256(base_path.read_bytes()).hexdigest() if base_path.exists() else "0" * 64
+            base_capture_sha256
+            if base_capture_sha256 is not None
+            else hashlib.sha256(base_path.read_bytes()).hexdigest()
+            if base_path.exists()
+            else "0" * 64
         ),
-        head_artifact_id="11",
+        head_artifact_id=head_artifact_id,
         head_artifact_digest="b" * 64,
         head_capture_sha256=(
-            hashlib.sha256(head_path.read_bytes()).hexdigest() if head_path.exists() else "0" * 64
+            head_capture_sha256
+            if head_capture_sha256 is not None
+            else hashlib.sha256(head_path.read_bytes()).hexdigest()
+            if head_path.exists()
+            else "0" * 64
         ),
     )
 
@@ -356,6 +369,51 @@ def test_missing_baseline_and_head_only_claim_block(tmp_path: Path) -> None:
     assert "HEAD_ONLY_CHARACTERIZATION_CLAIM" in result["policy_blocks"]
 
 
+def test_missing_head_is_incomplete_not_head_only(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, _ = _captures(repository, base_checkout, base_sha, head_sha)
+    base_path, _ = _write_artifacts(tmp_path, base, {})
+
+    result = _verify(repository, base_sha, head_sha, base_path, tmp_path / "missing-head.json")
+
+    assert "INCOMPLETE_CHARACTERIZATION_EVIDENCE" in result["policy_blocks"]
+    assert "HEAD_ONLY_CHARACTERIZATION_CLAIM" not in result["policy_blocks"]
+
+
+def test_changed_characterization_definition_blocks(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, _ = _repository(tmp_path)
+    changed = _scenario("existing", "src/sample.py")
+    changed["kind"] = "regression"
+    _write(repository / characterization.MANIFEST_PATH, _manifest([changed]))
+    head_sha = _commit(repository, "change characterization definition")
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "CHANGED_CHARACTERIZATION_DEFINITION:existing" in result["policy_blocks"]
+
+
+def test_removed_characterization_scenario_blocks(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, _ = _repository(tmp_path)
+    replacement = _scenario("replacement", ".supportability.toml")
+    _write(repository / characterization.MANIFEST_PATH, _manifest([replacement]))
+    _add_scenario_files(
+        repository,
+        "replacement",
+        ".supportability.toml",
+        "python",
+        PYTHON_CONTRACT,
+    )
+    head_sha = _commit(repository, "remove characterization scenario")
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "REMOVED_CHARACTERIZATION_SCENARIO:existing" in result["policy_blocks"]
+
+
 def test_changed_golden_output_blocks(tmp_path: Path) -> None:
     repository, base_checkout, base_sha, head_sha = _repository(tmp_path, changed_golden=True)
     base, head = _captures(repository, base_checkout, base_sha, head_sha)
@@ -377,6 +435,45 @@ def test_unauthenticated_proof_text_blocks(tmp_path: Path) -> None:
     assert "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE" in result["policy_blocks"]
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "block"),
+    [
+        (
+            "kind",
+            "regression",
+            "CHARACTERIZATION_DEFINITION_MISMATCH:existing",
+        ),
+        ("exit_code", 1, "CHARACTERIZATION_EXECUTION_FAILED:existing"),
+        ("golden_blob_sha", "0" * 40, "GOLDEN_ARTIFACT_IDENTITY_MISMATCH:existing"),
+        ("golden_behavior_sha256", "0" * 64, "GOLDEN_BEHAVIOR_MISMATCH:existing"),
+    ],
+)
+def test_scenario_capture_claim_mismatch_blocks(
+    tmp_path: Path, field: str, value: object, block: str
+) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    scenarios = head["scenarios"]
+    assert isinstance(scenarios, list) and isinstance(scenarios[0], dict)
+    scenarios[0][field] = value
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert block in result["policy_blocks"]
+
+
+def test_characterization_fingerprint_mismatch_blocks(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    head["behavior_fingerprint"] = "0" * 64
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "CHARACTERIZATION_FINGERPRINT_MISMATCH" in result["policy_blocks"]
+
+
 def test_stale_artifact_blocks(tmp_path: Path) -> None:
     repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
     base, head = _captures(repository, base_checkout, base_sha, head_sha)
@@ -386,6 +483,17 @@ def test_stale_artifact_blocks(tmp_path: Path) -> None:
     result = _verify(repository, base_sha, head_sha, *paths)
 
     assert "STALE_POST_CHANGE_ARTIFACT" in result["policy_blocks"]
+
+
+def test_stale_baseline_artifact_blocks(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    base["target_sha"] = head_sha
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "STALE_BASELINE_ARTIFACT" in result["policy_blocks"]
 
 
 def test_incompatible_behavior_blocks(tmp_path: Path) -> None:
@@ -435,25 +543,21 @@ def test_capture_digest_mismatch_blocks(tmp_path: Path) -> None:
     base, head = _captures(repository, base_checkout, base_sha, head_sha)
     paths = _write_artifacts(tmp_path, base, head)
 
-    result = characterization.verify_evidence(
-        repository,
-        base_sha,
-        head_sha,
-        *paths,
-        repository_name="example/fixture",
-        repository_id="123",
-        workflow_sha="f" * 40,
-        run_id="456",
-        run_attempt="1",
-        base_artifact_id="10",
-        base_artifact_digest="a" * 64,
-        base_capture_sha256="0" * 64,
-        head_artifact_id="11",
-        head_artifact_digest="b" * 64,
-        head_capture_sha256=hashlib.sha256(paths[1].read_bytes()).hexdigest(),
-    )
+    base_result = _verify(repository, base_sha, head_sha, *paths, base_capture_sha256="0" * 64)
+    head_result = _verify(repository, base_sha, head_sha, *paths, head_capture_sha256="0" * 64)
 
-    assert "BASE_CAPTURE_DIGEST_MISMATCH" in result["policy_blocks"]
+    assert "BASE_CAPTURE_DIGEST_MISMATCH" in base_result["policy_blocks"]
+    assert "HEAD_CAPTURE_DIGEST_MISMATCH" in head_result["policy_blocks"]
+
+
+def test_zero_artifact_id_is_invalid(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths, base_artifact_id="0")
+
+    assert "INVALID_ARTIFACT_IDENTITY" in result["policy_blocks"]
 
 
 def test_capture_requires_github_hosted_runner(

@@ -18,6 +18,8 @@ CAPTURE_SCHEMA = "characterization-capture.v1"
 RESULT_SCHEMA = "characterization-result.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
 SCENARIO_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+ARTIFACT_ID = re.compile(r"[1-9][0-9]*")
+SHA = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 MAX_JSON_BYTES = 1_000_000
 
@@ -303,12 +305,19 @@ def _coverage_blocks(
         for item in changes
         if item.new_path and policy.is_production_path(item.new_path)
     }
-    required = sorted(changed | (set(policy.high_risk_paths) - deleted_paths))
+    required = derive_required_paths(changed, set(policy.high_risk_paths), deleted_paths)
     covered = sorted({path for item in manifest.scenarios for path in item.covers})
     blocks = [
         f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered
     ]
     return blocks, required, covered
+
+
+def derive_required_paths(
+    changed_paths: set[str], high_risk_paths: set[str], deleted_paths: set[str]
+) -> list[str]:
+    """Return canonical changed and retained high-risk characterization coverage."""
+    return sorted(changed_paths | (high_risk_paths - deleted_paths))
 
 
 def _verified_capture_rows(
@@ -367,6 +376,281 @@ def _compatibility_evidence(
             }
         )
     return blocks, scenarios
+
+
+def _result_paths(value: object, field: str) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    try:
+        paths = tuple(contract.normalize_repository_path(item, field) for item in value)
+    except contract.ContractError:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT") from None
+    if len(paths) != len(set(paths)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return paths
+
+
+def _result_scenario(value: object) -> dict[str, Any]:
+    keys = {
+        "base_behavior_sha256",
+        "command",
+        "compatibility",
+        "covers",
+        "golden_behavior_sha256",
+        "head_behavior_sha256",
+        "id",
+        "kind",
+    }
+    row = _exact_keys(value, keys, "MALFORMED_CHARACTERIZATION_RESULT")
+    hashes = tuple(row[name] for name in keys if name.endswith("_sha256"))
+    command = row["command"]
+    if (
+        not isinstance(row["id"], str)
+        or SCENARIO_ID.fullmatch(row["id"]) is None
+        or not isinstance(row["kind"], str)
+        or row["kind"] not in KINDS
+        or not isinstance(row["compatibility"], str)
+        or row["compatibility"] not in {"PASS", "BLOCK"}
+        or any(
+            item is not None and (not isinstance(item, str) or SHA256.fullmatch(item) is None)
+            for item in hashes
+        )
+        or (
+            command is not None
+            and (
+                not isinstance(command, list)
+                or not command
+                or any(not isinstance(item, str) or not item for item in command)
+            )
+        )
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    if not _result_paths(row["covers"], "scenarios.covers"):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return row
+
+
+def _result_scenarios(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not value or len(value) > 50:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    rows = [_result_scenario(item) for item in value]
+    identifiers = [str(item["id"]) for item in rows]
+    if identifiers != sorted(set(identifiers)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    for row in rows:
+        compatible = bool(
+            row["base_behavior_sha256"] is not None
+            and row["base_behavior_sha256"] == row["head_behavior_sha256"]
+        )
+        if row["compatibility"] != ("PASS" if compatible else "BLOCK"):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return rows
+
+
+def _result_artifact(value: object) -> dict[str, Any]:
+    row = _exact_keys(
+        value, {"capture_sha256", "digest", "id"}, "MALFORMED_CHARACTERIZATION_RESULT"
+    )
+    if (
+        not isinstance(row["id"], str)
+        or not isinstance(row["digest"], str)
+        or (
+            row["capture_sha256"] is not None
+            and (
+                not isinstance(row["capture_sha256"], str)
+                or SHA256.fullmatch(row["capture_sha256"]) is None
+            )
+        )
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return row
+
+
+def _result_artifacts(
+    value: object, expected: object
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    rows = _exact_keys(value, {"base", "head"}, "MALFORMED_CHARACTERIZATION_RESULT")
+    trusted = (
+        rows
+        if expected is None
+        else _exact_keys(expected, {"base", "head"}, "MALFORMED_CHARACTERIZATION_RESULT")
+    )
+    artifacts = {side: _result_artifact(rows[side]) for side in ("base", "head")}
+    external = {side: _result_artifact(trusted[side]) for side in ("base", "head")}
+    if any(
+        (artifacts[side]["id"], artifacts[side]["digest"])
+        != (external[side]["id"], external[side]["digest"])
+        for side in ("base", "head")
+    ):
+        raise CharacterizationError("CHARACTERIZATION_RESULT_BINDING_MISMATCH")
+    blocks = [
+        f"{side.upper()}_CAPTURE_DIGEST_MISMATCH"
+        for side in ("base", "head")
+        if artifacts[side]["capture_sha256"] is not None
+        and artifacts[side]["capture_sha256"] != external[side]["capture_sha256"]
+    ]
+    if any(
+        ARTIFACT_ID.fullmatch(external[side]["id"]) is None
+        or SHA256.fullmatch(external[side]["digest"]) is None
+        or not isinstance(external[side]["capture_sha256"], str)
+        or SHA256.fullmatch(external[side]["capture_sha256"]) is None
+        for side in ("base", "head")
+    ):
+        blocks.append("INVALID_ARTIFACT_IDENTITY")
+    if artifacts["base"]["capture_sha256"] is None and artifacts["head"]["capture_sha256"]:
+        blocks.append("HEAD_ONLY_CHARACTERIZATION_CLAIM")
+    return artifacts, blocks
+
+
+def _result_policy_blocks(row: dict[str, Any]) -> list[str]:
+    value = row["policy_blocks"]
+    if (
+        not isinstance(value, list)
+        or any(not isinstance(item, str) or not item for item in value)
+        or value != sorted(set(value))
+        or row["overall_result"] != ("BLOCK" if value else "PASS")
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return value
+
+
+def _result_coverage(
+    value: object,
+    scenarios: list[dict[str, Any]],
+    required_paths: tuple[str, ...] | None,
+) -> list[str]:
+    row = _exact_keys(
+        value, {"covered_paths", "required_paths"}, "MALFORMED_CHARACTERIZATION_RESULT"
+    )
+    covered = _result_paths(row["covered_paths"], "coverage.covered_paths")
+    required = _result_paths(row["required_paths"], "coverage.required_paths")
+    expected_covered = tuple(
+        sorted({path for scenario in scenarios for path in scenario["covers"]})
+    )
+    if (
+        covered != expected_covered
+        or required != tuple(sorted(required))
+        or (required_paths is not None and required != required_paths)
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return [f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered]
+
+
+def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> list[str]:
+    derived: list[str] = []
+    incomplete = any(
+        block
+        in {"INCOMPLETE_CHARACTERIZATION_EVIDENCE", "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"}
+        for block in blocks
+    )
+    for row in rows:
+        identifier = row["id"]
+        base = row["base_behavior_sha256"]
+        head = row["head_behavior_sha256"]
+        golden = row["golden_behavior_sha256"]
+        execution_failed = f"CHARACTERIZATION_EXECUTION_FAILED:{identifier}" in blocks
+        if (
+            ((row["command"] is None or golden is None) and not incomplete)
+            or (
+                base is None
+                and not (incomplete or execution_failed or "MISSING_BASELINE" in blocks)
+            )
+            or (head is None and not (incomplete or execution_failed))
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+        if base is not None and head is not None and base != head:
+            derived.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:{identifier}")
+        behavior_mismatch = golden is not None and any(
+            behavior is not None and behavior != golden for behavior in (base, head)
+        )
+        if golden is not None and execution_failed and (base is None or head is None):
+            behavior_mismatch = True
+        if behavior_mismatch:
+            derived.append(f"GOLDEN_BEHAVIOR_MISMATCH:{identifier}")
+    return derived
+
+
+def validate_result(
+    value: object,
+    *,
+    repository: str,
+    base_sha: str,
+    head_sha: str,
+    workflow_sha: str,
+    required_paths: tuple[str, ...] | None,
+    expected_artifacts: object = None,
+) -> list[str]:
+    """Validate serialized Gate 5 facts without repository or target execution."""
+    keys = {
+        "artifacts",
+        "base_sha",
+        "behavior_fingerprint",
+        "coverage",
+        "head_sha",
+        "manifest_blob_sha",
+        "manifest_sha256",
+        "overall_result",
+        "policy_blocks",
+        "repository",
+        "scenarios",
+        "schema_version",
+        "workflow_sha",
+    }
+    row = _exact_keys(value, keys, "MALFORMED_CHARACTERIZATION_RESULT")
+    if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
+        repository,
+        base_sha,
+        head_sha,
+        workflow_sha,
+    ):
+        raise CharacterizationError("CHARACTERIZATION_RESULT_BINDING_MISMATCH")
+    if (
+        row["schema_version"] != RESULT_SCHEMA
+        or not isinstance(row["manifest_blob_sha"], str)
+        or SHA.fullmatch(row["manifest_blob_sha"]) is None
+        or not isinstance(row["manifest_sha256"], str)
+        or SHA256.fullmatch(row["manifest_sha256"]) is None
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    blocks = _result_policy_blocks(row)
+    artifacts, derived = _result_artifacts(row["artifacts"], expected_artifacts)
+    if artifacts["base"]["capture_sha256"] is None and not any(
+        block in {"MISSING_BASELINE", "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"}
+        for block in blocks
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    if artifacts["head"]["capture_sha256"] is None and not any(
+        block
+        in {
+            "INCOMPLETE_CHARACTERIZATION_EVIDENCE",
+            "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+        }
+        for block in blocks
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    scenarios = _result_scenarios(row["scenarios"])
+    fingerprint = _sha256(
+        _canonical([[item["id"], item["head_behavior_sha256"]] for item in scenarios])
+    )
+    if row["behavior_fingerprint"] != fingerprint:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    derived.extend(_result_scenario_blocks(scenarios, blocks))
+    derived.extend(_result_coverage(row["coverage"], scenarios, required_paths))
+    exact_families = (
+        "BASE_CAPTURE_DIGEST_MISMATCH",
+        "HEAD_CAPTURE_DIGEST_MISMATCH",
+        "HEAD_ONLY_CHARACTERIZATION_CLAIM",
+        "GOLDEN_BEHAVIOR_MISMATCH:",
+        "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
+        "INVALID_ARTIFACT_IDENTITY",
+        "MISSING_CHARACTERIZATION_COVERAGE:",
+    )
+    actual = sorted(
+        block for block in blocks if any(block.startswith(family) for family in exact_families)
+    )
+    if actual != sorted(set(derived)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return blocks
 
 
 def _verification_result(
@@ -450,7 +734,7 @@ def verify_evidence(
     }
     manifest = _manifest(repository, head_sha, records)
     base, base_error = _load_capture(base_path, "MISSING_BASELINE")
-    head, head_error = _load_capture(head_path, "HEAD_ONLY_CHARACTERIZATION_CLAIM")
+    head, head_error = _load_capture(head_path, "INCOMPLETE_CHARACTERIZATION_EVIDENCE")
     blocks = [item for item in (base_error, head_error) if item]
     if base is None and head is not None:
         blocks.append("HEAD_ONLY_CHARACTERIZATION_CLAIM")
@@ -485,8 +769,8 @@ def verify_evidence(
     coverage_blocks, required, covered = _coverage_blocks(policy, manifest, changes, deleted_paths)
     blocks.extend(coverage_blocks)
     if (
-        not base_artifact_id.isdecimal()
-        or not head_artifact_id.isdecimal()
+        ARTIFACT_ID.fullmatch(base_artifact_id) is None
+        or ARTIFACT_ID.fullmatch(head_artifact_id) is None
         or SHA256.fullmatch(base_artifact_digest) is None
         or SHA256.fullmatch(base_capture_sha256) is None
         or SHA256.fullmatch(head_artifact_digest) is None
@@ -495,7 +779,7 @@ def verify_evidence(
         blocks.append("INVALID_ARTIFACT_IDENTITY")
     compatibility_blocks, scenarios = _compatibility_evidence(manifest, base_rows, head_rows)
     blocks.extend(compatibility_blocks)
-    return _verification_result(
+    result = _verification_result(
         identity,
         manifest,
         base,
@@ -510,6 +794,27 @@ def verify_evidence(
         head_artifact_id,
         head_artifact_digest,
     )
+    validate_result(
+        result,
+        repository=identity.remote,
+        base_sha=identity.base_sha,
+        head_sha=identity.head_sha,
+        workflow_sha=workflow_sha,
+        required_paths=tuple(required),
+        expected_artifacts={
+            "base": {
+                "capture_sha256": base_capture_sha256,
+                "digest": base_artifact_digest,
+                "id": base_artifact_id,
+            },
+            "head": {
+                "capture_sha256": head_capture_sha256,
+                "digest": head_artifact_digest,
+                "id": head_artifact_id,
+            },
+        },
+    )
+    return result
 
 
 def _write_json(path: Path, value: object) -> bytes:

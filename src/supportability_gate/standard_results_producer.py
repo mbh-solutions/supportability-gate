@@ -100,6 +100,23 @@ def _outcomes(arguments: argparse.Namespace) -> dict[str, str]:
     }
 
 
+def _expected_characterization(arguments: argparse.Namespace) -> dict[str, object] | None:
+    values = (
+        arguments.expected_base_characterization_artifact_id,
+        arguments.expected_base_characterization_artifact_digest,
+        arguments.expected_base_characterization_capture_sha256,
+        arguments.expected_head_characterization_artifact_id,
+        arguments.expected_head_characterization_artifact_digest,
+        arguments.expected_head_characterization_capture_sha256,
+    )
+    if all(value is None for value in values):
+        return None
+    return {
+        "base": {"id": values[0], "digest": values[1], "capture_sha256": values[2]},
+        "head": {"id": values[3], "digest": values[4], "capture_sha256": values[5]},
+    }
+
+
 def _compose(arguments: argparse.Namespace) -> dict[str, object]:
     sources, errors = _load_sources(arguments)
     if arguments.install_outcome != "success":
@@ -110,6 +127,7 @@ def _compose(arguments: argparse.Namespace) -> dict[str, object]:
         sources["refactor"],
         sources["quality_provenance"],
         _identity(arguments),
+        expected_characterization_artifacts=_expected_characterization(arguments),
         expected_quality_artifact={
             "capture_sha256": arguments.expected_quality_capture_sha256,
             "digest": arguments.expected_quality_artifact_digest,
@@ -143,6 +161,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-quality-artifact-id", required=True)
     parser.add_argument("--expected-quality-artifact-digest", required=True)
     parser.add_argument("--expected-quality-capture-sha256", required=True)
+    parser.add_argument("--expected-base-characterization-artifact-id")
+    parser.add_argument("--expected-base-characterization-artifact-digest")
+    parser.add_argument("--expected-base-characterization-capture-sha256")
+    parser.add_argument("--expected-head-characterization-artifact-id")
+    parser.add_argument("--expected-head-characterization-artifact-digest")
+    parser.add_argument("--expected-head-characterization-capture-sha256")
     parser.add_argument("--complexity-outcome", required=True, choices=GITHUB_OUTCOMES)
     parser.add_argument("--characterization-outcome", required=True, choices=GITHUB_OUTCOMES)
     parser.add_argument("--install-outcome", required=True, choices=GITHUB_OUTCOMES)
