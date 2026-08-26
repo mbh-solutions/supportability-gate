@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S06 issue #149 is the sole active slice
-Next milestone authorized: S07 only after exact protected S06 completion and transition readback
+Current authorized work: Project #10 S07 issue #150 is the sole active slice
+Next milestone authorized: S08 only after exact protected S07 correction, canaries, and transition readback
 ```
 
 ## Milestone transition rules
@@ -1899,15 +1899,17 @@ Do not create a new terminal label not authorized by an active milestone directi
 
 ## Project #10 S07 Gate 5 qualification
 
-- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+- Prospective terminal result recorded by the protected S07 ledger transactions: Status `COMPLETE`;
   Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
   completes, live S07 remains `In progress / Missing / On scope / No`. These prospective values
-  become canonical only after the protected pull request closing issue #150 merges normally and
-  every required Python and frontend canary, lane-isolation proof, exact source proof, focused
-  review, cleanup, issue, and Project readback succeeds.
+  become canonical only after the bounded corrective pull request closing issue #150 merges
+  normally and every required Python and frontend canary, lane-isolation proof, exact source proof,
+  focused review, cleanup, issue, and Project readback succeeds.
 - Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
   `PVTI_lADOEmzFKc4BhXlKzg33gS4`, repository issue #150, and protected source base
   `ae705cc860118a5f1b12383703dae28174cc1da8`.
+- Corrective authority: owner comment `5424717850` binds the necessary isolated correction to
+  protected corrective base `064aa0e2e26d151904a8a8c333a6af66ca5e123e`.
 - Responsibility boundary: Gate 5 owns exact manifest identity, authenticated base/head captures,
   positive artifact identities, artifact and capture digests, driver and golden identities,
   deterministic replay, behavior compatibility, and changed/high-risk coverage. The independent
@@ -1933,12 +1935,24 @@ Do not create a new terminal label not authorized by an active milestone directi
   strengthened aggregate rejection boundary. Finding `3862055054` was rejected with evidence as
   plan-conflicting because the hosted workflow always supplies all six external artifact facts,
   while the pinned unchanged legacy aggregate-boundary driver deliberately omits the complete set.
+- Initial protected delivery: PR #163 final head `1e704aadeb516191e76928601ae97f3a4df2c187`
+  passed Source Validation run/job `32962972062`/`98159196289` and required run `32962972119`
+  attempt 2, then normally squash-merged as source main
+  `064aa0e2e26d151904a8a8c333a6af66ca5e123e` through passing rule suite `3826664325`.
+- Canary-preflight correction: exact merged source still converted a canonical Gate 5 policy BLOCK
+  into Gate 6 `NON_RUNNABLE_LOGICAL_STEP` and `MISSING_RUNNABILITY_COVERAGE`. Issue #150 was
+  reopened, and owner comment `5424717850` authorized one bounded corrective PR under the issue's
+  necessary isolated-binding repair scope. Gate 6 now preserves schema and identity checks but
+  validates coverage and compatibility only for characterization evidence that claims PASS; one
+  direct RED/GREEN regression protects the Gate-5-only boundary while a forged incompatible PASS
+  remains fail-closed in Gate 6. The corrective PR receives a fresh PR-scoped eight-focus lifecycle;
+  no PR #163 review artifact is reused.
 - Qualification limit: repository-only definition, driver, golden, authentication, stale-artifact,
   replay, and execution defects remain trusted outputs of the repository-backed verifier. Aggregate
   composition independently reconstructs every semantic fact present in the serialized result and
   binds external artifact identities; it does not reread the target repository or execute target
   code.
-- Remaining work: pass exact final-head source and hosted deterministic proof without repeating any
-  focused review, reply to and resolve the supported findings, merge normally without bypass,
+- Remaining work: pass exact corrective source and hosted deterministic proof, complete one fresh
+  eight-focus lifecycle on the corrective PR, resolve every finding, merge normally without bypass,
   complete and clean the Python/frontend missing-coverage canaries, finish issue/Project/ledger
   readback, refresh and activate S08 only, and set S07 `Done / Complete / On scope / Yes`.
