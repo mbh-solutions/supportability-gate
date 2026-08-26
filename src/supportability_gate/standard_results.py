@@ -1069,6 +1069,11 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     quality_adapters, quality_result = _s02_complexity_components(
         row, blocks, technical, changed, identity, code
     )
+    if (
+        row["quality_profile"] is not None
+        and row["high_risk_paths"] != row["quality_profile"]["high_risk_paths"]
+    ):
+        raise StandardResultsError(code)
     return _S02Complexity(
         tuple((*blocks, *function_blocks)),
         tuple(technical),

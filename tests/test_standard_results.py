@@ -714,6 +714,10 @@ def _gate_five_poison(
         expected["base"]["id"] = "0"
     elif block == "MISSING_CHARACTERIZATION_COVERAGE:src/risk.py":
         inputs[0]["high_risk_paths"] = ["src/risk.py"]
+        profile = inputs[0]["quality_profile"]
+        profile["high_risk_paths"] = ["src/risk.py"]
+        profile["production_files"].append("src/risk.py")
+        profile["commands"][0]["observed_paths"].append("src/risk.py")
         characterization["coverage"]["required_paths"].append("src/risk.py")
         characterization["coverage"]["required_paths"].sort()
     elif block in {"HEAD_ONLY_CHARACTERIZATION_CLAIM", "MISSING_BASELINE"}:
@@ -856,6 +860,18 @@ def test_characterization_artifacts_require_external_binding(side: str, field: s
         _entry(payload, standard)["technical_errors"]
         == ["CHARACTERIZATION_RESULT_BINDING_MISMATCH"]
         for standard in (5, 6)
+    )
+
+
+def test_high_risk_paths_require_authenticated_profile_binding() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["high_risk_paths"] = ["src/risk.py"]
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
     )
 
 

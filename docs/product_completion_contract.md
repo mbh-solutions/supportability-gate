@@ -1918,15 +1918,27 @@ Do not create a new terminal label not authorized by an active milestone directi
   aggregate-fixture assumptions; after correcting only those fixture facts, the exact 26 previously
   failing nodes passed. The proof covers Python and TypeScript positives, every ordered Gate 5 block
   family, zero-valued artifact identity, base/head digest mismatch, corrected missing-head
-  classification, semantic-forgery rejection, external-artifact binding, and authentic poison
-  isolated to Gate 5. Final full-source proof remains required on the frozen terminal head.
+  classification, semantic-forgery rejection, external-artifact binding, high-risk profile
+  cross-binding, and authentic poison isolated to Gate 5. Final full-source proof remains required
+  on the frozen terminal head.
+- Frozen source review: exact head `223e408d54ef9dbab3dc204ffb98bcd42f1fddf2` passed Source
+  Validation run/job `32959124479`/`98147329637` and required run `32959124429` attempt 1 before
+  eight exact serial request/completion pairs: `5424116276/5424151663`,
+  `5424157114/5424183034`, `5424188286/5424222219`, `5424228180/5424257089`,
+  `5424260324/review 5029597925`, `5424313156/5424352988`,
+  `5424361109/review 5029677900`, and `5424457689/review 5029742410`.
+- Review remediation: findings `3862124988` and `3862182744` were supported and handled together.
+  Aggregate complexity facts now reject disagreement with the authenticated quality-profile
+  high-risk paths, and the handoff accurately distinguishes unchanged Gate CLI behavior from the
+  strengthened aggregate rejection boundary. Finding `3862055054` was rejected with evidence as
+  plan-conflicting because the hosted workflow always supplies all six external artifact facts,
+  while the pinned unchanged legacy aggregate-boundary driver deliberately omits the complete set.
 - Qualification limit: repository-only definition, driver, golden, authentication, stale-artifact,
   replay, and execution defects remain trusted outputs of the repository-backed verifier. Aggregate
   composition independently reconstructs every semantic fact present in the serialized result and
   binds external artifact identities; it does not reread the target repository or execute target
   code.
-- Remaining work: pass exact source and hosted deterministic proof, complete eight focused reviews
-  serially on one frozen head, resolve all findings in one bounded remediation batch if needed,
-  merge normally without bypass, complete and clean the Python/frontend missing-coverage canaries,
-  finish issue/Project/ledger readback, refresh and activate S08 only, set S07
-  `Done / Complete / On scope / Yes`, and stop S07.
+- Remaining work: pass exact final-head source and hosted deterministic proof without repeating any
+  focused review, reply to and resolve the supported findings, merge normally without bypass,
+  complete and clean the Python/frontend missing-coverage canaries, finish issue/Project/ledger
+  readback, refresh and activate S08 only, and set S07 `Done / Complete / On scope / Yes`.
