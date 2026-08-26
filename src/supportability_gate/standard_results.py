@@ -503,9 +503,8 @@ def _s02_separation_boundaries(value: object, code: str) -> None:
     rows = _s02_rows(value, {"after", "before", "kind", "path", "symbol"}, code)
     identities: set[tuple[str, str, str]] = set()
     for row in rows:
-        if (
-            row["kind"] not in {"function", "component", "module"}
-            or any(not isinstance(row[name], str) or not row[name].strip() for name in row)
+        if row["kind"] not in {"function", "component", "module"} or any(
+            not isinstance(row[name], str) or not row[name].strip() for name in row
         ):
             raise StandardResultsError(code)
         identity = (row["path"], row["kind"], row["symbol"])

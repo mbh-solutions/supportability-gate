@@ -1,109 +1,64 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "Project #10 S03 makes Gate 1 deterministically qualify touched Python and TypeScript/TSX functions at maximum 10, preserve progressive legacy improvement, and own ordinary complexity policy failures without creating derivative Gate 4 or Gate 7 failures. Exact changed paths and lines, qualified function identities, metrics, decisions, and applicable Ruff evidence must cross-bind or fail closed."
-proof = "tests/test_evaluate_complexity.py::{test_new_complexity_10_passes,test_new_complexity_11_blocks,test_decorated_python_complexity_binds_ruff_to_definition_line,test_legacy_14_to_12_passes_progressively,test_typescript_clean_complexity_10_passes,test_typescript_complexity_11_blocks,test_typescript_metric_matches_eslint_classic_function_constructs,test_complexity_poison_is_byte_identical}; tests/test_standard_results.py::{test_complexity_policy_exit_blocks_gate_one_only,test_progressive_complexity_policy_exit_remains_a_successful_capture,test_function_evidence_must_cross_bind_to_changed_paths_and_ruff,test_function_evidence_must_intersect_changed_head_lines,test_ruff_evidence_must_bind_to_touched_function,test_standard_results_import_does_not_require_analysis_dependencies}"
+intended_behavior = "Project #10 S04 makes Gate 2 require complete structured before/after rows for every changed Python or TypeScript/TSX responsibility identity, bind those rows to the immutable base/head diff, isolate ordinary boundary defects to Gate 2, and surface boundary-derivation failures as explicit Gate 2 technical evidence."
+proof = "tests/test_evaluate_complexity.py::{test_modified_boundary_binds_retained_head_identity,test_deleted_boundary_binds_base_identity,test_renamed_boundary_binds_base_and_head_identities,test_added_tsx_boundary_binds_component_and_function_identities,test_module_boundary_uses_path_as_symbol,test_empty_boundaries_pass_when_diff_has_no_applicable_identity,test_real_diff_separation_boundary_poison_blocks,test_extra_nonduplicate_boundary_rejects_cardinality_mismatch,test_separation_boundary_outputs_are_byte_identical,test_syntax_error_is_technical_failure,test_non_regular_production_source_reports_boundary_derivation_failure}; tests/test_standard_results.py::{test_boundary_evidence_poison_blocks_gate_two_only,test_indexed_boundary_evidence_poison_blocks_gate_two_only,test_boundary_derivation_failure_is_gate_two_technical_only}"
 
 [characterization]
-captured_behavior = "Existing gate-cli, quality-profile, architecture-modularity, and standard-results-boundary scenarios cover every changed production responsibility. Focused fixtures add valid and poisoned Python/TypeScript metrics, decorated Ruff mapping, byte identity, Gate 1-only isolation, progressive capture, exact changed-line/result binding, and a site-package-free aggregate import boundary."
-proof = ".supportability-characterization.json scenarios gate-cli, m9-quality-profile, architecture-modularity-baseline, and standard-results-boundary; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
+captured_behavior = "Real immutable Git fixtures cover retained, deleted, renamed, added TSX component/function, module, empty, missing, malformed, insufficient, duplicate, nonexistent, unchanged, stale, mismatched, extra-cardinality, syntax-error, and non-regular-source cases. Aggregate fixtures prove ordinary top-level and indexed boundary defects block only Gate 2 and derivation failure remains a Gate 2 technical result."
+proof = "tests/test_evaluate_complexity.py; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "Ordinary complexity-adapter exit 1 was classified as a quality failure, new-location coverage rejected the same authenticated execution, TypeScript function metrics omitted approved classic constructs, decorated Ruff locations used decorator spans, and aggregate function/Ruff collections were independently valid but not cross-bound."
-after = "The leaf contract owns ordinary command-failure classification; quality and modularity consumers reuse it; changed-function collection and complexity measurement remain separate; reporting emits only already-verified touched Python Ruff rows; TypeScript forbids Ruff rows; and standard-results composition cross-binds exact changed sides and lines, names, spans, metrics, applicable Python Ruff message complexity, decisions, and policy ownership."
+before = "Review evidence had summary text but no exact responsibility rows. Initial S04 binding emitted indexed row defects without recognizing their Gate 2 ownership, coupled boundary derivation to review-document loading, swallowed parser failures, misclassified source Git failures as review-document defects, and left branch evidence describing the prior milestone."
+after = "Review evidence owns strict boundary-row shape and exact immutable-diff identity equality. Indexed row defects map only to Gate 2. CLI orchestration derives identities separately from review-document loading, preserves valid review fields for unaffected lanes when derivation fails, and emits one declared Gate 2 technical code. Aggregate validation mirrors the schema and branch evidence describes only S04."
 boundaries = [
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_evaluate", before = "Loaded review evidence without immutable responsibility identities.", after = "Supplies immutable diff context to boundary validation." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_read_review_evidence", before = "Read only review TOML bytes.", after = "Reads TOML and binds it to exact expected identities." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_separation_boundaries", before = "Had no Gate 2 identity derivation.", after = "Derives changed responsibility identities from immutable Git sides." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_separation_boundaries", before = "Had no structured boundary-row validation.", after = "Validates exact boundary rows and identity cardinality." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "Validated review shape only.", after = "Validates review shape against expected boundary identities." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "parse_review_evidence", before = "Parsed fixed review fields only.", after = "Parses required separation boundary evidence." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "module", symbol = "src/supportability_gate/review_evidence.py", before = "Did not own boundary-evidence schema fields.", after = "Owns fixed separation boundary schema validation." },
-    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Did not assign boundary defects to Gate 2.", after = "Assigns every separation boundary defect to Gate 2." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review", before = "Accepted separation summaries without boundary rows.", after = "Requires strict aggregate boundary-row validation." },
+    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_evaluate", before = "Loaded review evidence without immutable responsibility identities.", after = "Supplies immutable repository, policy, assessment, and error context to Gate 2 evidence loading." },
+    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_read_review_evidence", before = "Read review TOML without exact boundary derivation.", after = "Separates boundary derivation from review-blob loading and records deterministic Gate 2 derivation failure." },
+    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_separation_boundaries", before = "Had no Gate 2 responsibility-identity derivation.", after = "Derives exact changed responsibility identities from immutable Git sides." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_separation_boundaries", before = "Had no structured boundary-row validation.", after = "Validates exact row shape, text, kind, uniqueness, and expected identity equality when derivation is available." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "Validated review shape without expected boundary identities.", after = "Validates review evidence with exact identities or preserves structural evidence during declared derivation failure." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "parse_review_evidence", before = "Parsed fixed review fields without responsibility rows.", after = "Parses required separation rows and conditionally checks immutable identity equality." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "module", symbol = "src/supportability_gate/review_evidence.py", before = "Did not own Gate 2 boundary-row schema fields.", after = "Owns fixed separation boundary schema validation." },
+    { path = "src/supportability_gate/standard_block_ownership.py", kind = "function", symbol = "_emitted_review_location", before = "Rejected non-MALFORMED indexed separation-row locations.", after = "Recognizes only emit-capable indexed row roots, schema fields, kinds, and indices." },
+    { path = "src/supportability_gate/standard_block_ownership.py", kind = "function", symbol = "technical_owners", before = "Had no exact owner for boundary-derivation technical failure.", after = "Assigns the declared boundary-derivation technical code only to Gate 2." },
+    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Did not assign boundary defects or derivation failure to Gate 2.", after = "Owns exact Gate 2 policy and technical mappings for boundary evidence." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity_components", before = "Required complete shared review evidence unless all review lanes had technical failure.", after = "Accepts owner-bound ordinary review poison while preserving strict evidence requirements for unaffected inputs." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review", before = "Accepted separation summaries without boundary rows and only tolerated shared review failure.", after = "Requires strict aggregate boundary rows and accepts exact owner-bound review defects." },
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_separation_boundaries", before = "Had no aggregate boundary-row validator.", after = "Validates aggregate boundary-row shape and identity uniqueness." },
 ]
 
 [architecture]
-dependency_direction = "The dependency-free contract leaf owns fixed adapter identities and command-failure classification. Quality and modularity analysis depend downward on it. The minimal standard-results producer imports standard_results, which now depends only on leaf contract, clause inventory, and block ownership rather than hosted analyzers or tree-sitter packages."
+dependency_direction = "CLI orchestration supplies immutable Git context to the existing review-evidence validator. The aggregate result composer depends on the existing block-ownership leaf for exact Gate 2 policy and technical ownership. No target code import, target execution, new module, package, workflow, or dependency was added."
 reviewed_paths = [
     ".supportability-review.toml",
     "docs/product_completion_contract.md",
-    "src/supportability_gate/complexity_metrics.py",
-    "src/supportability_gate/contract.py",
-    "src/supportability_gate/function_changes.py",
-    "src/supportability_gate/modularity_policy.py",
-    "src/supportability_gate/quality_profile.py",
-    "src/supportability_gate/reporting.py",
+    "src/supportability_gate/cli.py",
+    "src/supportability_gate/review_evidence.py",
+    "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",
-    "tests/hosted_quality_profile.py",
     "tests/test_evaluate_complexity.py",
     "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/complexity_metrics.py"
-owns = "Exact per-function Python McCabe and TypeScript classic metrics, isolated Ruff execution, normalized C901 diagnostics, and bidirectional Ruff parity before reporting."
-does_not_own = "Changed-line selection, progressive policy decisions, hosted quality capture, modularity coverage, aggregate lane composition, advisory review, target repository execution, workflow orchestration, or GitHub mutation."
+path = "src/supportability_gate/review_evidence.py"
+owns = "Fixed structured review-evidence parsing, Gate 2 boundary-row validation, and exact expected-identity comparison when immutable derivation succeeds."
+does_not_own = "Git repository identity, changed-line discovery, source parsing, aggregate lane composition, advisory review, target repository execution, workflow orchestration, GitHub mutation, or prose truth judgment."
 
 [incremental_refactor]
-target = "Complete only Project #10 S03 Gate 1 Python and TypeScript/TSX qualification, exact evidence binding, lane isolation, protected canaries, and terminal ledger transaction; do not begin S04 or redesign Gates 2-8."
-completed_step = "The protected S03 merge corrected Gate 1 identities, metrics, Ruff mapping, exit ownership, coverage, evidence binding, and producer dependencies; this bounded follow-up returns after TypeScript's required empty Ruff set before enforcing Python-only Ruff completeness."
+target = "Complete only Project #10 S04 Gate 2 exact responsibility binding, ordinary-poison isolation, explicit derivation-failure propagation, direct proof, and prospective terminal ledger transaction."
+completed_step = "Bound exact Python and TypeScript/TSX responsibility identities, mirrored strict aggregate validation, repaired indexed row ownership, separated derivation from review loading, added focused syntax/non-regular composition proof, and replaced stale branch evidence."
 
 [review_handoff]
-summary = "Issue #146 remains the sole active slice. Its frozen review head 41499568b5ca42d7a3d8d77d4e0349e99fc35c94 completed eight focused reviews exactly once, final head c0bfcc863bfb6d25b16166d5088a333ba2847e2a passed deterministic gates, and protected merge 91fe5206cdc4d5aba5fb814d71d1de6cfc496cfa followed. Post-merge frontend canary run 32866480699 then proved TypeScript complexity 11 was misclassified because empty TypeScript Ruff evidence entered Python-only completeness. This correction adds the direct aggregate regression and returns before that Python rule."
+summary = "Issue #147 is the sole active slice. S04 implementation plus one bounded internal-review remediation batch now covers exact identity binding, indexed Gate 2 ownership, and explicit derivation failure. Exact final commit, hosted run, fresh focused-review lifecycle, protected canaries, normal merge, cleanup, and Project readback remain required and are not claimed here."
 remaining_risks = [
-    "Frozen review head bb6cd9fad2821e6c1fad1ff5b646634285e3e414 passed exact local source proof, Source Validation run 32868339299, and required Gate run 32868339195 attempt 4; this remediation head still needs final-head source proof, deterministic hosted gates, normal protected delivery without bypass, and a cleaned repeat of the frontend complexity-10 and complexity-11 canary.",
-    "The completed S03 focused reviews must not repeat. If the protected Gate requires a new advisory lifecycle for this corrective pull request, delivery stops for explicit owner direction rather than weakening or bypassing protection.",
-    "Class-field initializers and class-static blocks are ESLint implicit code paths, not S03 Gate 1 function identities; they do not leak into enclosing metrics, and independent enforcement requires separate owner authorization and binding rules.",
-    "The Gate never imports or executes target repository code; existing target-native characterization and quality commands execute only inside the isolated hosted target workflow as supporting authenticated evidence.",
-    "Codex judgment remains advisory, probabilistic, and non-exhaustive even after all eight focused reviews complete.",
+    "Parent must run the directly relevant and full exact-lock source proof on the final committed head; this bounded remediation ran only its focused RED/GREEN tests.",
+    "Final hosted deterministic checks, any required post-review remediation authorization, protected normal merge, Python/frontend canaries, cleanup, issue closure, and Project transition remain required before S04 completion.",
+    "Gate 2 proves row structure and immutable identity association only; it does not judge the truth or quality of before/after prose, and Codex review remains advisory and non-exhaustive.",
 ]
 
 [human_review]
-naming = "command_failed names the one shared fixed exit classifier; changed-function collection, metrics, reporting, and standard-results binding keep their existing responsibility names without generic helpers."
-cohesion = "Every correction stays in the existing owner of the behavior, and the only shared predicate moves to the existing dependency-free contract leaf used by all consumers."
-intended_behavior = "Issue #146 limits the change to Gate 1 qualification and direct proof. Packages, workflow command vectors, schemas, thresholds, target product code, production rulesets, class-implicit identities, S04, and Gates 2-8 redesign remain excluded."
-reviewability = "The corrective diff is limited to the TypeScript early return, the Python/TypeScript aggregate regression, and this current handoff; the original frozen-review identity remains separate and completed focuses are not repeated."
-
-[[module_boundaries]]
-path = "src/supportability_gate/contract.py"
-owner_path = "src/supportability_gate/contract.py"
-basis = "responsibility"
-justification = "This dependency-free leaf already owns fixed per-language complexity adapter identities and now owns their single ordinary-exit classification without pulling analyzers into minimal consumers."
-
-[[module_boundaries]]
-path = "src/supportability_gate/function_changes.py"
-owner_path = "src/supportability_gate/function_changes.py"
-basis = "responsibility"
-justification = "This module owns stable nested Python and TypeScript/TSX function identities and now visits parameter-owned callbacks as part of the same parse responsibility."
-
-[[module_boundaries]]
-path = "src/supportability_gate/complexity_metrics.py"
-owner_path = "src/supportability_gate/complexity_metrics.py"
-basis = "responsibility"
-justification = "This module owns exact static complexity measurement and Ruff parity, including approved TypeScript classic constructs and Python definition-line diagnostic mapping."
-
-[[module_boundaries]]
-path = "src/supportability_gate/quality_profile.py"
-owner_path = "src/supportability_gate/quality_profile.py"
-basis = "responsibility"
-justification = "This module owns authenticated hosted quality evidence and delegates only the fixed ordinary-exit classification to the contract leaf."
-
-[[module_boundaries]]
-path = "src/supportability_gate/modularity_policy.py"
-owner_path = "src/supportability_gate/modularity_policy.py"
-basis = "responsibility"
-justification = "This module owns new-location coverage and treats an authenticated ordinary complexity policy exit as execution coverage without changing Gate 4 policy."
-
-[[module_boundaries]]
-path = "src/supportability_gate/reporting.py"
-owner_path = "src/supportability_gate/reporting.py"
-basis = "responsibility"
-justification = "This module owns authoritative result serialization and emits only touched Ruff diagnostics after full in-memory changed-file parity succeeds."
-
-[[module_boundaries]]
-path = "src/supportability_gate/standard_results.py"
-owner_path = "src/supportability_gate/standard_results.py"
-basis = "responsibility"
-justification = "This module owns aggregate lane composition and fail-closed cross-binding of changed production sides and lines, renames, functions, touched names, Ruff spans/message complexity, and exact lane ownership."
+naming = "SEPARATION_BOUNDARY_DERIVATION_FAILURE names the exact failed Gate 2 operation; existing parsing, ownership, and composition responsibilities retain their established names."
+cohesion = "Review schema validation stays in review_evidence, immutable orchestration stays in cli, ownership stays in standard_block_ownership, and aggregate validation stays in standard_results."
+intended_behavior = "Issue #147 limits this change to Gate 2 qualification and direct proof. Packages, workflows, thresholds, target commands, target execution, immutable documents, later slices, and other lane semantics remain excluded."
+reviewability = "The remediation changes only accepted indexed-ownership, derivation-propagation, exact evidence, and focused-test gaps; final external delivery evidence remains explicitly pending."

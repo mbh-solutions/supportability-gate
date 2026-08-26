@@ -128,6 +128,10 @@ _REVIEW_SECTIONS = frozenset(field.partition(".")[0] for field in REVIEW_FIELD_O
 _REVIEW_ROOT_FIELDS = frozenset({"schema_version", *_REVIEW_SECTIONS})
 _MODULE_BOUNDARY_FIELDS = frozenset({"basis", "justification", "owner_path", "path"})
 _MODULE_BOUNDARY_LOCATION = re.compile(r"module_boundaries\[(0|[1-9][0-9]*)\](?:\.(.*))?\Z")
+_SEPARATION_BOUNDARY_FIELDS = frozenset({"after", "before", "kind", "path", "symbol"})
+_SEPARATION_BOUNDARY_LOCATION = re.compile(
+    r"separation_of_concerns\.boundaries\[(0|[1-9][0-9]*)\](?:\.(.*))?\Z"
+)
 _QUALITY_TECHNICAL_PREFIXES = (
     "DUPLICATE_QUALITY_",
     "MALFORMED_QUALITY_",
@@ -231,15 +235,25 @@ def _emitted_review_location(kind: str, location: str) -> bool:
         return kind == "MALFORMED"
     if location == "module_boundaries.path":
         return kind == "MALFORMED"
-    if match := _MODULE_BOUNDARY_LOCATION.fullmatch(location):
+    if match := (
+        _MODULE_BOUNDARY_LOCATION.fullmatch(location)
+        or _SEPARATION_BOUNDARY_LOCATION.fullmatch(location)
+    ):
         field = match.group(2)
-        return kind == "MALFORMED" if field not in _MODULE_BOUNDARY_FIELDS else True
+        fields = (
+            _MODULE_BOUNDARY_FIELDS
+            if location.startswith("module_boundaries")
+            else _SEPARATION_BOUNDARY_FIELDS
+        )
+        return kind == "MALFORMED" if field not in fields else True
     section, separator, _ = location.partition(".")
     if section not in _REVIEW_SECTIONS:
         return False
     if not separator:
         return kind == "MALFORMED"
-    return kind == "MALFORMED" or location in REVIEW_FIELD_OWNERS
+    return location in REVIEW_FIELD_OWNERS or (
+        kind == "MALFORMED" and not location.startswith("separation_of_concerns.boundaries")
+    )
 
 
 def review_owners(block: str) -> frozenset[int]:
@@ -318,6 +332,8 @@ def technical_owners(code: str) -> frozenset[int]:
         return frozenset({1})
     if raw.startswith("ARCHITECTURE_"):
         return frozenset({3, 4})
+    if raw == "SEPARATION_BOUNDARY_DERIVATION_FAILURE":
+        return frozenset({2})
     if raw == "REVIEW_EVIDENCE_UNAVAILABLE":
         return REVIEW_STANDARDS
     if raw == "INVALID_WORKFLOW_SHA" or raw.startswith(_QUALITY_TECHNICAL_PREFIXES):

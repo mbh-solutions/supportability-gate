@@ -5,6 +5,7 @@ import json
 import subprocess
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -18,6 +19,7 @@ from supportability_gate import (
     git_changes,
     quality_profile,
     reporting,
+    standard_results,
 )
 
 
@@ -146,8 +148,9 @@ def _review_evidence_with_boundaries(
     *identities: tuple[str, str, str], new_path: str | None = None
 ) -> str:
     rows = ", ".join(
-        "{ path = %s, kind = %s, symbol = %s, before = %s, after = %s }"
-        % tuple(json.dumps(value) for value in (*identity, "Before.", "After."))
+        "{{ path = {}, kind = {}, symbol = {}, before = {}, after = {} }}".format(
+            *(json.dumps(value) for value in (*identity, "Before.", "After."))
+        )
         for identity in identities
     )
     return _review_evidence_with_boundary_rows(f"[{rows}]", new_path=new_path)
@@ -201,13 +204,16 @@ def _commit(repository: Path, message: str) -> str:
     # Legacy non-S04 tests need valid Gate 2 config to keep testing their original concern.
     # S04 tests must use _literal_review_commit: production-derived rows cannot prove binding.
     _literal_review_commit(repository, message)
-    has_parent = subprocess.run(
-        ["git", "rev-parse", "--verify", "HEAD~1"],
-        cwd=repository,
-        check=False,
-        capture_output=True,
-        timeout=10,
-    ).returncode == 0
+    has_parent = (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD~1"],
+            cwd=repository,
+            check=False,
+            capture_output=True,
+            timeout=10,
+        ).returncode
+        == 0
+    )
     if message != "base" and has_parent:
         review_path = repository / ".supportability-review.toml"
         review = review_path.read_text(encoding="utf-8")
@@ -228,17 +234,16 @@ def _commit(repository: Path, message: str) -> str:
                 changes = git_changes.changed_paths(
                     repository, identity.base_sha, identity.head_sha, records
                 )
-                assessments = cli._classify_changes(
-                    repository, identity, policy, changes, records
-                )
+                assessments = cli._classify_changes(repository, identity, policy, changes, records)
                 boundaries = cli._separation_boundaries(
                     repository, identity, policy, assessments, records
                 )
             except (contract.ContractError, function_changes.PythonSourceError):
                 boundaries = ()
             rows = ", ".join(
-                "{ path = %s, kind = %s, symbol = %s, before = %s, after = %s }"
-                % tuple(json.dumps(value) for value in (*boundary, "Before.", "After."))
+                "{{ path = {}, kind = {}, symbol = {}, before = {}, after = {} }}".format(
+                    *(json.dumps(value) for value in (*boundary, "Before.", "After."))
+                )
                 for boundary in boundaries
             )
             _write(
@@ -463,6 +468,109 @@ def _evaluate(
     )
     result = json.loads((output / "complexity-result.json").read_text(encoding="utf-8"))
     return exit_code, result
+
+
+def _compose_cli_result(result: dict[str, Any], base_sha: str, head_sha: str) -> dict[str, Any]:
+    identity = standard_results.RunIdentity(
+        "example/fixture", 123, base_sha, head_sha, WORKFLOW_SHA, 456, 1
+    )
+    behavior = hashlib.sha256(
+        json.dumps([["sample", "e" * 64]], separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+    characterization: dict[str, Any] = {
+        "artifacts": {
+            "base": {"capture_sha256": "3" * 64, "digest": "4" * 64, "id": "701"},
+            "head": {"capture_sha256": "5" * 64, "digest": "6" * 64, "id": "702"},
+        },
+        "base_sha": base_sha,
+        "behavior_fingerprint": behavior,
+        "coverage": {
+            "covered_paths": ["src/sample.py"],
+            "required_paths": ["src/sample.py"],
+        },
+        "head_sha": head_sha,
+        "manifest_blob_sha": "8" * 40,
+        "manifest_sha256": "9" * 64,
+        "overall_result": "PASS",
+        "policy_blocks": [],
+        "repository": "github.com/example/fixture",
+        "scenarios": [
+            {
+                "base_behavior_sha256": "e" * 64,
+                "command": ["python", "tests/characterization/sample.characterization.py"],
+                "compatibility": "PASS",
+                "covers": ["src/sample.py"],
+                "golden_behavior_sha256": "e" * 64,
+                "head_behavior_sha256": "e" * 64,
+                "id": "sample",
+                "kind": "golden",
+            }
+        ],
+        "schema_version": "characterization-result.v1",
+        "workflow_sha": WORKFLOW_SHA,
+    }
+    characterization_sha = hashlib.sha256(
+        json.dumps(characterization, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+    refactor = {
+        "applicable": False,
+        "authorization": None,
+        "authorization_comment_id": None,
+        "base_sha": base_sha,
+        "characterization_sha256": characterization_sha,
+        "changed_paths": [".supportability-review.toml", "src/sample.py"],
+        "head_sha": head_sha,
+        "other_standard_clauses_waived": False,
+        "overall_result": "PASS",
+        "policy_blocks": [],
+        "repository": "example/fixture",
+        "schema_version": "refactor-policy-result.v1",
+        "targets": [],
+        "unbounded_paths": [],
+    }
+    profile = result["quality_profile"]
+    assert isinstance(profile, dict)
+    commands = profile["commands"]
+    assert isinstance(commands, list)
+    provenance = {
+        "artifact_digest": "d" * 64,
+        "artifact_id": "789",
+        "capture_sha256": "c" * 64,
+        "commands": [
+            {
+                "adapter": command["adapter"],
+                "raw_proof_sha256": "a" * 64,
+                "stderr_sha256": "b" * 64,
+                "stdout_sha256": "c" * 64,
+            }
+            for command in commands
+        ],
+        "job": "quality-profile",
+        "repository": "example/fixture",
+        "repository_id": "123",
+        "run_attempt": "1",
+        "run_id": "456",
+        "runner_environment": "github-hosted",
+    }
+    return standard_results.compose_results(
+        result,
+        characterization,
+        refactor,
+        provenance,
+        identity,
+        expected_quality_artifact={
+            "capture_sha256": "c" * 64,
+            "digest": "d" * 64,
+            "id": "789",
+        },
+        source_outcomes={
+            "install": "success",
+            "complexity": "failure",
+            "characterization": "success",
+            "refactor": "success",
+            "quality": "success",
+        },
+    )
 
 
 def test_new_complexity_10_passes(tmp_path: Path) -> None:
@@ -1475,9 +1583,7 @@ def test_real_diff_separation_boundary_poison_blocks(
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 1
-    assert result["policy_blocks"] == [
-        f"{block}_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
-    ]
+    assert result["policy_blocks"] == [f"{block}_REVIEW_EVIDENCE:separation_of_concerns.boundaries"]
 
 
 def test_extra_nonduplicate_boundary_rejects_cardinality_mismatch(tmp_path: Path) -> None:
@@ -1500,6 +1606,52 @@ def test_extra_nonduplicate_boundary_rejects_cardinality_mismatch(tmp_path: Path
     assert result["policy_blocks"] == [
         "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
     ]
+
+
+@pytest.mark.parametrize(
+    ("rows", "block"),
+    [
+        (
+            '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before." }]',
+            "MISSING_REVIEW_EVIDENCE:separation_of_concerns.boundaries[0].after",
+        ),
+        (
+            '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "" }]',
+            "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries[0].after",
+        ),
+        (
+            '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = 1 }]',
+            "MALFORMED_REVIEW_EVIDENCE:separation_of_concerns.boundaries[0].after",
+        ),
+    ],
+    ids=["missing-row-key", "empty-row-field", "malformed-row-field"],
+)
+def test_real_indexed_boundary_poison_blocks_only_gate_two_after_aggregation(
+    tmp_path: Path, rows: str, block: str
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("current", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("current", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundary_rows(rows),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [block]
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        "PASS",
+        "BLOCK",
+        *["PASS"] * 6,
+    ]
+    assert aggregate["entries"][1]["policy_blocks"] == [block]
+    assert all(entry["technical_errors"] == [] for entry in aggregate["entries"])
+    assert aggregate["shared_failures"] == []
 
 
 def test_separation_boundary_outputs_are_byte_identical(tmp_path: Path) -> None:
@@ -1526,9 +1678,7 @@ def test_separation_boundary_outputs_are_byte_identical(tmp_path: Path) -> None:
         ),
     )
     poisoned_sha = _literal_review_commit(repository, "poisoned")
-    poison_first_exit, _ = _evaluate(
-        repository, base_sha, poisoned_sha, tmp_path / "poison-first"
-    )
+    poison_first_exit, _ = _evaluate(repository, base_sha, poisoned_sha, tmp_path / "poison-first")
     poison_second_exit, _ = _evaluate(
         repository, base_sha, poisoned_sha, tmp_path / "poison-second"
     )
@@ -1586,11 +1736,49 @@ def test_syntax_error_is_technical_failure(tmp_path: Path) -> None:
 
     assert exit_code == 2
     assert [item["code"] for item in result["technical_errors"]] == [
+        "SEPARATION_BOUNDARY_DERIVATION_FAILURE",
         "COMPLEXITY_SYNTAX_ERROR",
         "ARCHITECTURE_SYNTAX_ERROR",
     ]
+    assert result["review_evidence"] is not None
     assert result["quality_profile"] is not None
     assert (tmp_path / "result" / "quality-provenance.json").is_file()
+
+
+def test_non_regular_production_source_reports_boundary_derivation_failure(
+    tmp_path: Path,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(("src/sample.py", "function", "existing")),
+    )
+    _run_git(repository, "add", ".supportability-review.toml")
+    link = (
+        subprocess.run(
+            ["git", "hash-object", "-w", "--stdin"],
+            cwd=repository,
+            input=b"elsewhere.py\n",
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    _run_git(repository, "update-index", "--add", "--cacheinfo", f"120000,{link},src/sample.py")
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 2
+    assert "SEPARATION_BOUNDARY_DERIVATION_FAILURE" in {
+        item["code"] for item in result["technical_errors"]
+    }
+    assert result["review_evidence"] is not None
 
 
 def test_ruff_parity_mismatch_is_technical_failure(tmp_path: Path) -> None:

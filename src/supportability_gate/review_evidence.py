@@ -84,7 +84,7 @@ def _validate_module_boundaries(value: object) -> list[dict[str, Any]]:
 
 
 def _validate_separation_boundaries(
-    value: object, expected: tuple[tuple[str, str, str], ...]
+    value: object, expected: tuple[tuple[str, str, str], ...] | None
 ) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         raise ReviewEvidenceError("MALFORMED", "separation_of_concerns.boundaries")
@@ -102,13 +102,13 @@ def _validate_separation_boundaries(
         if identity in identities:
             raise ReviewEvidenceError("MALFORMED", "separation_of_concerns.boundaries")
         identities.add(identity)
-    if identities != set(expected):
+    if expected is not None and identities != set(expected):
         raise ReviewEvidenceError("INSUFFICIENT", "separation_of_concerns.boundaries")
     return value
 
 
 def parse_review_evidence(
-    content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...]
+    content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...] | None
 ) -> ReviewEvidence:
     """Parse the only supported structured-review evidence schema."""
     try:
@@ -145,7 +145,7 @@ def parse_review_evidence(
 
 def evaluate_review_evidence(
     content: bytes | None,
-    expected_boundaries: tuple[tuple[str, str, str], ...],
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
 ) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
     """Return normalized evidence or one deterministic blocking reason."""
     if content is None:

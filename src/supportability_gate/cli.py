@@ -488,9 +488,10 @@ def _separation_boundaries(
             boundaries.update((change.new_path or "", span.kind, span.name) for span in head_spans)
             continue
         else:
-            path = change.new_path or change.old_path
-            if path is None:
+            retained_path = change.new_path or change.old_path
+            if retained_path is None:
                 continue
+            path = retained_path
             base = _regular_source(
                 repository,
                 identity.base_sha,
@@ -535,6 +536,12 @@ def _read_review_evidence(
         expected_boundaries = _separation_boundaries(
             repository, identity, policy, assessments, records
         )
+    except (function_changes.PythonSourceError, git_changes.GitError) as error:
+        errors.append(
+            function_changes.PythonSourceError("SEPARATION_BOUNDARY_DERIVATION_FAILURE", str(error))
+        )
+        expected_boundaries = None
+    try:
         blob = git_changes.read_regular_blob(
             repository,
             identity.head_sha,
@@ -547,8 +554,6 @@ def _read_review_evidence(
         if error.code == "SYMLINK_OR_NONFILE":
             return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
         errors.append(function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error)))
-        return None, ()
-    except function_changes.PythonSourceError:
         return None, ()
     return review_evidence.evaluate_review_evidence(blob.content, expected_boundaries)
 
