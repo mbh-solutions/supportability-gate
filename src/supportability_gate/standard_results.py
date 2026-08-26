@@ -13,6 +13,7 @@ from supportability_gate import (
     clause_inventory,
     contract,
     modularity_policy,
+    quality_profile,
     standard_block_ownership,
 )
 
@@ -108,6 +109,21 @@ EVIDENCE_SOURCES = (
 )
 _S02_SHA40 = re.compile(r"[0-9a-f]{40}\Z")
 _S02_SHA64 = re.compile(r"[0-9a-f]{64}\Z")
+_S02_QUALITY_TOKEN = re.compile(r"\$[A-Z_]+")
+_S02_QUALITY_TOKENS = frozenset(
+    {
+        "$LINT_IMPORTS",
+        "$NODE",
+        "$NPM",
+        "$OUTPUT",
+        "$PYTHON",
+        "$REPOSITORY",
+        "$SOURCE_FILES",
+        "$TEST_FILES",
+        "$TOOLS",
+    }
+)
+_S02_QUALITY_LIST_TOKENS = frozenset({"$SOURCE_FILES", "$TEST_FILES"})
 _S02_SHORT_EXCLUSIONS = {
     "docs/fixed_roadmap.md",
     "docs/product_completion_contract.md",
@@ -240,6 +256,7 @@ _S02_PROFILE_KEYS = {
     "production_paths",
     "repository_remote",
     "schema_version",
+    "test_files",
     "workflow_sha",
 }
 
@@ -437,7 +454,7 @@ def _s02_profile_command(row: dict[str, Any], code: str) -> str:
 
 def _s02_profile(
     value: object, identity: RunIdentity, language: str, code: str
-) -> tuple[tuple[str, ...], str, tuple[str, ...], tuple[str, ...]]:
+) -> tuple[tuple[str, ...], str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
         row[name] for name in ("base_sha", "head_sha", "repository_remote", "workflow_sha")
@@ -461,11 +478,19 @@ def _s02_profile(
     }
     commands = _s02_rows(row["commands"], command_keys, code, True)
     adapters = tuple(_s02_profile_command(command, code) for command in commands)
+    expected_commands = dict(quality_profile.command_templates(language))
+    required_adapters = quality_profile.required_adapters(language)
     if (
         actual != expected
-        or row["schema_version"] != "quality-gates.v4"
+        or row["schema_version"] != "quality-gates.v5"
         or row["maximum_complexity"] != 10
-        or len(adapters) != len(set(adapters))
+        or adapters != tuple(adapter for adapter in required_adapters if adapter in adapters)
+        or any(
+            command["adapter"] not in expected_commands
+            or tuple(command["arguments"]) != expected_commands[command["adapter"]]
+            or command["proof_kind"] != quality_profile.expected_proof_kind(command["adapter"])
+            for command in commands
+        )
     ):
         raise StandardResultsError(code)
     for name in (
@@ -474,6 +499,7 @@ def _s02_profile(
         "high_risk_paths",
         "production_files",
         "production_paths",
+        "test_files",
     ):
         _s02_strings(row[name], code)
     result = (
@@ -507,7 +533,8 @@ def _s02_profile(
         and command["exit_code"] == 1
         and contract.POLICY_EXIT_STANDARDS[row["language"]].get(command["adapter"]) == 3
     )
-    return adapters, result, failed, architecture_failed
+    missing = tuple(adapter for adapter in required_adapters if adapter not in adapters)
+    return adapters, result, failed, architecture_failed, missing
 
 
 def _s02_review_section(
@@ -1007,11 +1034,11 @@ def _s02_complexity_components(
         profile = (
             _s02_profile(row["quality_profile"], identity, row["language"], code)
             if row["quality_profile"] is not None
-            else ((), None, (), ())
+            else ((), None, (), (), ())
         )
     except StandardResultsError:
         technical[:] = list(dict.fromkeys((*technical, "MALFORMED_QUALITY_EVIDENCE")))
-        profile = ((), None, (), ())
+        profile = ((), None, (), (), ())
     if profile[1] is None:
         return (), None
     if row["modularity"] is not None:
@@ -1021,7 +1048,12 @@ def _s02_complexity_components(
         for block in blocks
         if block.startswith("QUALITY_GATE_FAILED:")
     }
-    quality_invalid = failed != set(profile[2])
+    missing = {
+        block.removeprefix("MISSING_QUALITY_COMMAND:")
+        for block in blocks
+        if block.startswith("MISSING_QUALITY_COMMAND:")
+    }
+    quality_invalid = failed != set(profile[2]) or missing != set(profile[4])
     architecture_failed = {
         block.removeprefix("ARCHITECTURE_GATE_FAILED:")
         for block in blocks
@@ -1654,6 +1686,117 @@ def _s02_provenance_adapters(value: object, code: str) -> tuple[str, ...]:
     return tuple(adapters)
 
 
+def _s02_quality_value(
+    values: dict[str, tuple[str, ...]], token: str, observed: tuple[str, ...], code: str
+) -> None:
+    if token not in _S02_QUALITY_TOKENS or (
+        token not in _S02_QUALITY_LIST_TOKENS and (len(observed) != 1 or not observed[0])
+    ):
+        raise StandardResultsError(code)
+    previous = values.setdefault(token, observed)
+    if previous != observed:
+        raise StandardResultsError(code)
+
+
+def _s02_quality_scalar(
+    template: str, executed: str, values: dict[str, tuple[str, ...]], code: str
+) -> None:
+    tokens = _S02_QUALITY_TOKEN.findall(template)
+    if not tokens:
+        if executed != template:
+            raise StandardResultsError(code)
+        return
+    if len(tokens) != 1 or tokens[0] in _S02_QUALITY_LIST_TOKENS:
+        raise StandardResultsError(code)
+    token = tokens[0]
+    prefix, suffix = template.split(token)
+    if (
+        not executed.startswith(prefix)
+        or not executed.endswith(suffix)
+        or len(executed) <= len(prefix) + len(suffix)
+    ):
+        raise StandardResultsError(code)
+    end = len(executed) - len(suffix) if suffix else len(executed)
+    _s02_quality_value(values, token, (executed[len(prefix) : end],), code)
+
+
+def _s02_quality_command(
+    template: object,
+    executed: object,
+    list_counts: dict[str, int],
+    values: dict[str, tuple[str, ...]],
+    code: str,
+) -> None:
+    template_arguments = _s02_strings(template, code, True)
+    executed_arguments = _s02_strings(executed, code, True)
+    index = 0
+    for argument in template_arguments:
+        if argument not in _S02_QUALITY_LIST_TOKENS:
+            if index >= len(executed_arguments):
+                raise StandardResultsError(code)
+            _s02_quality_scalar(argument, executed_arguments[index], values, code)
+            index += 1
+            continue
+        size = list_counts[argument]
+        if size < 0 or index + size > len(executed_arguments):
+            raise StandardResultsError(code)
+        _s02_quality_value(values, argument, tuple(executed_arguments[index : index + size]), code)
+        index += size
+    if index != len(executed_arguments):
+        raise StandardResultsError(code)
+
+
+def _s02_quality_paths(
+    values: dict[str, tuple[str, ...]], profile: dict[str, Any], code: str
+) -> None:
+    normalized = {
+        token: tuple(item.replace("\\", "/") for item in observed)
+        for token, observed in values.items()
+    }
+    repository = normalized.get("$REPOSITORY", (None,))[0]
+    source = normalized.get("$SOURCE_FILES")
+    production = tuple(profile["production_files"])
+    if source is not None and production:
+        suffix = f"/{production[0]}"
+        if not source[0].endswith(suffix):
+            raise StandardResultsError(code)
+        derived = source[0][: -len(suffix)]
+        if repository not in {None, derived}:
+            raise StandardResultsError(code)
+        repository = derived
+        if source != tuple(f"{repository}/{path}" for path in production):
+            raise StandardResultsError(code)
+    tests = normalized.get("$TEST_FILES")
+    test_files = tuple(profile["test_files"])
+    if tests is not None and test_files:
+        suffix = f"/{test_files[0]}"
+        if not tests[0].endswith(suffix):
+            raise StandardResultsError(code)
+        derived = tests[0][: -len(suffix)]
+        if repository not in {None, derived}:
+            raise StandardResultsError(code)
+        repository = derived
+    if tests is not None and tests != tuple(f"{repository}/{path}" for path in test_files):
+        raise StandardResultsError(code)
+    output = normalized.get("$OUTPUT")
+    tools = normalized.get("$TOOLS")
+    if tools is not None and (output is None or tools != (f"{output[0]}/quality-tools",)):
+        raise StandardResultsError(code)
+
+
+def _s02_quality_argv(profile: dict[str, Any], provenance: dict[str, Any], code: str) -> None:
+    values: dict[str, tuple[str, ...]] = {}
+    list_counts = {
+        "$SOURCE_FILES": len(profile["production_files"]),
+        "$TEST_FILES": len(profile["test_files"]),
+    }
+    for decision, proof in zip(profile["commands"], provenance["commands"], strict=True):
+        _s02_quality_command(
+            decision["arguments"], proof["executed_arguments"], list_counts, values, code
+        )
+    _s02_quality_paths(values, profile, code)
+
+
 def _s02_quality_capture(profile: dict[str, Any], provenance: dict[str, Any]) -> str:
     commands = [
         {**decision, **proof}
@@ -1737,6 +1880,7 @@ def _s02_quality_artifact(
         trusted["capture_sha256"],
     ) or _s02_quality_capture(profile, row) != trusted["capture_sha256"]:
         raise StandardResultsError("QUALITY_ARTIFACT_IDENTITY_MISMATCH")
+    _s02_quality_argv(profile, row, code)
     return {
         "capture_sha256": trusted["capture_sha256"],
         "digest": trusted["digest"],

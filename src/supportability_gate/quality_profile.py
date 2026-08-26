@@ -7,16 +7,23 @@ import json
 import re
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from supportability_gate import contract, git_changes
-from supportability_gate.function_changes import ChangedFileAssessment
 
-SCHEMA_VERSION = "quality-gates.v4"
+if TYPE_CHECKING:
+    from supportability_gate.function_changes import ChangedFileAssessment
+
+SCHEMA_VERSION = "quality-gates.v5"
 TIMEOUT_SECONDS = 180
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx"),
+}
+TEST_SUFFIXES = {
+    "python": (".py", ".pyi"),
+    "typescript": (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts"),
 }
 _PYTHON_COMMANDS = (
     (
@@ -288,6 +295,7 @@ class QualityEvidence:
     language: str
     maximum_complexity: int
     production_files: tuple[str, ...]
+    test_files: tuple[str, ...]
     production_paths: tuple[str, ...]
     repository: str
     repository_id: str
@@ -330,6 +338,20 @@ def production_files(
             repository, head_sha, policy.production_paths, records
         )
         if item.path.endswith(SOURCE_SUFFIXES[policy.language])
+    )
+
+
+def test_files(
+    repository: Path,
+    head_sha: str,
+    language: str,
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    """Recompute the exact quality test manifest from the immutable head tree."""
+    return tuple(
+        item.path
+        for item in git_changes.list_regular_blobs(repository, head_sha, ("tests",), records)
+        if item.path.endswith(TEST_SUFFIXES[language])
     )
 
 
@@ -467,6 +489,7 @@ def _parse_evidence(data: object) -> QualityEvidence:
         "language",
         "maximum_complexity",
         "production_files",
+        "test_files",
         "production_paths",
         "repository",
         "repository_id",
@@ -514,6 +537,7 @@ def _parse_evidence(data: object) -> QualityEvidence:
         data["language"],
         data["maximum_complexity"],
         _string_tuple(data["production_files"], "production_files"),
+        _string_tuple(data["test_files"], "test_files"),
         _string_tuple(data["production_paths"], "production_paths"),
         data["repository"],
         data["repository_id"],
@@ -790,10 +814,13 @@ def _policy_blocks(
     policy: contract.Contract,
     assessments: tuple[ChangedFileAssessment, ...],
     production_files: tuple[str, ...],
+    test_files: tuple[str, ...],
 ) -> list[str]:
     blocks: list[str] = []
     if evidence.production_files != production_files:
         blocks.append("QUALITY_PRODUCTION_MANIFEST_MISMATCH")
+    if evidence.test_files != test_files:
+        blocks.append("QUALITY_TEST_MANIFEST_MISMATCH")
     changed_paths = _changed_production_paths(assessments)
     if evidence.production_paths != policy.production_paths:
         blocks.append("QUALITY_SCOPE_NARROWING")
@@ -830,13 +857,14 @@ def evidence_blocks(
     identity: git_changes.RepositoryIdentity,
     assessments: tuple[ChangedFileAssessment, ...],
     production_files: tuple[str, ...],
+    test_files: tuple[str, ...],
     workflow_sha: str,
 ) -> tuple[str, ...]:
     """Bind exact attestation identity and return deterministic quality blocks."""
     _verify_evidence_identity(evidence, policy, identity, workflow_sha)
     changed_paths = _changed_head_production_paths(assessments)
     blocks = _command_blocks(evidence, policy, changed_paths)
-    blocks.extend(_policy_blocks(evidence, policy, assessments, production_files))
+    blocks.extend(_policy_blocks(evidence, policy, assessments, production_files, test_files))
     return tuple(sorted(set(blocks)))
 
 
@@ -872,6 +900,7 @@ def decision_payload(evidence: QualityEvidence) -> dict[str, object]:
         "language": evidence.language,
         "maximum_complexity": evidence.maximum_complexity,
         "production_files": list(evidence.production_files),
+        "test_files": list(evidence.test_files),
         "production_paths": list(evidence.production_paths),
         "repository_remote": evidence.repository_remote,
         "schema_version": evidence.schema_version,

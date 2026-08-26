@@ -243,6 +243,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         language=policy.language,
         maximum_complexity=policy.maximum,
         production_files=source_files,
+        test_files=test_files,
         production_paths=policy.production_paths,
         repository=str(arguments.repository_name),
         repository_id=str(arguments.repository_id),

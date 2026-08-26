@@ -31,6 +31,36 @@ def test_reported_package_version_matches_distribution_version() -> None:
 
 WORKFLOW_SHA = "f" * 40
 
+
+def _executed_quality_arguments(
+    arguments: tuple[str, ...] | list[str],
+    production_files: tuple[str, ...] | list[str],
+    test_files: tuple[str, ...] | list[str],
+) -> tuple[str, ...]:
+    scalar_values = {
+        "$LINT_IMPORTS": "lint-imports",
+        "$NODE": "node",
+        "$NPM": "npm",
+        "$OUTPUT": "C:/quality",
+        "$PYTHON": "python",
+        "$REPOSITORY": "C:/repo/target",
+        "$TOOLS": "C:/quality/quality-tools",
+    }
+    list_values = {
+        "$SOURCE_FILES": tuple(f"C:/repo/target/{path}" for path in production_files),
+        "$TEST_FILES": tuple(f"C:/repo/target/{path}" for path in test_files),
+    }
+    executed: list[str] = []
+    for argument in arguments:
+        if argument in list_values:
+            executed.extend(list_values[argument])
+            continue
+        for token, replacement in scalar_values.items():
+            argument = argument.replace(token, replacement)
+        executed.append(argument)
+    return tuple(executed)
+
+
 CONTRACT = """\
 schema_version = "1.0"
 language = "python"
@@ -436,6 +466,7 @@ def _evaluate(
             )
             if item.path.endswith(suffixes)
         )
+        test_files = quality_profile.test_files(repository, head_sha, policy.language, records)
         commands = tuple(
             quality_profile.GateResult(
                 adapter,
@@ -452,7 +483,7 @@ def _evaluate(
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
-                arguments,
+                _executed_quality_arguments(arguments, production_files, test_files),
             )
             for adapter, arguments in quality_profile.command_templates(policy.language)
         )
@@ -467,6 +498,7 @@ def _evaluate(
                 language=policy.language,
                 maximum_complexity=policy.maximum,
                 production_files=production_files,
+                test_files=test_files,
                 production_paths=policy.production_paths,
                 repository="example/fixture",
                 repository_id="123",
@@ -649,6 +681,9 @@ def _compose_cli_result(
     assert isinstance(profile, dict)
     commands = profile["commands"]
     assert isinstance(commands, list)
+    production_files = profile["production_files"]
+    test_files = profile["test_files"]
+    assert isinstance(production_files, list) and isinstance(test_files, list)
     provenance = {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
@@ -656,7 +691,9 @@ def _compose_cli_result(
         "commands": [
             {
                 "adapter": command["adapter"],
-                "executed_arguments": command["arguments"],
+                "executed_arguments": list(
+                    _executed_quality_arguments(command["arguments"], production_files, test_files)
+                ),
                 "raw_proof_sha256": "a" * 64,
                 "stderr_sha256": "b" * 64,
                 "stdout_sha256": "c" * 64,

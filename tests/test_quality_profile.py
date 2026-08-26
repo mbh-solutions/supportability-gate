@@ -88,6 +88,7 @@ def _evidence(**changes: object) -> quality_profile.QualityEvidence:
         "language": "python",
         "maximum_complexity": 10,
         "production_files": ("src/risk.py",),
+        "test_files": ("tests/test_sample.py",),
         "production_paths": ("src",),
         "repository": "example/fixture",
         "repository_id": "123",
@@ -125,9 +126,10 @@ def _blocks(
     evidence: quality_profile.QualityEvidence,
     assessments: tuple[ChangedFileAssessment, ...] = (),
     production_files: tuple[str, ...] = ("src/risk.py",),
+    test_files: tuple[str, ...] = ("tests/test_sample.py",),
 ) -> tuple[str, ...]:
     return quality_profile.evidence_blocks(
-        evidence, POLICY, IDENTITY, assessments, production_files, WORKFLOW_SHA
+        evidence, POLICY, IDENTITY, assessments, production_files, test_files, WORKFLOW_SHA
     )
 
 
@@ -183,6 +185,12 @@ def test_uncovered_changed_and_high_risk_paths_block() -> None:
 def test_incomplete_production_manifest_blocks() -> None:
     assert "QUALITY_PRODUCTION_MANIFEST_MISMATCH" in _blocks(
         _evidence(), production_files=("src/other.py", "src/risk.py")
+    )
+
+
+def test_incomplete_test_manifest_blocks() -> None:
+    assert "QUALITY_TEST_MANIFEST_MISMATCH" in _blocks(
+        _evidence(), test_files=("tests/other.py", "tests/test_sample.py")
     )
 
 
@@ -472,7 +480,9 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         newline="\n",
     )
     (repository / ".coveragerc").write_text(
-        "[report]\nexclude_lines =\n    .+\n", encoding="utf-8", newline="\n"
+        "[run]\nomit =\n    *\n\n[report]\nexclude_lines =\n    .+\n",
+        encoding="utf-8",
+        newline="\n",
     )
     package = repository / "src" / "sample"
     package.mkdir(parents=True)
@@ -549,7 +559,13 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         git_changes.ChangedPath("ADDED", None, poison), False, True, True, (1,)
     )
     blocks = quality_profile.evidence_blocks(
-        evidence, policy, identity, (assessment,), evidence.production_files, WORKFLOW_SHA
+        evidence,
+        policy,
+        identity,
+        (assessment,),
+        evidence.production_files,
+        evidence.test_files,
+        WORKFLOW_SHA,
     )
     test_result = next(item for item in evidence.commands if item.adapter == "python.pytest.v1")
     plans = quality_runner.command_plans(
@@ -875,6 +891,7 @@ maximum = 10
         identity,
         assessments,
         evidence.production_files,
+        evidence.test_files,
         WORKFLOW_SHA,
     )
 

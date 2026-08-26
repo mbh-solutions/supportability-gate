@@ -17,6 +17,7 @@ from supportability_gate import (
     cli,
     contract,
     git_changes,
+    quality_profile,
     standard_block_ownership,
     standard_results,
     standard_results_enforcer,
@@ -34,7 +35,7 @@ SUCCESS_OUTCOMES = {
     "quality": "success",
 }
 EXPECTED_QUALITY_ARTIFACT = {
-    "capture_sha256": "37ae64177833c7779cc569b9fdaf1fd6207b184c8cfc0e0e02fa7918693f59f0",
+    "capture_sha256": "d23641fbfaa702069691cd5b1fa7bf6fb14d73b25a85fe4ae769308828220cb5",
     "digest": "d" * 64,
     "id": "789",
 }
@@ -95,6 +96,96 @@ def _changed_file(path: str, lines: list[int], *, status: str = "MODIFIED") -> d
     }
 
 
+def _quality_arguments(
+    adapter: str,
+    language: str,
+    production_files: tuple[str, ...],
+    test_files: tuple[str, ...] = (),
+) -> tuple[list[str], list[str]]:
+    template = dict(quality_profile.command_templates(language))[adapter]
+    scalar_values = {
+        "$LINT_IMPORTS": "lint-imports",
+        "$NODE": "node",
+        "$NPM": "npm",
+        "$OUTPUT": "C:/quality",
+        "$PYTHON": "python",
+        "$REPOSITORY": "C:/repo/target",
+        "$TOOLS": "C:/quality/quality-tools",
+    }
+    list_values = {
+        "$SOURCE_FILES": tuple(f"C:/repo/target/{path}" for path in production_files),
+        "$TEST_FILES": tuple(f"C:/repo/target/{path}" for path in test_files),
+    }
+    executed: list[str] = []
+    for argument in template:
+        if argument in list_values:
+            executed.extend(list_values[argument])
+            continue
+        for token, replacement in scalar_values.items():
+            argument = argument.replace(token, replacement)
+        executed.append(argument)
+    return list(template), executed
+
+
+def _profile_commands(
+    language: str, production_files: tuple[str, ...], test_files: tuple[str, ...] = ()
+) -> list[dict[str, object]]:
+    commands: list[dict[str, object]] = []
+    for adapter in quality_profile.required_adapters(language):
+        template, _ = _quality_arguments(adapter, language, production_files, test_files)
+        commands.append(
+            {
+                "adapter": adapter,
+                "arguments": template,
+                "executed": True,
+                "exit_code": 0,
+                "observed_paths": list(production_files),
+                "proof_kind": quality_profile.expected_proof_kind(adapter),
+                "zero_statement_paths": [],
+            }
+        )
+    return commands
+
+
+def _provenance_commands(
+    language: str, production_files: tuple[str, ...], test_files: tuple[str, ...] = ()
+) -> list[dict[str, object]]:
+    return [
+        {
+            "adapter": adapter,
+            "executed_arguments": _quality_arguments(
+                adapter, language, production_files, test_files
+            )[1],
+            "raw_proof_sha256": "a" * 64,
+            "stderr_sha256": "b" * 64,
+            "stdout_sha256": "c" * 64,
+        }
+        for adapter in quality_profile.required_adapters(language)
+    ]
+
+
+def _set_quality_commands(
+    inputs: tuple[dict[str, Any], ...],
+    language: str,
+    production_files: tuple[str, ...],
+    test_files: tuple[str, ...] = (),
+) -> None:
+    profile = inputs[0]["quality_profile"]
+    profile["language"] = language
+    profile["production_files"] = list(production_files)
+    profile["test_files"] = list(test_files)
+    profile["commands"] = _profile_commands(language, production_files, test_files)
+    inputs[3]["commands"] = _provenance_commands(language, production_files, test_files)
+
+
+def _quality_command(inputs: tuple[dict[str, Any], ...], adapter: str) -> dict[str, Any]:
+    return next(
+        command
+        for command in inputs[0]["quality_profile"]["commands"]
+        if command["adapter"] == adapter
+    )
+
+
 def _complexity(
     path: str = "src/sample.py",
     lines: list[int] | None = None,
@@ -152,17 +243,7 @@ def _complexity(
         "quality_profile": {
             "base_sha": IDENTITY.base_sha,
             "changed_paths": [path],
-            "commands": [
-                {
-                    "adapter": "python.pytest.v1",
-                    "arguments": ["python", "-m", "pytest", "-q"],
-                    "executed": True,
-                    "exit_code": 0,
-                    "observed_paths": ["src/sample.py"],
-                    "proof_kind": "runtime-lines",
-                    "zero_statement_paths": [],
-                }
-            ],
+            "commands": _profile_commands("python", ("src/sample.py",)),
             "exclusions": [],
             "head_sha": IDENTITY.head_sha,
             "high_risk_paths": [],
@@ -171,7 +252,8 @@ def _complexity(
             "production_files": ["src/sample.py"],
             "production_paths": ["src"],
             "repository_remote": f"github.com/{IDENTITY.repository}",
-            "schema_version": "quality-gates.v4",
+            "schema_version": "quality-gates.v5",
+            "test_files": [],
             "workflow_sha": IDENTITY.workflow_sha,
         },
         "rename_bindings": [],
@@ -280,16 +362,8 @@ def _quality() -> dict[str, Any]:
     return {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
-        "capture_sha256": "37ae64177833c7779cc569b9fdaf1fd6207b184c8cfc0e0e02fa7918693f59f0",
-        "commands": [
-            {
-                "adapter": "python.pytest.v1",
-                "executed_arguments": ["python", "-I", "-m", "pytest", "-q"],
-                "raw_proof_sha256": "a" * 64,
-                "stderr_sha256": "b" * 64,
-                "stdout_sha256": "c" * 64,
-            }
-        ],
+        "capture_sha256": "d23641fbfaa702069691cd5b1fa7bf6fb14d73b25a85fe4ae769308828220cb5",
+        "commands": _provenance_commands("python", ("src/sample.py",)),
         "job": "quality-profile",
         "repository": IDENTITY.repository,
         "repository_id": str(IDENTITY.repository_id),
@@ -380,7 +454,7 @@ def _owned_new_location_inputs(
     inputs = _inputs(path, status="ADDED")
     complexity = inputs[0]
     adapters = {
-        "python": ("python.c901-touched.v1", "python.ast-imports.v1"),
+        "python": ("python.c901-touched.v1", "python.import-linter.v1"),
         "typescript": (
             "typescript.c901-equivalent-touched.v1",
             "typescript.import-boundaries.v1",
@@ -400,12 +474,7 @@ def _owned_new_location_inputs(
         "path": path,
     }
     sorted_adapters = sorted(adapters)
-    profile_command = complexity["quality_profile"]["commands"][0]
-    complexity["quality_profile"]["commands"] = [
-        {**profile_command, "adapter": adapter, "observed_paths": [path]} for adapter in adapters
-    ]
-    provenance_command = inputs[3]["commands"][0]
-    inputs[3]["commands"] = [{**provenance_command, "adapter": adapter} for adapter in adapters]
+    _set_quality_commands(inputs, language, (path,))
     complexity["review_evidence"]["module_boundaries"] = [claim]
     complexity["modularity"] = {
         "blocks": [],
@@ -1196,9 +1265,7 @@ def test_authentic_gate_four_poison_blocks_only_gate_four(case: str) -> None:
         complexity["architecture"]["covered_paths"].append(owner)
         complexity["architecture"]["nodes"].append(owner)
         complexity["quality_profile"]["changed_paths"].append(owner)
-        complexity["quality_profile"]["production_files"].append(owner)
-        for command in complexity["quality_profile"]["commands"]:
-            command["observed_paths"].append(owner)
+        _set_quality_commands(inputs, "python", (path, owner))
         complexity["modularity"]["changed_paths"].append(owner)
         complexity["modularity"]["new_paths"].append(owner)
         complexity["modularity"]["coverage"].append(
@@ -1311,8 +1378,7 @@ def _gate_five_poison(
         inputs[0]["high_risk_paths"] = ["src/risk.py"]
         profile = inputs[0]["quality_profile"]
         profile["high_risk_paths"] = ["src/risk.py"]
-        profile["production_files"].append("src/risk.py")
-        profile["commands"][0]["observed_paths"].append("src/risk.py")
+        _set_quality_commands(inputs, "python", ("src/sample.py", "src/risk.py"))
         characterization["coverage"]["required_paths"].append("src/risk.py")
         characterization["coverage"]["required_paths"].sort()
     elif block in {"HEAD_ONLY_CHARACTERIZATION_CLAIM", "MISSING_BASELINE"}:
@@ -1483,7 +1549,7 @@ def test_gate_four_aggregate_requires_authentic_changed_path_coupling() -> None:
     inputs = _inputs()
     inputs[0]["architecture"]["nodes"].append(owner)
     inputs[0]["architecture"]["edges"] = [edge]
-    inputs[0]["quality_profile"]["production_files"].append(owner)
+    _set_quality_commands(inputs, "python", (path, owner))
     inputs[0]["modularity"]["coupling_edges"] = [edge]
 
     assert _results(_compose(inputs)) == ["PASS"] * 8
@@ -1669,6 +1735,86 @@ def test_quality_capture_rejects_valid_shaped_split_forgery_in_gate_seven_only(
     assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
     assert _entry(payload, 7)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
     assert payload["quality_artifact"] is None
+
+
+def test_freshly_authenticated_quality_argv_poison_is_gate_seven_technical_only() -> None:
+    inputs = _inputs()
+    inputs[3]["commands"][0]["executed_arguments"] = ["python", "unsafe.py"]
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
+    assert _entry(payload, 7)["technical_errors"] == ["MALFORMED_QUALITY_RESULT_BINDING"]
+    assert payload["quality_artifact"] is None
+
+
+def test_freshly_authenticated_quality_template_poison_is_quality_evidence_failure() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["commands"][0]["arguments"] = ["python", "unsafe.py"]
+    inputs[3]["commands"][0]["executed_arguments"] = ["python", "unsafe.py"]
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _technical_standards(payload) == {4, 7}
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert payload["quality_artifact"] is None
+
+
+@pytest.mark.parametrize("mutation", ["unreported-missing", "reordered"])
+def test_freshly_authenticated_quality_adapter_sequence_is_required(mutation: str) -> None:
+    inputs = _inputs()
+    if mutation == "unreported-missing":
+        inputs[0]["quality_profile"]["commands"].pop()
+        inputs[3]["commands"].pop()
+    else:
+        inputs[0]["quality_profile"]["commands"].reverse()
+        inputs[3]["commands"].reverse()
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _technical_standards(payload) == {4, 7}
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _entry(payload, 4)["technical_errors"] == [code]
+    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert payload["quality_artifact"] is None
+
+
+def test_authenticated_missing_quality_adapter_block_is_gate_seven_only() -> None:
+    inputs = _inputs()
+    adapter = inputs[0]["quality_profile"]["commands"].pop()["adapter"]
+    inputs[3]["commands"].pop()
+    block = f"MISSING_QUALITY_COMMAND:{adapter}"
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _results(payload) == [*("PASS",) * 6, "BLOCK", "PASS"]
+    assert _entry(payload, 7)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+    assert payload["quality_artifact"] == {**trusted, "id": int(trusted["id"])}
+
+
+def test_quality_argv_requires_exact_test_manifest() -> None:
+    profile = {
+        "production_files": [],
+        "test_files": ["tests/test_sample.py"],
+        "commands": [{"arguments": ["tool", "--root=$REPOSITORY", "$TEST_FILES"]}],
+    }
+    provenance = {
+        "commands": [{"executed_arguments": ["tool", "--root=/repo/target"]}],
+    }
+
+    with pytest.raises(
+        standard_results.StandardResultsError, match="MALFORMED_QUALITY_RESULT_BINDING"
+    ):
+        standard_results._s02_quality_argv(profile, provenance, "MALFORMED_QUALITY_RESULT_BINDING")
 
 
 def test_missing_executed_argv_is_gate_seven_technical_only() -> None:
@@ -2086,7 +2232,7 @@ def test_blocked_refactor_source_requires_failure_and_remains_a_policy_block() -
 def test_failed_quality_capture_authenticates_its_gate_seven_block() -> None:
     inputs = _inputs()
     block = "QUALITY_GATE_FAILED:python.pytest.v1"
-    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
+    _quality_command(inputs, "python.pytest.v1")["exit_code"] = 1
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -2099,7 +2245,7 @@ def test_failed_quality_capture_authenticates_its_gate_seven_block() -> None:
 
 def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
     inputs = _inputs()
-    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
+    _quality_command(inputs, "python.pytest.v1")["exit_code"] = 1
     outcomes = dict(SUCCESS_OUTCOMES)
     outcomes["quality"] = "failure"
 
@@ -2140,13 +2286,11 @@ def test_complexity_policy_exit_blocks_gate_one_only(
         {"adapter": adapter, "paths": ["src"]},
         {"adapter": architecture_adapter, "paths": ["src"]},
     ]
-    inputs[0]["quality_profile"]["language"] = language
+    _set_quality_commands(inputs, language, (path,))
     inputs[0]["review_evidence"]["architecture"]["reviewed_paths"] = [path]
     inputs[0]["review_evidence"]["responsibility_boundary"]["path"] = path
-    profile_command = inputs[0]["quality_profile"]["commands"][0]
-    profile_command["adapter"] = adapter
+    profile_command = _quality_command(inputs, adapter)
     profile_command["exit_code"] = 1
-    inputs[3]["commands"][0]["adapter"] = adapter
     outcomes = dict(SUCCESS_OUTCOMES)
     outcomes["complexity"] = "failure"
 
@@ -2188,12 +2332,10 @@ def test_architecture_policy_exit_blocks_gate_three_only(
         {"adapter": complexity_adapter, "paths": ["src"]},
         {"adapter": architecture_adapter, "paths": ["src"]},
     ]
-    inputs[0]["quality_profile"]["language"] = language
+    _set_quality_commands(inputs, language, (path,))
     inputs[0]["review_evidence"]["architecture"]["reviewed_paths"] = [path]
     inputs[0]["review_evidence"]["responsibility_boundary"]["path"] = path
-    inputs[0]["quality_profile"]["commands"][0]["adapter"] = architecture_adapter
-    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
-    inputs[3]["commands"][0]["adapter"] = architecture_adapter
+    _quality_command(inputs, architecture_adapter)["exit_code"] = 1
     outcomes = dict(SUCCESS_OUTCOMES)
     outcomes["complexity"] = "failure"
 
@@ -2206,9 +2348,7 @@ def test_architecture_policy_exit_blocks_gate_three_only(
 
 def test_architecture_policy_exit_without_gate_three_evidence_is_malformed() -> None:
     inputs = _inputs()
-    inputs[0]["quality_profile"]["commands"][0]["adapter"] = "python.import-linter.v1"
-    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
-    inputs[3]["commands"][0]["adapter"] = "python.import-linter.v1"
+    _quality_command(inputs, "python.import-linter.v1")["exit_code"] = 1
 
     payload = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
 
@@ -2235,10 +2375,8 @@ def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> No
     ]
     inputs[0]["ruff_diagnostics"] = [_ruff(head)]
     inputs[0]["touched_qualified_functions"] = ["legacy"]
-    profile_command = inputs[0]["quality_profile"]["commands"][0]
-    profile_command["adapter"] = "python.c901-touched.v1"
+    profile_command = _quality_command(inputs, "python.c901-touched.v1")
     profile_command["exit_code"] = 1
-    inputs[3]["commands"][0]["adapter"] = "python.c901-touched.v1"
 
     payload = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
 
@@ -2257,12 +2395,10 @@ def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> No
 def test_complexity_adapter_tool_failure_still_blocks_gate_seven() -> None:
     inputs = _inputs()
     block = "QUALITY_GATE_FAILED:python.c901-touched.v1"
-    profile_command = inputs[0]["quality_profile"]["commands"][0]
-    profile_command["adapter"] = "python.c901-touched.v1"
+    profile_command = _quality_command(inputs, "python.c901-touched.v1")
     profile_command["exit_code"] = 2
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
-    inputs[3]["commands"][0]["adapter"] = "python.c901-touched.v1"
 
     payload = _compose(inputs)
 

@@ -221,19 +221,7 @@ def profile_files(
     records: list[git_changes.CommandRecord],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Read the exact source and test file manifests from the head tree."""
-    production = git_changes.list_regular_blobs(
-        repository, head_sha, policy.production_paths, records
+    return (
+        quality_profile.production_files(repository, head_sha, policy, records),
+        quality_profile.test_files(repository, head_sha, policy.language, records),
     )
-    tests = git_changes.list_regular_blobs(repository, head_sha, ("tests",), records)
-    suffixes = quality_profile.SOURCE_SUFFIXES[policy.language]
-    source_files = tuple(item.path for item in production if item.path.endswith(suffixes))
-    test_files = tuple(
-        item.path
-        for item in tests
-        if item.path.endswith(
-            (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts")
-        )
-    )
-    if policy.language == "python":
-        test_files = tuple(item.path for item in tests if item.path.endswith((".py", ".pyi")))
-    return source_files, test_files
