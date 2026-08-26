@@ -2,7 +2,7 @@ schema_version = "1.0"
 
 [behavior]
 intended_behavior = "Project #10 S06 makes Gate 4 independently bind exact new and changed production locations, ownership claims, coupling edges, architecture coverage, declared adapters, authenticated command results, and Gate 4 blocks before composing the eight Standard results."
-proof = "tests/test_modularity_policy.py; tests/test_standard_results.py::{test_gate_four_vocabulary_is_exact_and_ordered,test_added_location_cannot_hide_missing_gate_four_evidence,test_gate_four_aggregate_evidence_is_bound_to_source_facts,test_authentic_gate_four_poison_blocks_only_gate_four,test_malformed_module_boundaries_evidence_blocks_only_gate_four}"
+proof = "tests/test_modularity_policy.py; tests/test_standard_results.py::{test_gate_four_vocabulary_is_exact_and_ordered,test_added_location_cannot_hide_missing_gate_four_evidence,test_gate_four_aggregate_evidence_is_bound_to_source_facts,test_authentic_gate_four_poison_blocks_only_gate_four,test_typescript_owned_new_location_passes_aggregate_validation,test_gate_four_aggregate_requires_authentic_changed_path_coupling,test_malformed_module_boundaries_evidence_blocks_only_gate_four}"
 
 [characterization]
 captured_behavior = "Existing Gate 4 evaluator behavior remains covered while focused tests prove cohesive Python and TypeScript locations, modified-path coupling without a new-location claim, every declared ownership/location/coverage block family, malformed boundary ownership, aggregate source binding, and lane isolation."
@@ -10,25 +10,24 @@ proof = ".supportability-characterization.json; tests/characterization/architect
 
 [separation_of_concerns]
 before = "The Gate 4 evaluator produced deterministic modularity evidence, but aggregate composition validated only its shape and allowed internally forged locations, claims, coupling, coverage, or blocks to pass."
-after = "The existing evaluator still owns Gate 4 policy. The aggregate result contract now independently reconstructs the same Gate 4 facts from changed files, structured review, architecture, declared gates, and authenticated commands, then requires exact parity before lane composition."
+after = "The existing Gate 4 owner exposes one pure block-derivation boundary. The aggregate result contract independently reconstructs changed paths, claims, coupling, and coverage from authenticated facts, then requires exact parity before lane composition."
 boundaries = [
+    { path = "src/supportability_gate/modularity_policy.py", kind = "function", symbol = "derive_modularity_blocks", before = "Gate 4 block derivation was embedded only in evaluator orchestration and duplicated by aggregate validation.", after = "Owns the canonical pure derivation of vague-location, claim, and coverage blocks for evaluator and aggregate parity checks." },
+    { path = "src/supportability_gate/modularity_policy.py", kind = "function", symbol = "evaluate_modularity", before = "Derived Gate 4 blocks inline after assembling authenticated modularity facts.", after = "Delegates only canonical block derivation to the Gate 4-owned pure boundary." },
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity", before = "Validated aggregate fields without passing authenticated changed-file facts into modularity validation.", after = "Passes the already validated changed-file tuple into the Gate 4 binding boundary." },
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity_components", before = "Validated modularity shape before review and quality facts were authenticated.", after = "Validates review and quality facts first, then binds modularity to those facts." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity", before = "Accepted shape-valid modularity fields that were only a subset of aggregate policy blocks.", after = "Requires one exact tuple of derived locations, claims, coupling, coverage, and Gate 4 blocks." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_blocks", before = "No independent aggregate Gate 4 block reconstruction existed.", after = "Reconstructs exact vague-location, claim, and coverage blocks from authenticated facts." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_claim_blocks", before = "No independent aggregate ownership-claim verification existed.", after = "Checks exact normalized owners, existing nodes, new-owner use, and package identity." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity", before = "Accepted shape-valid modularity fields that were only a subset of aggregate policy blocks.", after = "Independently reconstructs authenticated facts and uses the Gate 4 owner only for canonical block derivation before requiring exact parity." },
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_coverage", before = "No independent aggregate coverage reconstruction existed.", after = "Reconstructs per-location architecture and successful declared-adapter coverage." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_package", before = "No aggregate package-identity boundary existed for Gate 4.", after = "Derives the owning production package from the longest matching production root." },
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_paths", before = "No aggregate derivation bound modularity paths to changed-file classifications.", after = "Derives exact sorted changed and new production paths from authenticated change rows." },
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_modularity_rows", before = "Gate 4 shape checks lived inside the unbound modularity validator.", after = "Validates only the fixed serialized row shapes before independent source binding." },
-    { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "The aggregate contract had no local path primitive or fixed vague-location vocabulary for independent Gate 4 verification.", after = "Uses stdlib path identity and the existing fixed Gate 4 vocabulary without importing analysis dependencies." },
 ]
 
 [architecture]
-dependency_direction = "The aggregate result contract remains independent of analysis dependencies. It consumes only serialized exact-head evidence, reuses contract path/command semantics and canonical block ownership, and uses stdlib path handling. It does not import modularity_policy or execute target code."
+dependency_direction = "Gate 4 policy owns canonical block derivation in modularity_policy. Type-only analyzer imports preserve the aggregate's dependency-light import boundary; standard_results independently reconstructs serialized facts and calls only the pure Gate 4 rule boundary. Neither path imports or executes target code."
 reviewed_paths = [
     ".supportability-review.toml",
     "docs/product_completion_contract.md",
+    "src/supportability_gate/modularity_policy.py",
     "src/supportability_gate/standard_results.py",
     "tests/test_modularity_policy.py",
     "tests/test_standard_results.py",
@@ -41,17 +40,17 @@ does_not_own = "Git acquisition, source parsing, modularity policy generation, t
 
 [incremental_refactor]
 target = "Complete only Project #10 S06 Gate 4 ownership, location, coupling, coverage, aggregate-binding, lane-isolation, direct-proof, and prospective terminal-ledger requirements."
-completed_step = "Added one independent aggregate parity check in the existing result owner plus focused Python/frontend, forged-evidence, block-vocabulary, malformed-review, and isolation tests."
+completed_step = "Added independent aggregate fact reconstruction, one Gate 4-owned pure block derivation, plus focused Python/frontend, all-family, coupling, forged-evidence, malformed-review, and isolation tests."
 
 [review_handoff]
-summary = "Issue #149 is the sole active slice. The committed change qualifies Gate 4 aggregate binding in one existing result owner; external protected checks, focused reviews, merge, canaries, cleanup, issue, and Project state remain live evidence and are not claimed by this file."
+summary = "Issue #149 is the sole active slice. The committed change qualifies Gate 4 through its existing policy owner and aggregate result owner; final protected checks, merge, canaries, cleanup, issue, and Project state remain live evidence and are not claimed by this file."
 remaining_risks = [
-    "Exact protected workflow, eight one-time focused reviews, normal merge, Python/frontend canaries, and cleanup must be verified from live GitHub evidence before S06 completion.",
-    "The aggregate verifier intentionally reconstructs only the existing fixed Gate 4 semantics and adds no new package, command, exclusion, waiver, threshold, or target execution.",
+    "Exact final-head protected workflow, normal merge, Python/frontend canaries, and cleanup must be verified from live GitHub evidence before S06 completion.",
+    "The aggregate verifier reconstructs authenticated Gate 4 facts and reuses only the existing canonical policy rules; no new package, command, exclusion, waiver, threshold, or target execution is added.",
 ]
 
 [human_review]
 naming = "Each added function names one Gate 4 fact it derives or validates; the existing canonical block names remain unchanged."
-cohesion = "Modularity policy generation stays in modularity_policy; independent serialized-result verification stays in standard_results; canonical lane ownership stays in standard_block_ownership."
+cohesion = "Canonical Gate 4 rule derivation stays in modularity_policy; independent serialized-fact reconstruction stays in standard_results; canonical lane ownership stays in standard_block_ownership."
 intended_behavior = "Issue #149 limits this change to Gate 4 qualification and direct proof. No packages, commands, executable paths, controls, exclusions, waivers, thresholds, workflow changes, target execution, immutable documents, or later-slice behavior are added."
-reviewability = "One bounded S06 production change reuses existing contract and ownership primitives and has direct positive, poison, forged-evidence, and isolation checks."
+reviewability = "One bounded S06 change reuses existing contract, policy, and ownership boundaries and has direct Python/frontend positive, all-family poison, coupling, forged-evidence, and isolation checks."

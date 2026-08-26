@@ -1879,8 +1879,20 @@ Do not create a new terminal label not authorized by an active milestone directi
   ordered Gate 4 vocabulary, invalid/missing/unresolved/new/parallel/vague ownership, incomplete
   coverage, malformed module-boundary ownership, forged aggregate evidence rejection, and an
   authentic ordinary poison isolated to Gate 4.
-- Remaining work: pass exact full source and hosted deterministic proof, complete eight focused
-  reviews serially on one frozen head, resolve all findings in one bounded remediation batch if
-  needed, merge normally without bypass, complete and clean the Python and frontend canaries,
-  finish issue/Project/ledger readback, refresh and activate S07 only, set S06
-  `Done / Complete / On scope / Yes`, and stop S06.
+- Frozen source review: exact head `7d7ba1cef828e143883aae1154da5458f434bfac` passed Source
+  Validation run/job `32946358532`/`98107793389` and required run `32946360285` attempt 2. Observer
+  `98110886702`, collector `98118640712`, and aggregate Gate `98118682143` passed after eight
+  exact serial request/completion pairs: `5422599142/5422624734`, `5422632138/5422659525`,
+  `5422667327/5422690435`, `5422695162/review 5028338998`,
+  `5422739659/review 5028373725`, `5422787660/5422810208`,
+  `5422814639/review 5028428397`, and `5422851259/5422886774`.
+- Review remediation: findings `3860999699`, `3861029855`, and `3861076828` were supported and
+  handled together. Canonical block derivation moved behind the existing Gate 4 policy owner while
+  aggregate fact reconstruction remained independent; aggregate tests now cover every authentic
+  Gate 4 block family, a TypeScript owned location, and real changed-path coupling acceptance plus
+  omission rejection. No new module, dependency, command, threshold, exclusion, waiver, or later
+  slice behavior was added.
+- Remaining work: pass exact final-head source and hosted deterministic proof with zero repeated
+  focused reviews, reply to and resolve all three findings, merge normally without bypass, complete
+  and clean the Python and frontend canaries, finish issue/Project/ledger readback, refresh and
+  activate S07 only, set S06 `Done / Complete / On scope / Yes`, and stop S06.

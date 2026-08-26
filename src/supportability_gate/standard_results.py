@@ -6,10 +6,14 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from pathlib import PurePosixPath
 from typing import Any
 
-from supportability_gate import clause_inventory, contract, standard_block_ownership
+from supportability_gate import (
+    clause_inventory,
+    contract,
+    modularity_policy,
+    standard_block_ownership,
+)
 
 CHECK_CONTEXTS = (
     "Supportability 1 - Cyclomatic Complexity",
@@ -244,7 +248,6 @@ _S02_REVIEW_SECTIONS = {
     "review_handoff": ({"summary"}, {"remaining_risks"}),
     "separation_of_concerns": ({"after", "before"}, set()),
 }
-_S02_VAGUE_LOCATION_NAMES = frozenset({"common", "helpers", "misc", "stuff", "utils"})
 
 
 @dataclass(frozen=True)
@@ -664,47 +667,6 @@ def _s02_modularity_paths(
     return changed_paths, new_paths
 
 
-def _s02_modularity_package(path: str, production_paths: list[str], code: str) -> str:
-    roots = [root for root in production_paths if path == root or path.startswith(f"{root}/")]
-    if not roots:
-        raise StandardResultsError(code)
-    root = max(roots, key=len)
-    relative = PurePosixPath(path).relative_to(root)
-    return relative.parts[0] if len(relative.parts) > 1 else PurePosixPath(root).name
-
-
-def _s02_modularity_claim_blocks(
-    source: dict[str, Any],
-    new_paths: list[str],
-    justifications: list[dict[str, Any]],
-    code: str,
-) -> list[str]:
-    blocks: list[str] = []
-    claims = {item["path"]: item for item in justifications}
-    nodes = source["architecture"]["nodes"]
-    for path in new_paths:
-        claim = claims.get(path)
-        if claim is None:
-            blocks.append(f"MISSING_NEW_LOCATION_JUSTIFICATION:{path}")
-            continue
-        try:
-            contract.normalize_repository_path(claim["path"], "module_boundaries.path")
-            contract.normalize_repository_path(claim["owner_path"], "module_boundaries.owner_path")
-        except contract.ContractError:
-            blocks.append(f"INVALID_NEW_LOCATION_JUSTIFICATION:{path}")
-            continue
-        owner = claim["owner_path"]
-        if owner not in nodes:
-            blocks.append(f"UNRESOLVED_MODULE_OWNER:{path}:{owner}")
-        elif owner in new_paths and owner != path:
-            blocks.append(f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{owner}")
-        elif _s02_modularity_package(owner, source["production_paths"], code) != (
-            _s02_modularity_package(path, source["production_paths"], code)
-        ):
-            blocks.append(f"PARALLEL_PACKAGE:{path}:{owner}")
-    return blocks
-
-
 def _s02_modularity_coverage(source: dict[str, Any], new_paths: list[str]) -> list[dict[str, Any]]:
     return [
         {
@@ -754,33 +716,6 @@ def _s02_modularity_rows(
     return row, blocks, justifications
 
 
-def _s02_modularity_blocks(
-    source: dict[str, Any],
-    new_paths: list[str],
-    justifications: list[dict[str, Any]],
-    coverage: list[dict[str, Any]],
-    code: str,
-) -> list[str]:
-    blocks = [
-        f"VAGUE_PRODUCTION_LOCATION:{path}:{name}"
-        for path in new_paths
-        for name in sorted(
-            {
-                *[part.lower() for part in PurePosixPath(path).parts[:-1]],
-                PurePosixPath(path).stem.lower(),
-            }
-            & _S02_VAGUE_LOCATION_NAMES
-        )
-    ]
-    blocks.extend(_s02_modularity_claim_blocks(source, new_paths, justifications, code))
-    blocks.extend(
-        f"NEW_LOCATION_GATE_COVERAGE:{item['path']}"
-        for item in coverage
-        if len(item["adapters"]) != len(source["gate_coverage"]) or not item["architecture"]
-    )
-    return sorted(blocks)
-
-
 def _s02_modularity(
     value: object,
     source: dict[str, Any],
@@ -802,9 +737,27 @@ def _s02_modularity(
         edge for edge in source["architecture"]["edges"] if edge["source"] in changed_paths
     ]
     expected_coverage = _s02_modularity_coverage(source, new_paths)
-    expected_blocks = _s02_modularity_blocks(
-        source, new_paths, expected_justifications, expected_coverage, code
-    )
+    try:
+        expected_blocks = list(
+            modularity_policy.derive_modularity_blocks(
+                tuple(source["production_paths"]),
+                tuple(new_paths),
+                tuple(
+                    modularity_policy.LocationJustification(**item)
+                    for item in expected_justifications
+                ),
+                tuple(source["architecture"]["nodes"]),
+                tuple(
+                    modularity_policy.LocationCoverage(
+                        item["path"], tuple(item["adapters"]), item["architecture"]
+                    )
+                    for item in expected_coverage
+                ),
+                len(source["gate_coverage"]),
+            )
+        )
+    except (contract.ContractError, ValueError):
+        raise StandardResultsError(code) from None
     gate_four_blocks = sorted(
         block
         for block in policy_blocks
