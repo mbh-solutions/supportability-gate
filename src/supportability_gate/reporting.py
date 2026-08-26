@@ -43,6 +43,8 @@ class EvaluationResult:
     high_risk_paths: tuple[str, ...]
     gate_coverage: tuple[tuple[str, tuple[str, ...]], ...]
     changed_files: tuple[ChangedFileAssessment, ...]
+    responsibility_targets: tuple[str, ...]
+    unbounded_production_paths: tuple[str, ...]
     functions: tuple[FunctionDecision, ...]
     ruff_diagnostics: tuple[RuffDiagnostic, ...]
     technical_errors: tuple[TechnicalError, ...]
@@ -198,6 +200,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "overall_result": result.overall_result,
         "policy_blocks": list(result.policy_blocks),
         "production_paths": list(result.production_paths),
+        "responsibility_targets": list(result.responsibility_targets),
         "quality_profile": decision_payload(result.quality_profile)
         if result.quality_profile
         else None,
@@ -215,6 +218,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "technical_errors": [asdict(item) for item in result.technical_errors],
         "tool_versions": dict(sorted(result.tool_versions.items())),
         "touched_qualified_functions": sorted(touched),
+        "unbounded_production_paths": list(result.unbounded_production_paths),
     }
 
 

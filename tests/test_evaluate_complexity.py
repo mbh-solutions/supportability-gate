@@ -553,6 +553,19 @@ def _compose_cli_result(
     behavior = hashlib.sha256(
         json.dumps([["sample", "e" * 64]], separators=(",", ":"), sort_keys=True).encode()
     ).hexdigest()
+    targets = result["responsibility_targets"]
+    unbounded = result["unbounded_production_paths"]
+    changed = result["changed_files"]
+    assert isinstance(targets, list) and isinstance(unbounded, list)
+    assert isinstance(changed, list)
+    scope = sorted(
+        {
+            changed_path
+            for row in changed
+            for changed_path in (row["old_path"], row["new_path"])
+            if changed_path
+        }
+    )
     characterization: dict[str, Any] = {
         "artifacts": {
             "base": {"capture_sha256": "3" * 64, "digest": "4" * 64, "id": "701"},
@@ -570,6 +583,16 @@ def _compose_cli_result(
         "overall_result": "PASS",
         "policy_blocks": [],
         "repository": "github.com/example/fixture",
+        "refactor_runnability": {
+            "base_sha": base_sha,
+            "head_sha": head_sha,
+            "repository": "github.com/example/fixture",
+            "runnable": True,
+            "schema_version": "refactor-runnability.v1",
+            "targets": targets,
+            "unbounded_paths": unbounded,
+            "workflow_sha": WORKFLOW_SHA,
+        },
         "scenarios": [
             {
                 "base_behavior_sha256": "e" * 64,
@@ -589,20 +612,37 @@ def _compose_cli_result(
         json.dumps(characterization, separators=(",", ":"), sort_keys=True).encode()
     ).hexdigest()
     refactor = {
-        "applicable": False,
-        "authorization": None,
-        "authorization_comment_id": None,
+        "applicable": True,
+        "authorization": {
+            "base_sha": base_sha,
+            "broad": len(targets) != 1,
+            "head_sha": head_sha,
+            "repository": "example/fixture",
+            "scope": scope,
+            "sequence": {"predecessor_sha": base_sha, "step": 1},
+            "targets": targets,
+        },
+        "authorization_comment_id": 11,
         "base_sha": base_sha,
         "characterization_sha256": characterization_sha,
-        "changed_paths": [".supportability-review.toml", path],
+        "changed_paths": scope,
         "head_sha": head_sha,
         "other_standard_clauses_waived": False,
         "overall_result": "PASS",
         "policy_blocks": [],
+        "predecessor": {
+            "authorization": None,
+            "authorization_comment_id": None,
+            "base_sha": None,
+            "block": None,
+            "head_sha": None,
+            "merge_sha": None,
+            "pull_number": None,
+        },
         "repository": "example/fixture",
         "schema_version": "refactor-policy-result.v1",
-        "targets": [],
-        "unbounded_paths": [],
+        "targets": targets,
+        "unbounded_paths": unbounded,
     }
     profile = result["quality_profile"]
     assert isinstance(profile, dict)

@@ -17,6 +17,7 @@ from supportability_gate import (
     git_changes,
     modularity_policy,
     quality_profile,
+    refactor_targets,
     reporting,
     review_evidence,
 )
@@ -373,6 +374,8 @@ def _result(
     policy: contract.Contract,
     contract_blocks: tuple[str, ...],
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    responsibility_targets: tuple[str, ...],
+    unbounded_production_paths: tuple[str, ...],
     decisions: tuple[complexity_policy.FunctionDecision, ...],
     ruff_diagnostics: tuple[complexity_metrics.RuffDiagnostic, ...],
     records: list[git_changes.CommandRecord],
@@ -403,6 +406,8 @@ def _result(
         policy.high_risk_paths,
         _gate_coverage(policy),
         assessments,
+        responsibility_targets,
+        unbounded_production_paths,
         decisions,
         ruff_diagnostics,
         (),
@@ -584,6 +589,8 @@ def _technical_result(
     blob: git_changes.GitBlob | None,
     policy: contract.Contract | None,
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
+    responsibility_targets: tuple[str, ...],
+    unbounded_production_paths: tuple[str, ...],
     decisions: tuple[complexity_policy.FunctionDecision, ...],
     ruff_diagnostics: tuple[complexity_metrics.RuffDiagnostic, ...],
     contract_blocks: tuple[str, ...],
@@ -616,6 +623,8 @@ def _technical_result(
         policy.high_risk_paths if policy else (),
         _gate_coverage(policy) if policy else (),
         assessments,
+        responsibility_targets,
+        unbounded_production_paths,
         decisions,
         ruff_diagnostics,
         tuple(technical_errors),
@@ -639,6 +648,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
     blob: git_changes.GitBlob | None = None
     policy: contract.Contract | None = None
     assessments: tuple[function_changes.ChangedFileAssessment, ...] = ()
+    responsibility_targets: tuple[str, ...] = ()
+    unbounded_production_paths: tuple[str, ...] = ()
     decisions: tuple[complexity_policy.FunctionDecision, ...] = ()
     ruff_diagnostics: tuple[complexity_metrics.RuffDiagnostic, ...] = ()
     contract_blocks: tuple[str, ...] = ()
@@ -673,6 +684,9 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
         )
         assessments = _classify_changes(repository, identity, policy, changes, records)
+        responsibility_targets, unbounded_production_paths = refactor_targets.derive(
+            repository, identity, policy, changes, records
+        )
         structured_review, review_blocks = _read_review_evidence(
             repository,
             identity,
@@ -730,6 +744,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
                 blob,
                 policy,
                 assessments,
+                responsibility_targets,
+                unbounded_production_paths,
                 decisions,
                 ruff_diagnostics,
                 contract_blocks,
@@ -749,6 +765,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             policy,
             contract_blocks,
             assessments,
+            responsibility_targets,
+            unbounded_production_paths,
             decisions,
             ruff_diagnostics,
             records,
@@ -770,6 +788,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             blob,
             policy,
             assessments,
+            responsibility_targets,
+            unbounded_production_paths,
             decisions,
             ruff_diagnostics,
             contract_blocks,

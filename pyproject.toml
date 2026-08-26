@@ -73,7 +73,8 @@ layers = [
     "supportability_gate.complexity_metrics",
     "supportability_gate.refactor_policy",
     "supportability_gate.codex_review",
-    "supportability_gate.function_changes",
     "supportability_gate.characterization",
+    "supportability_gate.refactor_targets",
+    "supportability_gate.function_changes",
     "supportability_gate.clause_inventory | supportability_gate.contract | supportability_gate.focused_review | supportability_gate.git_changes | supportability_gate.review_evidence | supportability_gate.standard_block_ownership",
 ]

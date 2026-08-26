@@ -332,6 +332,127 @@ def test_existing_characterization_passes_with_exact_identity(
     assert result["coverage"]["required_paths"] == [
         "src/sample.py" if language == "python" else "src/sample.ts"
     ]
+    assert result["refactor_runnability"] == {
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "repository": "github.com/example/fixture",
+        "runnable": True,
+        "schema_version": characterization.RUNNABILITY_SCHEMA,
+        "targets": [],
+        "unbounded_paths": [],
+        "workflow_sha": "f" * 40,
+    }
+
+
+def test_logical_step_runnability_requires_same_recorded_command() -> None:
+    scenario = characterization.Scenario("sample", "golden", ("src/sample.py",))
+    manifest = characterization.Manifest((scenario,), "a" * 40, "b" * 64)
+    targets = ("src/sample.py::function:calculate:1-2",)
+    base = {"sample": {"command": ["python3.12", "-P", "driver.py"]}}
+    head = {"sample": {"command": ["python3.12", "-P", "driver.py"]}}
+
+    assert characterization._logical_step_runnable(manifest, base, head, targets) is True
+    assert characterization._logical_step_runnable(manifest, base, {}, targets) is False
+    assert (
+        characterization._logical_step_runnable(
+            manifest,
+            base,
+            head,
+            (*targets, "src/missing.py::function:missing:1-2"),
+        )
+        is False
+    )
+    head["sample"]["command"] = ["python3.12", "-P", "other.py"]
+    assert characterization._logical_step_runnable(manifest, base, head, targets) is False
+
+
+def test_characterization_produces_source_derived_runnability(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    _write(
+        repository / "tests/characterization/existing.characterization.py",
+        "import json\n"
+        "print(json.dumps({'schema_version': '1.0', 'scenario': 'existing', "
+        "'behavior': {'stable': True}}, sort_keys=True))\n",
+    )
+    _write(
+        repository / "tests/characterization/existing.golden.json",
+        json.dumps({"stable": True}) + "\n",
+    )
+    _write(
+        repository / "src/sample.py",
+        "def calculate(value: int) -> int:\n    return value + 1\n",
+    )
+    base_sha = _commit(repository, "stable characterization")
+    _write(
+        repository / "src/sample.py",
+        "def calculate(value: int) -> int:\n    return value + 2\n",
+    )
+    head_sha = _commit(repository, "bounded source change")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert result["refactor_runnability"] == {
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "repository": "github.com/example/fixture",
+        "runnable": True,
+        "schema_version": characterization.RUNNABILITY_SCHEMA,
+        "targets": ["src/sample.py::function:calculate:1-2"],
+        "unbounded_paths": [],
+        "workflow_sha": "f" * 40,
+    }
+
+
+def test_separate_scenarios_cover_one_runnable_logical_step(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    sources = {
+        "existing": ("src/sample.py", "calculate"),
+        "other": ("src/other.py", "normalize"),
+    }
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest([_scenario(identifier, path) for identifier, (path, _) in sources.items()]),
+    )
+    for identifier, (path, name) in sources.items():
+        _write(
+            repository / path,
+            f"def {name}(value: int) -> int:\n    return value + 1\n",
+        )
+        _write(
+            repository / f"tests/characterization/{identifier}.characterization.py",
+            "import json\n"
+            f"print(json.dumps({{'schema_version': '1.0', 'scenario': '{identifier}', "
+            f"'behavior': {{'stable': '{identifier}'}}}}, sort_keys=True))\n",
+        )
+        _write(
+            repository / f"tests/characterization/{identifier}.golden.json",
+            json.dumps({"stable": identifier}) + "\n",
+        )
+    base_sha = _commit(repository, "separate runnable scenarios")
+    for path, name in sources.values():
+        _write(
+            repository / path,
+            f"def {name}(value: int) -> int:\n    return value + 2\n",
+        )
+    head_sha = _commit(repository, "multi-target change")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert result["refactor_runnability"]["targets"] == [
+        "src/other.py::function:normalize:1-2",
+        "src/sample.py::function:calculate:1-2",
+    ]
+    assert result["refactor_runnability"]["runnable"] is True
 
 
 def test_deleted_source_uses_retained_characterization_only(tmp_path: Path) -> None:

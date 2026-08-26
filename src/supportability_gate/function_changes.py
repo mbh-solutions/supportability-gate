@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import difflib
 import io
 import tokenize
 from dataclasses import dataclass
@@ -189,7 +190,7 @@ class _TypeScriptFunctionCollector:
         self.functions: list[FunctionDefinition] = []
         self.components: list[ResponsibilitySpan] = []
 
-    def _name(self, node: Node) -> str:
+    def _name_and_start_line(self, node: Node) -> tuple[str, int]:
         name = node.child_by_field_name("name")
         parent = node.parent
         if (
@@ -204,20 +205,23 @@ class _TypeScriptFunctionCollector:
         ):
             name = parent.child_by_field_name("name") or parent.child_by_field_name("key")
         if name is None:
-            return f"anonymous@{node.start_point.row + 1}:{node.start_point.column + 1}"
+            return (
+                f"anonymous@{node.start_point.row + 1}:{node.start_point.column + 1}",
+                node.start_point.row + 1,
+            )
         value = _typescript_text(name, self.content)
         if not value:
             raise PythonSourceError("AMBIGUOUS_FUNCTION_IDENTITY", self.path)
-        return value
+        return value, min(node.start_point.row, name.start_point.row) + 1
 
     def visit(self, node: Node) -> None:
-        if node.type in {"class_declaration", "class_expression"}:
-            name = self._name(node)
+        if node.type in {"class", "class_declaration", "class_expression"}:
+            name, start_line = self._name_and_start_line(node)
             qualified_name = ".".join([*self.context, name])
             if self._react_component(node):
                 self.components.append(
                     ResponsibilitySpan(
-                        node.start_point.row + 1,
+                        start_line,
                         node.end_point.row + 1,
                         "component",
                         qualified_name,
@@ -255,12 +259,12 @@ class _TypeScriptFunctionCollector:
         }
 
     def _visit_function(self, node: Node) -> None:
-        name = self._name(node)
+        name, start_line = self._name_and_start_line(node)
         qualified_name = ".".join([*self.context, name])
         span = FunctionSpan(
             self.path,
             qualified_name,
-            node.start_point.row + 1,
+            start_line,
             node.end_point.row + 1,
         )
         self.functions.append(FunctionDefinition(span, node))
@@ -377,6 +381,28 @@ def changed_responsibility_spans(
         (span.start_line, span.end_line, span.kind, span.name): span for span in (*head, *mapped)
     }
     return tuple(surviving[key] for key in sorted(surviving)), tuple(deleted)
+
+
+def renamed_responsibility_spans(
+    old_path: str, new_path: str, base_content: bytes, head_content: bytes
+) -> tuple[tuple[ResponsibilitySpan, ...], tuple[ResponsibilitySpan, ...]]:
+    """Return every moved head responsibility plus deleted base responsibilities."""
+    base_lines: set[int] = set()
+    matcher = difflib.SequenceMatcher(
+        None, base_content.splitlines(), head_content.splitlines(), autojunk=False
+    )
+    for tag, base_start, base_end, _, _ in matcher.get_opcodes():
+        if tag != "equal":
+            base_lines.update(range(base_start + 1, base_end + 1))
+    base = responsibility_spans(old_path, base_content, base_lines)
+    moved = responsibility_spans(
+        new_path, head_content, set(range(1, len(head_content.splitlines()) + 1))
+    )
+    identities = {(span.kind, span.name) for span in moved if span.kind != "module"}
+    deleted = tuple(
+        span for span in base if span.kind == "module" or (span.kind, span.name) not in identities
+    )
+    return moved, deleted
 
 
 def _deltas(

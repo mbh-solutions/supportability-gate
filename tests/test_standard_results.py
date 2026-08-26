@@ -102,6 +102,7 @@ def _complexity(
     status: str = "MODIFIED",
 ) -> dict[str, Any]:
     lines = lines or [1]
+    targets = [f"{path}::module:{path}:1-1"] if path.startswith("src/") else []
     return {
         "architecture": {
             "adapter": "python.ast-imports.v1",
@@ -147,6 +148,7 @@ def _complexity(
         "overall_result": "PASS",
         "policy_blocks": [],
         "production_paths": ["src"],
+        "responsibility_targets": targets,
         "quality_profile": {
             "base_sha": IDENTITY.base_sha,
             "changed_paths": [path],
@@ -182,10 +184,12 @@ def _complexity(
         "technical_errors": [],
         "tool_versions": {},
         "touched_qualified_functions": [],
+        "unbounded_production_paths": [],
     }
 
 
 def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
+    targets = [f"{path}::module:{path}:1-1"] if path.startswith("src/") else []
     return {
         "artifacts": {
             "base": {"capture_sha256": "3" * 64, "digest": "4" * 64, "id": "701"},
@@ -203,6 +207,16 @@ def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
         "overall_result": "PASS",
         "policy_blocks": [],
         "repository": f"github.com/{IDENTITY.repository}",
+        "refactor_runnability": {
+            "base_sha": IDENTITY.base_sha,
+            "head_sha": IDENTITY.head_sha,
+            "repository": f"github.com/{IDENTITY.repository}",
+            "runnable": True,
+            "schema_version": "refactor-runnability.v1",
+            "targets": targets,
+            "unbounded_paths": [],
+            "workflow_sha": IDENTITY.workflow_sha,
+        },
         "scenarios": [
             {
                 "base_behavior_sha256": "e" * 64,
@@ -221,10 +235,24 @@ def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
 
 
 def _refactor(characterization: dict[str, Any], path: str) -> dict[str, Any]:
+    applicable = path.startswith("src/")
+    targets = [f"{path}::module:{path}:1-1"] if applicable else []
     return {
-        "applicable": False,
-        "authorization": None,
-        "authorization_comment_id": None,
+        "applicable": applicable,
+        "authorization": (
+            {
+                "base_sha": IDENTITY.base_sha,
+                "broad": False,
+                "head_sha": IDENTITY.head_sha,
+                "repository": IDENTITY.repository,
+                "scope": [path],
+                "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+                "targets": targets,
+            }
+            if applicable
+            else None
+        ),
+        "authorization_comment_id": 11 if applicable else None,
         "base_sha": IDENTITY.base_sha,
         "characterization_sha256": hashlib.sha256(_canonical(characterization)).hexdigest(),
         "changed_paths": [path],
@@ -232,9 +260,18 @@ def _refactor(characterization: dict[str, Any], path: str) -> dict[str, Any]:
         "other_standard_clauses_waived": False,
         "overall_result": "PASS",
         "policy_blocks": [],
+        "predecessor": {
+            "authorization": None,
+            "authorization_comment_id": None,
+            "base_sha": None,
+            "block": None,
+            "head_sha": None,
+            "merge_sha": None,
+            "pull_number": None,
+        },
         "repository": IDENTITY.repository,
         "schema_version": "refactor-policy-result.v1",
-        "targets": [],
+        "targets": targets,
         "unbounded_paths": [],
     }
 
@@ -270,6 +307,32 @@ def _inputs(
     complexity = _complexity(path, lines, status=status)
     characterization = _characterization(path)
     return complexity, characterization, _refactor(characterization, path), _quality()
+
+
+def _step_two_refactor(inputs: tuple[dict[str, Any], ...]) -> dict[str, Any]:
+    refactor = inputs[2]
+    current = refactor["authorization"]
+    assert isinstance(current, dict)
+    current["sequence"]["step"] = 2
+    predecessor = {
+        "authorization": {
+            "base_sha": "c" * 40,
+            "broad": current["broad"],
+            "head_sha": "d" * 40,
+            "repository": IDENTITY.repository,
+            "scope": list(current["scope"]),
+            "sequence": {"predecessor_sha": "c" * 40, "step": 1},
+            "targets": list(current["targets"]),
+        },
+        "authorization_comment_id": 10,
+        "base_sha": "c" * 40,
+        "block": None,
+        "head_sha": "d" * 40,
+        "merge_sha": IDENTITY.base_sha,
+        "pull_number": 6,
+    }
+    refactor["predecessor"] = predecessor
+    return predecessor
 
 
 def _owned_new_location_inputs(
@@ -445,13 +508,497 @@ import supportability_gate.standard_results
     assert completed.returncode == 0, completed.stderr
 
 
-def test_current_refactor_schema_has_exact_boolean_applicable() -> None:
+def test_current_refactor_schema_has_authenticated_applicability() -> None:
     inputs = _inputs()
 
     payload = _compose(inputs)
 
-    assert inputs[2]["applicable"] is False
+    assert inputs[2]["applicable"] is True
     assert _entry(payload, 6)["result"] == "PASS"
+
+
+def test_gate_six_vocabulary_is_exact_and_ordered() -> None:
+    assert standard_block_ownership.BLOCK_FAMILIES[5] == (
+        "AUTHORIZATION_REPOSITORY_MISMATCH",
+        "BROAD_AUTHORIZATION_REQUIRED",
+        "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+        "INVALID_STRANGLER_SEQUENCE",
+        "MALFORMED_OWNER_AUTHORIZATION",
+        "MISSING_BOUNDED_PRODUCTION_TARGET",
+        "MISSING_OWNER_AUTHORIZATION",
+        "MISSING_RUNNABILITY_COVERAGE",
+        "NON_RUNNABLE_LOGICAL_STEP",
+        "STALE_OWNER_AUTHORIZATION",
+        "STALE_RUNNABILITY_EVIDENCE",
+        "UNAUTHENTICATED_OWNER_AUTHORIZATION",
+        "UNAUTHENTICATED_RUNNABILITY_EVIDENCE",
+        "UNFOCUSED_DIFF_SCOPE",
+        "UNVERIFIABLE_BOUNDED_TARGET",
+    )
+
+
+@pytest.mark.parametrize(
+    "defect", ["applicable", "scope", "targets", "target_shape", "authorization"]
+)
+def test_refactor_result_cross_binds_authenticated_change_evidence(defect: str) -> None:
+    inputs = _inputs()
+    target = "src/sample.py::function:calculate:1-2"
+    authorization = {
+        "base_sha": IDENTITY.base_sha,
+        "broad": False,
+        "head_sha": IDENTITY.head_sha,
+        "repository": IDENTITY.repository,
+        "scope": ["src/sample.py"],
+        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "targets": [target],
+    }
+    inputs[2].update(
+        {
+            "applicable": True,
+            "authorization": authorization,
+            "authorization_comment_id": 11,
+            "targets": [target],
+        }
+    )
+    if defect == "applicable":
+        inputs[2]["applicable"] = False
+    elif defect == "scope":
+        inputs[2]["changed_paths"] = ["docs/forged.md"]
+        authorization["scope"] = ["docs/forged.md"]
+    elif defect == "targets":
+        forged = "src/forged.py::function:calculate:1-2"
+        inputs[2]["targets"] = [forged]
+        authorization["targets"] = [forged]
+    elif defect == "target_shape":
+        forged = "src/sample.py::forged:anything"
+        inputs[2]["targets"] = [forged]
+        authorization["targets"] = [forged]
+    else:
+        authorization["head_sha"] = "f" * 40
+
+    payload = _compose(inputs)
+
+    expected = (
+        "MALFORMED_REFACTOR_RESULT"
+        if defect == "target_shape"
+        else "REFACTOR_RESULT_BINDING_MISMATCH"
+    )
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == [expected]
+    assert payload["shared_failures"] == []
+
+
+def test_refactor_result_rejects_same_path_forged_target_identity() -> None:
+    inputs = _inputs()
+    forged = "src/sample.py::function:forged:999-999"
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    inputs[2]["targets"] = [forged]
+    authorization["targets"] = [forged]
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+    assert payload["shared_failures"] == []
+
+
+def test_refactor_binding_preserves_deleted_old_path_identity_on_rename() -> None:
+    changed = (
+        {
+            "base_production": True,
+            "head_production": True,
+            "new_path": "src/renamed.py",
+            "old_path": "src/sample.py",
+        },
+    )
+    moved = "src/renamed.py::function:retained:1-2"
+    deleted = "src/sample.py::function:removed:4-5"
+    targets = (moved, deleted)
+    authorization = {
+        "base_sha": IDENTITY.base_sha,
+        "broad": True,
+        "head_sha": IDENTITY.head_sha,
+        "repository": IDENTITY.repository,
+        "scope": ["src/renamed.py", "src/sample.py"],
+        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "targets": list(targets),
+    }
+    row = {
+        "applicable": True,
+        "changed_paths": authorization["scope"],
+        "policy_blocks": [],
+        "targets": list(targets),
+        "unbounded_paths": [],
+    }
+
+    assert standard_results._s02_refactor_change_paths(changed) == (
+        ["src/renamed.py", "src/sample.py"],
+        ["src/renamed.py"],
+        ["src/renamed.py", "src/sample.py"],
+    )
+    standard_results._s02_refactor_binding(
+        row, authorization, IDENTITY, changed, targets, (), None, None
+    )
+    row["targets"] = [moved]
+    authorization["targets"] = [moved]
+    standard_results._s02_refactor_binding(
+        row, authorization, IDENTITY, changed, (moved,), (), None, None
+    )
+
+
+@pytest.mark.parametrize(
+    ("defect", "block"),
+    [
+        ("repository", "AUTHORIZATION_REPOSITORY_MISMATCH"),
+        ("base", "STALE_OWNER_AUTHORIZATION"),
+        ("broad", "BROAD_AUTHORIZATION_REQUIRED"),
+        ("sequence", "INVALID_STRANGLER_SEQUENCE"),
+        ("scope", "UNFOCUSED_DIFF_SCOPE"),
+        ("target", "UNVERIFIABLE_BOUNDED_TARGET"),
+    ],
+)
+def test_authenticated_refactor_poison_remains_a_gate_six_block(defect: str, block: str) -> None:
+    inputs = _inputs()
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    if defect == "repository":
+        authorization["repository"] = "example/other"
+    elif defect == "base":
+        authorization["base_sha"] = "f" * 40
+    elif defect == "broad":
+        extra = "src/sample.py::module:src/sample.py:3-3"
+        targets = sorted([*inputs[2]["targets"], extra])
+        authorization["targets"] = targets
+        inputs[2]["targets"] = targets
+        inputs[0]["changed_files"][0]["changed_head_lines"] = [1, 3]
+        inputs[0]["responsibility_targets"] = targets
+        inputs[1]["refactor_runnability"]["targets"] = targets
+    elif defect == "sequence":
+        authorization["sequence"]["predecessor_sha"] = "f" * 40
+    elif defect == "scope":
+        authorization["scope"] = ["docs/forged.md"]
+    else:
+        authorization["targets"] = ["src/forged.py::module:src/forged.py:1-1"]
+    inputs[2]["policy_blocks"] = [block]
+    inputs[2]["overall_result"] = "BLOCK"
+    inputs[2]["characterization_sha256"] = hashlib.sha256(_canonical(inputs[1])).hexdigest()
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["result"] == "BLOCK"
+    assert _entry(payload, 6)["policy_blocks"] == [block]
+    assert _entry(payload, 6)["technical_errors"] == []
+    assert payload["shared_failures"] == []
+
+
+def test_exact_authenticated_step_two_predecessor_passes() -> None:
+    inputs = _inputs()
+    _step_two_refactor(inputs)
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 8
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    ("defect", "expected"),
+    [
+        ("base_sha", "REFACTOR_RESULT_BINDING_MISMATCH"),
+        ("head_sha", "REFACTOR_RESULT_BINDING_MISMATCH"),
+        ("merge_sha", "REFACTOR_RESULT_BINDING_MISMATCH"),
+        ("authorization_comment_id", "MALFORMED_REFACTOR_RESULT"),
+        ("pull_number", "REFACTOR_RESULT_BINDING_MISMATCH"),
+        ("step", "REFACTOR_RESULT_BINDING_MISMATCH"),
+    ],
+)
+def test_forged_predecessor_evidence_is_gate_six_technical(defect: str, expected: str) -> None:
+    inputs = _inputs()
+    predecessor = _step_two_refactor(inputs)
+    if defect == "step":
+        predecessor["authorization"]["sequence"]["step"] = 999
+    elif defect in {"authorization_comment_id", "pull_number"}:
+        predecessor[defect] = 0
+    else:
+        predecessor[defect] = "f" * 40
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == [expected]
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize("predecessor_state", ["missing", "wrong_step"])
+def test_missing_or_wrong_predecessor_is_exact_gate_six_block(predecessor_state: str) -> None:
+    inputs = _inputs()
+    predecessor = _step_two_refactor(inputs)
+    if predecessor_state == "missing":
+        inputs[2]["predecessor"] = {
+            "authorization": None,
+            "authorization_comment_id": None,
+            "base_sha": None,
+            "block": None,
+            "head_sha": None,
+            "merge_sha": None,
+            "pull_number": None,
+        }
+    else:
+        predecessor["authorization"]["sequence"]["step"] = 7
+    inputs[2]["policy_blocks"] = ["INVALID_STRANGLER_SEQUENCE"]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["policy_blocks"] == ["INVALID_STRANGLER_SEQUENCE"]
+    assert _entry(payload, 6)["technical_errors"] == []
+
+
+def test_spurious_sequence_block_is_gate_six_technical() -> None:
+    inputs = _inputs()
+    _step_two_refactor(inputs)
+    inputs[2]["policy_blocks"] = ["INVALID_STRANGLER_SEQUENCE"]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+
+
+def test_sequence_and_predecessor_lookup_blocks_are_aggregated_together() -> None:
+    inputs = _inputs()
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    authorization["sequence"]["predecessor_sha"] = "f" * 40
+    inputs[2]["predecessor"]["block"] = "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"
+    inputs[2]["policy_blocks"] = [
+        "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+        "INVALID_STRANGLER_SEQUENCE",
+    ]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["policy_blocks"] == inputs[2]["policy_blocks"]
+    assert _entry(payload, 6)["technical_errors"] == []
+
+
+def test_unsorted_refactor_blocks_are_malformed() -> None:
+    inputs = _inputs()
+    inputs[2]["policy_blocks"] = [
+        "INVALID_STRANGLER_SEQUENCE",
+        "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+    ]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+        "MALFORMED_OWNER_AUTHORIZATION",
+        "MISSING_OWNER_AUTHORIZATION",
+        "STALE_OWNER_AUTHORIZATION",
+        "UNAUTHENTICATED_OWNER_AUTHORIZATION",
+    ],
+)
+def test_current_authorization_failure_remains_a_gate_six_block(block: str) -> None:
+    inputs = _inputs()
+    inputs[2]["authorization"] = None
+    inputs[2]["authorization_comment_id"] = None
+    inputs[2]["policy_blocks"] = [block]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["policy_blocks"] == [block]
+    assert _entry(payload, 6)["technical_errors"] == []
+    assert payload["shared_failures"] == []
+
+
+def test_current_authorization_failure_rejects_impossible_predecessor_evidence() -> None:
+    inputs = _inputs()
+    _step_two_refactor(inputs)
+    inputs[2]["authorization"] = None
+    inputs[2]["authorization_comment_id"] = None
+    inputs[2]["policy_blocks"] = ["GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+
+
+def test_nonapplicable_refactor_rejects_impossible_predecessor_evidence() -> None:
+    predecessor = _step_two_refactor(_inputs())
+    inputs = _inputs("docs/evidence.md")
+    inputs[2]["predecessor"] = predecessor
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+
+
+def test_unverifiable_authorized_target_remains_a_gate_six_block() -> None:
+    inputs = _inputs()
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    authorization["targets"] = ["src/sample.py::wrong"]
+    inputs[2]["policy_blocks"] = ["UNVERIFIABLE_BOUNDED_TARGET"]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["policy_blocks"] == ["UNVERIFIABLE_BOUNDED_TARGET"]
+    assert payload["shared_failures"] == []
+
+
+def test_unbounded_production_path_has_exact_gate_six_blocks() -> None:
+    path = "src/sample.bin"
+    inputs = _inputs(path)
+    target = f"{path}::module:{path}:1-1"
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    authorization["broad"] = True
+    authorization["targets"] = [target]
+    inputs[0]["changed_files"][0]["complexity_assessed"] = False
+    inputs[0]["modularity"]["changed_paths"] = []
+    inputs[0]["responsibility_targets"] = []
+    inputs[0]["unbounded_production_paths"] = [path]
+    inputs[1]["refactor_runnability"]["targets"] = []
+    inputs[1]["refactor_runnability"]["unbounded_paths"] = [path]
+    inputs[2]["targets"] = []
+    inputs[2]["unbounded_paths"] = [path]
+    inputs[2]["policy_blocks"] = [
+        "MISSING_BOUNDED_PRODUCTION_TARGET",
+        "UNVERIFIABLE_BOUNDED_TARGET",
+    ]
+    inputs[2]["overall_result"] = "BLOCK"
+    inputs[2]["characterization_sha256"] = hashlib.sha256(_canonical(inputs[1])).hexdigest()
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["policy_blocks"] == [
+        "MISSING_BOUNDED_PRODUCTION_TARGET",
+        "UNVERIFIABLE_BOUNDED_TARGET",
+    ]
+    assert _entry(payload, 6)["technical_errors"] == []
+    assert payload["shared_failures"] == []
+
+
+def test_refactor_cross_binding_waits_for_authenticated_complexity() -> None:
+    inputs = _inputs()
+    inputs[0]["head_sha"] = "f" * 40
+
+    payload = _compose(inputs)
+
+    assert _entry(payload, 6)["technical_errors"] == ["COMPLEXITY_RESULT_BINDING_MISMATCH"]
+
+
+def test_non_applicable_refactor_rejects_owner_authorization_blocks() -> None:
+    inputs = _inputs("docs/evidence.md")
+    inputs[2]["policy_blocks"] = ["MISSING_OWNER_AUTHORIZATION"]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+    assert payload["shared_failures"] == []
+
+
+def test_non_applicable_refactor_does_not_require_runnability_extension() -> None:
+    inputs = _inputs("docs/evidence.md")
+    inputs[1].pop("refactor_runnability")
+    inputs[2]["characterization_sha256"] = hashlib.sha256(_canonical(inputs[1])).hexdigest()
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 8
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    ("field", "block"),
+    [("scope", "UNFOCUSED_DIFF_SCOPE"), ("targets", "UNVERIFIABLE_BOUNDED_TARGET")],
+)
+def test_refactor_authorization_lists_are_canonical(field: str, block: str) -> None:
+    inputs = _inputs()
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    authorization[field] = [*authorization[field], *authorization[field]]
+    inputs[2]["policy_blocks"] = [block]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
+    assert _entry(payload, 6)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "MISSING_RUNNABILITY_COVERAGE",
+        "NON_RUNNABLE_LOGICAL_STEP",
+        "STALE_RUNNABILITY_EVIDENCE",
+        "UNAUTHENTICATED_RUNNABILITY_EVIDENCE",
+    ],
+)
+def test_refactor_runnability_blocks_remain_gate_six_blocks(block: str) -> None:
+    inputs = _inputs()
+    runnability = inputs[1]["refactor_runnability"]
+    assert isinstance(runnability, dict)
+    if block == "MISSING_RUNNABILITY_COVERAGE":
+        change = inputs[0]["changed_files"][0]
+        change.update(
+            {
+                "changed_head_lines": [],
+                "head_production": False,
+                "new_path": None,
+                "old_path": "src/sample.py",
+                "status": "DELETED",
+            }
+        )
+        inputs[0]["modularity"]["changed_paths"] = []
+        inputs[1]["coverage"] = {
+            "covered_paths": ["tests/characterization/sample.py"],
+            "required_paths": [],
+        }
+        inputs[1]["scenarios"][0]["covers"] = ["tests/characterization/sample.py"]
+        runnability["runnable"] = False
+    elif block == "NON_RUNNABLE_LOGICAL_STEP":
+        runnability["runnable"] = False
+    elif block == "STALE_RUNNABILITY_EVIDENCE":
+        runnability["base_sha"] = "f" * 40
+    else:
+        inputs[1].pop("refactor_runnability")
+    inputs[2]["policy_blocks"] = [block]
+    inputs[2]["overall_result"] = "BLOCK"
+    inputs[2]["characterization_sha256"] = hashlib.sha256(_canonical(inputs[1])).hexdigest()
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
+    assert _entry(payload, 6)["policy_blocks"] == [block]
+    assert _entry(payload, 6)["technical_errors"] == []
+    assert payload["shared_failures"] == []
 
 
 def test_quality_artifact_has_exact_authenticated_identity() -> None:
@@ -622,9 +1169,18 @@ def test_authentic_gate_four_poison_blocks_only_gate_four(case: str) -> None:
                 "path": owner,
             }
         )
+        target = f"{owner}::module:{owner}:1-1"
+        complexity["responsibility_targets"].append(target)
         inputs[1]["scenarios"][0]["covers"].append(owner)
         inputs[1]["coverage"]["covered_paths"].append(owner)
         inputs[1]["coverage"]["required_paths"].append(owner)
+        inputs[1]["refactor_runnability"]["targets"].append(target)
+        authorization = inputs[2]["authorization"]
+        assert isinstance(authorization, dict)
+        authorization["broad"] = True
+        authorization["scope"].append(owner)
+        inputs[2]["changed_paths"].append(owner)
+        inputs[2]["targets"].append(target)
         _bind_characterization(inputs)
         block = f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{owner}"
     elif case == "parallel":
@@ -1366,6 +1922,8 @@ def test_completed_passing_source_requires_success_outcome(
 def test_blocked_refactor_source_requires_failure_and_remains_a_policy_block() -> None:
     inputs = _inputs()
     block = "MISSING_OWNER_AUTHORIZATION"
+    inputs[2]["authorization"] = None
+    inputs[2]["authorization_comment_id"] = None
     inputs[2]["policy_blocks"] = [block]
     inputs[2]["overall_result"] = "BLOCK"
     outcomes = dict(SUCCESS_OUTCOMES)
@@ -1373,9 +1931,11 @@ def test_blocked_refactor_source_requires_failure_and_remains_a_policy_block() -
 
     payload = _compose(inputs, source_outcomes=outcomes)
 
+    assert _results(payload) == ["PASS"] * 5 + ["BLOCK"] + ["PASS"] * 2
     assert _entry(payload, 6)["result"] == "BLOCK"
     assert _entry(payload, 6)["policy_blocks"] == [block]
     assert _technical_standards(payload) == set()
+    assert payload["shared_failures"] == []
 
     mismatched = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
     assert _entry(mismatched, 6)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]

@@ -80,6 +80,9 @@
           "applicable": true,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "PASS"
@@ -194,6 +197,9 @@
           "applicable": true,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "PASS"
@@ -308,6 +314,9 @@
           "applicable": true,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "PASS"
@@ -459,6 +468,9 @@
           "applicable": true,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "TECHNICAL_FAILURE"
@@ -631,6 +643,9 @@
           "applicable": true,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "BLOCK"
@@ -752,6 +767,9 @@
           "applicable": false,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "NOT_APPLICABLE_SHORT_TASK"
@@ -873,6 +891,9 @@
           "applicable": true,
           "evidence_sources": [
             "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
             "complexity-result.json:review_evidence.incremental_refactor"
           ],
           "result": "PASS"

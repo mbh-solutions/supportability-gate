@@ -16,6 +16,7 @@ MANIFEST_PATH = ".supportability-characterization.json"
 SCENARIO_ROOT = "tests/characterization"
 CAPTURE_SCHEMA = "characterization-capture.v1"
 RESULT_SCHEMA = "characterization-result.v1"
+RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
 SCENARIO_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 ARTIFACT_ID = re.compile(r"[1-9][0-9]*")
@@ -378,6 +379,25 @@ def _compatibility_evidence(
     return blocks, scenarios
 
 
+def _logical_step_runnable(
+    manifest: Manifest,
+    base_rows: dict[str, dict[str, Any]],
+    head_rows: dict[str, dict[str, Any]],
+    responsibility_targets: tuple[str, ...],
+) -> bool:
+    target_paths = {target.split("::", 1)[0] for target in responsibility_targets}
+    runnable_paths = {
+        path
+        for scenario in manifest.scenarios
+        if (base := base_rows.get(scenario.id)) is not None
+        and (head := head_rows.get(scenario.id)) is not None
+        and base.get("command") == head.get("command")
+        and bool(head.get("command"))
+        for path in scenario.covers
+    }
+    return target_paths.issubset(runnable_paths)
+
+
 def _result_paths(value: object, field: str) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
@@ -596,7 +616,9 @@ def validate_result(
         "schema_version",
         "workflow_sha",
     }
-    row = _exact_keys(value, keys, "MALFORMED_CHARACTERIZATION_RESULT")
+    if not isinstance(value, dict) or set(value) not in (keys, {*keys, "refactor_runnability"}):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    row = value
     if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
         repository,
         base_sha,
@@ -662,6 +684,9 @@ def _verification_result(
     blocks: list[str],
     required: list[str],
     covered: list[str],
+    responsibility_targets: tuple[str, ...],
+    unbounded_paths: tuple[str, ...],
+    runnable: bool,
     workflow_sha: str,
     base_artifact_id: str,
     base_artifact_digest: str,
@@ -693,6 +718,16 @@ def _verification_result(
         "overall_result": "BLOCK" if unique_blocks else "PASS",
         "policy_blocks": unique_blocks,
         "repository": identity.remote,
+        "refactor_runnability": {
+            "base_sha": identity.base_sha,
+            "head_sha": identity.head_sha,
+            "repository": identity.remote,
+            "runnable": runnable,
+            "schema_version": RUNNABILITY_SCHEMA,
+            "targets": list(responsibility_targets),
+            "unbounded_paths": list(unbounded_paths),
+            "workflow_sha": workflow_sha,
+        },
         "scenarios": scenarios,
         "schema_version": RESULT_SCHEMA,
         "workflow_sha": workflow_sha,
@@ -727,6 +762,13 @@ def verify_evidence(
     )
     policy = contract.parse_contract(policy_blob.content)
     changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
+    from supportability_gate import (
+        refactor_targets,
+    )  # local: keep result validator dependency-light
+
+    responsibility_targets, unbounded_paths = refactor_targets.derive(
+        repository, identity, policy, changes, records
+    )
     deleted_paths = {
         item.old_path
         for item in changes
@@ -779,6 +821,7 @@ def verify_evidence(
         blocks.append("INVALID_ARTIFACT_IDENTITY")
     compatibility_blocks, scenarios = _compatibility_evidence(manifest, base_rows, head_rows)
     blocks.extend(compatibility_blocks)
+    runnable = _logical_step_runnable(manifest, base_rows, head_rows, responsibility_targets)
     result = _verification_result(
         identity,
         manifest,
@@ -788,6 +831,9 @@ def verify_evidence(
         blocks,
         required,
         covered,
+        responsibility_targets,
+        unbounded_paths,
+        runnable,
         workflow_sha,
         base_artifact_id,
         base_artifact_digest,
