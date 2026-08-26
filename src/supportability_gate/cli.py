@@ -301,6 +301,7 @@ def _quality_evidence(
 ) -> tuple[quality_profile.QualityEvidence | None, tuple[str, ...]]:
     try:
         sources = quality_profile.production_files(repository, identity.head_sha, policy, records)
+        tests = quality_profile.test_files(repository, identity.head_sha, policy.language, records)
         path = Path(arguments.quality_evidence)
         if not path.is_absolute():
             raise quality_profile.QualityProfileError(
@@ -324,6 +325,7 @@ def _quality_evidence(
             identity,
             assessments,
             sources,
+            tests,
             str(arguments.workflow_sha),
         )
         return evidence, blocks

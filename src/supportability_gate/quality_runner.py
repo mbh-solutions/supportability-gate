@@ -11,6 +11,8 @@ from pathlib import Path
 
 from supportability_gate import contract, git_changes, quality_profile
 
+_COVERAGE_CONFIGURATION = b"[report]\nexclude_lines =\n"
+
 
 @dataclass(frozen=True)
 class CommandPlan:
@@ -135,6 +137,7 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         encoding="utf-8",
         newline="\n",
     )
+    _write_coverage_config(output)
     roots = tuple(
         sorted(
             {
@@ -157,6 +160,14 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         encoding="utf-8",
         newline="\n",
     )
+
+
+def _write_coverage_config(output: Path) -> Path:
+    path = output / "coverage.ini"
+    path.write_bytes(_COVERAGE_CONFIGURATION)
+    if path.read_bytes() != _COVERAGE_CONFIGURATION:
+        raise OSError("trusted coverage configuration mismatch")
+    return path
 
 
 def command_plans(
@@ -210,19 +221,7 @@ def profile_files(
     records: list[git_changes.CommandRecord],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Read the exact source and test file manifests from the head tree."""
-    production = git_changes.list_regular_blobs(
-        repository, head_sha, policy.production_paths, records
+    return (
+        quality_profile.production_files(repository, head_sha, policy, records),
+        quality_profile.test_files(repository, head_sha, policy.language, records),
     )
-    tests = git_changes.list_regular_blobs(repository, head_sha, ("tests",), records)
-    suffixes = quality_profile.SOURCE_SUFFIXES[policy.language]
-    source_files = tuple(item.path for item in production if item.path.endswith(suffixes))
-    test_files = tuple(
-        item.path
-        for item in tests
-        if item.path.endswith(
-            (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts")
-        )
-    )
-    if policy.language == "python":
-        test_files = tuple(item.path for item in tests if item.path.endswith((".py", ".pyi")))
-    return source_files, test_files

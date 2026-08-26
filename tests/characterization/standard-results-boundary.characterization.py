@@ -262,6 +262,61 @@ def _run_case(
     producer: Any,
     enforcer: Any,
 ) -> dict[str, object]:
+    expected_capture = "c" * 64
+    if hasattr(producer.standard_results, "_s02_quality_capture"):
+        profile = inputs["complexity"]["quality_profile"]
+        current = "test_files" in producer.standard_results._S02_PROFILE_KEYS
+        profile["schema_version"] = "quality-gates.v5" if current else "quality-gates.v4"
+        if current:
+            profile["test_files"] = []
+        quality = producer.standard_results.quality_profile if current else None
+        if quality is not None:
+            decision = profile["commands"][0]
+            proof = inputs["quality"]["commands"][0]
+            scalar_values = {
+                "$LINT_IMPORTS": "lint-imports",
+                "$NODE": "node",
+                "$NPM": "npm",
+                "$OUTPUT": "/quality",
+                "$PYTHON": "python",
+                "$REPOSITORY": "/repo/target",
+                "$TOOLS": "/quality/quality-tools",
+            }
+            list_values = {
+                "$SOURCE_FILES": [f"/repo/target/{path}" for path in profile["production_files"]],
+                "$TEST_FILES": [f"/repo/target/{path}" for path in profile["test_files"]],
+            }
+            profile["commands"] = []
+            inputs["quality"]["commands"] = []
+            for adapter, template in quality.command_templates(profile["language"]):
+                executed: list[str] = []
+                for argument in template:
+                    if argument in list_values:
+                        executed.extend(list_values[argument])
+                        continue
+                    for token, replacement in scalar_values.items():
+                        argument = argument.replace(token, replacement)
+                    executed.append(argument)
+                profile["commands"].append(
+                    {
+                        **decision,
+                        "adapter": adapter,
+                        "arguments": list(template),
+                        "proof_kind": quality.expected_proof_kind(adapter),
+                    }
+                )
+                inputs["quality"]["commands"].append(
+                    {**proof, "adapter": adapter, "executed_arguments": executed}
+                )
+        if quality is None:
+            for decision, proof in zip(
+                profile["commands"], inputs["quality"]["commands"], strict=True
+            ):
+                proof["executed_arguments"] = list(decision["arguments"])
+        expected_capture = producer.standard_results._s02_quality_capture(
+            profile, inputs["quality"]
+        )
+        inputs["quality"]["capture_sha256"] = expected_capture
     source_paths = {source: directory / f"{name}-{source}.json" for source in inputs}
     for source, value in inputs.items():
         _write(source_paths[source], value)
@@ -294,7 +349,7 @@ def _run_case(
         "--expected-quality-artifact-digest",
         "d" * 64,
         "--expected-quality-capture-sha256",
-        "c" * 64,
+        expected_capture,
         "--complexity-outcome",
         outcomes["complexity"],
         "--characterization-outcome",
@@ -427,7 +482,7 @@ def main() -> None:
                 *cases["clean"].values(),
                 identity,
                 expected_quality_artifact={
-                    "capture_sha256": "c" * 64,
+                    "capture_sha256": cases["clean"]["quality"]["capture_sha256"],
                     "digest": "d" * 64,
                     "id": "789",
                 },

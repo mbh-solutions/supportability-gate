@@ -27,6 +27,7 @@ def _python_coverage_proof(
     plan: quality_runner.CommandPlan, repository: Path, output: Path
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
     report = output / "coverage.json"
+    config = quality_runner._write_coverage_config(output)
     completed = subprocess.run(
         (
             plan.actual[0],
@@ -34,6 +35,7 @@ def _python_coverage_proof(
             "-m",
             "coverage",
             "json",
+            f"--rcfile={config}",
             f"--data-file={output / '.coverage'}",
             "-o",
             str(report),
@@ -156,6 +158,7 @@ def _run_command(
             quality_profile._sha256(completed.stderr),
             quality_profile._sha256(completed.stdout),
             raw_digest,
+            plan.actual,
         )
     except subprocess.TimeoutExpired as error:
         return quality_profile.GateResult(
@@ -169,6 +172,7 @@ def _run_command(
             quality_profile._sha256(error.stderr or b""),
             quality_profile._sha256(error.stdout or b""),
             quality_profile._sha256(b""),
+            plan.actual,
         )
     except OSError as error:
         return quality_profile.GateResult(
@@ -182,6 +186,7 @@ def _run_command(
             quality_profile._sha256(str(error).encode()),
             quality_profile._sha256(b""),
             quality_profile._sha256(b""),
+            plan.actual,
         )
 
 
@@ -238,6 +243,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         language=policy.language,
         maximum_complexity=policy.maximum,
         production_files=source_files,
+        test_files=test_files,
         production_paths=policy.production_paths,
         repository=str(arguments.repository_name),
         repository_id=str(arguments.repository_id),

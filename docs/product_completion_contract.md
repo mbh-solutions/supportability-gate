@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S08 issue #151 is the sole active slice
-Next milestone authorized: S09 only after exact protected S08 completion, canaries, and transition readback
+Current authorized work: Project #10 S09 issue #152 is the sole active slice
+Next milestone authorized: S10 only after exact protected S09 completion, qualification, and transition readback
 ```
 
 ## Milestone transition rules
@@ -2031,3 +2031,57 @@ Do not create a new terminal label not authorized by an active milestone directi
   conversation; merge normally without bypass; complete and clean the Python/frontend Gate 6
   canaries; finish issue/Project/ledger readback; refresh and activate S09 only; and set S08
   `Done / Complete / On scope / Yes`.
+
+## Project #10 S09 Gate 7 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Live S09 remains
+  `In progress / Missing / On scope / No` until the protected pull request closing issue #152
+  merges normally and every required Python and frontend positive, short-task, poison,
+  lane-isolation, exact-source, focused-review, cleanup, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gUA`, repository issue #152, and exact protected source base
+  `1f880b940dbc056c76465bf5748f67c4dbfd80b3`.
+- Responsibility boundary: Gate 7 owns fixed approved Python and TypeScript/component quality
+  profiles executed only in isolated GitHub-hosted jobs. Its authenticated evidence binds the
+  repository, base/head/workflow/run/attempt/job/artifact identity, approved template, exact
+  executed argument vector through its consistent allowed template expansion, exact immutable-head
+  source and test manifests, canonical adapter order with exact missing-command blocks, result hashes,
+  changed/high-risk coverage, scope, threshold,
+  exclusions, and untested areas. The aggregate reconstructs the exact pre-enrichment artifact
+  bytes from decision and provenance fields before accepting external artifact identity.
+- Source correction: Python coverage uses a generated trusted report configuration for
+  measurement, then restores and verifies its exact bytes after target execution before JSON
+  production, so target-owned coverage exclusions cannot turn executable but unexecuted code into
+  zero-statement evidence. The hostile fixture supplies both measurement-time omission and
+  report-time exclusion poison. TypeScript formatting ignores target-owned editor configuration.
+  A hosted fixture exercises a real TSX component through the target's explicit
+  loader, while fixed templates remain free of shell, command substitution, arbitrary target
+  commands, executable controls, and environment controls.
+- Isolation: malformed or contradictory quality-profile semantics affect only Gate 7 and Gate 4's
+  explicit quality-dependent modularity evidence; mismatched architecture-result evidence affects
+  only Gates 3 and 4. Independent lanes remain computable. Missing,
+  malformed, mismatched, or forged quality provenance and external-artifact binding remain Gate-7
+  technical failures. Policy failures remain Gate-7 blocks.
+- Qualification limit: no Gate 1-6 or Gate 8 redesign, consumer activation, organization-ruleset
+  migration, source-protection redesign, package/service addition, threshold change, exclusion,
+  waiver, or scope narrowing is part of S09.
+- Source review packet: PR #166 completed exactly one serial Focus 1-8 lifecycle on frozen head
+  `12a18aad2fb2fa273586596250a30669ade09b13` and required run `33011179146`. Requests/completions
+  were `5430839536/5430871424`, `5430879710/5430907674`,
+  `5430909797/5430940003`, `5430941042/5430960643`,
+  `5430963133/5034997081`, `5431008445/5431035013`,
+  `5431036809/5035040066`, and `5431068768/5035066121`. Consolidated adjudication accepted
+  measurement-time coverage poison `3866657309` and freshly authenticated executed-argv poison
+  `3866696276` for this one remediation batch. Root-cause validation also binds the canonical
+  decision templates, canonical adapter order with exact omission binding, and exact
+  source/test-list expansion,
+  preventing a producer from authenticating matching substituted template and argv, silently
+  omitting gates or reordering them, or omitting test arguments. S08-ledger
+  rewrite `3866719924` was rejected because
+  S08 is an explicitly prospective historical transaction and issue #152 authorizes edits only to
+  S09 status/evidence/remaining-work, product status, and next-authorized-slice fields.
+- Remaining work: reply to and resolve all three source-review conversations; pass exact hosted
+  deterministic-only final-head proof; merge normally
+  without bypass; complete and clean all S09 canaries and poisons; finish issue/Project/ledger
+  readback; set S09 `Done / Complete / On scope / Yes`; then refresh and activate S10 only.

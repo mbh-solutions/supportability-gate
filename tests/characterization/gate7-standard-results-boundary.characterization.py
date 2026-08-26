@@ -8,11 +8,12 @@ import io
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
-LEGACY_DRIVER_SHA256 = "c735557ea56b8c1af081610eef042052a8db18fc863efa1108d39263284ffaf3"
+LEGACY_DRIVER_SHA256 = "1626a072f0d358bb5f4eaa5d9a6cc0a718cd76f00ab2c732a447c79bd0d0d31b"
 LEGACY_STANDARD_RESULTS_SHA256 = "43b1e96099a314aac1f2059589705161b5681157e07a752674aac9748d551f5b"
 FORGED_BOUNDARIES = (("tests/characterization/forged.py", "function", "forged"),)
 GATE_SIX_EVIDENCE_SOURCES = [
@@ -186,12 +187,160 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
     return True
 
 
+def _gate_seven_probe(
+    quality_profile: ModuleType,
+    quality_runner: ModuleType,
+    standard_results: ModuleType,
+    target: Path,
+) -> None:
+    schema = quality_profile.SCHEMA_VERSION
+    if schema not in {"quality-gates.v3", "quality-gates.v4", "quality-gates.v5"}:
+        raise RuntimeError("unsupported Gate 7 characterization schema")
+    argv_current = schema in {"quality-gates.v4", "quality-gates.v5"}
+    manifest_current = schema == "quality-gates.v5"
+    with tempfile.TemporaryDirectory() as temporary:
+        directory = Path(temporary)
+        python_output = directory / "python"
+        typescript_output = directory / "typescript"
+        python_plans = quality_runner.command_plans(
+            "python",
+            target,
+            python_output,
+            ("tests/test_quality_profile.py",),
+            ("src/supportability_gate/quality_profile.py",),
+        )
+        typescript_plans = quality_runner.command_plans(
+            "typescript",
+            target,
+            typescript_output,
+            ("tests/quality.test.mjs",),
+            ("src/presentation/Card.tsx",),
+        )
+        pytest_plan = next(item for item in python_plans if item.adapter == "python.pytest.v1")
+        ruff_plan = next(item for item in python_plans if item.adapter == "python.ruff-lint.v1")
+        prettier_plan = next(
+            item for item in typescript_plans if item.adapter == "typescript.prettier.v1"
+        )
+        config = python_output / "coverage.ini"
+        rcfile_bound = any(
+            item.startswith("--rcfile=") and Path(item.removeprefix("--rcfile=")) == config
+            for item in pytest_plan.actual
+        )
+        if argv_current:
+            config.write_bytes(b"[report]\nexclude_lines =\n    .+\n")
+            restored = quality_runner._write_coverage_config(python_output)
+            config_bound = (
+                restored == config and config.read_bytes() == b"[report]\nexclude_lines =\n"
+            )
+        else:
+            config_bound = not config.exists() and not hasattr(
+                quality_runner, "_write_coverage_config"
+            )
+
+    command_fields: dict[str, object] = {
+        "adapter": ruff_plan.adapter,
+        "arguments": ruff_plan.evidence,
+        "proof_kind": ruff_plan.proof_kind,
+        "observed_paths": ("src/supportability_gate/quality_profile.py",),
+        "zero_statement_paths": (),
+        "executed": True,
+        "exit_code": 0,
+        "stderr_sha256": "a" * 64,
+        "stdout_sha256": "b" * 64,
+        "raw_proof_sha256": "c" * 64,
+    }
+    if argv_current:
+        command_fields["executed_arguments"] = ruff_plan.actual
+    command = quality_profile.GateResult(**command_fields)
+    evidence_fields: dict[str, object] = dict(
+        base_sha="a" * 40,
+        changed_paths=("src/supportability_gate/quality_profile.py",),
+        commands=(command,),
+        exclusions=(),
+        head_sha="b" * 40,
+        high_risk_paths=("src/supportability_gate/quality_profile.py",),
+        language="python",
+        maximum_complexity=10,
+        production_files=("src/supportability_gate/quality_profile.py",),
+        production_paths=("src",),
+        repository="acme/repo",
+        repository_id="123",
+        repository_remote="github.com/acme/repo",
+        run_attempt="1",
+        run_id="456",
+        runner_environment="github-hosted",
+        schema_version=schema,
+        workflow_sha="d" * 40,
+        job="quality-profile",
+        artifact_id="789",
+        artifact_digest="e" * 64,
+        capture_sha256="f" * 64,
+    )
+    if manifest_current:
+        evidence_fields["test_files"] = ("tests/test_quality_profile.py",)
+    evidence = quality_profile.QualityEvidence(**evidence_fields)
+    decision = quality_profile.decision_payload(evidence)
+    provenance = quality_profile.provenance_payload(evidence)
+    executed_bound = "executed_arguments" in provenance["commands"][0]
+    reconstructed = not hasattr(standard_results, "_s02_quality_capture")
+    argv_bound = not manifest_current
+    if manifest_current:
+        standard_results._s02_quality_argv(decision, provenance, "MALFORMED_QUALITY_RESULT_BINDING")
+        forged = json.loads(json.dumps(provenance))
+        forged["commands"][0]["executed_arguments"] = ["python", "unsafe.py"]
+        try:
+            standard_results._s02_quality_argv(decision, forged, "MALFORMED_QUALITY_RESULT_BINDING")
+        except standard_results.StandardResultsError as error:
+            argv_bound = error.code == "MALFORMED_QUALITY_RESULT_BINDING"
+        original = {
+            **decision,
+            **{
+                name: provenance[name]
+                for name in (
+                    "job",
+                    "repository",
+                    "repository_id",
+                    "run_attempt",
+                    "run_id",
+                    "runner_environment",
+                )
+            },
+            "artifact_digest": "",
+            "artifact_id": "",
+            "capture_sha256": "",
+            "commands": [{**decision["commands"][0], **provenance["commands"][0]}],
+        }
+        expected = hashlib.sha256(
+            (json.dumps(original, indent=2, sort_keys=True) + "\n").encode()
+        ).hexdigest()
+        reconstructed = standard_results._s02_quality_capture(decision, provenance) == expected
+    valid = (
+        config_bound
+        and rcfile_bound is argv_current
+        and ("--no-editorconfig" in prettier_plan.actual) is argv_current
+        and executed_bound is argv_current
+        and "executed_arguments" not in decision["commands"][0]
+        and ("test_files" in decision) is manifest_current
+        and argv_bound
+        and reconstructed
+    )
+    if not valid:
+        raise RuntimeError(
+            "Gate 7 fixed evidence contract is not preserved: "
+            f"config={config_bound}, rcfile={rcfile_bound}, "
+            f"prettier={'--no-editorconfig' in prettier_plan.actual}, "
+            f"executed={executed_bound}, argv={argv_bound}, reconstructed={reconstructed}"
+        )
+
+
 def main() -> None:
     target = Path(os.environ["SUPPORTABILITY_CHARACTERIZATION_TARGET"])
     definition = Path(os.environ["SUPPORTABILITY_CHARACTERIZATION_DEFINITION"])
     sys.path.insert(0, str(target / "src"))
 
     from supportability_gate import (  # noqa: PLC0415
+        quality_profile,
+        quality_runner,
         refactor_policy,
         review_evidence,
         standard_results,
@@ -217,6 +366,7 @@ def main() -> None:
         target_deriver = refactor_policy
     derived_targets = _gate_six_derivation_probe(target_deriver)
     producer_runnable = _refactor_policy_probe(refactor_policy, derived_targets["src/sample.py"])
+    _gate_seven_probe(quality_profile, quality_runner, standard_results, target)
 
     legacy = _legacy_driver(definition)
     original_characterization = legacy._characterization
@@ -330,7 +480,7 @@ def main() -> None:
         "accepted": parsed is not None,
         "blocks": list(blocks),
     }
-    payload["scenario"] = "gate6-standard-results-boundary"
+    payload["scenario"] = "gate7-standard-results-boundary"
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))
 
 
