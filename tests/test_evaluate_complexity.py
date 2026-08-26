@@ -17,6 +17,7 @@ from supportability_gate import (
     function_changes,
     git_changes,
     quality_profile,
+    review_evidence,
     reporting,
 )
 
@@ -174,6 +175,43 @@ def _typescript_source(name: str, complexity: int, return_value: int = 0) -> str
 def _commit(repository: Path, message: str) -> str:
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", message)
+    if message == "head":
+        review_path = repository / ".supportability-review.toml"
+        review = review_path.read_text(encoding="utf-8")
+        if "[separation_of_concerns]" in review and "boundaries =" not in review:
+            records: list[git_changes.CommandRecord] = []
+            identity = git_changes.inspect_repository(
+                repository,
+                _run_git(repository, "rev-parse", "HEAD~1"),
+                _run_git(repository, "rev-parse", "HEAD"),
+                records,
+            )
+            policy = contract.parse_contract(
+                git_changes.read_regular_blob(
+                    repository, identity.base_sha, ".supportability.toml", records
+                ).content
+            )
+            changes = git_changes.changed_paths(
+                repository, identity.base_sha, identity.head_sha, records
+            )
+            assessments = cli._classify_changes(repository, identity, policy, changes, records)
+            rows = ", ".join(
+                "{ path = %s, kind = %s, symbol = %s, before = %s, after = %s }"
+                % tuple(json.dumps(value) for value in (*boundary, "Before.", "After."))
+                for boundary in cli._separation_boundaries(
+                    repository, identity, policy, assessments, records
+                )
+            )
+            review_path.write_text(
+                review.replace(
+                    'after = "The changed boundary now has one named responsibility."',
+                    'after = "The changed boundary now has one named responsibility."\n'
+                    f"boundaries = [{rows}]",
+                ),
+                encoding="utf-8",
+            )
+            _run_git(repository, "add", ".supportability-review.toml")
+            _run_git(repository, "commit", "--amend", "--no-edit")
     return _run_git(repository, "rev-parse", "HEAD")
 
 
@@ -1236,6 +1274,88 @@ def test_python_separation_boundary_binds_changed_function(tmp_path: Path) -> No
             "symbol": "existing",
         }
     ]
+
+
+def test_tsx_separation_boundary_binds_changed_component(tmp_path: Path) -> None:
+    source = """\
+export class Widget extends React.Component {
+  render() { return null; }
+}
+"""
+    repository, base_sha, head_sha = _typescript_repository(
+        tmp_path, None, source, extension=".tsx"
+    )
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert {
+        (row["path"], row["kind"], row["symbol"])
+        for row in result["review_evidence"]["separation_of_concerns"]["boundaries"]
+    } >= {("src/sample.tsx", "component", "Widget")}
+
+
+def test_empty_separation_boundaries_pass_when_no_production_identity_exists(
+    tmp_path: Path,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(repository / "README.md", "one line\n")
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["review_evidence"]["separation_of_concerns"]["boundaries"] == []
+
+
+def _boundary_document(rows: str | None) -> bytes:
+    suffix = "" if rows is None else f"\nboundaries = {rows}"
+    return REVIEW_EVIDENCE.replace(
+        'after = "The changed boundary now has one named responsibility."',
+        'after = "The changed boundary now has one named responsibility."' + suffix,
+    ).encode()
+
+
+@pytest.mark.parametrize(
+    ("rows", "expected", "block"),
+    [
+        (None, (("src/sample.py", "function", "current"),), "MISSING"),
+        ('"bad"', (("src/sample.py", "function", "current"),), "MALFORMED"),
+        ("[]", (("src/sample.py", "function", "current"),), "INSUFFICIENT"),
+        (
+            '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "After." }, { path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "After." }]',
+            (("src/sample.py", "function", "current"),),
+            "MALFORMED",
+        ),
+        (
+            '[{ path = "src/missing.py", kind = "function", symbol = "missing", before = "Before.", after = "After." }]',
+            (("src/sample.py", "function", "current"),),
+            "INSUFFICIENT",
+        ),
+        (
+            '[{ path = "src/sample.py", kind = "function", symbol = "unchanged", before = "Before.", after = "After." }]',
+            (),
+            "INSUFFICIENT",
+        ),
+        (
+            '[{ path = "src/old.py", kind = "function", symbol = "current", before = "Before.", after = "After." }]',
+            (("src/sample.py", "function", "current"),),
+            "INSUFFICIENT",
+        ),
+        (
+            '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "After." }]',
+            (("src/sample.py", "function", "current"), ("src/other.py", "module", "src/other.py")),
+            "INSUFFICIENT",
+        ),
+    ],
+)
+def test_separation_boundary_poison_blocks(
+    rows: str | None, expected: tuple[tuple[str, str, str], ...], block: str
+) -> None:
+    _, blocks = review_evidence.evaluate_review_evidence(_boundary_document(rows), expected)
+
+    assert blocks == (f"{block}_REVIEW_EVIDENCE:separation_of_concerns.boundaries",)
 
 
 def test_milestone_three_evidence_is_byte_identical(tmp_path: Path) -> None:

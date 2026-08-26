@@ -423,6 +423,7 @@ def _separation_boundaries(
             continue
         change = assessment.change
         if change.old_path is None and change.new_path:
+            path = change.new_path
             content = _regular_source(
                 repository,
                 identity.head_sha,
@@ -434,9 +435,10 @@ def _separation_boundaries(
             if content is None:
                 continue
             spans = function_changes.responsibility_spans(
-                change.new_path, content, set(range(1, len(content.splitlines()) + 1))
+                path, content, set(range(1, len(content.splitlines()) + 1))
             )
         elif change.new_path is None and change.old_path:
+            path = change.old_path
             content = _regular_source(
                 repository,
                 identity.base_sha,
@@ -448,7 +450,7 @@ def _separation_boundaries(
             if content is None:
                 continue
             spans = function_changes.responsibility_spans(
-                change.old_path, content, set(range(1, len(content.splitlines()) + 1))
+                path, content, set(range(1, len(content.splitlines()) + 1))
             )
         elif change.old_path != change.new_path:
             base = _regular_source(
@@ -482,6 +484,9 @@ def _separation_boundaries(
                 else ()
             )
             spans = (*base_spans, *head_spans)
+            boundaries.update((change.old_path or "", span.kind, span.name) for span in base_spans)
+            boundaries.update((change.new_path or "", span.kind, span.name) for span in head_spans)
+            continue
         else:
             path = change.new_path or change.old_path
             if path is None:
