@@ -17,7 +17,6 @@ from supportability_gate import (
     function_changes,
     git_changes,
     quality_profile,
-    review_evidence,
     reporting,
 )
 
@@ -135,6 +134,25 @@ justification = "Exact source path owns one cohesive fixture boundary."
     )
 
 
+def _review_evidence_with_boundary_rows(rows: str, *, new_path: str | None = None) -> str:
+    document = _review_evidence_for_new_path(new_path) if new_path else REVIEW_EVIDENCE
+    return document.replace(
+        "\n[architecture]",
+        f"\nboundaries = {rows}\n\n[architecture]",
+    )
+
+
+def _review_evidence_with_boundaries(
+    *identities: tuple[str, str, str], new_path: str | None = None
+) -> str:
+    rows = ", ".join(
+        "{ path = %s, kind = %s, symbol = %s, before = %s, after = %s }"
+        % tuple(json.dumps(value) for value in (*identity, "Before.", "After."))
+        for identity in identities
+    )
+    return _review_evidence_with_boundary_rows(f"[{rows}]", new_path=new_path)
+
+
 def _run_git(repository: Path, *arguments: str) -> str:
     completed = subprocess.run(
         ["git", *arguments],
@@ -172,9 +190,17 @@ def _typescript_source(name: str, complexity: int, return_value: int = 0) -> str
     return "\n".join(lines) + "\n"
 
 
-def _commit(repository: Path, message: str) -> str:
+def _literal_review_commit(repository: Path, message: str) -> str:
+    """Commit only caller-written review evidence; S04 expectations stay independent."""
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", message)
+    return _run_git(repository, "rev-parse", "HEAD")
+
+
+def _commit(repository: Path, message: str) -> str:
+    # Legacy non-S04 tests need valid Gate 2 config to keep testing their original concern.
+    # S04 tests must use _literal_review_commit: production-derived rows cannot prove binding.
+    _literal_review_commit(repository, message)
     has_parent = subprocess.run(
         ["git", "rev-parse", "--verify", "HEAD~1"],
         cwd=repository,
@@ -1258,116 +1284,262 @@ def test_valid_milestone_three_evidence_passes_and_reports_judgment(tmp_path: Pa
     assert '"reviewability": "Change is small enough for direct review."' in markdown
 
 
-def test_python_separation_boundary_binds_changed_function(tmp_path: Path) -> None:
+def _boundary_identities(result: dict[str, object]) -> list[tuple[str, str, str]]:
+    review = result["review_evidence"]
+    assert isinstance(review, dict)
+    separation = review["separation_of_concerns"]
+    assert isinstance(separation, dict)
+    boundaries = separation["boundaries"]
+    assert isinstance(boundaries, list)
+    return [(row["path"], row["kind"], row["symbol"]) for row in boundaries]
+
+
+def test_modified_boundary_binds_retained_head_identity(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path)
     _write(repository / "src" / "sample.py", _function_source("existing", 1))
-    base_sha = _commit(repository, "base")
+    base_sha = _literal_review_commit(repository, "base")
     _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
     _write(
         repository / ".supportability-review.toml",
-        REVIEW_EVIDENCE.replace(
-            'after = "The changed boundary now has one named responsibility."',
-            'after = "The changed boundary now has one named responsibility."\n'
-            'boundaries = [{ path = "src/sample.py", kind = "function", '
-            'symbol = "existing", before = "Parsed input.", after = "Orchestrates parsing." }]',
+        _review_evidence_with_boundaries(
+            ("src/sample.py", "function", "existing"),
         ),
     )
-    head_sha = _commit(repository, "head")
+    head_sha = _literal_review_commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 0
-    assert result["review_evidence"]["separation_of_concerns"]["boundaries"] == [
-        {
-            "after": "Orchestrates parsing.",
-            "before": "Parsed input.",
-            "kind": "function",
-            "path": "src/sample.py",
-            "symbol": "existing",
-        }
+    assert _boundary_identities(result) == [("src/sample.py", "function", "existing")]
+
+
+def test_deleted_boundary_binds_base_identity(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("removed", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    (repository / "src" / "sample.py").unlink()
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(("src/sample.py", "function", "removed")),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert _boundary_identities(result) == [("src/sample.py", "function", "removed")]
+
+
+def test_renamed_boundary_binds_base_and_head_identities(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "old.py", _function_source("existing", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _run_git(repository, "mv", "src/old.py", "src/new.py")
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(
+            ("src/old.py", "function", "existing"),
+            ("src/new.py", "function", "existing"),
+            new_path="src/new.py",
+        ),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert sorted(_boundary_identities(result)) == [
+        ("src/new.py", "function", "existing"),
+        ("src/old.py", "function", "existing"),
     ]
 
 
-def test_tsx_separation_boundary_binds_changed_component(tmp_path: Path) -> None:
+def test_added_tsx_boundary_binds_component_and_function_identities(tmp_path: Path) -> None:
     source = """\
 export class Widget extends React.Component {
   render() { return null; }
 }
 """
-    repository, base_sha, head_sha = _typescript_repository(
-        tmp_path, None, source, extension=".tsx"
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.tsx", source)
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(
+            ("src/sample.tsx", "component", "Widget"),
+            ("src/sample.tsx", "function", "Widget.render"),
+            new_path="src/sample.tsx",
+        ),
     )
+    head_sha = _literal_review_commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 0
-    assert {
-        (row["path"], row["kind"], row["symbol"])
-        for row in result["review_evidence"]["separation_of_concerns"]["boundaries"]
-    } >= {("src/sample.tsx", "component", "Widget")}
+    assert sorted(_boundary_identities(result)) == [
+        ("src/sample.tsx", "component", "Widget"),
+        ("src/sample.tsx", "function", "Widget.render"),
+    ]
 
 
-def test_empty_separation_boundaries_pass_when_no_production_identity_exists(
-    tmp_path: Path,
-) -> None:
+def test_module_boundary_uses_path_as_symbol(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path)
-    base_sha = _commit(repository, "base")
-    _write(repository / "README.md", "one line\n")
-    head_sha = _commit(repository, "head")
+    _write(repository / "src" / "sample.py", "SETTING = 1\n")
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", "SETTING = 2\n")
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(
+            ("src/sample.py", "module", "src/sample.py"),
+        ),
+    )
+    head_sha = _literal_review_commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
     assert exit_code == 0
-    assert result["review_evidence"]["separation_of_concerns"]["boundaries"] == []
+    assert _boundary_identities(result) == [
+        ("src/sample.py", "module", "src/sample.py"),
+    ]
 
 
-def _boundary_document(rows: str | None) -> bytes:
-    suffix = "" if rows is None else f"\nboundaries = {rows}"
-    return REVIEW_EVIDENCE.replace(
-        'after = "The changed boundary now has one named responsibility."',
-        'after = "The changed boundary now has one named responsibility."' + suffix,
-    ).encode()
+def test_empty_boundaries_pass_when_diff_has_no_applicable_identity(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "README.md", "one line\n")
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert _boundary_identities(result) == []
 
 
 @pytest.mark.parametrize(
-    ("rows", "expected", "block"),
+    ("rows", "block"),
     [
-        (None, (("src/sample.py", "function", "current"),), "MISSING"),
-        ('"bad"', (("src/sample.py", "function", "current"),), "MALFORMED"),
-        ("[]", (("src/sample.py", "function", "current"),), "INSUFFICIENT"),
+        (None, "MISSING"),
+        ('"bad"', "MALFORMED"),
+        ("[]", "INSUFFICIENT"),
         (
             '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "After." }, { path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "After." }]',
-            (("src/sample.py", "function", "current"),),
             "MALFORMED",
         ),
         (
-            '[{ path = "src/missing.py", kind = "function", symbol = "missing", before = "Before.", after = "After." }]',
-            (("src/sample.py", "function", "current"),),
+            '[{ path = "src/sample.py", kind = "function", symbol = "missing", before = "Before.", after = "After." }]',
             "INSUFFICIENT",
         ),
         (
             '[{ path = "src/sample.py", kind = "function", symbol = "unchanged", before = "Before.", after = "After." }]',
-            (),
             "INSUFFICIENT",
         ),
         (
             '[{ path = "src/old.py", kind = "function", symbol = "current", before = "Before.", after = "After." }]',
-            (("src/sample.py", "function", "current"),),
             "INSUFFICIENT",
         ),
         (
-            '[{ path = "src/sample.py", kind = "function", symbol = "current", before = "Before.", after = "After." }]',
-            (("src/sample.py", "function", "current"), ("src/other.py", "module", "src/other.py")),
+            '[{ path = "src/sample.py", kind = "component", symbol = "current", before = "Before.", after = "After." }]',
             "INSUFFICIENT",
         ),
     ],
+    ids=[
+        "missing",
+        "malformed",
+        "empty",
+        "duplicate",
+        "nonexistent",
+        "unchanged",
+        "stale",
+        "mismatched",
+    ],
 )
-def test_separation_boundary_poison_blocks(
-    rows: str | None, expected: tuple[tuple[str, str, str], ...], block: str
+def test_real_diff_separation_boundary_poison_blocks(
+    tmp_path: Path, rows: str | None, block: str
 ) -> None:
-    _, blocks = review_evidence.evaluate_review_evidence(_boundary_document(rows), expected)
+    repository = _initialize_repository(tmp_path)
+    base_source = _function_source("current", 1) + _function_source("unchanged", 1)
+    head_source = _function_source("current", 1, 1) + _function_source("unchanged", 1)
+    _write(repository / "src" / "sample.py", base_source)
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", head_source)
+    _write(
+        repository / ".supportability-review.toml",
+        REVIEW_EVIDENCE if rows is None else _review_evidence_with_boundary_rows(rows),
+    )
+    head_sha = _literal_review_commit(repository, "head")
 
-    assert blocks == (f"{block}_REVIEW_EVIDENCE:separation_of_concerns.boundaries",)
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        f"{block}_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
+    ]
+
+
+def test_extra_nonduplicate_boundary_rejects_cardinality_mismatch(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("current", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("current", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(
+            ("src/sample.py", "function", "current"),
+            ("src/sample.py", "function", "extra"),
+        ),
+    )
+    head_sha = _literal_review_commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == [
+        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
+    ]
+
+
+def test_separation_boundary_outputs_are_byte_identical(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("current", 1))
+    base_sha = _literal_review_commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("current", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(("src/sample.py", "function", "current")),
+    )
+    valid_sha = _literal_review_commit(repository, "valid")
+
+    valid_first_exit, _ = _evaluate(repository, base_sha, valid_sha, tmp_path / "valid-first")
+    valid_second_exit, _ = _evaluate(repository, base_sha, valid_sha, tmp_path / "valid-second")
+    valid_first = (tmp_path / "valid-first" / "complexity-result.json").read_bytes()
+    valid_second = (tmp_path / "valid-second" / "complexity-result.json").read_bytes()
+
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_with_boundaries(
+            ("src/sample.py", "function", "current"),
+            ("src/sample.py", "function", "extra"),
+        ),
+    )
+    poisoned_sha = _literal_review_commit(repository, "poisoned")
+    poison_first_exit, _ = _evaluate(
+        repository, base_sha, poisoned_sha, tmp_path / "poison-first"
+    )
+    poison_second_exit, _ = _evaluate(
+        repository, base_sha, poisoned_sha, tmp_path / "poison-second"
+    )
+    poison_first = (tmp_path / "poison-first" / "complexity-result.json").read_bytes()
+    poison_second = (tmp_path / "poison-second" / "complexity-result.json").read_bytes()
+
+    assert valid_first_exit == valid_second_exit == 0
+    assert poison_first_exit == poison_second_exit == 1
+    assert valid_first == valid_second
+    assert poison_first == poison_second
+    assert valid_first != poison_first
 
 
 def test_milestone_three_evidence_is_byte_identical(tmp_path: Path) -> None:
