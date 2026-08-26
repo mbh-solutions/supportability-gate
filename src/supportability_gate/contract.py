@@ -13,12 +13,19 @@ COMPLEXITY_ADAPTERS = {
     "python": "python.c901-touched.v1",
     "typescript": "typescript.c901-equivalent-touched.v1",
 }
+POLICY_EXIT_STANDARDS = {
+    "python": {COMPLEXITY_ADAPTERS["python"]: 1, "python.import-linter.v1": 3},
+    "typescript": {
+        COMPLEXITY_ADAPTERS["typescript"]: 1,
+        "typescript.import-boundaries.v1": 3,
+    },
+}
 
 
 def command_failed(language: str, adapter: str, executed: bool, exit_code: int) -> bool:
-    """Return whether a command failed outside ordinary Gate 1 policy evidence."""
+    """Return whether a command failed outside ordinary Gate 1 or 3 policy evidence."""
     return not executed or (
-        exit_code != 0 and (adapter != COMPLEXITY_ADAPTERS[language] or exit_code != 1)
+        exit_code != 0 and (adapter not in POLICY_EXIT_STANDARDS[language] or exit_code != 1)
     )
 
 

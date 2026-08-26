@@ -407,7 +407,7 @@ def _s02_profile_command(row: dict[str, Any], code: str) -> str:
 
 def _s02_profile(
     value: object, identity: RunIdentity, language: str, code: str
-) -> tuple[tuple[str, ...], str, tuple[str, ...]]:
+) -> tuple[tuple[str, ...], str, tuple[str, ...], tuple[str, ...]]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
         row[name] for name in ("base_sha", "head_sha", "repository_remote", "workflow_sha")
@@ -470,7 +470,14 @@ def _s02_profile(
             command["exit_code"],
         )
     )
-    return adapters, result, failed
+    architecture_failed = tuple(
+        command["adapter"]
+        for command in commands
+        if command["executed"]
+        and command["exit_code"] == 1
+        and contract.POLICY_EXIT_STANDARDS[row["language"]].get(command["adapter"]) == 3
+    )
+    return adapters, result, failed, architecture_failed
 
 
 def _s02_review_section(
@@ -850,7 +857,7 @@ def _s02_complexity_components(
     profile = (
         _s02_profile(row["quality_profile"], identity, row["language"], code)
         if row["quality_profile"] is not None
-        else ((), None, ())
+        else ((), None, (), ())
     )
     failed = {
         block.removeprefix("QUALITY_GATE_FAILED:")
@@ -858,6 +865,13 @@ def _s02_complexity_components(
         if block.startswith("QUALITY_GATE_FAILED:")
     }
     if failed != set(profile[2]):
+        raise StandardResultsError(code)
+    architecture_failed = {
+        block.removeprefix("ARCHITECTURE_GATE_FAILED:")
+        for block in blocks
+        if block.startswith("ARCHITECTURE_GATE_FAILED:")
+    }
+    if architecture_failed != set(profile[3]):
         raise StandardResultsError(code)
     if profile[1] == "BLOCK" and not any(
         7 in standard_block_ownership.owners(block) for block in blocks

@@ -140,6 +140,17 @@ def test_missing_required_command_blocks() -> None:
     )
 
 
+def test_architecture_policy_exit_emits_gate_three_evidence() -> None:
+    commands = tuple(
+        replace(item, exit_code=1) if item.adapter == "python.import-linter.v1" else item
+        for item in _commands()
+    )
+
+    assert _blocks(_evidence(commands=commands)) == (
+        "ARCHITECTURE_GATE_FAILED:python.import-linter.v1",
+    )
+
+
 @pytest.mark.parametrize(
     ("field", "value", "code"),
     [

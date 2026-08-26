@@ -322,6 +322,80 @@ def _typescript_repository(
     return repository, base_sha, head_sha
 
 
+def test_typescript_architecture_reads_exact_head_tsconfig_alias(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    _write(repository / "src" / "domain" / "model.ts", "export const value = 1;\n")
+    _write(
+        repository / "tsconfig.json",
+        '{"compilerOptions":{"baseUrl":".","paths":{"@domain/*":["src/domain/*"]}}}\n',
+    )
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / "src" / "application" / "useCase.ts",
+        "import { value } from '@domain/model';\nexport const current = value;\n",
+    )
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_for_new_path("src/application/useCase.ts").replace(
+            'owner_path = "src/owner.ts"',
+            'owner_path = "src/application/useCase.ts"',
+        ),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["architecture"]["edges"] == [
+        {
+            "internal": True,
+            "line": 1,
+            "source": "src/application/useCase.ts",
+            "specifier": "@domain/model",
+            "target": "src/domain/model.ts",
+        }
+    ]
+    assert any(
+        command["arguments"] == ["cat-file", "blob", f"{head_sha}:tsconfig.json"]
+        for command in result["commands"]
+    )
+
+
+def test_unresolved_typescript_alias_blocks_gate_three_through_real_evaluator(
+    tmp_path: Path,
+) -> None:
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    _write(
+        repository / "tsconfig.json",
+        '{"compilerOptions":{"baseUrl":".","paths":{"@domain/*":["src/domain/*"]}}}\n',
+    )
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.ts", "import { value } from '@domain/model';\n")
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_for_new_path("src/sample.ts"),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha, "src/sample.ts")
+    block = "UNRESOLVED_TYPESCRIPT_ALIAS:src/sample.ts:1:@domain/model"
+
+    assert exit_code == 1
+    assert result["overall_result"] == "BLOCK"
+    assert result["architecture"]["blocks"] == [block]
+    assert result["policy_blocks"] == [block]
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        "PASS",
+        "PASS",
+        "BLOCK",
+        *["PASS"] * 5,
+    ]
+    assert aggregate["entries"][2]["policy_blocks"] == [block]
+    assert all(entry["technical_errors"] == [] for entry in aggregate["entries"])
+    assert aggregate["shared_failures"] == []
+
+
 def _evaluate(
     repository: Path,
     base_sha: str,
@@ -470,7 +544,9 @@ def _evaluate(
     return exit_code, result
 
 
-def _compose_cli_result(result: dict[str, Any], base_sha: str, head_sha: str) -> dict[str, Any]:
+def _compose_cli_result(
+    result: dict[str, Any], base_sha: str, head_sha: str, path: str = "src/sample.py"
+) -> dict[str, Any]:
     identity = standard_results.RunIdentity(
         "example/fixture", 123, base_sha, head_sha, WORKFLOW_SHA, 456, 1
     )
@@ -485,8 +561,8 @@ def _compose_cli_result(result: dict[str, Any], base_sha: str, head_sha: str) ->
         "base_sha": base_sha,
         "behavior_fingerprint": behavior,
         "coverage": {
-            "covered_paths": ["src/sample.py"],
-            "required_paths": ["src/sample.py"],
+            "covered_paths": [path],
+            "required_paths": [path],
         },
         "head_sha": head_sha,
         "manifest_blob_sha": "8" * 40,
@@ -499,7 +575,7 @@ def _compose_cli_result(result: dict[str, Any], base_sha: str, head_sha: str) ->
                 "base_behavior_sha256": "e" * 64,
                 "command": ["python", "tests/characterization/sample.characterization.py"],
                 "compatibility": "PASS",
-                "covers": ["src/sample.py"],
+                "covers": [path],
                 "golden_behavior_sha256": "e" * 64,
                 "head_behavior_sha256": "e" * 64,
                 "id": "sample",
@@ -518,7 +594,7 @@ def _compose_cli_result(result: dict[str, Any], base_sha: str, head_sha: str) ->
         "authorization_comment_id": None,
         "base_sha": base_sha,
         "characterization_sha256": characterization_sha,
-        "changed_paths": [".supportability-review.toml", "src/sample.py"],
+        "changed_paths": [".supportability-review.toml", path],
         "head_sha": head_sha,
         "other_standard_clauses_waived": False,
         "overall_result": "PASS",

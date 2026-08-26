@@ -192,19 +192,26 @@ def _gate_coverage(policy: contract.Contract) -> tuple[tuple[str, tuple[str, ...
     return tuple((gate.adapter, gate.paths) for gate in policy.gates)
 
 
-def _architecture_sources(
+def _architecture_inputs(
     repository: Path,
     head_sha: str,
     policy: contract.Contract,
     records: list[git_changes.CommandRecord],
-) -> dict[str, bytes]:
+) -> tuple[dict[str, bytes], bytes | None]:
     suffixes = (".py", ".pyi") if policy.language == "python" else (".cts", ".mts", ".ts", ".tsx")
-    blobs = git_changes.list_regular_blobs(repository, head_sha, policy.production_paths, records)
-    return {
+    roots = (
+        (*policy.production_paths, "tsconfig.json")
+        if policy.language == "typescript"
+        else policy.production_paths
+    )
+    blobs = git_changes.list_regular_blobs(repository, head_sha, roots, records)
+    contents = {
         item.path: git_changes.read_regular_blob(repository, head_sha, item.path, records).content
         for item in blobs
-        if item.path.endswith(suffixes)
+        if item.path.endswith(suffixes) or item.path == "tsconfig.json"
     }
+    sources = {path: content for path, content in contents.items() if path.endswith(suffixes)}
+    return sources, contents.get("tsconfig.json")
 
 
 def _complexity_evidence(
@@ -262,7 +269,9 @@ def _architecture_evidence(
     errors: list[Exception],
 ) -> architecture_policy.ArchitectureResult | None:
     try:
-        sources = _architecture_sources(repository, identity.head_sha, policy, records)
+        sources, typescript_config = _architecture_inputs(
+            repository, identity.head_sha, policy, records
+        )
         gate = next(
             (
                 item
@@ -271,7 +280,7 @@ def _architecture_evidence(
             ),
             None,
         )
-        return architecture_policy.evaluate_architecture(policy, sources, gate)
+        return architecture_policy.evaluate_architecture(policy, sources, gate, typescript_config)
     except (function_changes.PythonSourceError, git_changes.GitError) as error:
         code = (
             error.code if error.code.startswith("ARCHITECTURE_") else f"ARCHITECTURE_{error.code}"
