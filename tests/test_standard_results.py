@@ -1022,12 +1022,11 @@ def test_architecture_policy_exit_blocks_gate_three_only(
     language: str, complexity_adapter: str, architecture_adapter: str, path: str
 ) -> None:
     inputs = _inputs(path)
-    block = f"IMPORT_CYCLE:{path}:1:dependency"
+    block = f"ARCHITECTURE_GATE_FAILED:{architecture_adapter}"
     inputs[0]["language"] = language
     inputs[0]["overall_result"] = "BLOCK"
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["architecture"]["adapter"] = architecture_adapter
-    inputs[0]["architecture"]["blocks"] = [block]
     inputs[0]["gate_coverage"] = [
         {"adapter": complexity_adapter, "paths": ["src"]},
         {"adapter": architecture_adapter, "paths": ["src"]},
@@ -1046,6 +1045,20 @@ def test_architecture_policy_exit_blocks_gate_three_only(
     assert _results(payload) == ["PASS", "PASS", "BLOCK", *("PASS",) * 5]
     assert _entry(payload, 3)["policy_blocks"] == [block]
     assert payload["shared_failures"] == []
+
+
+def test_architecture_policy_exit_without_gate_three_evidence_is_malformed() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["commands"][0]["adapter"] = "python.import-linter.v1"
+    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
+    inputs[3]["commands"][0]["adapter"] = "python.import-linter.v1"
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
 
 
 def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> None:

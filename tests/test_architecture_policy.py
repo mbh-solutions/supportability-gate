@@ -217,6 +217,22 @@ def test_typescript_base_url_alias_resolves_index_target() -> None:
     ]
 
 
+def test_typescript_explicit_base_url_resolves_unmatched_bare_import() -> None:
+    result = _evaluate(
+        {
+            "src/application/useCase.ts": "import { view } from 'presentation/view';\n",
+            "src/presentation/view.ts": "export const view = 1;\n",
+        },
+        "typescript",
+        b'{"compilerOptions":{"baseUrl":"src"}}',
+    )
+
+    assert [(edge.target, edge.internal) for edge in result.edges] == [
+        ("src/presentation/view.ts", True)
+    ]
+    assert result.blocks == ("DEPENDENCY_INVERSION:src/application/useCase.ts:1:presentation/view",)
+
+
 @pytest.mark.parametrize(
     ("config", "block"),
     [

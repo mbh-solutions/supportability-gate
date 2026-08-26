@@ -2,7 +2,7 @@ schema_version = "1.0"
 
 [behavior]
 intended_behavior = "Project #10 S05 makes Gate 3 emit deterministic static Python and TypeScript/TSX import graphs from immutable source blobs, resolve supported exact-head root tsconfig aliases without executing target code, and isolate ordinary architecture policy failures to Gate 3."
-proof = "tests/test_architecture_policy.py; tests/test_evaluate_complexity.py::test_typescript_architecture_reads_exact_head_tsconfig_alias; tests/test_standard_results.py::{test_gate_three_architecture_blocks_only_gate_three,test_architecture_policy_exit_blocks_gate_three_only}"
+proof = "tests/test_architecture_policy.py; tests/test_evaluate_complexity.py::{test_typescript_architecture_reads_exact_head_tsconfig_alias,test_unresolved_typescript_alias_blocks_gate_three_through_real_evaluator}; tests/test_quality_profile.py::test_architecture_policy_exit_emits_gate_three_evidence; tests/test_standard_results.py::{test_gate_three_architecture_blocks_only_gate_three,test_architecture_policy_exit_blocks_gate_three_only,test_architecture_policy_exit_without_gate_three_evidence_is_malformed}"
 
 [characterization]
 captured_behavior = "Existing Python and relative TypeScript graph behavior remains covered while focused tests capture alias-preserving Python imports, JavaScript-suffix rewrites, package identity, exact and wildcard TypeScript aliases, baseUrl and index candidates, invalid configuration, unresolved configured aliases, Gate 3 ownership, and byte-identical valid and poison evidence."
@@ -10,7 +10,7 @@ proof = ".supportability-characterization.json; tests/characterization/architect
 
 [separation_of_concerns]
 before = "Static graph evaluation resolved Python and relative TypeScript imports, but CLI orchestration did not supply exact-head root tsconfig bytes, bare TypeScript specifiers could be mistaken for repository paths, ordinary architecture-tool exit 1 contaminated quality enforcement, and alias defects had no Gate 3 ownership."
-after = "CLI orchestration reads only immutable production blobs plus optional root tsconfig. Architecture policy alone validates supported JSON and resolves exact, longest-prefix wildcard, ordered fallback, baseUrl, suffix, and index candidates. Contract classification isolates ordinary architecture exit 1; block ownership maps declared alias defects only to Gate 3."
+after = "CLI orchestration reads only immutable production blobs plus optional root tsconfig. Architecture policy alone validates supported JSON and resolves exact, longest-prefix wildcard, ordered fallback, explicit baseUrl, suffix, and index candidates. Authenticated architecture-adapter policy exits emit Gate 3 evidence; aggregate validation rejects missing evidence; block ownership maps declared architecture defects only to Gate 3."
 boundaries = [
     { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_alias_capture", before = "No TypeScript alias capture boundary existed.", after = "Captures the single supported wildcard substitution deterministically." },
     { path = "src/supportability_gate/architecture_policy.py", kind = "function", symbol = "_matching_alias", before = "No TypeScript alias-selection boundary existed.", after = "Selects exact matches first, then the wildcard with the longest prefix." },
@@ -25,9 +25,13 @@ boundaries = [
     { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_architecture_evidence", before = "Passed source blobs without root TypeScript configuration.", after = "Passes exact-head root tsconfig bytes to the existing architecture-policy owner." },
     { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_architecture_inputs", before = "No architecture input boundary included optional root configuration.", after = "Reads fixed immutable production blobs plus optional root tsconfig and separates source from configuration bytes." },
     { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_architecture_sources", before = "Read only production source blobs.", after = "Replaced by _architecture_inputs so exact-head configuration remains explicit." },
-    { path = "src/supportability_gate/contract.py", kind = "function", symbol = "command_failed", before = "Allowed policy exit 1 only for Gate 1 complexity adapters.", after = "Allows policy exit 1 for fixed Gate 1 and Gate 3 adapters while preserving every execution and tool failure." },
-    { path = "src/supportability_gate/contract.py", kind = "module", symbol = "src/supportability_gate/contract.py", before = "Owned fixed complexity policy-exit classification.", after = "Owns fixed complexity and architecture policy-exit classification." },
-    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Had no owner for declared TypeScript configuration and unresolved-alias blocks.", after = "Assigns those ordinary blocks only to Gate 3." },
+    { path = "src/supportability_gate/contract.py", kind = "function", symbol = "command_failed", before = "Allowed policy exit 1 only for Gate 1 complexity adapters.", after = "Allows fixed Gate 1 and Gate 3 policy exits while preserving every execution and tool failure." },
+    { path = "src/supportability_gate/contract.py", kind = "module", symbol = "src/supportability_gate/contract.py", before = "Owned fixed complexity policy-exit classification.", after = "Maps fixed ordinary policy-exit adapters to their Standard owners." },
+    { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_command_exit_block", before = "No command-exit evidence classifier separated Gate 3 policy exits from Gate 7 failures.", after = "Maps authenticated architecture policy exits to Gate 3 evidence and all remaining command failures to Gate 7 evidence." },
+    { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_command_blocks", before = "Suppressed an authenticated architecture-adapter policy exit without emitting an owned block.", after = "Emits an authenticated architecture-adapter policy exit as Gate 3 evidence while preserving Gate 7 tool failures." },
+    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Had no owner for declared TypeScript configuration, unresolved-alias, or architecture-adapter policy blocks.", after = "Assigns those ordinary blocks only to Gate 3." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity_components", before = "Authenticated Gate 7 command failures but not suppressed Gate 3 policy exits.", after = "Requires exact parity between authenticated architecture policy exits and their Gate 3 blocks." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_profile", before = "Returned only adapters, technical command result, and Gate 7 failures.", after = "Also returns authenticated Gate 3 architecture policy exits for aggregate parity validation." },
 ]
 
 [architecture]
@@ -38,9 +42,12 @@ reviewed_paths = [
     "src/supportability_gate/architecture_policy.py",
     "src/supportability_gate/cli.py",
     "src/supportability_gate/contract.py",
+    "src/supportability_gate/quality_profile.py",
     "src/supportability_gate/standard_block_ownership.py",
+    "src/supportability_gate/standard_results.py",
     "tests/test_architecture_policy.py",
     "tests/test_evaluate_complexity.py",
+    "tests/test_quality_profile.py",
     "tests/test_standard_results.py",
 ]
 
@@ -51,18 +58,18 @@ does_not_own = "Git acquisition, command execution, target imports, target runti
 
 [incremental_refactor]
 target = "Complete only Project #10 S05 Gate 3 graph, alias, ownership, lane-isolation, direct-proof, and prospective terminal-ledger requirements."
-completed_step = "Added exact-head root tsconfig acquisition, fixed supported alias resolution, external package identity, deterministic alias poison, Gate 3 block ownership, and ordinary architecture-exit isolation using existing modules and dependencies."
+completed_step = "Added exact-head root tsconfig acquisition, fixed supported alias and explicit-baseUrl resolution, external package identity, deterministic alias poison, authenticated Gate 3 adapter-exit evidence, and aggregate parity validation using existing modules and dependencies."
 
 [review_handoff]
-summary = "Issue #148 is the sole active slice. Focused RED tests proved exact-head tsconfig was ignored, scoped packages lost identity, longest-prefix aliases could select the wrong target, and ordinary architecture exit 1 contaminated all lanes. Minimal production changes satisfy those cases, and the complete directly relevant Gate 3 suite passed 138 tests. Exact-lock source, hosted deterministic, serial eight-focus, protected merge, canary, cleanup, issue, and Project evidence remain pending and are not claimed here."
+summary = "Issue #148 is the sole active slice. Frozen review head fe96e108fb730fd41459be23c1c8ec132791948a passed the complete exact-lock source proof, hosted deterministic evidence, and eight serial focused reviews. Four accepted findings now have targeted RED/GREEN remediation for adapter-exit ownership, explicit baseUrl resolution, real-evaluator alias poison, and proof-status accuracy. Final-head exact-lock and hosted deterministic proof, protected merge, canary, cleanup, issue, and Project evidence remain pending and are not claimed here."
 remaining_risks = [
-    "The full exact-lock source proof has not yet run on the prospective review head.",
-    "Hosted deterministic qualification, eight serial focused reviews, normal protected merge, and post-merge Python/frontend canaries remain required before S05 completion.",
+    "The remediation head still requires the full exact-lock source proof and deterministic-only hosted rerun; completed focused reviews must not be repeated.",
+    "Normal protected merge and post-merge Python/frontend canaries remain required before S05 completion.",
     "Supported tsconfig handling is intentionally bounded to root compilerOptions.baseUrl and paths with exact or one-wildcard rows; extends, plugins, malformed rows, multi-wildcards, and unresolved configured aliases fail closed.",
 ]
 
 [human_review]
 naming = "TypeScript configuration, alias, candidate, package, and target helpers name one fixed responsibility each; declared block codes name exact fail-closed conditions."
-cohesion = "Static graph and alias semantics stay in architecture_policy; immutable blob acquisition stays in cli; ordinary command classification stays in contract; lane ownership stays in standard_block_ownership."
+cohesion = "Static graph and alias semantics stay in architecture_policy; immutable blob acquisition stays in cli; command capture classification stays in contract and quality_profile; aggregate parity stays in standard_results; lane ownership stays in standard_block_ownership."
 intended_behavior = "Issue #148 limits this change to Gate 3 qualification and direct proof. No packages, commands, executable paths, environment controls, exclusions, waivers, thresholds, workflow changes, generalized compiler emulation, target execution, immutable documents, or later-slice behavior are added."
 reviewability = "One bounded S05 change uses existing modules, stdlib JSON, fixed candidates, explicit blocks, and direct tests for every supported and rejected alias case."

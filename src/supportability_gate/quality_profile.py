@@ -720,6 +720,14 @@ def _covers(result: GateResult, path: str) -> bool:
     return path in result.observed_paths or path in result.zero_statement_paths
 
 
+def _command_exit_block(language: str, result: GateResult) -> str | None:
+    if result.exit_code == 1 and contract.POLICY_EXIT_STANDARDS[language].get(result.adapter) == 3:
+        return f"ARCHITECTURE_GATE_FAILED:{result.adapter}"
+    if contract.command_failed(language, result.adapter, result.executed, result.exit_code):
+        return f"QUALITY_GATE_FAILED:{result.adapter}"
+    return None
+
+
 def _command_blocks(
     evidence: QualityEvidence,
     policy: contract.Contract,
@@ -745,10 +753,8 @@ def _command_blocks(
             blocks.append(f"QUALITY_PROOF_KIND_MISMATCH:{adapter}")
         if not result.executed:
             blocks.append(f"DECLARED_TOOL_NOT_EXECUTED:{adapter}")
-        elif contract.command_failed(
-            policy.language, result.adapter, result.executed, result.exit_code
-        ):
-            blocks.append(f"QUALITY_GATE_FAILED:{adapter}")
+        elif exit_block := _command_exit_block(policy.language, result):
+            blocks.append(exit_block)
         if result.proof_kind != "provisioning":
             blocks.extend(
                 f"QUALITY_CHANGED_FILE_COVERAGE:{adapter}:{path}"

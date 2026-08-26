@@ -92,7 +92,7 @@ class _TypeScriptAlias:
 
 @dataclass(frozen=True)
 class _TypeScriptConfig:
-    base_url: str
+    base_url: str | None
     aliases: tuple[_TypeScriptAlias, ...]
     blocks: tuple[str, ...]
 
@@ -239,7 +239,7 @@ def _typescript_aliases(value: object) -> tuple[tuple[_TypeScriptAlias, ...], bo
 
 def _typescript_config(content: bytes | None) -> _TypeScriptConfig:
     if content is None:
-        return _TypeScriptConfig(".", (), ())
+        return _TypeScriptConfig(None, (), ())
     try:
         document = json.loads(content)
         if not isinstance(document, dict):
@@ -247,12 +247,13 @@ def _typescript_config(content: bytes | None) -> _TypeScriptConfig:
         options = document.get("compilerOptions", {})
         if not isinstance(options, dict):
             raise ValueError
-        base_url = options.get("baseUrl", ".")
-        if not isinstance(base_url, str):
+        raw_base_url = options.get("baseUrl")
+        if "baseUrl" in options and not isinstance(raw_base_url, str):
             raise ValueError
+        base_url = raw_base_url if isinstance(raw_base_url, str) else None
         aliases, invalid_pattern = _typescript_aliases(options.get("paths", {}))
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
-        return _TypeScriptConfig(".", (), ("MALFORMED_TYPESCRIPT_CONFIG",))
+        return _TypeScriptConfig(None, (), ("MALFORMED_TYPESCRIPT_CONFIG",))
     unsupported = "extends" in document or bool(options.get("plugins")) or invalid_pattern
     return _TypeScriptConfig(
         base_url,
@@ -313,11 +314,16 @@ def _typescript_target(
         alias, capture = match
         for target_pattern in alias.targets:
             expanded = target_pattern.replace("*", capture)
-            stem = posixpath.normpath(posixpath.join(config.base_url, expanded))
+            stem = posixpath.normpath(posixpath.join(config.base_url or ".", expanded))
             target = next((item for item in _typescript_candidates(stem) if item in paths), None)
             if target:
                 return target, True, True
         return _typescript_package(specifier), False, True
+    if config.base_url is not None:
+        stem = posixpath.normpath(posixpath.join(config.base_url, specifier))
+        target = next((item for item in _typescript_candidates(stem) if item in paths), None)
+        if target:
+            return target, True, False
     return _typescript_package(specifier), False, False
 
 
