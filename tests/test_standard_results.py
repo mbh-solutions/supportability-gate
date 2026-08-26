@@ -440,9 +440,17 @@ def test_boolean_or_integer_row_spoofs_are_rejected(field: str, value: object) -
         standard_results.validate_payload(payload, IDENTITY)
 
 
-def test_gate_three_cycle_blocks_only_gate_three() -> None:
+@pytest.mark.parametrize(
+    "block",
+    [
+        "IMPORT_CYCLE:src/a.py:1:src.b",
+        "MALFORMED_TYPESCRIPT_CONFIG",
+        "UNSUPPORTED_TYPESCRIPT_CONFIG",
+        "UNRESOLVED_TYPESCRIPT_ALIAS:src/a.ts:1:@domain/model",
+    ],
+)
+def test_gate_three_architecture_blocks_only_gate_three(block: str) -> None:
     inputs = _inputs()
-    block = "IMPORT_CYCLE:src/a.py:1:src.b"
     inputs[0]["architecture"]["blocks"] = [block]
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
@@ -996,6 +1004,48 @@ def test_complexity_policy_exit_blocks_gate_one_only(
     forged[0]["policy_blocks"] = [f"QUALITY_GATE_FAILED:{adapter}"]
     forged_payload = _compose(forged, source_outcomes=outcomes)
     assert _technical_standards(forged_payload) == set(range(1, 9))
+
+
+@pytest.mark.parametrize(
+    ("language", "complexity_adapter", "architecture_adapter", "path"),
+    [
+        ("python", "python.c901-touched.v1", "python.import-linter.v1", "src/sample.py"),
+        (
+            "typescript",
+            "typescript.c901-equivalent-touched.v1",
+            "typescript.import-boundaries.v1",
+            "src/sample.ts",
+        ),
+    ],
+)
+def test_architecture_policy_exit_blocks_gate_three_only(
+    language: str, complexity_adapter: str, architecture_adapter: str, path: str
+) -> None:
+    inputs = _inputs(path)
+    block = f"IMPORT_CYCLE:{path}:1:dependency"
+    inputs[0]["language"] = language
+    inputs[0]["overall_result"] = "BLOCK"
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["architecture"]["adapter"] = architecture_adapter
+    inputs[0]["architecture"]["blocks"] = [block]
+    inputs[0]["gate_coverage"] = [
+        {"adapter": complexity_adapter, "paths": ["src"]},
+        {"adapter": architecture_adapter, "paths": ["src"]},
+    ]
+    inputs[0]["quality_profile"]["language"] = language
+    inputs[0]["review_evidence"]["architecture"]["reviewed_paths"] = [path]
+    inputs[0]["review_evidence"]["responsibility_boundary"]["path"] = path
+    inputs[0]["quality_profile"]["commands"][0]["adapter"] = architecture_adapter
+    inputs[0]["quality_profile"]["commands"][0]["exit_code"] = 1
+    inputs[3]["commands"][0]["adapter"] = architecture_adapter
+    outcomes = dict(SUCCESS_OUTCOMES)
+    outcomes["complexity"] = "failure"
+
+    payload = _compose(inputs, source_outcomes=outcomes)
+
+    assert _results(payload) == ["PASS", "PASS", "BLOCK", *("PASS",) * 5]
+    assert _entry(payload, 3)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
 
 
 def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> None:

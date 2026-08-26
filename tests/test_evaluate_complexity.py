@@ -322,6 +322,45 @@ def _typescript_repository(
     return repository, base_sha, head_sha
 
 
+def test_typescript_architecture_reads_exact_head_tsconfig_alias(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+    _write(repository / "src" / "domain" / "model.ts", "export const value = 1;\n")
+    _write(
+        repository / "tsconfig.json",
+        '{"compilerOptions":{"baseUrl":".","paths":{"@domain/*":["src/domain/*"]}}}\n',
+    )
+    base_sha = _commit(repository, "base")
+    _write(
+        repository / "src" / "application" / "useCase.ts",
+        "import { value } from '@domain/model';\nexport const current = value;\n",
+    )
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_for_new_path("src/application/useCase.ts").replace(
+            'owner_path = "src/owner.ts"',
+            'owner_path = "src/application/useCase.ts"',
+        ),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["architecture"]["edges"] == [
+        {
+            "internal": True,
+            "line": 1,
+            "source": "src/application/useCase.ts",
+            "specifier": "@domain/model",
+            "target": "src/domain/model.ts",
+        }
+    ]
+    assert any(
+        command["arguments"] == ["cat-file", "blob", f"{head_sha}:tsconfig.json"]
+        for command in result["commands"]
+    )
+
+
 def _evaluate(
     repository: Path,
     base_sha: str,

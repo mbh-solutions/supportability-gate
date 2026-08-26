@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import posixpath
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -80,6 +81,19 @@ class ArchitectureResult:
     covered_paths: tuple[str, ...]
     nodes: tuple[str, ...]
     edges: tuple[ImportEdge, ...]
+    blocks: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _TypeScriptAlias:
+    pattern: str
+    targets: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _TypeScriptConfig:
+    base_url: str
+    aliases: tuple[_TypeScriptAlias, ...]
     blocks: tuple[str, ...]
 
 
@@ -203,26 +217,116 @@ def _typescript_specifiers(node: Node, content: bytes) -> list[tuple[int, str]]:
     return found
 
 
-def _typescript_target(source: str, specifier: str, paths: set[str]) -> tuple[str, bool]:
+def _typescript_aliases(value: object) -> tuple[tuple[_TypeScriptAlias, ...], bool]:
+    if not isinstance(value, dict):
+        raise ValueError
+    aliases: list[_TypeScriptAlias] = []
+    unsupported = False
+    for pattern, targets in value.items():
+        if (
+            not isinstance(pattern, str)
+            or not isinstance(targets, list)
+            or any(not isinstance(target, str) for target in targets)
+        ):
+            raise ValueError
+        if pattern.count("*") > 1 or any(
+            target.count("*") > 1 or ("*" in target and "*" not in pattern) for target in targets
+        ):
+            unsupported = True
+        aliases.append(_TypeScriptAlias(pattern, tuple(targets)))
+    return tuple(aliases), unsupported
+
+
+def _typescript_config(content: bytes | None) -> _TypeScriptConfig:
+    if content is None:
+        return _TypeScriptConfig(".", (), ())
+    try:
+        document = json.loads(content)
+        if not isinstance(document, dict):
+            raise ValueError
+        options = document.get("compilerOptions", {})
+        if not isinstance(options, dict):
+            raise ValueError
+        base_url = options.get("baseUrl", ".")
+        if not isinstance(base_url, str):
+            raise ValueError
+        aliases, invalid_pattern = _typescript_aliases(options.get("paths", {}))
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return _TypeScriptConfig(".", (), ("MALFORMED_TYPESCRIPT_CONFIG",))
+    unsupported = "extends" in document or bool(options.get("plugins")) or invalid_pattern
+    return _TypeScriptConfig(
+        base_url,
+        () if unsupported else aliases,
+        ("UNSUPPORTED_TYPESCRIPT_CONFIG",) if unsupported else (),
+    )
+
+
+def _typescript_candidates(stem: str) -> tuple[str, ...]:
+    suffix = PurePosixPath(stem).suffix
+    rewrites = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
+    base, candidates = (stem[: -len(suffix)], []) if suffix in rewrites else (stem, [stem])
+    candidates.extend(f"{base}{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
+    candidates.extend(f"{base}/index{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
+    return tuple(candidates)
+
+
+def _alias_capture(specifier: str, pattern: str) -> str | None:
+    if "*" not in pattern:
+        return "" if specifier == pattern else None
+    prefix, suffix = pattern.split("*", 1)
+    if not specifier.startswith(prefix) or not specifier.endswith(suffix):
+        return None
+    return specifier[len(prefix) : len(specifier) - len(suffix) if suffix else None]
+
+
+def _matching_alias(
+    specifier: str, aliases: tuple[_TypeScriptAlias, ...]
+) -> tuple[_TypeScriptAlias, str] | None:
+    exact = next((alias for alias in aliases if alias.pattern == specifier), None)
+    if exact:
+        return exact, ""
+    matches = (
+        (alias, capture)
+        for alias in aliases
+        if (capture := _alias_capture(specifier, alias.pattern)) is not None
+    )
+    return max(matches, key=lambda item: len(item[0].pattern.split("*", 1)[0]), default=None)
+
+
+def _typescript_package(specifier: str) -> str:
+    parts = specifier.split("/")
+    return "/".join(parts[:2]) if specifier.startswith("@") else parts[0]
+
+
+def _typescript_target(
+    source: str,
+    specifier: str,
+    paths: set[str],
+    config: _TypeScriptConfig,
+) -> tuple[str, bool, bool]:
     if specifier.startswith("."):
         stem = posixpath.normpath(posixpath.join(posixpath.dirname(source), specifier))
-        suffix = PurePosixPath(stem).suffix
-        rewrites = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
-        base, candidates = (stem[: -len(suffix)], []) if suffix in rewrites else (stem, [stem])
-        candidates.extend(f"{base}{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
-        candidates.extend(
-            f"{base}/index{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES)
-        )
-        target = next((item for item in candidates if item in paths), None)
-        return (target, True) if target else (specifier, False)
-    target = next(
-        (path for path in sorted(paths) if path.rsplit(".", 1)[0].endswith(f"/{specifier}")),
-        None,
-    )
-    return (target, True) if target else (specifier.split("/", 1)[0], False)
+        target = next((item for item in _typescript_candidates(stem) if item in paths), None)
+        return (target, True, False) if target else (specifier, False, False)
+    match = _matching_alias(specifier, config.aliases)
+    if match:
+        alias, capture = match
+        for target_pattern in alias.targets:
+            expanded = target_pattern.replace("*", capture)
+            stem = posixpath.normpath(posixpath.join(config.base_url, expanded))
+            target = next((item for item in _typescript_candidates(stem) if item in paths), None)
+            if target:
+                return target, True, True
+        return _typescript_package(specifier), False, True
+    return _typescript_package(specifier), False, False
 
 
-def _typescript_edges(path: str, content: bytes, paths: set[str]) -> list[ImportEdge]:
+def _typescript_edges(
+    path: str,
+    content: bytes,
+    paths: set[str],
+    config: _TypeScriptConfig,
+) -> tuple[list[ImportEdge], list[str]]:
     language = (
         tree_sitter_typescript.language_tsx()
         if path.endswith(".tsx")
@@ -231,11 +335,14 @@ def _typescript_edges(path: str, content: bytes, paths: set[str]) -> list[Import
     tree = Parser(Language(language)).parse(content)
     if tree.root_node.has_error:
         raise PythonSourceError("SYNTAX_ERROR", f"syntax error in production file: {path}")
-    edges = []
+    edges: list[ImportEdge] = []
+    blocks: list[str] = []
     for line, specifier in _typescript_specifiers(tree.root_node, content):
-        target, internal = _typescript_target(path, specifier, paths)
+        target, internal, configured = _typescript_target(path, specifier, paths, config)
         edges.append(ImportEdge(path, target, line, specifier, internal))
-    return edges
+        if configured and not internal:
+            blocks.append(f"UNRESOLVED_TYPESCRIPT_ALIAS:{path}:{line}:{specifier}")
+    return edges, blocks
 
 
 def _reachable(start: str, goal: str, graph: dict[str, set[str]]) -> bool:
@@ -290,6 +397,7 @@ def evaluate_architecture(
     policy: Contract,
     sources: dict[str, bytes],
     gate: GateAdapter | None,
+    typescript_config: bytes | None = None,
 ) -> ArchitectureResult:
     """Execute fixed static import analysis without importing target code."""
     adapter = ARCHITECTURE_ADAPTERS[policy.language]
@@ -305,11 +413,15 @@ def evaluate_architecture(
     if policy.language == "python":
         modules = _python_modules(paths, policy.production_paths)
         raw_edges = [edge for path in paths for edge in _python_edges(path, sources[path], modules)]
+        architecture_blocks: tuple[str, ...] = ()
     else:
         path_set = set(paths)
-        raw_edges = [
-            edge for path in paths for edge in _typescript_edges(path, sources[path], path_set)
-        ]
+        config = _typescript_config(typescript_config)
+        parsed = [_typescript_edges(path, sources[path], path_set, config) for path in paths]
+        raw_edges = [edge for edges, _ in parsed for edge in edges]
+        architecture_blocks = tuple(
+            sorted((*config.blocks, *(block for _, blocks in parsed for block in blocks)))
+        )
     edges = tuple(
         sorted(
             set(raw_edges),
@@ -328,5 +440,9 @@ def evaluate_architecture(
         coverage,
         paths,
         edges,
-        tuple(sorted((*coverage_blocks, *_blocks(edges, policy.production_paths)))),
+        tuple(
+            sorted(
+                (*coverage_blocks, *architecture_blocks, *_blocks(edges, policy.production_paths))
+            )
+        ),
     )

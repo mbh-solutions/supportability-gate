@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S04 issue #147 is the sole active slice
-Next milestone authorized: S05 only after exact protected S04 completion and transition readback
+Current authorized work: Project #10 S05 issue #148 is the sole active slice
+Next milestone authorized: S06 only after exact protected S05 completion and transition readback
 ```
 
 ## Milestone transition rules
@@ -1834,3 +1834,26 @@ Do not create a new terminal label not authorized by an active milestone directi
 - Remaining work: resolve all focused-review findings, pass final-head deterministic proof, merge
   normally without bypass, complete and clean the Python/frontend canaries, finish
   issue/Project/ledger readback, refresh S05, set S04 `Done / Complete / On scope / Yes`, and stop.
+
+## Project #10 S05 Gate 3 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
+  completes, live S05 remains `In progress / Missing / On scope / No`. These prospective values
+  become canonical only after the protected pull request closing issue #148 merges normally and
+  every required Python and frontend canary, lane/shared-isolation proof, exact source proof,
+  focused review, cleanup, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gRw`, and repository issue #148.
+- Responsibility boundary: Gate 3 owns static Python and TypeScript/TSX import graphs, exact
+  source locations, canonical internal and external targets, fixed root `tsconfig.json` alias
+  resolution, cycles, dependency inversions, forbidden domain dependencies, production coverage,
+  and declared-adapter execution. Ordinary architecture-policy exit `1`, graph defects, malformed
+  or unsupported TypeScript alias configuration, and unresolved configured aliases block Gate 3
+  only; shared identity, authorization, contract, or artifact defects remain explicit dependent
+  technical failures.
+- Remaining work: pass exact source and hosted deterministic proof, complete eight focused reviews
+  serially on one frozen head, resolve all findings in one bounded remediation batch if needed,
+  merge normally without bypass, complete and clean the Python/frontend canaries plus shared
+  configuration-identity poison, finish issue/Project/ledger readback, refresh and activate S06
+  only, set S05 `Done / Complete / On scope / Yes`, and stop S05.
