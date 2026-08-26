@@ -1208,6 +1208,36 @@ def test_valid_milestone_three_evidence_passes_and_reports_judgment(tmp_path: Pa
     assert '"reviewability": "Change is small enough for direct review."' in markdown
 
 
+def test_python_separation_boundary_binds_changed_function(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        REVIEW_EVIDENCE.replace(
+            'after = "The changed boundary now has one named responsibility."',
+            'after = "The changed boundary now has one named responsibility."\n'
+            'boundaries = [{ path = "src/sample.py", kind = "function", '
+            'symbol = "existing", before = "Parsed input.", after = "Orchestrates parsing." }]',
+        ),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["review_evidence"]["separation_of_concerns"]["boundaries"] == [
+        {
+            "after": "Orchestrates parsing.",
+            "before": "Parsed input.",
+            "kind": "function",
+            "path": "src/sample.py",
+            "symbol": "existing",
+        }
+    ]
+
+
 def test_milestone_three_evidence_is_byte_identical(tmp_path: Path) -> None:
     repository, base_sha, head_sha = _repository(
         tmp_path,

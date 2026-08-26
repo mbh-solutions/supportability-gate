@@ -70,7 +70,11 @@ def _review_evidence() -> dict[str, object]:
         },
         "review_handoff": {"remaining_risks": ["None known."], "summary": "Ready."},
         "schema_version": "1.0",
-        "separation_of_concerns": {"after": "One owner.", "before": "Mixed owners."},
+        "separation_of_concerns": {
+            "after": "One owner.",
+            "before": "Mixed owners.",
+            "boundaries": [],
+        },
     }
 
 
@@ -447,6 +451,20 @@ def test_gate_three_cycle_blocks_only_gate_three() -> None:
 
     assert _results(payload) == ["PASS", "PASS", "BLOCK", *("PASS",) * 5]
     assert _entry(payload, 3)["policy_blocks"] == [block]
+
+
+def test_boundary_evidence_poison_blocks_gate_two_only() -> None:
+    inputs = _inputs()
+    block = "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
+    inputs[0]["review_evidence"] = None
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS", "BLOCK", *["PASS"] * 6]
+    assert _entry(payload, 2)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
 
 
 def test_quality_provenance_binding_mismatch_is_gate_seven_technical_only() -> None:

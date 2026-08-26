@@ -11,6 +11,18 @@ proof = ".supportability-characterization.json scenarios gate-cli, m9-quality-pr
 [separation_of_concerns]
 before = "Ordinary complexity-adapter exit 1 was classified as a quality failure, new-location coverage rejected the same authenticated execution, TypeScript function metrics omitted approved classic constructs, decorated Ruff locations used decorator spans, and aggregate function/Ruff collections were independently valid but not cross-bound."
 after = "The leaf contract owns ordinary command-failure classification; quality and modularity consumers reuse it; changed-function collection and complexity measurement remain separate; reporting emits only already-verified touched Python Ruff rows; TypeScript forbids Ruff rows; and standard-results composition cross-binds exact changed sides and lines, names, spans, metrics, applicable Python Ruff message complexity, decisions, and policy ownership."
+boundaries = [
+    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_evaluate", before = "Loaded review evidence without immutable responsibility identities.", after = "Supplies immutable diff context to boundary validation." },
+    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_read_review_evidence", before = "Read only review TOML bytes.", after = "Reads TOML and binds it to exact expected identities." },
+    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_separation_boundaries", before = "Had no Gate 2 identity derivation.", after = "Derives changed responsibility identities from immutable Git sides." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_separation_boundaries", before = "Had no structured boundary-row validation.", after = "Validates exact boundary rows and identity cardinality." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "Validated review shape only.", after = "Validates review shape against expected boundary identities." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "parse_review_evidence", before = "Parsed fixed review fields only.", after = "Parses required separation boundary evidence." },
+    { path = "src/supportability_gate/review_evidence.py", kind = "module", symbol = "src/supportability_gate/review_evidence.py", before = "Did not own boundary-evidence schema fields.", after = "Owns fixed separation boundary schema validation." },
+    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Did not assign boundary defects to Gate 2.", after = "Assigns every separation boundary defect to Gate 2." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review", before = "Accepted separation summaries without boundary rows.", after = "Requires strict aggregate boundary-row validation." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_separation_boundaries", before = "Had no aggregate boundary-row validator.", after = "Validates aggregate boundary-row shape and identity uniqueness." },
+]
 
 [architecture]
 dependency_direction = "The dependency-free contract leaf owns fixed adapter identities and command-failure classification. Quality and modularity analysis depend downward on it. The minimal standard-results producer imports standard_results, which now depends only on leaf contract, clause inventory, and block ownership rather than hosted analyzers or tree-sitter packages."

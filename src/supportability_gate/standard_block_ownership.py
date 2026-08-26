@@ -115,6 +115,7 @@ REVIEW_FIELD_OWNERS = {
     "review_handoff.summary": frozenset({8}),
     "separation_of_concerns.after": frozenset({2}),
     "separation_of_concerns.before": frozenset({2}),
+    "separation_of_concerns.boundaries": frozenset({2}),
 }
 
 _REVIEW_PREFIXES = (

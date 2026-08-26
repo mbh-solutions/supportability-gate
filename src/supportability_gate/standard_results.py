@@ -499,10 +499,25 @@ def _s02_review_boundaries(value: object, code: str) -> None:
         raise StandardResultsError(code)
 
 
+def _s02_separation_boundaries(value: object, code: str) -> None:
+    rows = _s02_rows(value, {"after", "before", "kind", "path", "symbol"}, code)
+    identities: set[tuple[str, str, str]] = set()
+    for row in rows:
+        if (
+            row["kind"] not in {"function", "component", "module"}
+            or any(not isinstance(row[name], str) or not row[name].strip() for name in row)
+        ):
+            raise StandardResultsError(code)
+        identity = (row["path"], row["kind"], row["symbol"])
+        if identity in identities:
+            raise StandardResultsError(code)
+        identities.add(identity)
+
+
 def _s02_review(value: object, blocks: list[str], code: str) -> None:
     owners = frozenset().union(*(standard_block_ownership.review_owners(block) for block in blocks))
     if value is None:
-        if owners == standard_block_ownership.REVIEW_STANDARDS:
+        if owners:
             return
         raise StandardResultsError(code)
     if owners:
@@ -512,7 +527,12 @@ def _s02_review(value: object, blocks: list[str], code: str) -> None:
     if row["schema_version"] != "1.0":
         raise StandardResultsError(code)
     for name, (text_fields, list_fields) in _S02_REVIEW_SECTIONS.items():
-        _s02_review_section(row[name], text_fields, list_fields, code)
+        if name == "separation_of_concerns":
+            separation = _s02_exact(row[name], text_fields | {"boundaries"}, code)
+            _s02_review_section(separation, text_fields, list_fields, code)
+            _s02_separation_boundaries(separation["boundaries"], code)
+        else:
+            _s02_review_section(row[name], text_fields, list_fields, code)
     _s02_review_boundaries(row["module_boundaries"], code)
 
 
@@ -809,7 +829,7 @@ def _s02_complexity_components(
         or (row["quality_profile"] is None and 7 not in affected)
         or (
             row["review_evidence"] is None
-            and review_owners != standard_block_ownership.REVIEW_STANDARDS
+            and not review_owners
             and not standard_block_ownership.REVIEW_STANDARDS.issubset(affected)
         )
     ):
