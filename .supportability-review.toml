@@ -5,8 +5,8 @@ intended_behavior = "Project #10 S04 makes Gate 2 require complete structured be
 proof = "tests/test_evaluate_complexity.py::{test_modified_boundary_binds_retained_head_identity,test_deleted_boundary_binds_base_identity,test_renamed_boundary_binds_base_and_head_identities,test_added_tsx_boundary_binds_component_and_function_identities,test_module_boundary_uses_path_as_symbol,test_empty_boundaries_pass_when_diff_has_no_applicable_identity,test_real_diff_separation_boundary_poison_blocks,test_extra_nonduplicate_boundary_rejects_cardinality_mismatch,test_separation_boundary_outputs_are_byte_identical,test_syntax_error_is_technical_failure,test_non_regular_production_source_reports_boundary_derivation_failure}; tests/test_standard_results.py::{test_boundary_evidence_poison_blocks_gate_two_only,test_indexed_boundary_evidence_poison_blocks_gate_two_only,test_boundary_derivation_failure_is_gate_two_technical_only}"
 
 [characterization]
-captured_behavior = "Real immutable Git fixtures cover retained, deleted, renamed, added TSX component/function, module, empty, missing, malformed, insufficient, duplicate, nonexistent, unchanged, stale, mismatched, extra-cardinality, syntax-error, and non-regular-source cases. Aggregate fixtures prove ordinary top-level and indexed boundary defects block only Gate 2 and derivation failure remains a Gate 2 technical result."
-proof = "tests/test_evaluate_complexity.py; tests/test_standard_results.py"
+captured_behavior = "Real immutable Git fixtures cover retained, deleted, renamed, added TSX component/function, module, empty, missing, malformed, insufficient, duplicate, nonexistent, unchanged, stale, mismatched, extra-cardinality, syntax-error, and non-regular-source cases. Aggregate fixtures prove ordinary top-level and indexed boundary defects block only Gate 2 and derivation failure remains a Gate 2 technical result. The gate2-standard-results-boundary scenario cryptographically binds and replays the established aggregate driver on both immutable source sides, adapts only the added Gate 2 schema field, validates each side's real review document, and normalizes synthetic input provenance that is not behavior."
+proof = "tests/test_evaluate_complexity.py; tests/test_standard_results.py; .supportability-characterization.json; tests/characterization/standard-results-boundary.characterization.py; tests/characterization/gate2-standard-results-boundary.characterization.py; tests/characterization/gate2-standard-results-boundary.golden.json"
 
 [separation_of_concerns]
 before = "Review evidence had summary text but no exact responsibility rows. Initial S04 binding emitted indexed row defects without recognizing their Gate 2 ownership, coupled boundary derivation to review-document loading, swallowed parser failures, misclassified source Git failures as review-document defects, and left branch evidence describing the prior milestone."
@@ -28,14 +28,18 @@ boundaries = [
 ]
 
 [architecture]
-dependency_direction = "CLI orchestration supplies immutable Git context to the existing review-evidence validator. The aggregate result composer depends on the existing block-ownership leaf for exact Gate 2 policy and technical ownership. No target code import, target execution, new module, package, workflow, or dependency was added."
+dependency_direction = "CLI orchestration supplies immutable Git context to the existing review-evidence validator. The aggregate result composer depends on the existing block-ownership leaf for exact Gate 2 policy and technical ownership. Production Gate execution still never imports or executes analyzed consumer-repository code. Trusted source characterization imports only this repository's own immutable base/head modules; no production module, package, workflow, or dependency was added."
 reviewed_paths = [
+    ".supportability-characterization.json",
     ".supportability-review.toml",
     "docs/product_completion_contract.md",
     "src/supportability_gate/cli.py",
     "src/supportability_gate/review_evidence.py",
     "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",
+    "tests/characterization/gate2-standard-results-boundary.characterization.py",
+    "tests/characterization/gate2-standard-results-boundary.golden.json",
+    "tests/characterization/standard-results-boundary.characterization.py",
     "tests/test_evaluate_complexity.py",
     "tests/test_standard_results.py",
 ]
@@ -47,12 +51,12 @@ does_not_own = "Git repository identity, changed-line discovery, source parsing,
 
 [incremental_refactor]
 target = "Complete only Project #10 S04 Gate 2 exact responsibility binding, ordinary-poison isolation, explicit derivation-failure propagation, direct proof, and prospective terminal ledger transaction."
-completed_step = "Bound exact Python and TypeScript/TSX responsibility identities, mirrored strict aggregate validation, repaired indexed row ownership, separated derivation from review loading, added focused syntax/non-regular composition proof, and replaced stale branch evidence."
+completed_step = "Bound exact Python and TypeScript/TSX responsibility identities, mirrored strict aggregate validation, repaired indexed row ownership, separated derivation from review loading, added focused syntax/non-regular composition proof, replaced stale branch evidence, reduced the real parser decision count to the enforced maximum, and added an immutable-side-compatible Gate 2 characterization scenario."
 
 [review_handoff]
-summary = "Issue #147 is the sole active slice. S04 implementation plus one bounded internal-review remediation batch now covers exact identity binding, indexed Gate 2 ownership, and explicit derivation failure. Exact final commit, hosted run, fresh focused-review lifecycle, protected canaries, normal merge, cleanup, and Project readback remain required and are not claimed here."
+summary = "Issue #147 is the sole active slice. Hosted pre-freeze run 32921984335 on prior head 694f41c45919ae63edc7866501ae70b47db18f28 exposed real parser/Ruff parity and immutable characterization coverage failures before any focused review request. This correction removes the duplicate parser decision and replaces the retired scenario entry with a new base/head-compatible Gate 2 scenario that cryptographically binds the preserved legacy driver. No focused review has been requested. Fresh exact source proof, hosted deterministic green, one serial eight-focus lifecycle, protected canaries, normal merge, cleanup, and Project readback remain required and are not claimed here."
 remaining_risks = [
-    "Parent must run the directly relevant and full exact-lock source proof on the final committed head; this bounded remediation ran only its focused RED/GREEN tests.",
+    "The pre-freeze correction still requires the directly relevant and full exact-lock source proof on its committed head, followed by fresh hosted deterministic qualification before the review head can freeze.",
     "Final hosted deterministic checks, any required post-review remediation authorization, protected normal merge, Python/frontend canaries, cleanup, issue closure, and Project transition remain required before S04 completion.",
     "Gate 2 proves row structure and immutable identity association only; it does not judge the truth or quality of before/after prose, and Codex review remains advisory and non-exhaustive.",
 ]

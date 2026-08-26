@@ -35,12 +35,13 @@
     },
     {
       "covers": [
+        "src/supportability_gate/review_evidence.py",
         "src/supportability_gate/standard_block_ownership.py",
         "src/supportability_gate/standard_results.py",
         "src/supportability_gate/standard_results_enforcer.py",
         "src/supportability_gate/standard_results_producer.py"
       ],
-      "id": "standard-results-boundary",
+      "id": "gate2-standard-results-boundary",
       "kind": "regression"
     },
     {

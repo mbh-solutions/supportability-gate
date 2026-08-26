@@ -20,6 +20,7 @@ _LIST_FIELDS = {
     "architecture": ("reviewed_paths",),
     "review_handoff": ("remaining_risks",),
 }
+_SECTION_EXTRA_FIELDS = {"separation_of_concerns": ("boundaries",)}
 _MODULE_BOUNDARY_FIELDS = {"basis", "justification", "owner_path", "path"}
 _SEPARATION_BOUNDARY_FIELDS = {"after", "before", "kind", "path", "symbol"}
 
@@ -129,9 +130,7 @@ def parse_review_evidence(
         section = _section(data, name)
         text_fields = _TEXT_FIELDS.get(name, ())
         list_fields = _LIST_FIELDS.get(name, ())
-        fields = {*text_fields, *list_fields}
-        if name == "separation_of_concerns":
-            fields.add("boundaries")
+        fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
         _require_keys(section, fields, name)
         for field in text_fields:
             _validate_text(section[field], f"{name}.{field}")
