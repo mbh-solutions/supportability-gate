@@ -175,38 +175,43 @@ def _typescript_source(name: str, complexity: int, return_value: int = 0) -> str
 def _commit(repository: Path, message: str) -> str:
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", message)
-    if message == "head":
+    if message != "base":
         review_path = repository / ".supportability-review.toml"
         review = review_path.read_text(encoding="utf-8")
         if "[separation_of_concerns]" in review and "boundaries =" not in review:
-            records: list[git_changes.CommandRecord] = []
-            identity = git_changes.inspect_repository(
-                repository,
-                _run_git(repository, "rev-parse", "HEAD~1"),
-                _run_git(repository, "rev-parse", "HEAD"),
-                records,
-            )
-            policy = contract.parse_contract(
-                git_changes.read_regular_blob(
-                    repository, identity.base_sha, ".supportability.toml", records
-                ).content
-            )
-            changes = git_changes.changed_paths(
-                repository, identity.base_sha, identity.head_sha, records
-            )
-            assessments = cli._classify_changes(repository, identity, policy, changes, records)
+            try:
+                records: list[git_changes.CommandRecord] = []
+                identity = git_changes.inspect_repository(
+                    repository,
+                    _run_git(repository, "rev-parse", "HEAD~1"),
+                    _run_git(repository, "rev-parse", "HEAD"),
+                    records,
+                )
+                policy = contract.parse_contract(
+                    git_changes.read_regular_blob(
+                        repository, identity.base_sha, ".supportability.toml", records
+                    ).content
+                )
+                changes = git_changes.changed_paths(
+                    repository, identity.base_sha, identity.head_sha, records
+                )
+                assessments = cli._classify_changes(
+                    repository, identity, policy, changes, records
+                )
+                boundaries = cli._separation_boundaries(
+                    repository, identity, policy, assessments, records
+                )
+            except (contract.ContractError, function_changes.PythonSourceError):
+                boundaries = ()
             rows = ", ".join(
                 "{ path = %s, kind = %s, symbol = %s, before = %s, after = %s }"
                 % tuple(json.dumps(value) for value in (*boundary, "Before.", "After."))
-                for boundary in cli._separation_boundaries(
-                    repository, identity, policy, assessments, records
-                )
+                for boundary in boundaries
             )
             review_path.write_text(
                 review.replace(
-                    'after = "The changed boundary now has one named responsibility."',
-                    'after = "The changed boundary now has one named responsibility."\n'
-                    f"boundaries = [{rows}]",
+                    "\n[architecture]",
+                    f"\nboundaries = [{rows}]\n\n[architecture]",
                 ),
                 encoding="utf-8",
             )

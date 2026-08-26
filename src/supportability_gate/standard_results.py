@@ -529,7 +529,11 @@ def _s02_review(value: object, blocks: list[str], code: str) -> None:
     for name, (text_fields, list_fields) in _S02_REVIEW_SECTIONS.items():
         if name == "separation_of_concerns":
             separation = _s02_exact(row[name], text_fields | {"boundaries"}, code)
-            _s02_review_section(separation, text_fields, list_fields, code)
+            if any(
+                not isinstance(separation[field], str) or not separation[field].strip()
+                for field in text_fields
+            ):
+                raise StandardResultsError(code)
             _s02_separation_boundaries(separation["boundaries"], code)
         else:
             _s02_review_section(row[name], text_fields, list_fields, code)

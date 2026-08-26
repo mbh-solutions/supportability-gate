@@ -548,8 +548,7 @@ def _read_review_evidence(
             return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
         errors.append(function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error)))
         return None, ()
-    except function_changes.PythonSourceError as error:
-        errors.append(error)
+    except function_changes.PythonSourceError:
         return None, ()
     return review_evidence.evaluate_review_evidence(blob.content, expected_boundaries)
 
