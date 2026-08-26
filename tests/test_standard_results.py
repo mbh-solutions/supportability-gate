@@ -38,6 +38,10 @@ EXPECTED_QUALITY_ARTIFACT = {
     "digest": "d" * 64,
     "id": "789",
 }
+EXPECTED_CHARACTERIZATION_ARTIFACTS = {
+    "base": {"capture_sha256": "3" * 64, "digest": "4" * 64, "id": "701"},
+    "head": {"capture_sha256": "5" * 64, "digest": "6" * 64, "id": "702"},
+}
 
 
 def _canonical(value: object) -> bytes:
@@ -190,7 +194,7 @@ def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
         "base_sha": IDENTITY.base_sha,
         "behavior_fingerprint": hashlib.sha256(_canonical([["sample", "e" * 64]])).hexdigest(),
         "coverage": {
-            "covered_paths": [path] if path.startswith("src/") else [],
+            "covered_paths": [path],
             "required_paths": [path] if path.startswith("src/") else [],
         },
         "head_sha": IDENTITY.head_sha,
@@ -204,7 +208,7 @@ def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
                 "base_behavior_sha256": "e" * 64,
                 "command": ["python", "tests/characterization/sample.characterization.py"],
                 "compatibility": "PASS",
-                "covers": ["src/sample.py"],
+                "covers": [path],
                 "golden_behavior_sha256": "e" * 64,
                 "head_behavior_sha256": "e" * 64,
                 "id": "sample",
@@ -360,6 +364,7 @@ def _ruff(metric: dict[str, object]) -> dict[str, object]:
 def _compose(
     inputs: tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]],
     *,
+    expected_characterization_artifacts: dict[str, Any] | None = None,
     source_errors: dict[str, str] | None = None,
     source_outcomes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
@@ -378,6 +383,11 @@ def _compose(
     return standard_results.compose_results(
         *inputs,
         IDENTITY,
+        expected_characterization_artifacts=(
+            EXPECTED_CHARACTERIZATION_ARTIFACTS
+            if expected_characterization_artifacts is None
+            else expected_characterization_artifacts
+        ),
         expected_quality_artifact=EXPECTED_QUALITY_ARTIFACT,
         source_errors=source_errors,
         source_outcomes=source_outcomes,
@@ -612,6 +622,10 @@ def test_authentic_gate_four_poison_blocks_only_gate_four(case: str) -> None:
                 "path": owner,
             }
         )
+        inputs[1]["scenarios"][0]["covers"].append(owner)
+        inputs[1]["coverage"]["covered_paths"].append(owner)
+        inputs[1]["coverage"]["required_paths"].append(owner)
+        _bind_characterization(inputs)
         block = f"NEW_MODULE_OWNER_NOT_PREEXISTING:{path}:{owner}"
     elif case == "parallel":
         owner = "src/inventory/model.py"
@@ -641,6 +655,224 @@ def test_typescript_owned_new_location_passes_aggregate_validation() -> None:
     )
 
     assert _results(payload) == ["PASS"] * 8
+
+
+def test_gate_five_vocabulary_is_exact_and_ordered() -> None:
+    assert standard_block_ownership.BLOCK_FAMILIES[4] == (
+        "BASE_CAPTURE_DIGEST_MISMATCH",
+        "CHANGED_CHARACTERIZATION_DEFINITION:",
+        "CHANGED_GOLDEN_OUTPUT:",
+        "CHARACTERIZATION_DEFINITION_MISMATCH:",
+        "CHARACTERIZATION_DRIVER_IDENTITY_MISMATCH:",
+        "CHARACTERIZATION_EXECUTION_FAILED:",
+        "CHARACTERIZATION_FINGERPRINT_MISMATCH",
+        "CHARACTERIZATION_REPLAY_DRIFT:",
+        "GOLDEN_ARTIFACT_IDENTITY_MISMATCH:",
+        "GOLDEN_BEHAVIOR_MISMATCH:",
+        "HEAD_CAPTURE_DIGEST_MISMATCH",
+        "HEAD_ONLY_CHARACTERIZATION_CLAIM",
+        "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
+        "INCOMPLETE_CHARACTERIZATION_EVIDENCE",
+        "INVALID_ARTIFACT_IDENTITY",
+        "MISSING_BASELINE",
+        "MISSING_CHARACTERIZATION_COVERAGE:",
+        "REMOVED_CHARACTERIZATION_SCENARIO:",
+        "STALE_BASELINE_ARTIFACT",
+        "STALE_POST_CHANGE_ARTIFACT",
+        "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+    )
+
+
+def _bind_characterization(inputs: tuple[dict[str, Any], ...]) -> None:
+    inputs[2]["characterization_sha256"] = hashlib.sha256(_canonical(inputs[1])).hexdigest()
+
+
+def _gate_five_poison(
+    block: str,
+) -> tuple[tuple[dict[str, Any], ...], dict[str, Any], list[str]]:
+    inputs = _inputs()
+    characterization = inputs[1]
+    expected = copy.deepcopy(EXPECTED_CHARACTERIZATION_ARTIFACTS)
+    blocks = [block]
+    scenario = characterization["scenarios"][0]
+    if block == "BASE_CAPTURE_DIGEST_MISMATCH":
+        characterization["artifacts"]["base"]["capture_sha256"] = "7" * 64
+    elif block == "HEAD_CAPTURE_DIGEST_MISMATCH":
+        characterization["artifacts"]["head"]["capture_sha256"] = "7" * 64
+    elif block == "GOLDEN_BEHAVIOR_MISMATCH:sample":
+        scenario["golden_behavior_sha256"] = "d" * 64
+    elif block == "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample":
+        blocks = ["GOLDEN_BEHAVIOR_MISMATCH:sample", block]
+        scenario["head_behavior_sha256"] = "d" * 64
+        scenario["golden_behavior_sha256"] = "d" * 64
+        scenario["compatibility"] = "BLOCK"
+        characterization["behavior_fingerprint"] = hashlib.sha256(
+            _canonical([["sample", "d" * 64]])
+        ).hexdigest()
+    elif block == "INVALID_ARTIFACT_IDENTITY":
+        characterization["artifacts"]["base"]["id"] = "0"
+        expected["base"]["id"] = "0"
+    elif block == "MISSING_CHARACTERIZATION_COVERAGE:src/risk.py":
+        inputs[0]["high_risk_paths"] = ["src/risk.py"]
+        profile = inputs[0]["quality_profile"]
+        profile["high_risk_paths"] = ["src/risk.py"]
+        profile["production_files"].append("src/risk.py")
+        profile["commands"][0]["observed_paths"].append("src/risk.py")
+        characterization["coverage"]["required_paths"].append("src/risk.py")
+        characterization["coverage"]["required_paths"].sort()
+    elif block in {"HEAD_ONLY_CHARACTERIZATION_CLAIM", "MISSING_BASELINE"}:
+        blocks = ["HEAD_ONLY_CHARACTERIZATION_CLAIM", "MISSING_BASELINE"]
+        characterization["artifacts"]["base"]["capture_sha256"] = None
+        scenario["base_behavior_sha256"] = None
+        scenario["compatibility"] = "BLOCK"
+    elif block == "INCOMPLETE_CHARACTERIZATION_EVIDENCE":
+        characterization["artifacts"]["head"]["capture_sha256"] = None
+        scenario.update(
+            command=None,
+            compatibility="BLOCK",
+            golden_behavior_sha256=None,
+            head_behavior_sha256=None,
+        )
+        characterization["behavior_fingerprint"] = hashlib.sha256(
+            _canonical([["sample", None]])
+        ).hexdigest()
+    characterization["policy_blocks"] = blocks
+    characterization["overall_result"] = "BLOCK"
+    _bind_characterization(inputs)
+    return inputs, expected, blocks
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "BASE_CAPTURE_DIGEST_MISMATCH",
+        "CHANGED_CHARACTERIZATION_DEFINITION:sample",
+        "CHANGED_GOLDEN_OUTPUT:sample",
+        "CHARACTERIZATION_DEFINITION_MISMATCH:sample",
+        "CHARACTERIZATION_DRIVER_IDENTITY_MISMATCH:sample",
+        "CHARACTERIZATION_EXECUTION_FAILED:sample",
+        "CHARACTERIZATION_FINGERPRINT_MISMATCH",
+        "CHARACTERIZATION_REPLAY_DRIFT:sample",
+        "GOLDEN_ARTIFACT_IDENTITY_MISMATCH:sample",
+        "GOLDEN_BEHAVIOR_MISMATCH:sample",
+        "HEAD_CAPTURE_DIGEST_MISMATCH",
+        "HEAD_ONLY_CHARACTERIZATION_CLAIM",
+        "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample",
+        "INCOMPLETE_CHARACTERIZATION_EVIDENCE",
+        "INVALID_ARTIFACT_IDENTITY",
+        "MISSING_BASELINE",
+        "MISSING_CHARACTERIZATION_COVERAGE:src/risk.py",
+        "REMOVED_CHARACTERIZATION_SCENARIO:sample",
+        "STALE_BASELINE_ARTIFACT",
+        "STALE_POST_CHANGE_ARTIFACT",
+        "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+    ],
+)
+def test_authentic_gate_five_poison_blocks_only_gate_five(block: str) -> None:
+    inputs, expected, blocks = _gate_five_poison(block)
+
+    payload = _compose(inputs, expected_characterization_artifacts=expected)
+
+    assert _results(payload) == ["PASS", "PASS", "PASS", "PASS", "BLOCK", *["PASS"] * 3]
+    assert _entry(payload, 5)["policy_blocks"] == blocks
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "fingerprint",
+        "required_paths",
+        "covered_paths",
+        "scenario_covers",
+        "compatibility",
+        "golden_hash",
+        "base_golden_hash",
+        "forged_golden_block",
+        "masked_missing_captures",
+        "masked_missing_command",
+        "unhashable_kind",
+        "unhashable_compatibility",
+        "duplicate_scenario",
+    ],
+)
+def test_characterization_aggregate_rejects_semantic_forgery(case: str) -> None:
+    inputs = _inputs()
+    characterization = inputs[1]
+    scenario = characterization["scenarios"][0]
+    if case == "fingerprint":
+        characterization["behavior_fingerprint"] = "0" * 64
+    elif case == "required_paths":
+        characterization["coverage"]["required_paths"] = []
+    elif case == "covered_paths":
+        characterization["coverage"]["covered_paths"] = []
+    elif case == "scenario_covers":
+        scenario["covers"] = ["src/forged.py"]
+    elif case == "compatibility":
+        scenario["compatibility"] = "BLOCK"
+    elif case == "golden_hash":
+        scenario["golden_behavior_sha256"] = "d" * 64
+    elif case == "base_golden_hash":
+        scenario["base_behavior_sha256"] = "d" * 64
+        scenario["compatibility"] = "BLOCK"
+        characterization["policy_blocks"] = ["INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample"]
+        characterization["overall_result"] = "BLOCK"
+    elif case == "forged_golden_block":
+        characterization["policy_blocks"] = ["GOLDEN_BEHAVIOR_MISMATCH:sample"]
+        characterization["overall_result"] = "BLOCK"
+    elif case == "masked_missing_captures":
+        characterization["artifacts"]["base"]["capture_sha256"] = None
+        characterization["artifacts"]["head"]["capture_sha256"] = None
+        characterization["policy_blocks"] = ["CHANGED_GOLDEN_OUTPUT:sample"]
+        characterization["overall_result"] = "BLOCK"
+    elif case == "masked_missing_command":
+        scenario["command"] = None
+        characterization["policy_blocks"] = ["CHANGED_GOLDEN_OUTPUT:sample"]
+        characterization["overall_result"] = "BLOCK"
+    elif case == "unhashable_kind":
+        scenario["kind"] = []
+    elif case == "unhashable_compatibility":
+        scenario["compatibility"] = {}
+    else:
+        characterization["scenarios"].append(copy.deepcopy(scenario))
+    _bind_characterization(inputs)
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == {5, 6}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["MALFORMED_CHARACTERIZATION_RESULT"]
+        for standard in (5, 6)
+    )
+
+
+@pytest.mark.parametrize("side", ["base", "head"])
+@pytest.mark.parametrize("field", ["id", "digest"])
+def test_characterization_artifacts_require_external_binding(side: str, field: str) -> None:
+    inputs = _inputs()
+    inputs[1]["artifacts"][side][field] = "999" if field == "id" else "7" * 64
+    _bind_characterization(inputs)
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == {5, 6}
+    assert all(
+        _entry(payload, standard)["technical_errors"]
+        == ["CHARACTERIZATION_RESULT_BINDING_MISMATCH"]
+        for standard in (5, 6)
+    )
+
+
+def test_high_risk_paths_require_authenticated_profile_binding() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["high_risk_paths"] = ["src/risk.py"]
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(
+        entry["technical_errors"] == ["MALFORMED_COMPLEXITY_RESULT"] for entry in payload["entries"]
+    )
 
 
 def test_gate_four_aggregate_requires_authentic_changed_path_coupling() -> None:
@@ -1748,6 +1980,18 @@ def _producer_arguments(tmp_path: Path) -> tuple[list[str], dict[str, Path], Pat
             str(IDENTITY.run_attempt),
             "--install-outcome",
             "success",
+            "--expected-base-characterization-artifact-id",
+            EXPECTED_CHARACTERIZATION_ARTIFACTS["base"]["id"],
+            "--expected-base-characterization-artifact-digest",
+            EXPECTED_CHARACTERIZATION_ARTIFACTS["base"]["digest"],
+            "--expected-base-characterization-capture-sha256",
+            EXPECTED_CHARACTERIZATION_ARTIFACTS["base"]["capture_sha256"],
+            "--expected-head-characterization-artifact-id",
+            EXPECTED_CHARACTERIZATION_ARTIFACTS["head"]["id"],
+            "--expected-head-characterization-artifact-digest",
+            EXPECTED_CHARACTERIZATION_ARTIFACTS["head"]["digest"],
+            "--expected-head-characterization-capture-sha256",
+            EXPECTED_CHARACTERIZATION_ARTIFACTS["head"]["capture_sha256"],
             "--expected-quality-artifact-id",
             EXPECTED_QUALITY_ARTIFACT["id"],
             "--expected-quality-artifact-digest",
@@ -2032,6 +2276,12 @@ def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() 
         '--expected-quality-capture-sha256 "${{ needs.quality-profile.outputs.capture-sha256 }}"'
         in evidence
     )
+    for side in ("base", "head"):
+        for field in ("artifact-id", "artifact-digest", "capture-sha256"):
+            assert (
+                f"--expected-{side}-characterization-{field} "
+                f'"${{{{ needs.characterize-{side}.outputs.{field} }}}}"' in evidence
+            )
     condition = "needs.deterministic-evidence.outputs.review-required == 'true'"
     assert condition in observer
     assert condition in connector

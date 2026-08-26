@@ -1896,3 +1896,49 @@ Do not create a new terminal label not authorized by an active milestone directi
   focused reviews, reply to and resolve all three findings, merge normally without bypass, complete
   and clean the Python and frontend canaries, finish issue/Project/ledger readback, refresh and
   activate S07 only, set S06 `Done / Complete / On scope / Yes`, and stop S06.
+
+## Project #10 S07 Gate 5 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Before the terminal transaction
+  completes, live S07 remains `In progress / Missing / On scope / No`. These prospective values
+  become canonical only after the protected pull request closing issue #150 merges normally and
+  every required Python and frontend canary, lane-isolation proof, exact source proof, focused
+  review, cleanup, issue, and Project readback succeeds.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gS4`, repository issue #150, and protected source base
+  `ae705cc860118a5f1b12383703dae28174cc1da8`.
+- Responsibility boundary: Gate 5 owns exact manifest identity, authenticated base/head captures,
+  positive artifact identities, artifact and capture digests, driver and golden identities,
+  deterministic replay, behavior compatibility, and changed/high-risk coverage. The independent
+  aggregate result contract binds serialized Gate 5 identity, artifacts, scenarios, fingerprint,
+  coverage, and derivable blocks to authenticated change and external workflow artifact facts
+  before composing lane results.
+- Direct source evidence: the first exact S07 targeted run passed 165 cases and exposed 26 stale
+  aggregate-fixture assumptions; after correcting only those fixture facts, the exact 26 previously
+  failing nodes passed. The proof covers Python and TypeScript positives, every ordered Gate 5 block
+  family, zero-valued artifact identity, base/head digest mismatch, corrected missing-head
+  classification, semantic-forgery rejection, external-artifact binding, high-risk profile
+  cross-binding, and authentic poison isolated to Gate 5. Final full-source proof remains required
+  on the frozen terminal head.
+- Frozen source review: exact head `223e408d54ef9dbab3dc204ffb98bcd42f1fddf2` passed Source
+  Validation run/job `32959124479`/`98147329637` and required run `32959124429` attempt 1 before
+  eight exact serial request/completion pairs: `5424116276/5424151663`,
+  `5424157114/5424183034`, `5424188286/5424222219`, `5424228180/5424257089`,
+  `5424260324/review 5029597925`, `5424313156/5424352988`,
+  `5424361109/review 5029677900`, and `5424457689/review 5029742410`.
+- Review remediation: findings `3862124988` and `3862182744` were supported and handled together.
+  Aggregate complexity facts now reject disagreement with the authenticated quality-profile
+  high-risk paths, and the handoff accurately distinguishes unchanged Gate CLI behavior from the
+  strengthened aggregate rejection boundary. Finding `3862055054` was rejected with evidence as
+  plan-conflicting because the hosted workflow always supplies all six external artifact facts,
+  while the pinned unchanged legacy aggregate-boundary driver deliberately omits the complete set.
+- Qualification limit: repository-only definition, driver, golden, authentication, stale-artifact,
+  replay, and execution defects remain trusted outputs of the repository-backed verifier. Aggregate
+  composition independently reconstructs every semantic fact present in the serialized result and
+  binds external artifact identities; it does not reread the target repository or execute target
+  code.
+- Remaining work: pass exact final-head source and hosted deterministic proof without repeating any
+  focused review, reply to and resolve the supported findings, merge normally without bypass,
+  complete and clean the Python/frontend missing-coverage canaries, finish issue/Project/ledger
+  readback, refresh and activate S08 only, and set S07 `Done / Complete / On scope / Yes`.
