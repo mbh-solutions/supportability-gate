@@ -315,11 +315,25 @@ def changed_base_lines(
     head_sha: str,
     path: str,
     records: list[CommandRecord],
+    *,
+    old_path: str | None = None,
 ) -> tuple[int, ...]:
     """Return exact removed or modified line numbers in a retained base blob."""
+    rename_option = ("--find-renames=50%",) if old_path is not None else ()
+    paths = (old_path, path) if old_path is not None else (path,)
     patch = run_git(
         repository,
-        ("diff", "--unified=0", "--no-color", "--no-ext-diff", base_sha, head_sha, "--", path),
+        (
+            "diff",
+            *rename_option,
+            "--unified=0",
+            "--no-color",
+            "--no-ext-diff",
+            base_sha,
+            head_sha,
+            "--",
+            *paths,
+        ),
         records,
     ).decode("utf-8", errors="strict")
     lines: set[int] = set()

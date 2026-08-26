@@ -701,6 +701,25 @@ def test_refactor_targets_pure_rename_targets_the_moved_responsibility(tmp_path:
     assert result["unbounded_paths"] == []
 
 
+def test_refactor_targets_rename_timeout_keeps_head_target_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    _git(repository, "mv", "src/sample.py", "src/renamed.py")
+    head_sha = _commit(repository, "rename production responsibility")
+
+    def timeout(*args: object, **kwargs: object) -> tuple[int, ...]:
+        raise git_changes.GitError("GIT_TIMEOUT", "bounded rename diff timed out")
+
+    monkeypatch.setattr(git_changes, "changed_base_lines", timeout)
+
+    assert _derived_targets(repository, base_sha, head_sha) == (
+        ("src/renamed.py::function:calculate:1-2",),
+        ("src/sample.py",),
+    )
+
+
 def test_empty_renamed_production_file_keeps_both_paths_fail_closed(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
@@ -1343,6 +1362,22 @@ def test_github_comment_pagination_reaches_next_page() -> None:
     assert authorization.head_sha == head_sha
     assert comment_id == 11
     assert [request.full_url.rsplit("page=", 1)[-1] for request in requests] == ["1", "2"]
+
+
+def test_github_comment_pagination_has_a_finite_evidence_bound() -> None:
+    requests: list[Any] = []
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        requests.append(request)
+        return _Reply([], '<https://api.github.com/repeated>; rel="next"')
+
+    with pytest.raises(
+        refactor_policy.RefactorPolicyError,
+        match="GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
+    ):
+        refactor_policy._github_comments("example/fixture", 7, "token", opener)
+
+    assert len(requests) == refactor_policy.MAX_GITHUB_PAGES
 
 
 def test_predecessor_pagination_reaches_next_page() -> None:

@@ -36,15 +36,18 @@ def _legacy_driver(definition: Path) -> ModuleType:
     return module
 
 
-def _gate_six_derivation_probe(module: ModuleType) -> None:
+def _gate_six_derivation_probe(module: ModuleType) -> dict[str, str]:
     original_read = module.git_changes.read_regular_blob
     original_lines = module.git_changes.changed_head_lines
+    original_base_lines = module.git_changes.changed_base_lines
     module.git_changes.read_regular_blob = lambda *args: SimpleNamespace(
         content=b"def calculate(value: int) -> int:\n    return value + 1\n"
     )
     module.git_changes.changed_head_lines = lambda *args, **kwargs: [1, 2]
+    module.git_changes.changed_base_lines = lambda *args, **kwargs: [1, 2, 3]
     try:
-        python_targets = module.derive(
+        derive = module.derive if hasattr(module, "derive") else module._target_identities
+        python_targets = derive(
             Path("."),
             SimpleNamespace(base_sha="a" * 40, head_sha="b" * 40),
             SimpleNamespace(
@@ -61,7 +64,7 @@ def _gate_six_derivation_probe(module: ModuleType) -> None:
                 b"  return <section>{value + 2}</section>;\n}\n"
             )
         )
-        frontend_targets = module.derive(
+        frontend_targets = derive(
             Path("."),
             SimpleNamespace(base_sha="a" * 40, head_sha="b" * 40),
             SimpleNamespace(
@@ -73,11 +76,114 @@ def _gate_six_derivation_probe(module: ModuleType) -> None:
     finally:
         module.git_changes.read_regular_blob = original_read
         module.git_changes.changed_head_lines = original_lines
+        module.git_changes.changed_base_lines = original_base_lines
     if python_targets != (("src/sample.py::function:calculate:1-2",), ()) or frontend_targets != (
         ("src/sample.tsx::component:Card:1-3",),
         (),
     ):
         raise RuntimeError("Gate 6 target derivation is not exact")
+    return {
+        "src/sample.py": python_targets[0][0],
+        "src/sample.tsx": frontend_targets[0][0],
+    }
+
+
+def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
+    base_sha, head_sha, workflow_sha = "a" * 40, "b" * 40, "c" * 40
+    path = target.split("::", 1)[0]
+    originals = (
+        module.git_changes.validate_repository,
+        module.git_changes.inspect_repository,
+        module.git_changes.read_regular_blob,
+        module.git_changes.changed_paths,
+        module.contract.parse_contract,
+    )
+    target_owner = module.refactor_targets if hasattr(module, "refactor_targets") else module
+    target_name = "derive" if hasattr(module, "refactor_targets") else "_target_identities"
+    original_targets = getattr(target_owner, target_name)
+    module.git_changes.validate_repository = lambda repository, records: repository
+    module.git_changes.inspect_repository = lambda *args: SimpleNamespace()
+    module.git_changes.read_regular_blob = lambda *args: SimpleNamespace(content=b"")
+    module.git_changes.changed_paths = lambda *args: (
+        SimpleNamespace(old_path=None, new_path=path),
+    )
+    module.contract.parse_contract = lambda content: SimpleNamespace(
+        is_production_path=lambda candidate: candidate.startswith("src/")
+    )
+    setattr(target_owner, target_name, lambda *args: ((target,), ()))
+    try:
+        event = {
+            "repository": {"full_name": "acme/repo"},
+            "pull_request": {
+                "base": {"sha": base_sha},
+                "head": {"sha": head_sha},
+                "number": 7,
+            },
+        }
+        authorization = {
+            "base_sha": base_sha,
+            "broad": False,
+            "head_sha": head_sha,
+            "repository": "acme/repo",
+            "schema_version": "1.0",
+            "scope": [path],
+            "sequence": {"predecessor_sha": base_sha, "step": 1},
+            "targets": [target],
+        }
+        characterization = {
+            "base_sha": base_sha,
+            "coverage": {"covered_paths": [path], "required_paths": [path]},
+            "head_sha": head_sha,
+            "overall_result": "PASS",
+            "policy_blocks": [],
+            "refactor_runnability": {
+                "base_sha": base_sha,
+                "head_sha": head_sha,
+                "repository": "github.com/acme/repo",
+                "runnable": True,
+                "schema_version": "refactor-runnability.v1",
+                "targets": [target],
+                "unbounded_paths": [],
+                "workflow_sha": workflow_sha,
+            },
+            "repository": "github.com/acme/repo",
+            "scenarios": [{"compatibility": "PASS", "covers": [path]}],
+            "schema_version": "characterization-result.v1",
+            "workflow_sha": workflow_sha,
+        }
+        result = module.verify_refactor(
+            Path("."),
+            event,
+            characterization,
+            (
+                {
+                    "body": module.AUTHORIZATION_PREFIX
+                    + json.dumps(authorization, separators=(",", ":"), sort_keys=True),
+                    "id": 11,
+                    "user": {"id": module.TRUSTED_OWNER_ID},
+                },
+            ),
+        )
+    finally:
+        (
+            module.git_changes.validate_repository,
+            module.git_changes.inspect_repository,
+            module.git_changes.read_regular_blob,
+            module.git_changes.changed_paths,
+            module.contract.parse_contract,
+        ) = originals
+        setattr(target_owner, target_name, original_targets)
+    if (
+        result["applicable"] is not True
+        or result["authorization_comment_id"] != 11
+        or result["changed_paths"] != [path]
+        or result["overall_result"] != "PASS"
+        or result["policy_blocks"] != []
+        or result["targets"] != [target]
+        or result["unbounded_paths"] != []
+    ):
+        raise RuntimeError("Gate 6 producer is not independently runnable")
+    return True
 
 
 def main() -> None:
@@ -85,7 +191,11 @@ def main() -> None:
     definition = Path(os.environ["SUPPORTABILITY_CHARACTERIZATION_DEFINITION"])
     sys.path.insert(0, str(target / "src"))
 
-    from supportability_gate import review_evidence, standard_results  # noqa: PLC0415
+    from supportability_gate import (  # noqa: PLC0415
+        refactor_policy,
+        review_evidence,
+        standard_results,
+    )
 
     gate_six_binding = "responsibility_targets" in getattr(
         standard_results, "_S02_COMPLEXITY_KEYS", ()
@@ -102,7 +212,11 @@ def main() -> None:
     if gate_six_binding:
         from supportability_gate import refactor_targets  # noqa: PLC0415
 
-        _gate_six_derivation_probe(refactor_targets)
+        target_deriver = refactor_targets
+    else:
+        target_deriver = refactor_policy
+    derived_targets = _gate_six_derivation_probe(target_deriver)
+    producer_runnable = _refactor_policy_probe(refactor_policy, derived_targets["src/sample.py"])
 
     legacy = _legacy_driver(definition)
     original_characterization = legacy._characterization
@@ -116,7 +230,7 @@ def main() -> None:
         value = original_complexity(identity, standard_sha256, path, status)
         if not gate_six_binding:
             return value
-        targets = [f"{path}::module:{path}:1-1"] if path.startswith("src/") else []
+        targets = [derived_targets[path]] if path in derived_targets else []
         value["responsibility_targets"] = targets
         value["unbounded_production_paths"] = []
         return value
@@ -125,12 +239,12 @@ def main() -> None:
         value = original_characterization(identity, path)
         if not gate_six_binding:
             return value
-        targets = [f"{path}::module:{path}:1-1"] if path.startswith("src/") else []
+        targets = [derived_targets[path]] if path in derived_targets else []
         value["refactor_runnability"] = {
             "base_sha": identity.base_sha,
             "head_sha": identity.head_sha,
             "repository": f"github.com/{identity.repository}",
-            "runnable": True,
+            "runnable": producer_runnable,
             "schema_version": "refactor-runnability.v1",
             "targets": targets,
             "unbounded_paths": [],
@@ -165,7 +279,7 @@ def main() -> None:
                 "pull_number": None,
             }
         if gate_six_binding and path.startswith("src/"):
-            target_identity = f"{path}::module:{path}:1-1"
+            target_identity = derived_targets[path]
             value.update(
                 {
                     "applicable": True,

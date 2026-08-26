@@ -581,6 +581,23 @@ def _read_review_evidence(
     return review_evidence.evaluate_review_evidence(blob.content, expected_boundaries)
 
 
+def _refactor_target_evidence(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    changes: tuple[git_changes.ChangedPath, ...],
+    records: list[git_changes.CommandRecord],
+    errors: list[Exception],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    try:
+        return refactor_targets.derive(repository, identity, policy, changes, records)
+    except git_changes.GitError as error:
+        errors.append(
+            function_changes.PythonSourceError("REFACTOR_TARGET_DERIVATION_FAILURE", str(error))
+        )
+        return (), ()
+
+
 def _technical_result(
     identity: git_changes.RepositoryIdentity | None,
     contract_path: str,
@@ -684,8 +701,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
         )
         assessments = _classify_changes(repository, identity, policy, changes, records)
-        responsibility_targets, unbounded_production_paths = refactor_targets.derive(
-            repository, identity, policy, changes, records
+        responsibility_targets, unbounded_production_paths = _refactor_target_evidence(
+            repository, identity, policy, changes, records, evidence_errors
         )
         structured_review, review_blocks = _read_review_evidence(
             repository,

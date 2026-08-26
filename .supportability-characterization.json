@@ -14,13 +14,6 @@
     },
     {
       "covers": [
-        "src/supportability_gate/refactor_policy.py"
-      ],
-      "id": "refactor-policy-retained",
-      "kind": "cli"
-    },
-    {
-      "covers": [
         "src/supportability_gate/codex_review.py"
       ],
       "id": "codex-review-boundary",
@@ -35,6 +28,7 @@
     },
     {
       "covers": [
+        "src/supportability_gate/refactor_policy.py",
         "src/supportability_gate/review_evidence.py",
         "src/supportability_gate/refactor_targets.py",
         "src/supportability_gate/standard_block_ownership.py",

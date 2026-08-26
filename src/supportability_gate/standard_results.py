@@ -1456,16 +1456,12 @@ def _s02_refactor_runnability_blocks(
     return blocks
 
 
-def _s02_refactor_binding(
+def _s02_refactor_shape(
     row: dict[str, Any],
-    authorization: dict[str, Any] | None,
-    identity: RunIdentity,
     changed: tuple[dict[str, Any], ...],
-    responsibility_targets: tuple[str, ...],
-    unbounded_production_paths: tuple[str, ...],
-    predecessor: dict[str, Any] | None,
-    predecessor_block: str | None,
-) -> None:
+    responsibility_targets: tuple[str, ...] | None,
+    unbounded_production_paths: tuple[str, ...] | None,
+) -> tuple[list[str], list[str], list[str]]:
     scope, required, allowed = _s02_refactor_change_paths(changed)
     target_paths = _s02_refactor_target_paths(row["targets"])
     bounded_paths = set((*target_paths, *row["unbounded_paths"]))
@@ -1475,26 +1471,49 @@ def _s02_refactor_binding(
             for name in ("changed_paths", "targets", "unbounded_paths")
         )
         or row["changed_paths"] != scope
-        or row["targets"] != list(responsibility_targets)
-        or row["unbounded_paths"] != list(unbounded_production_paths)
+        or (
+            responsibility_targets is not None
+            and (
+                row["targets"] != list(responsibility_targets)
+                or row["unbounded_paths"] != list(unbounded_production_paths or ())
+            )
+        )
         or row["applicable"] is not bool(required)
         or not set(required).issubset(bounded_paths)
         or not bounded_paths.issubset(allowed)
         or set(target_paths) & set(row["unbounded_paths"])
     ):
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
-    if authorization is None:
-        if predecessor is not None or predecessor_block is not None:
-            raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
-        if not row["applicable"]:
-            if row["policy_blocks"]:
-                raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
-            return
-        authorization_blocks = set(row["policy_blocks"]) & _S02_REFACTOR_AUTHORIZATION_BLOCKS
-        current = authorization_blocks & _S02_REFACTOR_CURRENT_AUTHORIZATION_BLOCKS
-        if len(current) != 1 or authorization_blocks != current:
+    return scope, allowed, target_paths
+
+
+def _s02_refactor_absent_authorization(
+    row: dict[str, Any],
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+) -> None:
+    if predecessor is not None or predecessor_block is not None:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    if not row["applicable"]:
+        if row["policy_blocks"]:
             raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
         return
+    authorization_blocks = set(row["policy_blocks"]) & _S02_REFACTOR_AUTHORIZATION_BLOCKS
+    current = authorization_blocks & _S02_REFACTOR_CURRENT_AUTHORIZATION_BLOCKS
+    if len(current) != 1 or authorization_blocks != current:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+
+
+def _s02_refactor_authenticated_authorization(
+    row: dict[str, Any],
+    authorization: dict[str, Any],
+    identity: RunIdentity,
+    scope: list[str],
+    allowed: list[str],
+    target_paths: list[str],
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+) -> None:
     if not row["applicable"]:
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
     if set(row["policy_blocks"]) & {
@@ -1510,6 +1529,34 @@ def _s02_refactor_binding(
     )
     if set(row["policy_blocks"]) & _S02_REFACTOR_AUTHORIZATION_BLOCKS != expected:
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+
+
+def _s02_refactor_binding(
+    row: dict[str, Any],
+    authorization: dict[str, Any] | None,
+    identity: RunIdentity,
+    changed: tuple[dict[str, Any], ...],
+    responsibility_targets: tuple[str, ...] | None,
+    unbounded_production_paths: tuple[str, ...] | None,
+    predecessor: dict[str, Any] | None,
+    predecessor_block: str | None,
+) -> None:
+    scope, allowed, target_paths = _s02_refactor_shape(
+        row, changed, responsibility_targets, unbounded_production_paths
+    )
+    if authorization is None:
+        _s02_refactor_absent_authorization(row, predecessor, predecessor_block)
+        return
+    _s02_refactor_authenticated_authorization(
+        row,
+        authorization,
+        identity,
+        scope,
+        allowed,
+        target_paths,
+        predecessor,
+        predecessor_block,
+    )
 
 
 def _s02_refactor(
@@ -1543,13 +1590,14 @@ def _s02_refactor(
     )
     predecessor, predecessor_block = _s02_refactor_predecessor(row["predecessor"], identity, code)
     if complexity is not None:
+        targets_unavailable = "REFACTOR_TARGET_DERIVATION_FAILURE" in complexity.technical
         _s02_refactor_binding(
             row,
             authorization,
             identity,
             complexity.changed_files,
-            complexity.responsibility_targets,
-            complexity.unbounded_production_paths,
+            None if targets_unavailable else complexity.responsibility_targets,
+            None if targets_unavailable else complexity.unbounded_production_paths,
             predecessor,
             predecessor_block,
         )

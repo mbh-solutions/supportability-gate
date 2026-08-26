@@ -25,6 +25,7 @@ RUNNABILITY_SCHEMA = characterization_evidence.RUNNABILITY_SCHEMA
 TRUSTED_OWNER_ID = 229662739
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 MAX_JSON_BYTES = 1_000_000
+MAX_GITHUB_PAGES = 10
 
 
 class RefactorPolicyError(ValueError):
@@ -276,8 +277,7 @@ def _owner_authorization(
 
 def _github_rows(endpoint: str, token: str, opener: Any) -> tuple[dict[str, Any], ...]:
     rows: list[dict[str, Any]] = []
-    page = 1
-    while True:
+    for page in range(1, MAX_GITHUB_PAGES + 1):
         request = urllib.request.Request(
             f"{endpoint}?per_page=100&page={page}",
             headers={
@@ -312,7 +312,7 @@ def _github_rows(endpoint: str, token: str, opener: Any) -> tuple[dict[str, Any]
         rows.extend(value)
         if not link or re.search(r'<[^>]+>;\s*rel="next"', link) is None:
             return tuple(rows)
-        page += 1
+    raise RefactorPolicyError("GITHUB_AUTHORIZATION_EVIDENCE_FAILURE")
 
 
 def _github_comments(

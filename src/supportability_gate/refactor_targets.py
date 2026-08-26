@@ -125,10 +125,27 @@ def _renamed_spans(
         if production and (not profiled or side is None)
     )
     if base is not None and head is not None:
-        moved, deleted = function_changes.renamed_responsibility_spans(
-            old_path, new_path, base[0], head[0]
-        )
-        spans = (*_bind(new_path, moved), *_bind(old_path, deleted))
+        try:
+            base_lines = set(
+                git_changes.changed_base_lines(
+                    repository,
+                    identity.base_sha,
+                    identity.head_sha,
+                    new_path,
+                    records,
+                    old_path=old_path,
+                )
+            )
+        except git_changes.GitError as error:
+            if error.code != "GIT_TIMEOUT":
+                raise
+            spans = _bind(new_path, head[1])
+            unbounded = (*unbounded, old_path)
+        else:
+            moved, deleted = function_changes.renamed_responsibility_spans(
+                old_path, new_path, base[0], head[0], base_lines
+            )
+            spans = (*_bind(new_path, moved), *_bind(old_path, deleted))
     elif head is not None:
         spans = _bind(new_path, head[1])
     elif base is not None:

@@ -1522,6 +1522,38 @@ def test_boundary_derivation_failure_is_gate_two_technical_only() -> None:
     assert payload["shared_failures"] == []
 
 
+def test_refactor_target_derivation_failure_is_gate_six_technical_only() -> None:
+    inputs = _inputs()
+    code = "REFACTOR_TARGET_DERIVATION_FAILURE"
+    inputs[0]["technical_errors"] = [{"code": code, "message": "target derivation failed"}]
+    inputs[0]["overall_result"] = "TECHNICAL_FAILURE"
+    inputs[0]["responsibility_targets"] = []
+    inputs[0]["unbounded_production_paths"] = []
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*(["PASS"] * 5), "TECHNICAL_FAILURE", "PASS", "PASS"]
+    assert _entry(payload, 6)["technical_errors"] == [f"COMPLEXITY_RESULT:{code}"]
+    assert payload["shared_failures"] == []
+
+    forged = copy.deepcopy(inputs)
+    forged[2]["changed_paths"] = ["src/forged.py"]
+    forged_payload = _compose(forged)
+    assert _entry(forged_payload, 6)["technical_errors"] == [
+        f"COMPLEXITY_RESULT:{code}",
+        "REFACTOR_RESULT_BINDING_MISMATCH",
+    ]
+
+    unrelated = _inputs()
+    unrelated[0]["technical_errors"] = [
+        {"code": "MCCABE_GRAPH_MISMATCH", "message": "metric evidence failed"}
+    ]
+    unrelated[0]["overall_result"] = "TECHNICAL_FAILURE"
+    unrelated[0]["responsibility_targets"] = []
+    unrelated_payload = _compose(unrelated)
+    assert _entry(unrelated_payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+
+
 def test_quality_provenance_binding_mismatch_is_gate_seven_technical_only() -> None:
     inputs = _inputs()
     inputs[3]["run_id"] = "999"

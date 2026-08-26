@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import difflib
 import io
 import tokenize
 from dataclasses import dataclass
@@ -60,6 +59,7 @@ class FunctionDefinition:
 
     span: FunctionSpan
     node: SourceNode
+    responsibility_start_line: int | None = None
 
 
 @dataclass(frozen=True)
@@ -259,15 +259,15 @@ class _TypeScriptFunctionCollector:
         }
 
     def _visit_function(self, node: Node) -> None:
-        name, start_line = self._name_and_start_line(node)
+        name, responsibility_start_line = self._name_and_start_line(node)
         qualified_name = ".".join([*self.context, name])
         span = FunctionSpan(
             self.path,
             qualified_name,
-            start_line,
+            node.start_point.row + 1,
             node.end_point.row + 1,
         )
-        self.functions.append(FunctionDefinition(span, node))
+        self.functions.append(FunctionDefinition(span, node, responsibility_start_line))
         self.context.append(name)
         parameters = node.child_by_field_name("parameters") or node.child_by_field_name("parameter")
         if parameters is not None:
@@ -318,9 +318,11 @@ def responsibility_spans(
         else parse_typescript_file(path, content)
     )
     touched = tuple(
-        item.span
+        (item, item.responsibility_start_line or item.span.start_line)
         for item in parsed.functions
-        if changed_lines.intersection(range(item.span.start_line, item.span.end_line + 1))
+        if changed_lines.intersection(
+            range(item.responsibility_start_line or item.span.start_line, item.span.end_line + 1)
+        )
     )
     components = tuple(
         item
@@ -330,18 +332,20 @@ def responsibility_spans(
     boundaries = list(components)
     boundaries.extend(
         ResponsibilitySpan(
-            span.start_line,
-            span.end_line,
+            start_line,
+            item.span.end_line,
             "component"
             if not path.endswith((".py", ".pyi"))
-            and span.qualified_name.rsplit(".", 1)[-1][:1].isupper()
+            and item.span.qualified_name.rsplit(".", 1)[-1][:1].isupper()
             else "function",
-            span.qualified_name,
+            item.span.qualified_name,
         )
-        for span in touched
+        for item, start_line in touched
     )
     covered = {line for span in components for line in range(span.start_line, span.end_line + 1)}
-    covered.update(line for span in touched for line in range(span.start_line, span.end_line + 1))
+    covered.update(
+        line for item, start_line in touched for line in range(start_line, item.span.end_line + 1)
+    )
     source_lines = content.splitlines()
     module_lines = {
         line
@@ -384,17 +388,14 @@ def changed_responsibility_spans(
 
 
 def renamed_responsibility_spans(
-    old_path: str, new_path: str, base_content: bytes, head_content: bytes
+    old_path: str,
+    new_path: str,
+    base_content: bytes,
+    head_content: bytes,
+    base_changed_lines: set[int],
 ) -> tuple[tuple[ResponsibilitySpan, ...], tuple[ResponsibilitySpan, ...]]:
     """Return every moved head responsibility plus deleted base responsibilities."""
-    base_lines: set[int] = set()
-    matcher = difflib.SequenceMatcher(
-        None, base_content.splitlines(), head_content.splitlines(), autojunk=False
-    )
-    for tag, base_start, base_end, _, _ in matcher.get_opcodes():
-        if tag != "equal":
-            base_lines.update(range(base_start + 1, base_end + 1))
-    base = responsibility_spans(old_path, base_content, base_lines)
+    base = responsibility_spans(old_path, base_content, base_changed_lines)
     moved = responsibility_spans(
         new_path, head_content, set(range(1, len(head_content.splitlines()) + 1))
     )

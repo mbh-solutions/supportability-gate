@@ -384,6 +384,7 @@ def _logical_step_runnable(
     base_rows: dict[str, dict[str, Any]],
     head_rows: dict[str, dict[str, Any]],
     responsibility_targets: tuple[str, ...],
+    language: str,
 ) -> bool:
     target_paths = {target.split("::", 1)[0] for target in responsibility_targets}
     runnable_paths = {
@@ -391,8 +392,13 @@ def _logical_step_runnable(
         for scenario in manifest.scenarios
         if (base := base_rows.get(scenario.id)) is not None
         and (head := head_rows.get(scenario.id)) is not None
-        and base.get("command") == head.get("command")
-        and bool(head.get("command"))
+        and base.get("command")
+        == head.get("command")
+        == (
+            ["python3.12", "-P", _scenario_paths(scenario, language)[0]]
+            if language == "python"
+            else ["node", _scenario_paths(scenario, language)[0]]
+        )
         for path in scenario.covers
     }
     return target_paths.issubset(runnable_paths)
@@ -766,9 +772,24 @@ def verify_evidence(
         refactor_targets,
     )  # local: keep result validator dependency-light
 
-    responsibility_targets, unbounded_paths = refactor_targets.derive(
-        repository, identity, policy, changes, records
-    )
+    target_derivation_failed = False
+    try:
+        responsibility_targets, unbounded_paths = refactor_targets.derive(
+            repository, identity, policy, changes, records
+        )
+    except git_changes.GitError:
+        target_derivation_failed = True
+        responsibility_targets = ()
+        unbounded_paths = tuple(
+            sorted(
+                {
+                    path
+                    for change in changes
+                    for path in (change.old_path, change.new_path)
+                    if path is not None and policy.is_production_path(path)
+                }
+            )
+        )
     deleted_paths = {
         item.old_path
         for item in changes
@@ -821,7 +842,9 @@ def verify_evidence(
         blocks.append("INVALID_ARTIFACT_IDENTITY")
     compatibility_blocks, scenarios = _compatibility_evidence(manifest, base_rows, head_rows)
     blocks.extend(compatibility_blocks)
-    runnable = _logical_step_runnable(manifest, base_rows, head_rows, responsibility_targets)
+    runnable = not target_derivation_failed and _logical_step_runnable(
+        manifest, base_rows, head_rows, responsibility_targets, policy.language
+    )
     result = _verification_result(
         identity,
         manifest,

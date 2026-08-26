@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from supportability_gate import characterization
+from supportability_gate import characterization, git_changes, refactor_targets
 
 _SPEC = importlib.util.spec_from_file_location(
     "hosted_characterization", Path(__file__).with_name("hosted_characterization.py")
@@ -348,22 +348,35 @@ def test_logical_step_runnability_requires_same_recorded_command() -> None:
     scenario = characterization.Scenario("sample", "golden", ("src/sample.py",))
     manifest = characterization.Manifest((scenario,), "a" * 40, "b" * 64)
     targets = ("src/sample.py::function:calculate:1-2",)
-    base = {"sample": {"command": ["python3.12", "-P", "driver.py"]}}
-    head = {"sample": {"command": ["python3.12", "-P", "driver.py"]}}
+    command = ["python3.12", "-P", "tests/characterization/sample.characterization.py"]
+    base = {"sample": {"command": command}}
+    head = {"sample": {"command": command}}
 
-    assert characterization._logical_step_runnable(manifest, base, head, targets) is True
-    assert characterization._logical_step_runnable(manifest, base, {}, targets) is False
+    assert characterization._logical_step_runnable(manifest, base, head, targets, "python") is True
+    assert characterization._logical_step_runnable(manifest, base, {}, targets, "python") is False
     assert (
         characterization._logical_step_runnable(
             manifest,
             base,
             head,
             (*targets, "src/missing.py::function:missing:1-2"),
+            "python",
         )
         is False
     )
     head["sample"]["command"] = ["python3.12", "-P", "other.py"]
-    assert characterization._logical_step_runnable(manifest, base, head, targets) is False
+    assert characterization._logical_step_runnable(manifest, base, head, targets, "python") is False
+    base["sample"]["command"] = head["sample"]["command"]
+    assert characterization._logical_step_runnable(manifest, base, head, targets, "python") is False
+
+    typescript_command = ["node", "tests/characterization/sample.characterization.mjs"]
+    typescript = {"sample": {"command": typescript_command}}
+    assert (
+        characterization._logical_step_runnable(
+            manifest, typescript, typescript, targets, "typescript"
+        )
+        is True
+    )
 
 
 def test_characterization_produces_source_derived_runnability(tmp_path: Path) -> None:
@@ -406,6 +419,50 @@ def test_characterization_produces_source_derived_runnability(tmp_path: Path) ->
         "unbounded_paths": [],
         "workflow_sha": "f" * 40,
     }
+
+
+def test_target_derivation_failure_preserves_characterization(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    _write(
+        repository / "tests/characterization/existing.characterization.py",
+        "import json\n"
+        "print(json.dumps({'schema_version': '1.0', 'scenario': 'existing', "
+        "'behavior': {'stable': True}}, sort_keys=True))\n",
+    )
+    _write(
+        repository / "tests/characterization/existing.golden.json",
+        json.dumps({"stable": True}) + "\n",
+    )
+    _write(
+        repository / "src/sample.py",
+        "def calculate(value: int) -> int:\n    return value + 1\n",
+    )
+    base_sha = _commit(repository, "stable characterization")
+    _write(
+        repository / "src/sample.py",
+        "def calculate(value: int) -> int:\n    return value + 2\n",
+    )
+    head_sha = _commit(repository, "bounded source change")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    def fail(*args: object) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        raise git_changes.GitError("GIT_TIMEOUT", "target derivation timed out")
+
+    monkeypatch.setattr(refactor_targets, "derive", fail)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert result["policy_blocks"] == []
+    assert result["scenarios"][0]["compatibility"] == "PASS"
+    assert result["refactor_runnability"]["runnable"] is False
+    assert result["refactor_runnability"]["targets"] == []
+    assert result["refactor_runnability"]["unbounded_paths"] == ["src/sample.py"]
 
 
 def test_separate_scenarios_cover_one_runnable_logical_step(tmp_path: Path) -> None:

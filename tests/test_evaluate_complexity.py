@@ -925,6 +925,22 @@ def test_typescript_tsx_arrow_function_is_bound(tmp_path: Path) -> None:
     assert result["functions"][0]["ending_complexity"] == 2
 
 
+def test_typescript_declarator_only_change_does_not_touch_gate_one_function(
+    tmp_path: Path,
+) -> None:
+    base = "export const handler: (value: number) => number =\n  (value) => value + 1;\n"
+    head = (
+        "export const handler: (value: number) => number | undefined =\n  (value) => value + 1;\n"
+    )
+    repository, base_sha, head_sha = _typescript_repository(tmp_path, base, head)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["touched_qualified_functions"] == []
+    assert result["responsibility_targets"] == ["src/sample.ts::function:handler:1-2"]
+
+
 def test_typescript_anonymous_callback_gets_stable_identity(tmp_path: Path) -> None:
     source = "export const values = [1].map((value) => value + 1);\n"
     repository, base_sha, head_sha = _typescript_repository(tmp_path, None, source)
@@ -1946,6 +1962,33 @@ def test_syntax_error_is_technical_failure(tmp_path: Path) -> None:
     assert result["review_evidence"] is not None
     assert result["quality_profile"] is not None
     assert (tmp_path / "result" / "quality-provenance.json").is_file()
+
+
+def test_refactor_target_derivation_failure_preserves_other_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, base_sha, head_sha = _repository(
+        tmp_path,
+        _function_source("existing", 1),
+        _function_source("existing", 1, 1),
+    )
+
+    def fail(*args: object, **kwargs: object) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        raise git_changes.GitError("GIT_TIMEOUT", "target derivation timed out")
+
+    monkeypatch.setattr(cli.refactor_targets, "derive", fail)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 2
+    assert [item["code"] for item in result["technical_errors"]] == [
+        "REFACTOR_TARGET_DERIVATION_FAILURE"
+    ]
+    assert result["touched_qualified_functions"] == ["existing"]
+    assert result["review_evidence"] is not None
+    assert result["architecture"] is not None
+    assert result["modularity"] is not None
+    assert result["quality_profile"] is not None
 
 
 def test_non_regular_production_source_reports_boundary_derivation_failure(
