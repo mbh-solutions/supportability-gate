@@ -2324,7 +2324,7 @@ def _s02_handoff_follow_up(functions: list[dict[str, Any]]) -> list[dict[str, ob
             "qualified_name": (row["head"] or row["base"])["qualified_name"],
         }
         for row in functions
-        if row["next_target"] is not None
+        if row["remaining_gap"]
     ]
 
 
@@ -2972,6 +2972,81 @@ def validate_payload(
             or not _s02_sha(artifact["capture_sha256"], _S02_SHA64)
         ):
             raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
+
+
+def _s02_handoff_quality_source(
+    row: dict[str, Any],
+    data: _S02Complexity,
+    provenance: object,
+    identity: RunIdentity,
+) -> dict[str, object] | None:
+    artifact = row["quality_artifact"]
+    if artifact is None:
+        return None
+    if not isinstance(artifact, dict):
+        raise StandardResultsError("HANDOFF_SOURCE_BINDING_MISMATCH")
+    return _s02_quality_artifact(
+        provenance,
+        {
+            "capture_sha256": artifact["capture_sha256"],
+            "digest": artifact["digest"],
+            "id": str(artifact["id"]),
+        },
+        data.quality_adapters,
+        data.quality_profile,
+        identity,
+    )
+
+
+def validate_handoff_sources(
+    value: object,
+    complexity: object,
+    quality_provenance: object,
+    identity: RunIdentity,
+) -> None:
+    """Bind Gate 8 facts to independently produced source files."""
+    validate_payload(value, identity, standard=8)
+    if not isinstance(value, dict):
+        raise StandardResultsError("HANDOFF_SOURCE_BINDING_MISMATCH")
+    row = value
+    data = _s02_complexity(complexity, identity)
+    applicability = row["applicability_evidence"]
+    handoff = row["review_handoff"]
+    if not isinstance(applicability, dict) or data.source_sha256 != applicability["source_sha256"]:
+        raise StandardResultsError("HANDOFF_SOURCE_BINDING_MISMATCH")
+    if handoff is None:
+        return
+    if not isinstance(handoff, dict) or not isinstance(handoff.get("identity"), dict):
+        raise StandardResultsError("HANDOFF_SOURCE_BINDING_MISMATCH")
+    artifact = _s02_handoff_quality_source(row, data, quality_provenance, identity)
+    handoff_identity = handoff["identity"]
+    expected_quality_sha = (
+        hashlib.sha256(_canonical(quality_provenance)).hexdigest() if artifact is not None else None
+    )
+    expected = (
+        json.loads(_canonical(data.changed_files)),
+        _s02_handoff_coverage(data),
+        data.source["functions"],
+        _s02_handoff_boundaries(data.source),
+        list(data.responsibility_targets),
+        _s02_handoff_commands(data, quality_provenance, artifact),
+        data.source_sha256,
+        expected_quality_sha,
+        data.source["review_evidence_binding"],
+    )
+    actual = (
+        handoff["changed_files"],
+        handoff["coverage"],
+        handoff["functions"],
+        handoff["responsibility_boundaries"],
+        handoff["responsibility_targets"],
+        handoff["validation"]["commands"],
+        handoff_identity["complexity_result_sha256"],
+        handoff_identity["quality_provenance_sha256"],
+        handoff_identity["review_evidence"],
+    )
+    if actual != expected:
+        raise StandardResultsError("HANDOFF_SOURCE_BINDING_MISMATCH")
 
 
 def review_required(payload: object) -> bool:

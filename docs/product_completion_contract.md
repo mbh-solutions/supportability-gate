@@ -2143,14 +2143,29 @@ Do not create a new terminal label not authorized by an active milestone directi
   evidence, authenticated dependency routing, source/result tampering, citation binding, hidden
   risk, and Gate-8-only enforcement. The predecessor-created versioned aggregate characterization
   records the v3 evidence contract without importing any source from preserved unmerged PR #142.
+- Focused review evidence: frozen review head
+  `35d15910a4b2b1b29baa368624d1148e26707508`, Source Validation run `33039841223`, and required
+  workflow run `33039841268` deterministic lanes passed before the exact serial Focus 1-8 packet;
+  observer job `98410963141`, collector job `98415245548`, and final Gate job `98415276342` then
+  passed after all completions. Exact request/completion pairs were
+  `5434439134/5434456894`, `5434461639/5434480157`, `5434482489/5434497556`,
+  `5434499281/5037334853`, `5434520082/5037350605`, `5434543623/5037365674`,
+  `5434565276/5037380361`, and `5434587187/5037393796`; no automatic broad review or
+  completed-focus rerun occurred.
+- Consolidated finding disposition: review findings `3868809687`, `3868824364`, `3868838528`,
+  review-body finding `5037380361`, and `3868864372` are accepted together. The one bounded
+  remediation isolates unreadable base review binding to Gate 8, cross-checks command and coverage
+  facts against authenticated sibling sources, removes completed legacy functions from follow-up
+  work, captures each Gate 8 characterization handoff plus digest, binds legacy fallback to the
+  exact protected S09 source, and preserves the short-task exemption from handoff source loading.
+  No Gate 1-7 redesign, package, target command, or new target execution path is added.
 - Qualification limit: no Gate 1-7 redesign, target-code import or execution, arbitrary command,
   package, workflow redesign, consumer activation, ruleset migration, threshold, exclusion, waiver,
   scope narrowing, immutable/frozen source change, completed-review rerun, or S11 behavior is part
   of S10.
-- Remaining work: complete the exact targeted and mandatory source proof; open exactly one protected
-  implementation PR with `Closes #153`; freeze one green review head; complete one serial Focus 1-8
-  lifecycle; adjudicate findings together and apply at most one bounded remediation batch; resolve
-  every conversation; run deterministic-only final-head proof without repeating review; complete
+- Remaining work: finish the exact final-head targeted and mandatory source proof; reply to and
+  resolve every finding conversation; run deterministic-only final-head proof without repeating
+  review; complete
   and clean Python/frontend positive, authenticated short-task, deceptive-poison, Gate-8-only, and
   all-eight canaries; merge normally without bypass; finish issue/Project/ledger readback; set S10
   `Done / Complete / On scope / Yes`; then refresh and activate S11 only.

@@ -2866,6 +2866,29 @@ def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> No
     )
 
 
+def test_completed_legacy_function_is_not_follow_up_work() -> None:
+    inputs = _inputs()
+    base = _metric("src/sample.py", "legacy", 14)
+    head = _metric("src/sample.py", "legacy", 9)
+    inputs[0]["functions"] = [
+        _function(
+            base,
+            head,
+            state="EXISTING_LEGACY",
+            decision="PASS",
+            debt=0,
+            next_target=10,
+        )
+    ]
+    inputs[0]["touched_qualified_functions"] = ["legacy"]
+
+    handoff = _compose(inputs)["review_handoff"]
+
+    assert handoff["functions"][0]["next_target"] == 10
+    assert handoff["gaps"] == []
+    assert handoff["follow_up"] == []
+
+
 def test_complexity_adapter_tool_failure_still_blocks_gate_seven() -> None:
     inputs = _inputs()
     block = "QUALITY_GATE_FAILED:python.c901-touched.v1"
@@ -3236,8 +3259,14 @@ def test_synchronized_shared_ownership_spoof_is_rejected() -> None:
         standard_results.validate_payload(payload, IDENTITY)
 
 
-def _enforcer_arguments(path: Path, standard: int) -> list[str]:
-    return [
+def _enforcer_arguments(
+    path: Path,
+    standard: int,
+    sources: tuple[dict[str, Any], ...] | None = None,
+    *,
+    include_handoff_sources: bool = True,
+) -> list[str]:
+    arguments = [
         "--repository",
         IDENTITY.repository,
         "--repository-id",
@@ -3257,6 +3286,32 @@ def _enforcer_arguments(path: Path, standard: int) -> list[str]:
         "--standard",
         str(standard),
     ]
+    if standard == 8 and include_handoff_sources:
+        source_values = sources or _inputs()
+        complexity = path.with_name("complexity-result.json")
+        provenance = path.with_name("quality-provenance.json")
+        complexity.write_text(json.dumps(source_values[0]), encoding="utf-8")
+        provenance.write_text(json.dumps(source_values[3]), encoding="utf-8")
+        arguments.extend(
+            [
+                "--complexity-result",
+                str(complexity),
+                "--quality-provenance",
+                str(provenance),
+            ]
+        )
+    return arguments
+
+
+def test_short_task_gate_eight_does_not_require_handoff_sources(tmp_path: Path) -> None:
+    payload = _compose(_inputs("docs/release-note.md", [1], status="ADDED"))
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert (
+        standard_results_enforcer.main(_enforcer_arguments(path, 8, include_handoff_sources=False))
+        == 0
+    )
 
 
 def test_exact_result_artifact_identity_mismatch_is_shared_via_enforcer(tmp_path: Path) -> None:
@@ -3320,6 +3375,30 @@ def test_coordinated_rehash_cannot_detach_change_fact_from_authenticated_source(
 
     assert standard_results_enforcer.main(_enforcer_arguments(path, 1)) == 0
     assert standard_results_enforcer.main(_enforcer_arguments(path, 8)) == 2
+
+
+@pytest.mark.parametrize("poison", ["command", "coverage"])
+def test_coordinated_rehash_cannot_detach_handoff_from_authenticated_sources(
+    tmp_path: Path, poison: str
+) -> None:
+    inputs = _inputs()
+    payload = _compose(inputs)
+    handoff = payload["review_handoff"]
+    if poison == "command":
+        handoff["validation"]["commands"][0]["executed_arguments"].append("--invented")
+        source = "validation"
+        fact = handoff["validation"]["commands"]
+    else:
+        handoff["coverage"]["maximum_complexity"] = 999
+        source = "coverage"
+        fact = handoff["coverage"]
+    handoff["sources"][source]["sha256"] = hashlib.sha256(_canonical(fact)).hexdigest()
+    payload["review_handoff_sha256"] = hashlib.sha256(_canonical(handoff)).hexdigest()
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 1, inputs)) == 0
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 8, inputs)) == 2
 
 
 def test_rehashed_false_no_risk_claim_fails_gate_eight_only(tmp_path: Path) -> None:
@@ -3688,6 +3767,8 @@ def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() 
     ]
     assert "fail-fast: false" in matrix
     assert "python -P -m supportability_gate.standard_results_enforcer" in matrix
+    assert '--complexity-result "$RUNNER_TEMP/evidence/complexity-result.json"' in matrix
+    assert '--quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json"' in matrix
     assert "if: always()" in matrix
     assert "name: Supportability Gate" in gate
     assert "standard-results" in gate

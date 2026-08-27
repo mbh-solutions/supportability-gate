@@ -31,6 +31,494 @@
       ],
       "lane_failures": [],
       "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "402b0b5f0012fcb8ac1bcaba93e52ce7d6eb1597d54659102cf5cbf60efa05c2",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "14cb474acd4631596158f5ee1000acba9761082cb9a8b8c1fc04d52f768e0e81",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "9ccf2ace174f9d3bd5447a526946a0804cdbfcaf5a5472cc590bc70696efa168",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "b367fc9e0c14c9b62510d111b2930f5894a6d1b03e1ae0db4a31b76856e54941"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "abb08a12c7734fb60760f4dc777b3b23eeb229945c1e97afcb8500b2cdb471ba"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "success",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "7173ff3710e87322d18435d151f91c185240a72c2aab679e091e378eba02e393",
       "review_required": "true",
       "rows": [
         {
@@ -156,6 +644,502 @@
         }
       ],
       "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "67096116e27be96be198f5a568d21b9f6f8ee3fe3075338e236cd652dd1c1bf3",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "14cb474acd4631596158f5ee1000acba9761082cb9a8b8c1fc04d52f768e0e81",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "9ccf2ace174f9d3bd5447a526946a0804cdbfcaf5a5472cc590bc70696efa168",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "IMPORT_CYCLE:src/a.py:1:src.b",
+            "kind": "POLICY_BLOCK",
+            "standard": 3
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "b367fc9e0c14c9b62510d111b2930f5894a6d1b03e1ae0db4a31b76856e54941"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "e3a2ba155bc43b6d21e2af3164352fd39a31214864aee73c2eac892b9d1e0042"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "failure",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "IMPORT_CYCLE:src/a.py:1:src.b"
+              ],
+              "result": "BLOCK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "e4718c4b78d65767bc3fd844fc4eeb1f5b131b57c36867ae020f2561a5072f0b",
       "review_required": "false",
       "rows": [
         {
@@ -288,6 +1272,227 @@
         }
       ],
       "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "402b0b5f0012fcb8ac1bcaba93e52ce7d6eb1597d54659102cf5cbf60efa05c2",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": null,
+          "quality_provenance_sha256": null,
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 7
+          },
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 8
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "b367fc9e0c14c9b62510d111b2930f5894a6d1b03e1ae0db4a31b76856e54941"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "dbf0246a8d6d94add456b36e359c0699a0d54dc9a854ef3873a902eb0fea4b46"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "validation": {
+          "commands": [],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "success",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 7,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 8,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "a6f26d0f36af7f7fadfaed438faf2d0f7d1e6821109b74587d39a68a9dfe7701",
       "review_required": "false",
       "rows": [
         {
@@ -460,6 +1665,8 @@
         }
       ],
       "producer_exit": 0,
+      "review_handoff": null,
+      "review_handoff_sha256": null,
       "review_required": "false",
       "rows": [
         {
@@ -643,6 +1850,544 @@
         }
       ],
       "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "fbe17b0a6518ea45092c7fb8d2da330c41dd30b18896a8e99a81c95e00e8555b",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "14cb474acd4631596158f5ee1000acba9761082cb9a8b8c1fc04d52f768e0e81",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "9ccf2ace174f9d3bd5447a526946a0804cdbfcaf5a5472cc590bc70696efa168",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": null,
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 1
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 2
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 3
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 4
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 5
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 6
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 8
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "b367fc9e0c14c9b62510d111b2930f5894a6d1b03e1ae0db4a31b76856e54941"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "be7cab5a7581b0466a187603924417949da0055d6dc1e685963a312edd671279"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "5bd97f4e5343f6878785fa9374c9c6a8de7edd1696df19912afa62a6c3b32cae"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "failure",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "3a0bb0286d2eecc11762e43cfe9ffcd940308d7dbd9855c52f992ed9aa5e6e6b",
       "review_required": "false",
       "rows": [
         {
@@ -775,6 +2520,492 @@
       ],
       "lane_failures": [],
       "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": false,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": false,
+            "head_production": false,
+            "new_path": "docs/release-note.md",
+            "old_path": null,
+            "status": "ADDED"
+          }
+        ],
+        "coverage": {
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "docs/release-note.md"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "1b735aea6dba71da3e7cc6ac384541cec02649206bf7c7bde7f8b9f3cb4eb6e9",
+          "complexity_result_sha256": "b4f8802e91d131fe62292e6ec60a8706ee186d231281d486475cb7f5af5181bc",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "5e0a11605043cf288f7f761890cb5bc513286cd8cd788d14818e380b393fcb2f",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "bff964424e87d4546cc2aae9d0693d6891adb3322693c79fe0a72217253c5d8c",
+          "refactor_result_sha256": "9b5f82241f9488c3958b8270786ba898df82cd0d9e7c236ceec2edaf6982b752",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [],
+        "risks": [],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "c65525a46c8d363c2e72439282fb78344ddae29c05d5ecca2a5cdb70d40b9fd1"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "3e84e4dce68b9e24a2682d7ff3fcd88566d9e8e86998c82341cec9aedc22c663"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "0b05629b4c45dc7e29a36171040387d632cb884a6c7f8cb7a7d928ea5f2104bd"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "a729ef0f4fcefcaf9db6ddd3d6aff18396e066813ca008cdac58dbf4df02d594"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "success",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "162984aabdb27dedae65e08105d54c9c1f7736ab283845b4c15e53566c749b64",
       "review_required": "false",
       "rows": [
         {
@@ -914,6 +3145,234 @@
         }
       ],
       "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "67096116e27be96be198f5a568d21b9f6f8ee3fe3075338e236cd652dd1c1bf3",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": null,
+          "quality_provenance_sha256": null,
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "IMPORT_CYCLE:src/a.py:1:src.b",
+            "kind": "POLICY_BLOCK",
+            "standard": 3
+          },
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 7
+          },
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 8
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "b367fc9e0c14c9b62510d111b2930f5894a6d1b03e1ae0db4a31b76856e54941"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "396daf19038a2338c14e0faf06bb0729685114096ef7f78cba816548fd822ac4"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "validation": {
+          "commands": [],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "failure",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "IMPORT_CYCLE:src/a.py:1:src.b"
+              ],
+              "result": "BLOCK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 7,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 8,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "d7531c96212e37118cd5255a2e6cece65632ab9dc729de6ec8ed2356ee85d6e1",
       "review_required": "false",
       "rows": [
         {

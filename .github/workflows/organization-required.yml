@@ -628,6 +628,8 @@ jobs:
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --input "$RUNNER_TEMP/evidence/standard-results.json" \
+            --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
+            --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
             --standard "$STANDARD"
 
   supportability-gate:

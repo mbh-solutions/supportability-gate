@@ -348,6 +348,8 @@ def technical_owners(code: str) -> frozenset[int]:
         return frozenset({2, 8})
     if raw == "REFACTOR_TARGET_DERIVATION_FAILURE":
         return frozenset({6, 8})
+    if raw == "REVIEW_EVIDENCE_BINDING_UNAVAILABLE":
+        return frozenset({8})
     if raw == "REVIEW_EVIDENCE_UNAVAILABLE":
         return REVIEW_STANDARDS
     if raw == "INVALID_WORKFLOW_SHA" or raw.startswith(_QUALITY_TECHNICAL_PREFIXES):

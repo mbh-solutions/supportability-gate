@@ -1626,6 +1626,74 @@ def test_review_handoff_binds_exact_base_and_head_blobs(tmp_path: Path) -> None:
     }
 
 
+def test_unreadable_base_review_binding_fails_gate_eight_only(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    _run_git(repository, "add", "--all")
+    link = (
+        subprocess.run(
+            ["git", "hash-object", "-w", "--stdin"],
+            cwd=repository,
+            input=b"elsewhere.toml\n",
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    _run_git(
+        repository,
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        f"120000,{link},.supportability-review.toml",
+    )
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    head_review = _review_evidence_with_boundaries(("src/sample.py", "function", "existing"))
+    _write(repository / ".supportability-review.toml", head_review)
+    _run_git(repository, "add", "src/sample.py")
+    review_blob = (
+        subprocess.run(
+            ["git", "hash-object", "-w", "--stdin"],
+            cwd=repository,
+            input=head_review.encode(),
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    _run_git(
+        repository,
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        f"100644,{review_blob},.supportability-review.toml",
+    )
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+
+    assert exit_code == 2
+    assert result["review_evidence"] is not None
+    assert result["review_evidence_binding"]["base"] is None
+    assert result["review_evidence_binding"]["head"] is not None
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        *["PASS"] * 7,
+        "TECHNICAL_FAILURE",
+    ]
+    assert aggregate["entries"][7]["technical_errors"] == [
+        "COMPLEXITY_RESULT:REVIEW_EVIDENCE_BINDING_UNAVAILABLE"
+    ]
+    assert aggregate["shared_failures"] == []
+
+
 def test_unsupported_handoff_summary_blocks(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path)
     _write(repository / "src" / "sample.py", _function_source("existing", 1))

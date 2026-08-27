@@ -579,7 +579,9 @@ def _read_review_evidence(
     except git_changes.GitError as error:
         if error.code != "MISSING_BLOB":
             errors.append(
-                function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error))
+                function_changes.PythonSourceError(
+                    "REVIEW_EVIDENCE_BINDING_UNAVAILABLE", str(error)
+                )
             )
         base_blob = None
     try:

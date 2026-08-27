@@ -15,6 +15,9 @@ from typing import Any
 
 LEGACY_DRIVER_SHA256 = "1626a072f0d358bb5f4eaa5d9a6cc0a718cd76f00ab2c732a447c79bd0d0d31b"
 LEGACY_STANDARD_RESULTS_SHA256 = "43b1e96099a314aac1f2059589705161b5681157e07a752674aac9748d551f5b"
+LEGACY_GATE_EIGHT_STANDARD_RESULTS_SHA256 = (
+    "942d2127b636240bb3695ce489fccd7a27736a82b358fc4fe9db9a33d355ede0"
+)
 FORGED_BOUNDARIES = (("tests/characterization/forged.py", "function", "forged"),)
 GATE_SIX_EVIDENCE_SOURCES = [
     "refactor-policy-result.json",
@@ -374,6 +377,16 @@ def main() -> None:
             == LEGACY_STANDARD_RESULTS_SHA256
         ):
             raise RuntimeError("Gate 6 binding is missing outside the exact pre-S08 baseline")
+    if not gate_eight_binding:
+        legacy_source = target / "src/supportability_gate/standard_results.py"
+        definition_source = definition / "src/supportability_gate/standard_results.py"
+        if (
+            hashlib.sha256(legacy_source.read_bytes()).hexdigest()
+            != LEGACY_GATE_EIGHT_STANDARD_RESULTS_SHA256
+            or hashlib.sha256(definition_source.read_bytes()).hexdigest()
+            == LEGACY_GATE_EIGHT_STANDARD_RESULTS_SHA256
+        ):
+            raise RuntimeError("Gate 8 binding is missing outside the exact protected S09 baseline")
     if gate_six_binding:
         from supportability_gate import refactor_targets  # noqa: PLC0415
 
@@ -389,6 +402,16 @@ def main() -> None:
     original_complexity = legacy._complexity
     original_review_evidence = legacy._review_evidence
     original_refactor = legacy._refactor
+    original_run_case = legacy._run_case
+    legacy_cases = (
+        json.loads(
+            (
+                definition / "tests/characterization/gate8-standard-results-boundary.golden.json"
+            ).read_bytes()
+        )["cases"]
+        if not gate_eight_binding
+        else {}
+    )
 
     def complexity_fixture(
         identity: Any, standard_sha256: str, path: str, status: str
@@ -473,10 +496,44 @@ def main() -> None:
             )
         return value
 
+    def run_case(
+        directory: Path,
+        name: str,
+        inputs: dict[str, dict[str, Any]],
+        identity: Any,
+        producer: Any,
+        enforcer: Any,
+    ) -> dict[str, object]:
+        active_enforcer = enforcer
+        if gate_eight_binding:
+
+            def enforce(arguments: list[str]) -> int:
+                return enforcer.main(
+                    [
+                        *arguments,
+                        "--complexity-result",
+                        str(directory / f"{name}-complexity.json"),
+                        "--quality-provenance",
+                        str(directory / f"{name}-quality.json"),
+                    ]
+                )
+
+            active_enforcer = SimpleNamespace(main=enforce)
+        case = original_run_case(directory, name, inputs, identity, producer, active_enforcer)
+        source = (
+            json.loads((directory / f"{name}-standard-results.json").read_bytes())
+            if gate_eight_binding
+            else legacy_cases[name]
+        )
+        case["review_handoff"] = source["review_handoff"]
+        case["review_handoff_sha256"] = source["review_handoff_sha256"]
+        return case
+
     legacy._characterization = characterization_fixture
     legacy._complexity = complexity_fixture
     legacy._review_evidence = review_fixture
     legacy._refactor = refactor_fixture
+    legacy._run_case = run_case
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
         legacy.main()
