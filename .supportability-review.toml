@@ -3,7 +3,7 @@ module_boundaries = []
 
 [behavior]
 intended_behavior = "Supportability 7 accepts only fixed stack-native quality commands that actually execute in a GitHub-hosted job, cover every changed and high-risk production path, and bind exact identity, argv, results, scope, thresholds, exclusions, untested areas, and authenticated artifact bytes. A source-validated one-line documentation task remains short when a failed complexity source contains only policy blocks owned by inapplicable lanes."
-proof = "tests/test_quality_profile.py; tests/test_standard_results.py; live corrective trigger PR #63 run 33025768512 job 98366873570 artifact 9628341460"
+proof = "tests/test_quality_profile.py; tests/test_standard_results.py"
 
 [characterization]
 captured_behavior = "The unchanged version-aware Gate 7 standard-results scenario remains byte-compatible across the protected v3 baseline and v5 head while directly checking trusted coverage restoration, fixed Python and TypeScript argv, executed-argv provenance, canonical templates, exact source/test manifest expansion, freshly authenticated argv-poison rejection, and exact artifact reconstruction without target execution. The direct aggregate regression owns the intentional short-task classification correction."
@@ -11,10 +11,13 @@ proof = "tests/characterization/gate7-standard-results-boundary.characterization
 
 [separation_of_concerns]
 before = "Quality decisions and run provenance were split for reporting, but the aggregate did not reconstruct the authenticated source artifact, exact executed argv was absent, target coverage configuration could alter results, and malformed quality semantics could contaminate independent lanes."
-after = "quality_profile owns fixed decisions and exact argv provenance; quality_runner restores generated trusted configuration after target execution; standard_results binds executed argv to the approved template expansion, reconstructs authenticated bytes, confines malformed quality evidence to Gates 4 and 7, routes architecture-result mismatch only to Gates 3 and 4, and classifies short tasks against only Gate 7 and fail-closed ownership defects."
+after = "quality_profile owns fixed decisions and exact argv provenance; quality_runner restores generated trusted configuration after target execution; standard_results binds executed argv to the approved template expansion, reconstructs authenticated bytes, confines malformed quality evidence to Gates 4 and 7, routes architecture-result mismatch only to Gates 3 and 4, and retains the exact validated complexity source when it justifies a failed short-task outcome."
 boundaries = [
     { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_authenticated_short", before = "Any policy block in the validated complexity artifact rejected short-task classification, including blocks owned only by lanes that become not applicable.", after = "Short-task classification routes blocks through canonical ownership with only Gate 7 applicable, so Gate 7, unknown, ambiguous, and malformed evidence still fail closed while inapplicable-lane policy blocks do not." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "validate_payload", before = "A passing short-task payload required the complexity source outcome to be successful even when its validated result was a policy block owned only by inapplicable lanes.", after = "A passing short task accepts a truthful successful or policy-blocked complexity outcome, while skipped and cancelled complexity remain invalid because they cannot authenticate short classification." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "compose_results", before = "Applicability evidence discarded the source artifact omitted when short-task classification made its policy-block owner lanes inapplicable.", after = "Only an authenticated short task with omitted source blocks carries the exact canonical complexity result as optional applicability evidence; unchanged payloads retain the established schema." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_inapplicable_source", before = "The aggregate retained no source preimage, so a later validator could not bind an asserted inapplicable block to the authenticated complexity-result hash.", after = "The aggregate reparses the complete retained complexity result and binds its exact hash, changed files, BLOCK result, short eligibility, and canonical lane ownership." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_applicability", before = "Applicability validation bound classification to changed files and source identity but had no retained source proof for an otherwise passing short task with a failed complexity outcome.", after = "Applicability validation accepts the optional exact complexity source only for a short task and delegates its complete binding checks to one narrow boundary." },
+    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "validate_payload", before = "A passing short-task payload accepted any failed complexity source outcome without retaining the source artifact that justified it.", after = "A passing short task accepts a failed complexity outcome only with the completely revalidated source artifact; otherwise complexity must succeed, and skipped or cancelled complexity remain invalid." },
 ]
 
 [architecture]
@@ -47,9 +50,9 @@ target = "Qualify only Supportability 7 through fixed hosted quality profiles, e
 completed_step = "Added restored trusted Python coverage configuration, hostile measurement-time exclusion proof, canonical adapter-order and exact omission/source/test-manifest binding, raw-artifact reconstruction, a real TSX hosted fixture, quality-versus-architecture lane isolation, and the bounded short-task ownership correction without a new package or workflow redesign."
 
 [review_handoff]
-summary = "S09 qualifies Gate 7 only. PR #166 delivered the reviewed source and positive canaries. Live short-task PR #63 then exposed one aggregate ownership defect: an inapplicable Gate 2 review block rejected a source-validated one-line documentation task. This bounded corrective PR changes only short-task classification/source-outcome validation, direct aggregate regressions, review metadata, and S09 ledger fields; it requires its own one-time serial Focus 1-8 lifecycle before normal protected merge."
+summary = "S09 qualifies Gate 7 only. PR #166 delivered the reviewed source and positive canaries. Live short-task PR #63 exposed one aggregate ownership defect. This corrective PR completed its one serial Focus 1-8 lifecycle on review head 6383fb4e767acfa91c01c643eda941dfe36dfb20 and accepted all three findings in one bounded remediation: exact retained source binding, accurate trigger labeling, and accurate one-module scope."
 remaining_risks = [
-    "The corrected exact source head must pass hosted source validation, eight focused reviews, any one-batch remediation, deterministic-only final-head proof, and normal protected merge.",
+    "The descendant exact final source head must pass hosted source validation and deterministic-only final-head proof with every conversation resolved; no focused review may repeat.",
     "The corrected exact source head must make existing review-free PR #63 pass as NNNNNNPN under an isolated unmerged workflow pin before the representative poison and isolation matrix and this source PR complete.",
 ]
 
@@ -57,4 +60,4 @@ remaining_risks = [
 naming = "coverage.ini, _write_coverage_config, executed_arguments, _s02_quality_argv, _s02_quality_capture, and quality_profile state their single evidence responsibilities."
 cohesion = "Fixed command decisions, hosted execution, reporting, aggregate reconstruction, and lane ownership remain separate existing modules."
 intended_behavior = "Every missing, unexecuted, failed, stale, mismatched, incomplete, or unauthenticated Gate 7 fact blocks deterministically; valid Python and real component evidence passes."
-reviewability = "The bounded diff changes five existing production modules and keeps direct trust-boundary regressions beside the existing quality and aggregate suites."
+reviewability = "This bounded correction changes one existing production module and keeps direct trust-boundary regressions beside the existing aggregate suite."

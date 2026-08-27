@@ -2095,9 +2095,15 @@ Do not create a new terminal label not authorized by an active milestone directi
   `9628341460` proved `short_task=false`. The bounded correction routes validated policy blocks
   through canonical ownership with only Gate 7 applicable and preserves the truthful failed
   complexity source outcome for an otherwise passing authenticated short task.
-- Remaining work: pass exact corrective source and hosted proof through one fresh serial Focus 1-8
-  lifecycle, resolve every conversation, and rerun deterministic gates only on any descendant final
-  head; use that exact final source head through isolated unmerged workflow pins to complete and
-  clean review-free PR #63 plus the fixed representative poison and lane-isolation matrix; then
-  merge this source PR normally without bypass, finish issue/Project/ledger readback, set S09
+- Corrective review: PR #167 completed exactly one serial Focus 1-8 lifecycle on review head
+  `6383fb4e767acfa91c01c643eda941dfe36dfb20` and required run `33027209835`. Findings
+  `3867878254`, `3867892991`, and `3867904665` were accepted together. This single bounded
+  remediation retains and completely revalidates the exact complexity source artifact that
+  justifies a failed short-task outcome, labels the earlier run only as defect evidence, and corrects the
+  reviewability claim to the actual one-production-module boundary.
+- Remaining work: reply to and resolve all three conversations; pass exact corrective final-head
+  source validation and deterministic-only proof without repeating any completed focus; use that
+  exact final source head through isolated unmerged workflow pins to complete and clean review-free
+  PR #63 plus the fixed representative poison and lane-isolation matrix; then merge this source PR
+  normally without bypass, finish issue/Project/ledger readback, set S09
   `Done / Complete / On scope / Yes`, and refresh and activate S10 only.

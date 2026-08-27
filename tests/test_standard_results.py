@@ -2098,6 +2098,9 @@ def test_short_task_ignores_review_blocks_owned_by_inapplicable_lanes() -> None:
     payload = _compose(inputs)
 
     assert payload["short_task"] is True
+    assert payload["applicability_evidence"]["inapplicable_complexity_result"]["policy_blocks"] == [
+        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
+    ]
     assert payload["source_outcomes"]["complexity"] == "failure"
     assert _results(payload) == [
         *("NOT_APPLICABLE_SHORT_TASK",) * 6,
@@ -2106,7 +2109,21 @@ def test_short_task_ignores_review_blocks_owned_by_inapplicable_lanes() -> None:
     ]
 
 
-@pytest.mark.parametrize("outcome", ["cancelled", "skipped"])
+def test_short_task_rejects_unbound_inapplicable_block() -> None:
+    payload = _compose(_inputs("docs/release-note.md", [1], status="ADDED"))
+    payload["source_outcomes"]["complexity"] = "failure"
+    payload["applicability_evidence"]["inapplicable_policy_blocks"] = [
+        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
+    ]
+
+    with pytest.raises(
+        standard_results.StandardResultsError,
+        match="MALFORMED_STANDARD_RESULTS_APPLICABILITY",
+    ):
+        standard_results.validate_payload(payload, IDENTITY)
+
+
+@pytest.mark.parametrize("outcome", ["cancelled", "failure", "skipped"])
 def test_short_task_requires_completed_complexity_outcome(outcome: str) -> None:
     payload = _compose(_inputs("docs/release-note.md", [1], status="ADDED"))
     payload["source_outcomes"]["complexity"] = outcome
