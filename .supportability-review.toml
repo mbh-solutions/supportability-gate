@@ -2,97 +2,40 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Gate 8 accepts only a canonical handoff derived from immutable diff and authenticated artifacts. Author-written handoff claims, stale or missing review-blob identity, coordinated fact rehashes, altered facts or citations, hidden failures, and false no-risk claims block Gate 8; independently computable Gates 1-7 retain their correct results."
-proof = "tests/test_evaluate_complexity.py; tests/test_standard_results.py"
+intended_behavior = "The protected product ledger records S11 as the terminal authorized slice and records no successor, while keeping completion prospective until every issue #154 proof and final protected merge readback exists."
+proof = "docs/product_completion_contract.md; issue #154"
 
 [characterization]
-captured_behavior = "The versioned aggregate boundary retains predecessor behavior while standard-results.v3 records each case's exact canonical Gate 8 handoff and digest, evidence dependencies, source citations and hashes, active-lane failure ownership, and exact dependent-lane outcomes."
-proof = "tests/characterization/gate8-standard-results-boundary.characterization.py; tests/characterization/gate8-standard-results-boundary.golden.json; tests/test_standard_results.py"
+captured_behavior = "The integrated standard-results.v3 runtime and eight independent check contexts remain unchanged; this transaction changes only review evidence and the persistent product-status ledger."
+proof = "tests/test_evaluate_complexity.py; tests/test_codex_review.py; tests/test_quality_profile.py; tests/test_standard_results.py"
 
 [separation_of_concerns]
-before = "The source accepted author-written handoff prose, read only the head review blob, and exposed no canonical aggregate cross-check of change, responsibility, validation, coverage, risk, gap, follow-up, citation, or exact review-blob identity."
-after = "review_evidence accepts only a derivation sentinel; cli and reporting bind exact base/head review blobs; standard_results derives and validates the canonical handoff from existing authenticated inputs; standard_block_ownership maps only demonstrated Gate 8 dependencies; the enforcer validates handoff integrity only for Gate 8."
-boundaries = [
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_evaluate", before = "Evaluation initialized and propagated no review-blob binding.", after = "Evaluation initializes fail-closed review binding and propagates the exact evidence returned by the reader." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_read_review_evidence", before = "The reader parsed only the head review blob.", after = "The reader captures exact base and head review blobs, confines an unreadable optional base binding to Gate 8, and returns immutable identities with parsed head evidence." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_result", before = "Successful result assembly omitted review-blob identity.", after = "Successful result assembly carries authenticated review-blob identity into reporting." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_review_binding", before = "No dedicated review-blob binding existed.", after = "The helper derives only Git blob SHA and content SHA-256 from an already read regular blob." },
-    { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_technical_result", before = "Technical result assembly omitted review-blob identity.", after = "Technical result assembly preserves available review-blob identity without converting failure to pass." },
-    { path = "src/supportability_gate/cli.py", kind = "module", symbol = "src/supportability_gate/cli.py", before = "The module had no content-hash dependency for review evidence.", after = "The module uses only stdlib hashing to bind already authenticated base/head review blobs." },
-    { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "markdown_from_json", before = "Markdown echoed author-written review_handoff input as structured evidence.", after = "Markdown omits the non-authoritative source handoff field while remaining derived from authoritative complexity JSON." },
-    { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "result_payload", before = "The complexity artifact omitted review-blob identity.", after = "The complexity artifact exposes exact base/head review-blob bindings for aggregate verification." },
-    { path = "src/supportability_gate/reporting.py", kind = "module", symbol = "src/supportability_gate/reporting.py", before = "EvaluationResult carried parsed review evidence without its blob binding.", after = "EvaluationResult carries the optional exact review-evidence binding beside parsed evidence." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_error_block", before = "All parser defects were rewritten into generic review-evidence prefixes.", after = "Unsupported handoff claims retain their Gate 8-owned deterministic prefix while other parser defects retain existing prefixes." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_handoff", before = "Handoff sentinel checks increased the general parser's control flow.", after = "One narrow helper accepts only the exact derivation sentinel in both source handoff fields." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_section", before = "The general parser owned every named section's field and special-case validation.", after = "One section validator owns named field, handoff, and responsibility-boundary checks without changing schema behavior." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "A Gate 8 source error preserved valid Gate 2 separation evidence but discarded valid Gate 4 module ownership.", after = "A Gate 8 source error preserves independently valid Gate 2 separation and Gate 4 module-boundary evidence while returning the exact Gate 8 block." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "parse_review_evidence", before = "Any nonempty handoff prose satisfied source shape and the general parser owned every section branch.", after = "The parser delegates named section checks while only the exact derivation sentinel is accepted for handoff fields." },
-    { path = "src/supportability_gate/review_evidence.py", kind = "module", symbol = "src/supportability_gate/review_evidence.py", before = "No fixed derivation sentinel identified non-claim handoff input.", after = "One fixed sentinel distinguishes schema presence from trusted derived claims." },
-    { path = "src/supportability_gate/standard_block_ownership.py", kind = "function", symbol = "technical_owners", before = "Gate 8 did not declare dependence on source facts used by its handoff.", after = "Gate 8 joins only technical dependency sets for facts consumed by its canonical handoff, including exclusive ownership of an unreadable optional base review binding." },
-    { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Gate 8 had no block families or authenticated source dependencies.", after = "Gate 8 owns handoff claim and binding families plus explicit dependencies on consumed characterization, refactor, quality, complexity, and review evidence without contaminating independent lanes." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_S02State.technical", before = "Technical dependencies were written to every declared owner even when a short task made that lane inapplicable.", after = "Technical failures are written and shared only across currently applicable dependent lanes." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity", before = "Validated complexity data discarded the source object and had no review-blob or handoff-claim check.", after = "Validated complexity data binds review blobs, rejects unsupported handoff claims, and retains the exact source solely for canonical derivation." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff", before = "No canonical handoff was composed.", after = "The aggregate composes one canonical handoff from already validated change, responsibility, function, validation, coverage, risk, gap, follow-up, identity, and citation facts." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_blocks", before = "Review evidence freshness and head authentication were not enforced.", after = "Missing head binding and unchanged base/head blob identity block Gate 8 only." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_boundaries", before = "No handoff responsibility facts were derived and raw author prose could be mistaken for canonical truth.", after = "The helper exposes only exact path, kind, and symbol identities already cross-bound to changed source, never author ownership prose." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_claim_blocks", before = "Aggregate validation trusted source handoff prose shape.", after = "The aggregate independently rejects any source handoff value other than the fixed derivation sentinel." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_commands", before = "No handoff command facts joined approved decisions to executed provenance.", after = "The helper joins fixed command decisions with authenticated executed-command provenance by adapter." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_coverage", before = "No canonical handoff coverage, exclusion, threshold, scope, or untested-path facts existed.", after = "The helper derives those facts only from validated complexity and quality-profile evidence and reports unverified state when evidence is absent or malformed." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_follow_up", before = "No canonical next-target facts existed.", after = "The helper derives follow-up work only for validated function decisions with a positive remaining gap." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_gaps", before = "No canonical remaining-gap facts existed.", after = "The helper derives remaining gaps only from validated function decisions." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_payload", before = "Aggregate validation had no canonical handoff contract.", after = "Gate 8 validation binds schema, top-level hash, run and source identity, commands, results, risks, gaps, follow-up, and citations to the enclosing authenticated aggregate." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_risks", before = "No canonical risk list existed.", after = "The helper derives risks from every final policy block and technical error without author no-risk prose." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_source", before = "No resolvable handoff citation binding existed.", after = "The helper binds each fixed authenticated source set to the canonical SHA-256 of its derived fact." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_quality_source", before = "Gate 8 validation did not independently reconstruct the authenticated quality source used by command facts.", after = "The helper validates the sibling provenance against the already bound artifact identity and quality profile before handoff comparison." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_sources", before = "Handoff citations and cited facts were not cross-checked.", after = "Validation reconstructs every fixed source set and fact hash and rejects unresolved or altered bindings." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_ownership", before = "Ownership validation had no active-lane context.", after = "Ownership validation supplies the exact applicable lane set to technical dependency validation." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review", before = "Partial review validation accepted only preserved Gate 2 separation evidence.", after = "Partial review validation also accepts and validates independently preserved Gate 4 module-boundary evidence without accepting other partial fields." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review_binding", before = "Aggregate source validation had no review-blob binding schema.", after = "The aggregate accepts only exact optional base/head Git blob SHA and content SHA-256 bindings." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_source_uncertain", before = "A short-task quality failure became uncertain when its authenticated dependency also served inapplicable Gate 8.", after = "Only the applicable Gate 7 quality dependency remains eligible for short-task classification; unrelated failures still force full processing." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_technical_ownership", before = "Technical ownership validation required every declared dependent lane even when some were inapplicable.", after = "Technical ownership is exact after intersecting authenticated dependency owners with applicable lanes." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_validate_handoff", before = "Full handoff validation increased the main payload validator above the complexity ceiling.", after = "One narrow dispatch validates handoff integrity only for full validation or Gate 8." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "compose_results", before = "The aggregate emitted eight rows without a derived handoff.", after = "The aggregate emits the canonical handoff and its canonical SHA-256 after all source lanes are evaluated." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "validate_payload", before = "Payload validation had no handoff binding and no lane-specific handoff isolation.", after = "Full validation checks the handoff, while per-lane enforcement checks handoff integrity only for Gate 8." },
-    { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "validate_handoff_sources", before = "A coordinated handoff fact and self-hash rewrite could remain internally consistent without comparison to sibling source artifacts.", after = "Gate 8 independently reconstructs change, coverage, function, responsibility, command, quality, and review-identity facts from the authenticated sibling sources and rejects any mismatch." },
-    { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "standard-results.v2 exposed only raw Gate 8 source metadata.", after = "standard-results.v3 declares the exact Gate 8 evidence set and canonical handoff contract without adding target execution." },
-    { path = "src/supportability_gate/standard_results_enforcer.py", kind = "function", symbol = "_read_json", before = "The reader used only aggregate-specific missing and malformed errors.", after = "The reader applies caller-supplied fail-closed errors to the aggregate and the two fixed Gate 8 sibling sources." },
-    { path = "src/supportability_gate/standard_results_enforcer.py", kind = "function", symbol = "_parser", before = "The enforcer accepted only the aggregate path.", after = "The parser accepts the fixed complexity and quality-provenance sibling paths used only by Gate 8 source binding." },
-    { path = "src/supportability_gate/standard_results_enforcer.py", kind = "function", symbol = "_handoff_sources", before = "The enforcer did not load independently produced handoff source artifacts.", after = "The helper fails closed unless both fixed sibling sources are present and valid JSON." },
-    { path = "src/supportability_gate/standard_results_enforcer.py", kind = "function", symbol = "_entry", before = "Each lane invoked identical full-payload validation.", after = "Applicable Gate 8 alone cross-checks the aggregate against independently produced sibling sources; inapplicable short-task Gate 8 and Gates 1-7 retain isolated payload validation." },
-]
+before = "The ledger still named completed S10 as current work and S11 as merely next, with no terminal S11 transaction or declared-profile assurance boundary."
+after = "The ledger alone records the prospective S11 terminal transaction, live repository and ruleset disposition, declared-profile boundary, remaining proof, and mandatory stop; runtime and workflow ownership remain unchanged."
+boundaries = []
 
 [architecture]
-dependency_direction = "Dependency remains one way: cli reads immutable Git evidence; review_evidence validates source shape; reporting serializes it; standard_results consumes complexity, characterization, refactor, and quality artifacts plus canonical ownership; standard_results_enforcer validates one requested lane. No target code is imported or executed."
+dependency_direction = "No production or workflow dependency changes. The ledger references the existing integrated runtime as evidence and does not implement or alter that runtime."
 reviewed_paths = [
     ".supportability-review.toml",
     "docs/product_completion_contract.md",
-    "src/supportability_gate/cli.py",
-    "src/supportability_gate/reporting.py",
-    "src/supportability_gate/review_evidence.py",
-    "src/supportability_gate/standard_block_ownership.py",
-    "src/supportability_gate/standard_results.py",
-    "src/supportability_gate/standard_results_enforcer.py",
-    "tests/characterization/gate8-standard-results-boundary.characterization.py",
-    "tests/characterization/gate8-standard-results-boundary.golden.json",
-    "tests/test_evaluate_complexity.py",
-    "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results.py"
-owns = "Canonical Gate 8 handoff derivation and validation from already authenticated diff, complexity, characterization, refactor, quality, result, ownership, review-blob, and citation facts."
-does_not_own = "Target execution, arbitrary commands, author-written completion claims, connector review, GitHub transport, policy waivers, threshold or scope changes, Gates 1-7 decisions, ruleset activation, or S11 inventory work."
+path = "docs/product_completion_contract.md"
+owns = "Persistent milestone status, direct evidence references, remaining work, final product status, and the no-successor stop boundary."
+does_not_own = "Gate implementation, workflow execution, target code, GitHub ruleset behavior, connector findings, or proof that has not yet been observed."
 
 [incremental_refactor]
-target = "Qualify only Gate 8 by replacing author-written handoff claims with one canonical authenticated aggregate handoff and exact lane isolation."
-completed_step = "Added exact review-blob binding, derivation-only source sentinel, canonical change/boundary/function/validation/coverage/risk/gap/follow-up facts, fixed source-set hashes, coordinated-rehash source cross-checking, completed-work filtering, dependency ownership, and applicable Gate-8-only enforcer validation without a new package, target command, workflow, or target execution path."
+target = "Record only the terminal S11 product-state transaction required by issue #154."
+completed_step = "Updated the current and next authorization fields and appended one bounded prospective S11 ledger entry without changing production source, tests, workflow, packages, architecture, or immutable documents."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "review_binding, validate_handoff, handoff_claim_blocks, handoff_commands, handoff_coverage, handoff_risks, handoff_gaps, handoff_follow_up, handoff_sources, and handoff_payload state their single evidence responsibilities."
-cohesion = "Git reading, source parsing, result serialization, ownership, aggregate derivation, aggregate validation, and one-lane enforcement remain in their existing modules."
-intended_behavior = "Gate 8 exposes only facts reconstructed from authenticated inputs and fails closed for unsupported, stale, missing, contradictory, or altered evidence while independent lanes retain correct results."
-reviewability = "The bounded S10 change modifies six existing production modules, two direct suites, and one S10 characterization boundary; it adds no package, workflow, command, or abstraction layer."
+naming = "The S11 heading and bullets name inventory, ruleset, qualification, declared-profile, assurance, remaining-work, and stop responsibilities directly."
+cohesion = "All product-status claims remain in the existing completion ledger; the review manifest describes only this ledger transaction."
+intended_behavior = "S11 becomes canonical only after its protected closing pull request merges normally following every required source, review, canary, migration, cleanup, and readback proof."
+reviewability = "The diff is limited to the existing review manifest and product completion ledger and changes no executable behavior."
