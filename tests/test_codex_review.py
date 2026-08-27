@@ -913,6 +913,55 @@ def test_focused_observer_is_get_only_and_tracks_serial_acknowledgements() -> No
     assert all(request.get_method() == "GET" for request in requests)
 
 
+def test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement() -> None:
+    job_polls = 0
+    comment_polls = 0
+    delays: list[int] = []
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        nonlocal comment_polls, job_polls
+        assert kwargs == {"timeout": 30}
+        path = urllib.parse.urlparse(request.full_url).path
+        if path.endswith("jobs"):
+            job_polls += 1
+            if job_polls == 2:
+                raise urllib.error.HTTPError(request.full_url, 502, "Bad Gateway", {}, None)
+            return _Reply(_jobs())
+        if path.endswith("comments"):
+            comment_polls += 1
+            if comment_polls == 1:
+                return _Reply([_focused_request("1")])
+            return _Reply([_focused_request(focus) for focus in codex_review.FOCUSES])
+        if path.endswith("reviews"):
+            return _Reply([])
+        if path.endswith("reactions"):
+            comment_id = int(path.split("/")[-2])
+            focus = next(
+                item for item, identifier in FOCUS_REQUEST_IDS.items() if identifier == comment_id
+            )
+            if focus == "1":
+                content = "eyes" if comment_polls == 1 else "+1"
+            else:
+                content = "+1"
+            return _Reply([_focused_reaction(focus, content=content)])
+        raise AssertionError(path)
+
+    comment_ids = codex_review.require_focused_acknowledgements(
+        "example/repository",
+        7,
+        HEAD,
+        RUN_ID,
+        "token",
+        attempts=3,
+        delay=2,
+        opener=opener,
+        sleeper=delays.append,
+    )
+
+    assert comment_ids == tuple(FOCUS_REQUEST_IDS[focus] for focus in codex_review.FOCUSES)
+    assert delays == [2, 2]
+
+
 def test_focused_completion_waits_for_final_eyes_to_clear() -> None:
     requests = [_focused_request(focus) for focus in codex_review.FOCUSES]
     polls = 0
