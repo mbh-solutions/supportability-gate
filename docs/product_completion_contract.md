@@ -2159,6 +2159,14 @@ Do not create a new terminal label not authorized by an active milestone directi
   work, captures each Gate 8 characterization handoff plus digest, binds legacy fallback to the
   exact protected S09 source, and preserves the short-task exemption from handoff source loading.
   No Gate 1-7 redesign, package, target command, or new target execution path is added.
+- Runtime isolation correction: the first unsupported-summary poison at target PR #47 and source
+  run `33044986442` correctly blocked Gate 8 with
+  `UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary` but also exposed a spurious Gate 4
+  `MISSING_NEW_LOCATION_JUSTIFICATION` because the partial-error path discarded valid module
+  ownership. One targeted regression reproduced that exact added-location failure before the
+  shared parser and aggregate validator were corrected to preserve and validate independently
+  valid Gate 2 and Gate 4 evidence. Poison cases 2-4 already proved Gate-8-only isolation and are
+  not repeated; only corrected case 1 remains for protected rerun.
 - Qualification limit: no Gate 1-7 redesign, target-code import or execution, arbitrary command,
   package, workflow redesign, consumer activation, ruleset migration, threshold, exclusion, waiver,
   scope narrowing, immutable/frozen source change, completed-review rerun, or S11 behavior is part

@@ -1696,12 +1696,11 @@ def test_unreadable_base_review_binding_fails_gate_eight_only(tmp_path: Path) ->
 
 def test_unsupported_handoff_summary_blocks(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path)
-    _write(repository / "src" / "sample.py", _function_source("existing", 1))
     base_sha = _commit(repository, "base")
-    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    _write(repository / "src" / "sample.py", _function_source("added", 1))
     _write(
         repository / ".supportability-review.toml",
-        REVIEW_EVIDENCE.replace(
+        _review_evidence_for_new_path("src/sample.py").replace(
             f'summary = "{HANDOFF_SENTINEL}"',
             'summary = "All gates green; fictional-check --all passed."',
         ),
@@ -1709,9 +1708,15 @@ def test_unsupported_handoff_summary_blocks(tmp_path: Path) -> None:
     head_sha = _commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
 
     assert exit_code == 1
     assert result["policy_blocks"] == ["UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary"]
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        *["PASS"] * 7,
+        "BLOCK",
+    ]
+    assert aggregate["shared_failures"] == []
 
 
 def test_false_no_risk_handoff_claim_blocks(tmp_path: Path) -> None:

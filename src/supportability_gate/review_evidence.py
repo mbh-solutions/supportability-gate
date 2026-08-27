@@ -190,6 +190,12 @@ def evaluate_review_evidence(
             _validate_text(section[field], f"separation_of_concerns.{field}")
         _validate_separation_boundaries(section["boundaries"], expected_boundaries)
         gate_two_review = {"separation_of_concerns": section}
+        try:
+            gate_two_review["module_boundaries"] = _validate_module_boundaries(
+                data.get("module_boundaries", [])
+            )
+        except ReviewEvidenceError:
+            pass
     except (KeyError, UnicodeDecodeError, tomllib.TOMLDecodeError):
         pass
     except ReviewEvidenceError as error:

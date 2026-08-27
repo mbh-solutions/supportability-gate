@@ -629,8 +629,13 @@ def _s02_review(value: object, blocks: list[str], code: str) -> None:
     if owners:
         if 2 in owners:
             raise StandardResultsError(code)
-        row = _s02_exact(value, {"separation_of_concerns"}, code)
+        keys = {"separation_of_concerns"}
+        if isinstance(value, dict) and "module_boundaries" in value:
+            keys.add("module_boundaries")
+        row = _s02_exact(value, keys, code)
         _s02_separation_boundaries(row["separation_of_concerns"], code)
+        if "module_boundaries" in row:
+            _s02_review_boundaries(row["module_boundaries"], code)
         return
     keys = {"module_boundaries", "schema_version", *_S02_REVIEW_SECTIONS}
     row = _s02_exact(value, keys, code)
