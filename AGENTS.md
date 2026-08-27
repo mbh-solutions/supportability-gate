@@ -98,40 +98,15 @@ Stop condition:
   evidence required by the Milestone 1 directive.
 - Do not claim full Supportability Standard runtime while any required milestone remains incomplete.
 
-## Codex review completion
+## Codex review boundary
 
-- Only a frozen full-process pull-request head and required-workflow run with every deterministic
-  lane green and authenticated advisory-review applicability invokes Codex review. Short-task and
-  deterministic-failure runs do not invoke advisory review.
-- For that exact reviewed head and run, post exactly eight owner-authenticated comments, one at a
-  time in focus order `1` through `8`.
-- Each comment must contain the exact focus command below plus
-  `Codex-Review-Focus: <focus>`, `Codex-Review-Head: <40-character-head-sha>`, and
-  `Codex-Review-Run: <workflow-run-id>` on separate lines:
-  - `1`: `@codex review for maze-like control flow, misleading extraction, or helpers that lower measured complexity without improving readability, testability, or naming in changed code only`
-  - `2`: `@codex review for mixed responsibilities or unclear single ownership in changed code only`
-  - `3`: `@codex review for unclear, inverted, cyclic, or unjustified dependency direction across changed boundaries only`
-  - `4`: `@codex review for weak domain ownership, low cohesion, avoidable coupling, or unjustified module boundaries only`
-  - `5`: `@codex review for missing, weak, misleading, or nondeterministic characterization of behavior at risk from this change only`
-  - `6`: `@codex review for oversized, non-runnable, big-bang, or insufficiently bounded refactor steps in this change only`
-  - `7`: `@codex review for validation evidence that omits changed or high-risk behavior, weakens scope or thresholds, hides failures, or overstates what ran only`
-  - `8`: `@codex review for unsupported, contradictory, stale, incomplete, or misleading handoff claims about change, boundaries, validation, risk, or gate coverage only`
-- Post the next focus only after the connector completes the prior focus. A failed or timed-out
-  focus may be retried until it receives one successful terminal review. A generic request, an
-  out-of-order request, or one completion artifact reused across focuses does not count.
-- Bind one unique successful completion artifact to each focus's strict serial time window. Never
-  rerun a successfully completed focus, including after remediation.
-- A clean summary or submitted review counts only after the exact-run observer job logged that
-  focus and request comment ID while connector eyes were present; the required Gate must then bind
-  one unique completion artifact to that focus's strict serial time window.
-- After all eight complete, assess the findings together, implement supported advice, reject
-  unsupported or plan-conflicting advice with evidence, and resolve every inline conversation.
-- A final remediation head may reuse that exact completed reviewed lifecycle only through one
-  immutable owner remediation authorization that binds the reviewed head and run, final head and
-  run, pull request, repository, and exact reviewed-to-final scope. Rerun deterministic gates on
-  the final head; do not post new advisory-review requests.
-- Resolve every inline finding before merge; GitHub's required review-thread resolution remains the
-  enforcement boundary for unresolved findings.
+- Codex connector review is optional, advisory, and never part of required workflow, ruleset,
+  merge, milestone, or completion criteria.
+- Missing acknowledgement, timeout, outage, unavailable review, or absent completion never blocks
+  deterministic delivery. Move on without retrying or waiting.
+- Do not request automatic broad review. An owner may request focused advisory review separately.
+- Resolve any inline conversation that exists before merge; native review-thread resolution remains
+  the enforcement boundary for actual findings.
 
 ## Active milestone control
 

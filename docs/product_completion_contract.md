@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S10 issue #153 is the sole active slice
-Next milestone authorized: S11 only after exact protected S10 completion, qualification, and transition readback
+Current authorized work: Project #10 S11 issue #154 is the terminal slice; none after exact protected completion
+Next milestone authorized: NONE; S11 has no successor
 ```
 
 ## Milestone transition rules
@@ -2175,9 +2175,69 @@ Do not create a new terminal label not authorized by an active milestone directi
   package, workflow redesign, consumer activation, ruleset migration, threshold, exclusion, waiver,
   scope narrowing, immutable/frozen source change, completed-review rerun, or S11 behavior is part
   of S10.
-- Remaining work: finish the exact final-head targeted and mandatory source proof; reply to and
-  resolve every finding conversation; run deterministic-only final-head proof without repeating
-  review; complete
-  and clean Python/frontend positive, authenticated short-task, deceptive-poison, Gate-8-only, and
-  all-eight canaries; merge normally without bypass; finish issue/Project/ledger readback; set S10
-  `Done / Complete / On scope / Yes`; then refresh and activate S11 only.
+- Terminal completion: PR #168 merged normally without bypass at `2026-08-27T07:45:13Z`;
+  reviewed head `35d15910a4b2b1b29baa368624d1148e26707508`, exact final head
+  `dcc6e7358b64ff451c37b32099b6ad4c1c43bcd5`, and protected merge/main
+  `1dccc727d35a9f15bbce452485c3934ae2f3a86d`. Final Source Validation run `33046100164` and
+  deterministic-only required run `33046100182` passed with authoritative artifact `9635728301`,
+  digest `sha256:afa2a7d486bfdadddf5e9ef814d7ac3f9d5d8c3c24139b00a8c4597da783a3a9`.
+  Python positive `supportability-audit#64`, frontend positive `dc_training#65`, eligible short task
+  `dc_training#66`, eighteen deceptive poisons, Gate-8-only isolation, and all-eight missing-result
+  behavior completed with required cleanup. Issue #153 closed automatically; Project item
+  `PVTI_lADOEmzFKc4BhXlKzg33gUc` reads `Done / Complete / On scope / Yes`. Terminal issue evidence
+  is comment `5435909386`. Remaining work: None; S11 was then refreshed and activated as the sole
+  `In progress` item.
+
+## Project #10 S11 integrated qualification and organization-wide activation
+
+- Prospective terminal result recorded by this protected ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after the
+  pull request closing issue #154 merges normally with no bypass after every source, deterministic,
+  canary, inventory, activation, cleanup, and final-readback condition in that issue has direct
+  evidence. Project #10 then closes with no successor.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gVM`, repository issue #154, protected source base
+  `1dccc727d35a9f15bbce452485c3934ae2f3a86d`, and authenticated pre-activation inventory comment
+  `5436111748`.
+- Integrated boundary: the protected predecessor runtime already composes one authenticated
+  `standard-results.v3` artifact and enforces its eight independently owned results through the
+  exact `Supportability 1` through `Supportability 8` check contexts. Owner correction on
+  2026-08-27 confirms Codex review was always intended to be advisory and non-blocking: missing
+  acknowledgement, timeout, outage, unavailable review, or absent completion means move on. The
+  required workflow therefore contains no connector observer or collector dependency; deterministic
+  failure still blocks, and native review-thread resolution still governs any actual inline finding.
+- Live inventory boundary: authenticated organization repository pagination ended with an explicit
+  empty page after four enabled, nonarchived, supported repositories: `dc_training` ID
+  `1326160036`, `supportability-audit` ID `1336156746`, `supportability-gate` ID `1312412529`, and
+  `twmn` ID `1296846001`. All four are in scope and none is excluded. Source targeting remains
+  additive to separate source-repository protection.
+- Ruleset disposition: migrate per-target organization rulesets `20588739`, `20917183`, and
+  `19913103` one at a time under their exact rollback payloads; verify one canary after each update;
+  create and verify one consolidated zero-bypass organization ruleset for all four live repository
+  IDs before retiring those three superseded rulesets; migrate source ruleset `19767613`
+  separately; preserve independent audit validation ruleset `20913838`.
+- Orphan disposition: organization ruleset `20224623` remains unchanged. Owner-authenticated
+  evidence and current REST readback establish that its repository ID `1319911879` was permanently
+  deleted and that the rule is effective on zero live repositories; it is neither a production
+  target nor authorized cleanup.
+- Qualification boundary: exact source proof includes the predecessor-created integrated
+  `tests/test_standard_results.py` suite. Protected Python and frontend positives prove all eight
+  deterministic lanes and merge normally without bypass; connector availability or completion is
+  not qualification evidence. Predecessor proof is retained for Gate 1-8 single-lane poison and
+  isolation cases plus all-eight missing-result behavior. S11 still requires fresh hosted proof for
+  its eligible short task and integrated shared identity, artifact, workflow, run, and provenance
+  failure families.
+- Declared-profile boundary: repository inclusion means protected enforcement of each repository's
+  committed `.supportability.toml` profile, not qualification of files outside that profile.
+  `dc_training` qualifies TypeScript under `src`; its SQL migrations remain outside the declared
+  production path. `twmn` qualifies Python under `src`; its EasyLanguage, binary, transcript,
+  spreadsheet, document, and PDF assets remain outside the declared production path.
+- Assurance limit: optional Codex review remains advisory, probabilistic, non-exhaustive, and outside
+  every required workflow, ruleset, merge, milestone, and completion criterion. Deterministic lanes,
+  exact artifacts, required workflows and status contexts, native conversation resolution, separate
+  source validation, strict current-head enforcement, and zero bypass remain the enforcement
+  boundary. No target code is imported or executed on the owner workstation.
+- Remaining work: complete and record every issue #154 terminal proof, merge this exact protected
+  pull request normally, read back protected `main`, automatic issue closure, rulesets, target set,
+  canaries, Project fields, and cleanup, set S11 `Done / Complete / On scope / Yes`, close Project
+  #10, and stop. No successor or unrelated work is authorized.
