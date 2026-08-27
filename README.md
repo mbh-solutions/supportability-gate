@@ -61,3 +61,5 @@ controls:
 
 The path exclusion is limited to the immutable owner-authored standard. It does not waive its
 integrity check or exclude any other file.
+
+<!-- S11 ruleset migration canary: prepared -->
