@@ -1988,12 +1988,12 @@ def _s02_load_complexity(
 
 
 def _s02_authenticated_short(data: _S02Complexity | None) -> bool:
-    return bool(
-        data is not None
-        and not data.blocks
-        and not data.technical
-        and _s02_short(data.changed_files)
-    )
+    if data is None or data.technical or not _s02_short(data.changed_files):
+        return False
+    state = _S02State(frozenset({7}))
+    for block in data.blocks:
+        _s02_apply_block(state, block, "complexity-result")
+    return not state.blocks[7] and not any(state.errors.values())
 
 
 def _s02_add_complexity(
@@ -2175,13 +2175,16 @@ def compose_results(
         complexity_error,
     )
     source_validated = bool(data and not data.technical)
+    applicability: dict[str, object] = {
+        "changed_files": list(data.changed_files) if data else [],
+        "classification": "SHORT_TASK" if short else "FULL_PROCESS",
+        "source_sha256": data.source_sha256 if data else None,
+        "source_validated": source_validated,
+    }
+    if short and data and data.blocks and complexity is not None:
+        applicability["inapplicable_complexity_result"] = json.loads(_canonical(complexity))
     payload: dict[str, object] = {
-        "applicability_evidence": {
-            "changed_files": list(data.changed_files) if data else [],
-            "classification": "SHORT_TASK" if short else "FULL_PROCESS",
-            "source_sha256": data.source_sha256 if data else None,
-            "source_validated": source_validated,
-        },
+        "applicability_evidence": applicability,
         "base_sha": identity.base_sha,
         "entries": _s02_entries(state),
         "head_sha": identity.head_sha,
@@ -2209,24 +2212,58 @@ def compose_results(
     return payload
 
 
-def _s02_applicability(value: object, short_task: bool) -> bool:
-    row = _s02_exact(
-        value,
-        {"changed_files", "classification", "source_sha256", "source_validated"},
-        "MALFORMED_STANDARD_RESULTS_APPLICABILITY",
-    )
+def _s02_inapplicable_source(
+    value: object,
+    identity: RunIdentity,
+    changed: tuple[dict[str, Any], ...],
+    source_sha256: object,
+) -> bool:
+    if value is None:
+        return False
+    code = "MALFORMED_STANDARD_RESULTS_APPLICABILITY"
+    try:
+        data = _s02_complexity(value, identity)
+    except StandardResultsError:
+        raise StandardResultsError(code) from None
+    if (
+        data.changed_files != changed
+        or data.source_sha256 != source_sha256
+        or data.result != "BLOCK"
+        or not _s02_authenticated_short(data)
+    ):
+        raise StandardResultsError(code)
+    return True
+
+
+def _s02_applicability(value: object, short_task: bool, identity: RunIdentity) -> tuple[bool, bool]:
+    keys = {"changed_files", "classification", "source_sha256", "source_validated"}
+    if not isinstance(value, dict) or set(value) not in (
+        keys,
+        keys | {"inapplicable_complexity_result"},
+    ):
+        raise StandardResultsError("MALFORMED_STANDARD_RESULTS_APPLICABILITY")
+    row = value
     changed = _s02_changed(row["changed_files"], "MALFORMED_STANDARD_RESULTS_APPLICABILITY")
+    inapplicable_source = _s02_inapplicable_source(
+        row.get("inapplicable_complexity_result"), identity, changed, row["source_sha256"]
+    )
     if type(row["source_validated"]) is not bool:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_APPLICABILITY")
     if row["source_sha256"] is not None and not _s02_sha(row["source_sha256"], _S02_SHA64):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_APPLICABILITY")
     eligible = bool(row["source_validated"] and _s02_short(changed))
     classification = "SHORT_TASK" if short_task else "FULL_PROCESS"
-    if (short_task and not eligible) or row["classification"] != classification:
+    if (
+        short_task
+        and not eligible
+        or inapplicable_source
+        and not short_task
+        or row["classification"] != classification
+    ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_APPLICABILITY")
     if row["source_validated"] and row["source_sha256"] is None:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_APPLICABILITY")
-    return eligible
+    return eligible, inapplicable_source
 
 
 def _s02_source_uncertain(entries: list[dict[str, Any]]) -> bool:
@@ -2414,18 +2451,30 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> None
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
     outcomes = _s02_outcomes(row["source_outcomes"])
-    eligible_short = _s02_applicability(row["applicability_evidence"], row["short_task"])
+    eligible_short, inapplicable_source = _s02_applicability(
+        row["applicability_evidence"], row["short_task"], actual
+    )
     if not isinstance(row["entries"], list) or len(row["entries"]) != 8:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
     entries = [
         _s02_entry(item, standard, row["short_task"])
         for standard, item in enumerate(row["entries"], start=1)
     ]
-    required_success = {"complexity", "install", "quality"}
+    required_outcomes = {
+        "complexity": {"failure" if inapplicable_source else "success"},
+        "install": {"success"},
+        "quality": {"success"},
+    }
     if not row["short_task"]:
-        required_success.update({"characterization", "refactor"})
+        required_outcomes.update(
+            {
+                "characterization": {"success"},
+                "complexity": {"success"},
+                "refactor": {"success"},
+            }
+        )
     if all(entry["result"] in {"PASS", "NOT_APPLICABLE_SHORT_TASK"} for entry in entries) and any(
-        outcomes[source] != "success" for source in required_success
+        outcomes[source] not in allowed for source, allowed in required_outcomes.items()
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_SOURCE_OUTCOMES")
     shared = _s02_shared(row["shared_failures"])
