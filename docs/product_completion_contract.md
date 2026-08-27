@@ -2175,12 +2175,18 @@ Do not create a new terminal label not authorized by an active milestone directi
   package, workflow redesign, consumer activation, ruleset migration, threshold, exclusion, waiver,
   scope narrowing, immutable/frozen source change, completed-review rerun, or S11 behavior is part
   of S10.
-- Remaining work: finish the exact final-head targeted and mandatory source proof; reply to and
-  resolve every finding conversation; run deterministic-only final-head proof without repeating
-  review; complete
-  and clean Python/frontend positive, authenticated short-task, deceptive-poison, Gate-8-only, and
-  all-eight canaries; merge normally without bypass; finish issue/Project/ledger readback; set S10
-  `Done / Complete / On scope / Yes`; then refresh and activate S11 only.
+- Terminal completion: PR #168 merged normally without bypass at `2026-08-27T07:45:13Z`;
+  reviewed head `35d15910a4b2b1b29baa368624d1148e26707508`, exact final head
+  `dcc6e7358b64ff451c37b32099b6ad4c1c43bcd5`, and protected merge/main
+  `1dccc727d35a9f15bbce452485c3934ae2f3a86d`. Final Source Validation run `33046100164` and
+  deterministic-only required run `33046100182` passed with authoritative artifact `9635728301`,
+  digest `sha256:afa2a7d486bfdadddf5e9ef814d7ac3f9d5d8c3c24139b00a8c4597da783a3a9`.
+  Python positive `supportability-audit#64`, frontend positive `dc_training#65`, eligible short task
+  `dc_training#66`, eighteen deceptive poisons, Gate-8-only isolation, and all-eight missing-result
+  behavior completed with required cleanup. Issue #153 closed automatically; Project item
+  `PVTI_lADOEmzFKc4BhXlKzg33gUc` reads `Done / Complete / On scope / Yes`. Terminal issue evidence
+  is comment `5435909386`. Remaining work: None; S11 was then refreshed and activated as the sole
+  `In progress` item.
 
 ## Project #10 S11 integrated qualification and organization-wide activation
 

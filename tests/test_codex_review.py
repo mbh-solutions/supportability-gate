@@ -931,7 +931,12 @@ def test_focused_observer_retries_transient_github_failure_without_losing_acknow
             comment_polls += 1
             if comment_polls == 1:
                 return _Reply([_focused_request("1")])
-            return _Reply([_focused_request(focus) for focus in codex_review.FOCUSES])
+            return _Reply(
+                [
+                    *[_focused_request(focus) for focus in codex_review.FOCUSES],
+                    _focused_summary("1"),
+                ]
+            )
         if path.endswith("reviews"):
             return _Reply([])
         if path.endswith("reactions"):
@@ -940,10 +945,10 @@ def test_focused_observer_retries_transient_github_failure_without_losing_acknow
                 item for item, identifier in FOCUS_REQUEST_IDS.items() if identifier == comment_id
             )
             if focus == "1":
-                content = "eyes" if comment_polls == 1 else "+1"
-            else:
-                content = "+1"
-            return _Reply([_focused_reaction(focus, content=content)])
+                return _Reply(
+                    [_focused_reaction(focus, content="eyes")] if comment_polls == 1 else []
+                )
+            return _Reply([_focused_reaction(focus)])
         raise AssertionError(path)
 
     comment_ids = codex_review.require_focused_acknowledgements(
@@ -960,6 +965,41 @@ def test_focused_observer_retries_transient_github_failure_without_losing_acknow
 
     assert comment_ids == tuple(FOCUS_REQUEST_IDS[focus] for focus in codex_review.FOCUSES)
     assert delays == [2, 2]
+
+
+@pytest.mark.parametrize("case", ["http_403", "url_error", "malformed"])
+def test_focused_observer_fails_fast_for_nontransient_github_evidence(case: str) -> None:
+    calls = 0
+    delays: list[int] = []
+
+    def opener(request: Any, **kwargs: object) -> _Reply:
+        nonlocal calls
+        calls += 1
+        assert kwargs == {"timeout": 30}
+        if case == "http_403":
+            raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, None)
+        if case == "url_error":
+            raise urllib.error.URLError("unavailable")
+        return _Reply([])
+
+    with pytest.raises(
+        codex_review.CodexReviewError,
+        match="GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE",
+    ):
+        codex_review.require_focused_acknowledgements(
+            "example/repository",
+            7,
+            HEAD,
+            RUN_ID,
+            "token",
+            attempts=2,
+            delay=2,
+            opener=opener,
+            sleeper=delays.append,
+        )
+
+    assert calls == 1
+    assert delays == []
 
 
 def test_focused_completion_waits_for_final_eyes_to_clear() -> None:

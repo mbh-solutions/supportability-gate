@@ -3,11 +3,11 @@ module_boundaries = []
 
 [behavior]
 intended_behavior = "The focused-review observer preserves already seen serial acknowledgements across a transient GitHub HTTP 5xx response within its existing bounded poll window, while nontransient evidence failures remain fail-closed. The protected ledger records S11 as the terminal authorized slice with no successor and keeps completion prospective until every issue #154 proof and final protected merge readback exists."
-proof = "tests/test_codex_review.py::test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement; docs/product_completion_contract.md; issue #154"
+proof = "tests/test_codex_review.py::test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement; tests/test_codex_review.py::test_focused_observer_fails_fast_for_nontransient_github_evidence; docs/product_completion_contract.md; issues #153 and #154"
 
 [characterization]
-captured_behavior = "Before this correction, any GitHub evidence HTTP failure terminated the focused observer immediately and discarded its in-memory acknowledgement set; the regression injects one HTTP 502 after Focus 1 acknowledgement and proves the same bounded observer completes all eight without repeating Focus 1."
-proof = "tests/test_codex_review.py::test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement"
+captured_behavior = "Before this correction, any GitHub evidence HTTP failure terminated the focused observer immediately and discarded its in-memory acknowledgement set; the regression injects one HTTP 502 after Focus 1 acknowledgement, removes the later Focus 1 reaction, and proves its summary is accepted only through the preserved acknowledgement. Separate cases prove HTTP 403, URLError, and malformed evidence still fail before sleep or a second request."
+proof = "tests/test_codex_review.py::test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement; tests/test_codex_review.py::test_focused_observer_fails_fast_for_nontransient_github_evidence"
 
 [separation_of_concerns]
 before = "The focused observer treated a transient GitHub server response like a permanent evidence failure, terminating the only process that retained already observed request acknowledgements."
@@ -33,7 +33,7 @@ does_not_own = "Connector judgment, deterministic gate results, arbitrary retry 
 
 [incremental_refactor]
 target = "Correct only the observed transient-5xx failure in the existing focused acknowledgement loop and record the terminal S11 transaction."
-completed_step = "Added one narrow predicate, one conditional, and one regression; retained the existing poll count, delay, transport, evidence validation, and fail-closed behavior; updated only the existing manifest and ledger beside that correction."
+completed_step = "Added one narrow predicate and one conditional; direct regressions prove saved-acknowledgement continuity across HTTP 502 and immediate failure for representative nontransient evidence errors. The existing poll count, delay, transport, validation, and fail-closed boundary remain unchanged; the ledger also records S10 terminal proof before prospective S11 state."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
@@ -42,5 +42,5 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 [human_review]
 naming = "_transient_github_failure states the exact classification; require_focused_acknowledgements retains ownership of bounded observation."
 cohesion = "HTTP cause classification and focused polling remain in the existing Codex review evidence module; the regression remains in its direct suite; product status remains in the ledger."
-intended_behavior = "A temporary GitHub 5xx cannot erase already observed focus acknowledgements, but authentication, malformed, unavailable, timeout, and trust failures remain fail-closed."
-reviewability = "The executable change is one predicate and one conditional with one direct regression; no package, workflow, command, abstraction layer, or target code changed."
+intended_behavior = "A temporary GitHub 5xx cannot erase already observed focus acknowledgements, but authentication, malformed, unavailable, timeout, and trust failures remain fail-closed and S11 is not presented before S10 terminal evidence."
+reviewability = "The executable change is one predicate and one conditional with direct continuity and fail-fast regressions; the ledger reconciles S10 before S11. No package, workflow, command, abstraction layer, or target code changed."
