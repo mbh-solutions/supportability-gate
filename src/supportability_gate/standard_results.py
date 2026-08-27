@@ -1988,12 +1988,12 @@ def _s02_load_complexity(
 
 
 def _s02_authenticated_short(data: _S02Complexity | None) -> bool:
-    return bool(
-        data is not None
-        and not data.blocks
-        and not data.technical
-        and _s02_short(data.changed_files)
-    )
+    if data is None or data.technical or not _s02_short(data.changed_files):
+        return False
+    state = _S02State(frozenset({7}))
+    for block in data.blocks:
+        _s02_apply_block(state, block, "complexity-result")
+    return not state.blocks[7] and not any(state.errors.values())
 
 
 def _s02_add_complexity(
@@ -2421,11 +2421,21 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> None
         _s02_entry(item, standard, row["short_task"])
         for standard, item in enumerate(row["entries"], start=1)
     ]
-    required_success = {"complexity", "install", "quality"}
+    required_outcomes = {
+        "complexity": {"failure", "success"},
+        "install": {"success"},
+        "quality": {"success"},
+    }
     if not row["short_task"]:
-        required_success.update({"characterization", "refactor"})
+        required_outcomes.update(
+            {
+                "characterization": {"success"},
+                "complexity": {"success"},
+                "refactor": {"success"},
+            }
+        )
     if all(entry["result"] in {"PASS", "NOT_APPLICABLE_SHORT_TASK"} for entry in entries) and any(
-        outcomes[source] != "success" for source in required_success
+        outcomes[source] not in allowed for source, allowed in required_outcomes.items()
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_SOURCE_OUTCOMES")
     shared = _s02_shared(row["shared_failures"])

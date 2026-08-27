@@ -2040,8 +2040,9 @@ Do not create a new terminal label not authorized by an active milestone directi
   merges normally and every required Python and frontend positive, short-task, poison,
   lane-isolation, exact-source, focused-review, cleanup, issue, and Project readback succeeds.
 - Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
-  `PVTI_lADOEmzFKc4BhXlKzg33gUA`, repository issue #152, and exact protected source base
-  `1f880b940dbc056c76465bf5748f67c4dbfd80b3`.
+  `PVTI_lADOEmzFKc4BhXlKzg33gUA`, repository issue #152, initial exact protected source base
+  `1f880b940dbc056c76465bf5748f67c4dbfd80b3`, and corrective source base
+  `a3000c0708b96ff3bdb18fb5b421e8bc228665f7`.
 - Responsibility boundary: Gate 7 owns fixed approved Python and TypeScript/component quality
   profiles executed only in isolated GitHub-hosted jobs. Its authenticated evidence binds the
   repository, base/head/workflow/run/attempt/job/artifact identity, approved template, exact
@@ -2081,7 +2082,22 @@ Do not create a new terminal label not authorized by an active milestone directi
   rewrite `3866719924` was rejected because
   S08 is an explicitly prospective historical transaction and issue #152 authorizes edits only to
   S09 status/evidence/remaining-work, product status, and next-authorized-slice fields.
-- Remaining work: reply to and resolve all three source-review conversations; pass exact hosted
-  deterministic-only final-head proof; merge normally
-  without bypass; complete and clean all S09 canaries and poisons; finish issue/Project/ledger
-  readback; set S09 `Done / Complete / On scope / Yes`; then refresh and activate S10 only.
+- Delivered source and positive canaries: PR #166 merged normally at source main
+  `a3000c0708b96ff3bdb18fb5b421e8bc228665f7` after all three conversations were answered and
+  resolved. Python target PR #23 passed final run `33024081626` and merged normally to its
+  disposable base. Frontend target PR #62 passed final run `33025470400`, including all eight
+  deterministic lanes, and merged normally to its disposable base. Both retained production main
+  branches were unchanged.
+- Runtime correction trigger: review-free short-task PR #63 used the exact one-added-line
+  documentation diff and source run `33025768512`. Characterization, quality, deterministic
+  evidence, and seven lane jobs succeeded, but Gate 2 job `98366873570` blocked on
+  `INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries`; authoritative artifact
+  `9628341460` proved `short_task=false`. The bounded correction routes validated policy blocks
+  through canonical ownership with only Gate 7 applicable and preserves the truthful failed
+  complexity source outcome for an otherwise passing authenticated short task.
+- Remaining work: pass exact corrective source and hosted proof through one fresh serial Focus 1-8
+  lifecycle, resolve every conversation, and rerun deterministic gates only on any descendant final
+  head; use that exact final source head through isolated unmerged workflow pins to complete and
+  clean review-free PR #63 plus the fixed representative poison and lane-isolation matrix; then
+  merge this source PR normally without bypass, finish issue/Project/ledger readback, set S09
+  `Done / Complete / On scope / Yes`, and refresh and activate S10 only.

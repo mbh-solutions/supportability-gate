@@ -2089,6 +2089,35 @@ def test_one_added_document_line_is_authenticated_short_task() -> None:
     assert standard_results.review_required(payload) is False
 
 
+def test_short_task_ignores_review_blocks_owned_by_inapplicable_lanes() -> None:
+    inputs = _inputs("docs/release-note.md", [1], status="ADDED")
+    inputs[0]["review_evidence"] = None
+    inputs[0]["policy_blocks"] = ["INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert payload["short_task"] is True
+    assert payload["source_outcomes"]["complexity"] == "failure"
+    assert _results(payload) == [
+        *("NOT_APPLICABLE_SHORT_TASK",) * 6,
+        "PASS",
+        "NOT_APPLICABLE_SHORT_TASK",
+    ]
+
+
+@pytest.mark.parametrize("outcome", ["cancelled", "skipped"])
+def test_short_task_requires_completed_complexity_outcome(outcome: str) -> None:
+    payload = _compose(_inputs("docs/release-note.md", [1], status="ADDED"))
+    payload["source_outcomes"]["complexity"] = outcome
+
+    with pytest.raises(
+        standard_results.StandardResultsError,
+        match="MALFORMED_STANDARD_RESULTS_SOURCE_OUTCOMES",
+    ):
+        standard_results.validate_payload(payload, IDENTITY)
+
+
 def test_cli_captures_one_added_document_line_without_broadening_other_files(
     tmp_path: Path,
 ) -> None:
