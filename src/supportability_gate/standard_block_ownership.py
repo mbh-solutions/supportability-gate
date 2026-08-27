@@ -97,7 +97,13 @@ BLOCK_FAMILIES = (
         "UNAPPROVED_QUALITY_COMMAND:",
         "UNTESTED_AREA:",
     ),
-    (),
+    (
+        "HANDOFF_FACT_MISMATCH:",
+        "STALE_HANDOFF_EVIDENCE",
+        "UNAUTHENTICATED_HANDOFF_EVIDENCE",
+        "UNRESOLVED_HANDOFF_CITATION:",
+        "UNSUPPORTED_HANDOFF_CLAIM:",
+    ),
 )
 
 REVIEW_FIELD_OWNERS = {
@@ -127,6 +133,7 @@ _REVIEW_PREFIXES = (
     "MISSING_REVIEW_EVIDENCE:",
     "MALFORMED_REVIEW_EVIDENCE:",
     "INSUFFICIENT_REVIEW_EVIDENCE:",
+    "UNSUPPORTED_HANDOFF_CLAIM:",
 )
 REVIEW_STANDARDS = frozenset({1, 2, 3, 4, 5, 6, 8})
 _REVIEW_SECTIONS = frozenset(field.partition(".")[0] for field in REVIEW_FIELD_OWNERS)
@@ -153,53 +160,53 @@ COMPLEXITY_TECHNICAL_STANDARDS = frozenset({1, 2, 3, 4, 7, 8})
 _EXACT_TECHNICAL_DEPENDENCIES = {
     "CHARACTERIZATION_RESULT_BINDING_MISMATCH": (
         "characterization-result",
-        frozenset({5, 6}),
+        frozenset({5, 6, 8}),
     ),
     "COMPLEXITY_RESULT_BINDING_MISMATCH": ("complexity-result", ALL_STANDARDS),
     "GATE_INSTALL_FAILURE": ("gate-install", ALL_STANDARDS),
     "MALFORMED_CHARACTERIZATION_RESULT": (
         "characterization-result",
-        frozenset({5, 6}),
+        frozenset({5, 6, 8}),
     ),
     "MALFORMED_COMPLEXITY_RESULT": ("complexity-result", ALL_STANDARDS),
     "MALFORMED_QUALITY_PROVENANCE": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
     "MALFORMED_EXTERNAL_QUALITY_ARTIFACT": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
     "MALFORMED_QUALITY_RESULT_BINDING": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
-    "MALFORMED_REFACTOR_RESULT": ("refactor-policy-result", frozenset({6})),
+    "MALFORMED_REFACTOR_RESULT": ("refactor-policy-result", frozenset({6, 8})),
     "MISSING_CHARACTERIZATION_RESULT": (
         "characterization-result",
-        frozenset({5, 6}),
+        frozenset({5, 6, 8}),
     ),
     "MISSING_COMPLEXITY_RESULT": ("complexity-result", ALL_STANDARDS),
     "MISSING_QUALITY_PROVENANCE": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
     "MISSING_EXTERNAL_QUALITY_ARTIFACT": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
-    "MISSING_REFACTOR_RESULT": ("refactor-policy-result", frozenset({6})),
+    "MISSING_REFACTOR_RESULT": ("refactor-policy-result", frozenset({6, 8})),
     "QUALITY_RESULT_BINDING_MISMATCH": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
     "QUALITY_ARTIFACT_IDENTITY_MISMATCH": (
         "quality-profile:artifact-binding",
-        frozenset({7}),
+        frozenset({7, 8}),
     ),
     "REFACTOR_RESULT_BINDING_MISMATCH": (
         "refactor-policy-result",
-        frozenset({6}),
+        frozenset({6, 8}),
     ),
 }
 _SOURCE_BLOCK_ALLOWED = {
@@ -208,9 +215,9 @@ _SOURCE_BLOCK_ALLOWED = {
     "refactor-policy-result:policy-blocks": frozenset({6}),
 }
 _SOURCE_BLOCK_DEPENDENTS = {
-    "characterization-result:policy-blocks": frozenset({5, 6}),
+    "characterization-result:policy-blocks": frozenset({5, 6, 8}),
     "complexity-result:policy-blocks": ALL_STANDARDS,
-    "refactor-policy-result:policy-blocks": frozenset({6}),
+    "refactor-policy-result:policy-blocks": frozenset({6, 8}),
 }
 
 
@@ -334,17 +341,17 @@ def technical_owners(code: str) -> frozenset[int]:
         "MISSING_FUNCTION_BODY",
         "PROFILE_NODE_MISMATCH",
     } or raw.startswith(("C901_", "RUFF_")):
-        return frozenset({1})
+        return frozenset({1, 8})
     if raw.startswith("ARCHITECTURE_"):
         return frozenset({3, 4})
     if raw == "SEPARATION_BOUNDARY_DERIVATION_FAILURE":
-        return frozenset({2})
+        return frozenset({2, 8})
     if raw == "REFACTOR_TARGET_DERIVATION_FAILURE":
-        return frozenset({6})
+        return frozenset({6, 8})
     if raw == "REVIEW_EVIDENCE_UNAVAILABLE":
         return REVIEW_STANDARDS
     if raw == "INVALID_WORKFLOW_SHA" or raw.startswith(_QUALITY_TECHNICAL_PREFIXES):
-        return frozenset({4, 7})
+        return frozenset({4, 7, 8})
     return frozenset()
 
 

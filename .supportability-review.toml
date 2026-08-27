@@ -50,11 +50,8 @@ target = "Qualify only Supportability 7 through fixed hosted quality profiles, e
 completed_step = "Added restored trusted Python coverage configuration, hostile measurement-time exclusion proof, canonical adapter-order and exact omission/source/test-manifest binding, raw-artifact reconstruction, a real TSX hosted fixture, quality-versus-architecture lane isolation, and the bounded short-task ownership correction without a new package or workflow redesign."
 
 [review_handoff]
-summary = "S09 qualifies Gate 7 only. PR #166 delivered the reviewed source and positive canaries. Live short-task PR #63 exposed one aggregate ownership defect. This corrective PR completed its one serial Focus 1-8 lifecycle on review head 6383fb4e767acfa91c01c643eda941dfe36dfb20 and accepted all three findings in one bounded remediation: exact retained source binding, accurate trigger labeling, and accurate one-module scope."
-remaining_risks = [
-    "The descendant exact final source head must pass hosted source validation and deterministic-only final-head proof with every conversation resolved; no focused review may repeat.",
-    "The corrected exact source head must make existing review-free PR #63 pass as NNNNNNPN under an isolated unmerged workflow pin before the representative poison and isolation matrix and this source PR complete.",
-]
+summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
+remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
 naming = "coverage.ini, _write_coverage_config, executed_arguments, _s02_quality_argv, _s02_quality_capture, and quality_profile state their single evidence responsibilities."

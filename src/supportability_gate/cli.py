@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -384,6 +385,7 @@ def _result(
     ruff_records: list[complexity_metrics.RuffCommandRecord],
     structured_review: review_evidence.ReviewEvidence | None,
     review_blocks: tuple[str, ...],
+    review_binding: dict[str, object],
     architecture: architecture_policy.ArchitectureResult,
     modularity: modularity_policy.ModularityResult,
     quality: quality_profile.QualityEvidence,
@@ -423,6 +425,7 @@ def _result(
         architecture,
         modularity,
         quality,
+        review_binding,
     )
 
 
@@ -556,7 +559,7 @@ def _read_review_evidence(
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
     records: list[git_changes.CommandRecord],
     errors: list[Exception],
-) -> tuple[review_evidence.ReviewEvidence | None, tuple[str, ...]]:
+) -> tuple[review_evidence.ReviewEvidence | None, tuple[str, ...], dict[str, object]]:
     try:
         expected_boundaries = _separation_boundaries(
             repository, identity, policy, assessments, records
@@ -567,7 +570,20 @@ def _read_review_evidence(
         )
         expected_boundaries = None
     try:
-        blob = git_changes.read_regular_blob(
+        base_blob = git_changes.read_regular_blob(
+            repository,
+            identity.base_sha,
+            review_evidence.REVIEW_EVIDENCE_PATH,
+            records,
+        )
+    except git_changes.GitError as error:
+        if error.code != "MISSING_BLOB":
+            errors.append(
+                function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error))
+            )
+        base_blob = None
+    try:
+        head_blob = git_changes.read_regular_blob(
             repository,
             identity.head_sha,
             review_evidence.REVIEW_EVIDENCE_PATH,
@@ -575,12 +591,39 @@ def _read_review_evidence(
         )
     except git_changes.GitError as error:
         if error.code == "MISSING_BLOB":
-            return review_evidence.evaluate_review_evidence(None, ())
+            review, blocks = review_evidence.evaluate_review_evidence(None, ())
+            return review, blocks, {"base": _review_binding(base_blob), "head": None}
         if error.code == "SYMLINK_OR_NONFILE":
-            return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
+            return (
+                None,
+                ("MALFORMED_REVIEW_EVIDENCE:document",),
+                {
+                    "base": _review_binding(base_blob),
+                    "head": None,
+                },
+            )
         errors.append(function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error)))
-        return None, ()
-    return review_evidence.evaluate_review_evidence(blob.content, expected_boundaries)
+        return None, (), {"base": _review_binding(base_blob), "head": None}
+    review, blocks = review_evidence.evaluate_review_evidence(
+        head_blob.content, expected_boundaries
+    )
+    return (
+        review,
+        blocks,
+        {
+            "base": _review_binding(base_blob),
+            "head": _review_binding(head_blob),
+        },
+    )
+
+
+def _review_binding(blob: git_changes.GitBlob | None) -> dict[str, str] | None:
+    if blob is None:
+        return None
+    return {
+        "blob_sha": blob.object_sha,
+        "sha256": hashlib.sha256(blob.content).hexdigest(),
+    }
 
 
 def _refactor_target_evidence(
@@ -615,6 +658,7 @@ def _technical_result(
     contract_blocks: tuple[str, ...],
     structured_review: review_evidence.ReviewEvidence | None,
     review_blocks: tuple[str, ...],
+    review_binding: dict[str, object],
     architecture: architecture_policy.ArchitectureResult | None,
     modularity: modularity_policy.ModularityResult | None,
     quality: quality_profile.QualityEvidence | None,
@@ -657,6 +701,7 @@ def _technical_result(
         architecture,
         modularity,
         quality,
+        review_binding,
     )
 
 
@@ -674,6 +719,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
     contract_blocks: tuple[str, ...] = ()
     structured_review: review_evidence.ReviewEvidence | None = None
     review_blocks: tuple[str, ...] = ()
+    review_binding: dict[str, object] = {"base": None, "head": None}
     architecture: architecture_policy.ArchitectureResult | None = None
     modularity: modularity_policy.ModularityResult | None = None
     quality: quality_profile.QualityEvidence | None = None
@@ -706,7 +752,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
         responsibility_targets, unbounded_production_paths = _refactor_target_evidence(
             repository, identity, policy, changes, records, evidence_errors
         )
-        structured_review, review_blocks = _read_review_evidence(
+        structured_review, review_blocks, review_binding = _read_review_evidence(
             repository,
             identity,
             policy,
@@ -770,6 +816,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
                 contract_blocks,
                 structured_review,
                 review_blocks,
+                review_binding,
                 architecture,
                 modularity,
                 quality,
@@ -792,6 +839,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             ruff_records,
             structured_review,
             review_blocks,
+            review_binding,
             architecture,
             modularity,
             quality,
@@ -814,6 +862,7 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             contract_blocks,
             structured_review,
             review_blocks,
+            review_binding,
             architecture,
             modularity,
             quality,

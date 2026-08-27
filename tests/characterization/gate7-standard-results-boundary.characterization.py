@@ -23,6 +23,19 @@ GATE_SIX_EVIDENCE_SOURCES = [
     "complexity-result.json:unbounded_production_paths",
     "complexity-result.json:review_evidence.incremental_refactor",
 ]
+GATE_EIGHT_EVIDENCE_SOURCES = [
+    "complexity-result.json:changed_files",
+    "complexity-result.json:functions",
+    "complexity-result.json:gate_coverage",
+    "complexity-result.json:quality_profile",
+    "complexity-result.json:review_evidence_binding",
+    "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+    "complexity-result.json:review_evidence.review_handoff",
+    "characterization-result.json",
+    "refactor-policy-result.json",
+    "quality-provenance.json",
+]
+HANDOFF_SENTINEL = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 
 
 def _legacy_driver(definition: Path) -> ModuleType:
@@ -349,6 +362,9 @@ def main() -> None:
     gate_six_binding = "responsibility_targets" in getattr(
         standard_results, "_S02_COMPLEXITY_KEYS", ()
     )
+    gate_eight_binding = "review_evidence_binding" in getattr(
+        standard_results, "_S02_COMPLEXITY_KEYS", ()
+    )
     if not gate_six_binding:
         legacy_source = target / "src/supportability_gate/standard_results.py"
         definition_source = definition / "src/supportability_gate/standard_results.py"
@@ -383,6 +399,11 @@ def main() -> None:
         targets = [derived_targets[path]] if path in derived_targets else []
         value["responsibility_targets"] = targets
         value["unbounded_production_paths"] = []
+        if gate_eight_binding:
+            value["review_evidence_binding"] = {
+                "base": {"blob_sha": "7" * 40, "sha256": "7" * 64},
+                "head": {"blob_sha": "8" * 40, "sha256": "8" * 64},
+            }
         return value
 
     def characterization_fixture(identity: Any, path: str) -> dict[str, Any]:
@@ -412,6 +433,10 @@ def main() -> None:
             if not isinstance(separation, dict):
                 raise RuntimeError("invalid legacy review fixture")
             separation["boundaries"] = []
+        value["review_handoff"] = {
+            "remaining_risks": [HANDOFF_SENTINEL],
+            "summary": HANDOFF_SENTINEL,
+        }
         return value
 
     def refactor_fixture(
@@ -462,6 +487,24 @@ def main() -> None:
         if gate_six_binding and evidence_sources != GATE_SIX_EVIDENCE_SOURCES:
             raise RuntimeError("Gate 6 evidence sources are incomplete")
         case["rows"][5]["evidence_sources"] = GATE_SIX_EVIDENCE_SOURCES
+        case["rows"][7]["evidence_sources"] = GATE_EIGHT_EVIDENCE_SOURCES
+    if not gate_eight_binding:
+        for name in ("gate-7-technical", "simultaneous"):
+            case = payload["behavior"]["cases"][name]
+            error = case["lane_failures"][-1]["technical_errors"]
+            case["lane_failures"].append(
+                {"policy_blocks": [], "standard": 8, "technical_errors": error}
+            )
+            case["enforcer_exits"][7] = 2
+            case["rows"][7]["result"] = "TECHNICAL_FAILURE"
+            case["shared_failures"].append(
+                {
+                    "affected_standards": [7, 8],
+                    "code": error[0],
+                    "dependency": "quality-profile:artifact-binding",
+                    "kind": "TECHNICAL_ERROR",
+                }
+            )
 
     content = (target / ".supportability-review.toml").read_bytes()
     if (
@@ -480,6 +523,7 @@ def main() -> None:
         "accepted": parsed is not None,
         "blocks": list(blocks),
     }
+    payload["behavior"]["schema_version"] = "standard-results.v3"
     payload["scenario"] = "gate7-standard-results-boundary"
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))
 

@@ -1274,8 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S09 issue #152 is the sole active slice
-Next milestone authorized: S10 only after exact protected S09 completion, qualification, and transition readback
+Current authorized work: Project #10 S10 issue #153 is the sole active slice
+Next milestone authorized: S11 only after exact protected S10 completion, qualification, and transition readback
 ```
 
 ## Milestone transition rules
@@ -2107,3 +2107,50 @@ Do not create a new terminal label not authorized by an active milestone directi
   PR #63 plus the fixed representative poison and lane-isolation matrix; then merge this source PR
   normally without bypass, finish issue/Project/ledger readback, set S09
   `Done / Complete / On scope / Yes`, and refresh and activate S10 only.
+
+## Project #10 S10 Gate 8 qualification
+
+- Prospective terminal result recorded by this same-PR ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. Live S10 remains
+  `In progress / Missing / On scope / No` until the protected pull request closing issue #153
+  merges normally and every required Python and frontend positive, short-task, deceptive-poison,
+  Gate-8-only, all-eight, exact-source, focused-review, cleanup, issue, and Project readback succeeds.
+  This entry becomes canonical only through that exact normal protected merge.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg33gUc`, repository issue #153, activation evidence comment
+  `5433832672`, and exact protected source base
+  `9a782c191e84bdc3d4326f435b15601f2def9594`.
+- Responsibility boundary: Gate 8 owns canonical handoff derivation and validation from already
+  authenticated diff, complexity, characterization, refactor, quality, result, ownership,
+  review-blob, and citation facts. It does not execute target code, accept author-written completion
+  claims, alter Gates 1-7 decisions, request connector review, change policy thresholds or scope,
+  migrate rulesets, or perform S11 inventory work.
+- Source contract: `.supportability-review.toml` supplies only the exact
+  `DERIVED_FROM_AUTHENTICATED_EVIDENCE` sentinel for handoff fields. The evaluator binds immutable
+  base/head review blobs by Git object SHA and content SHA-256. `standard-results.v3` derives and
+  hashes change, responsibility-boundary, function/C901, executed-validation, source-outcome,
+  changed/high-risk coverage, exclusion, threshold/scope, untested-path, risk, gap, follow-up,
+  identity, and source-citation facts. The complexity Markdown omits the non-authoritative source
+  handoff field; the authoritative aggregate retains the canonical derived handoff.
+- Isolation and trust: unsupported source prose, missing or stale head review evidence, altered
+  canonical facts, altered hashes, unresolved citation bindings, hidden failures, and false
+  no-risk/no-gap claims fail closed in Gate 8. Gate 8 shares only authenticated dependencies it
+  consumes; per-lane enforcer validation confines handoff-artifact tampering to Gate 8 while
+  independently computable Gates 1-7 retain their correct results.
+- Direct acceptance surface: `tests/test_evaluate_complexity.py` covers exact base/head review-blob
+  binding and rejection of unsupported summary and no-risk prose. `tests/test_standard_results.py`
+  covers canonical facts, threshold/scope truth, stale/unbound/missing and schema-valid ungrounded
+  evidence, authenticated dependency routing, source/result tampering, citation binding, hidden
+  risk, and Gate-8-only enforcement. The predecessor-created versioned aggregate characterization
+  records the v3 evidence contract without importing any source from preserved unmerged PR #142.
+- Qualification limit: no Gate 1-7 redesign, target-code import or execution, arbitrary command,
+  package, workflow redesign, consumer activation, ruleset migration, threshold, exclusion, waiver,
+  scope narrowing, immutable/frozen source change, completed-review rerun, or S11 behavior is part
+  of S10.
+- Remaining work: complete the exact targeted and mandatory source proof; open exactly one protected
+  implementation PR with `Closes #153`; freeze one green review head; complete one serial Focus 1-8
+  lifecycle; adjudicate findings together and apply at most one bounded remediation batch; resolve
+  every conversation; run deterministic-only final-head proof without repeating review; complete
+  and clean Python/frontend positive, authenticated short-task, deceptive-poison, Gate-8-only, and
+  all-eight canaries; merge normally without bypass; finish issue/Project/ledger readback; set S10
+  `Done / Complete / On scope / Yes`; then refresh and activate S11 only.

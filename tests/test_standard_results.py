@@ -43,6 +43,10 @@ EXPECTED_CHARACTERIZATION_ARTIFACTS = {
     "base": {"capture_sha256": "3" * 64, "digest": "4" * 64, "id": "701"},
     "head": {"capture_sha256": "5" * 64, "digest": "6" * 64, "id": "702"},
 }
+REVIEW_BINDING = {
+    "base": {"blob_sha": "7" * 40, "sha256": "7" * 64},
+    "head": {"blob_sha": "8" * 40, "sha256": "8" * 64},
+}
 
 
 def _canonical(value: object) -> bytes:
@@ -73,7 +77,10 @@ def _review_evidence() -> dict[str, object]:
             "owns": "Sample behavior.",
             "path": "src/sample.py",
         },
-        "review_handoff": {"remaining_risks": ["None known."], "summary": "Ready."},
+        "review_handoff": {
+            "remaining_risks": ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"],
+            "summary": "DERIVED_FROM_AUTHENTICATED_EVIDENCE",
+        },
         "schema_version": "1.0",
         "separation_of_concerns": {
             "after": "One owner.",
@@ -259,6 +266,7 @@ def _complexity(
         "rename_bindings": [],
         "repository_remote": f"github.com/{IDENTITY.repository}",
         "review_evidence": _review_evidence(),
+        "review_evidence_binding": copy.deepcopy(REVIEW_BINDING),
         "review_evidence_path": ".supportability-review.toml",
         "ruff_diagnostics": [],
         "schema_version": "1.0",
@@ -601,6 +609,289 @@ def test_clean_current_aggregate_schema_passes_without_prototype_standard_blocks
     assert standard_results.review_required(payload) is True
 
 
+def test_gate_eight_exposes_exact_canonical_handoff_facts() -> None:
+    inputs = _inputs()
+    payload = _compose(inputs)
+
+    handoff = payload["review_handoff"]
+    assert handoff["schema_version"] == "review-handoff.v1"
+    assert handoff["identity"] == {
+        "base_sha": IDENTITY.base_sha,
+        "characterization_artifacts": EXPECTED_CHARACTERIZATION_ARTIFACTS,
+        "characterization_result_sha256": hashlib.sha256(_canonical(inputs[1])).hexdigest(),
+        "complexity_result_sha256": hashlib.sha256(_canonical(inputs[0])).hexdigest(),
+        "head_sha": IDENTITY.head_sha,
+        "quality_artifact": {
+            "capture_sha256": EXPECTED_QUALITY_ARTIFACT["capture_sha256"],
+            "digest": EXPECTED_QUALITY_ARTIFACT["digest"],
+            "id": 789,
+        },
+        "repository": IDENTITY.repository,
+        "repository_id": IDENTITY.repository_id,
+        "refactor_result_sha256": hashlib.sha256(_canonical(inputs[2])).hexdigest(),
+        "review_evidence": REVIEW_BINDING,
+        "run_attempt": IDENTITY.run_attempt,
+        "run_id": IDENTITY.run_id,
+        "quality_provenance_sha256": hashlib.sha256(_canonical(inputs[3])).hexdigest(),
+        "workflow_sha": IDENTITY.workflow_sha,
+    }
+    assert handoff["changed_files"] == [
+        {
+            "base_production": True,
+            "changed_head_lines": [1],
+            "complexity_assessed": True,
+            "head_production": True,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED",
+        }
+    ]
+    assert handoff["responsibility_boundaries"] == []
+    assert handoff["functions"] == []
+    assert handoff["validation"]["source_outcomes"] == SUCCESS_OUTCOMES
+    assert handoff["validation"]["commands"][0]["adapter"] == "python.ruff-lint.v1"
+    assert handoff["validation"]["commands"][0]["executed_arguments"][:3] == [
+        "python",
+        "-I",
+        "-m",
+    ]
+    assert handoff["coverage"] == {
+        "candidate_contract_changed": False,
+        "changed_paths": ["src/sample.py"],
+        "exclusions": [],
+        "gate_coverage": [
+            {"adapter": "python.c901-touched.v1", "paths": ["src"]},
+            {"adapter": "python.ast-imports.v1", "paths": ["src"]},
+        ],
+        "high_risk_paths": [],
+        "maximum_complexity": 10,
+        "production_files": ["src/sample.py"],
+        "production_paths": ["src"],
+        "scope_state": "UNCHANGED",
+        "test_files": [],
+        "threshold_state": "UNCHANGED",
+        "untested_paths": [],
+    }
+    assert handoff["risks"] == []
+    assert handoff["gaps"] == []
+    assert handoff["follow_up"] == []
+    responsibility_facts = {
+        "boundaries": handoff["responsibility_boundaries"],
+        "targets": handoff["responsibility_targets"],
+    }
+    source_facts = {
+        "change": (["complexity-result.json:changed_files"], handoff["changed_files"]),
+        "coverage": (
+            [
+                "complexity-result.json:gate_coverage",
+                "complexity-result.json:policy_blocks",
+                "complexity-result.json:quality_profile",
+            ],
+            handoff["coverage"],
+        ),
+        "functions": (["complexity-result.json:functions"], handoff["functions"]),
+        "identity": (
+            [
+                "characterization-result.json",
+                "complexity-result.json",
+                "quality-provenance.json",
+                "refactor-policy-result.json",
+                "workflow-run-identity",
+            ],
+            handoff["identity"],
+        ),
+        "responsibilities": (
+            [
+                "complexity-result.json:responsibility_targets",
+                "complexity-result.json:review_evidence.separation_of_concerns",
+            ],
+            responsibility_facts,
+        ),
+        "review_identity": (
+            ["complexity-result.json:review_evidence_binding"],
+            handoff["identity"]["review_evidence"],
+        ),
+        "validation": (
+            [
+                "complexity-result.json:quality_profile.commands",
+                "quality-provenance.json:commands",
+            ],
+            handoff["validation"]["commands"],
+        ),
+    }
+    assert handoff["sources"] == {
+        name: {
+            "citations": citations,
+            "sha256": hashlib.sha256(_canonical(fact)).hexdigest(),
+        }
+        for name, (citations, fact) in source_facts.items()
+    }
+    assert payload["review_handoff_sha256"] == hashlib.sha256(_canonical(handoff)).hexdigest()
+    assert (
+        "complexity-result.json:review_evidence_binding" in _entry(payload, 8)["evidence_sources"]
+    )
+
+
+def test_handoff_exposes_only_source_bound_boundary_identities() -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence"]["responsibility_boundary"] = {
+        "does_not_own": "Fictional exclusion.",
+        "owns": "Fictional ownership.",
+        "path": "src/unrelated.py",
+    }
+    inputs[0]["review_evidence"]["separation_of_concerns"] = {
+        "after": "Fictional after claim.",
+        "before": "Fictional before claim.",
+        "boundaries": [
+            {
+                "after": "Fictional boundary after.",
+                "before": "Fictional boundary before.",
+                "kind": "function",
+                "path": "src/sample.py",
+                "symbol": "calculate",
+            }
+        ],
+    }
+
+    handoff = _compose(inputs)["review_handoff"]
+
+    assert handoff["responsibility_boundaries"] == [
+        {"kind": "function", "path": "src/sample.py", "symbol": "calculate"}
+    ]
+    assert "Fictional" not in json.dumps(handoff)
+
+
+@pytest.mark.parametrize(
+    ("block", "field", "state"),
+    [
+        ("QUALITY_THRESHOLD_WEAKENING", "threshold_state", "WEAKENED"),
+        ("QUALITY_THRESHOLD_MISMATCH", "threshold_state", "MISMATCH"),
+        ("QUALITY_SCOPE_NARROWING", "scope_state", "NARROWED"),
+    ],
+)
+def test_handoff_reports_authenticated_threshold_and_scope_blocks(
+    block: str, field: str, state: str
+) -> None:
+    inputs = _inputs()
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert payload["review_handoff"]["coverage"][field] == state
+
+
+def test_handoff_does_not_claim_unchanged_scope_without_quality_profile() -> None:
+    inputs = _inputs()
+    inputs[0]["technical_errors"] = [
+        {"code": "MALFORMED_QUALITY_EVIDENCE", "message": "quality evidence missing"}
+    ]
+    inputs[0]["overall_result"] = "TECHNICAL_FAILURE"
+    inputs[0]["quality_profile"] = None
+    inputs[0]["modularity"] = None
+
+    coverage = _compose(inputs)["review_handoff"]["coverage"]
+
+    assert coverage["scope_state"] == "UNVERIFIED"
+    assert coverage["threshold_state"] == "UNVERIFIED"
+
+
+def test_handoff_does_not_use_malformed_quality_profile_as_truth() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["schema_version"] = "quality-gates.v3"
+    inputs[0]["quality_profile"]["maximum_complexity"] = 999
+
+    coverage = _compose(inputs)["review_handoff"]["coverage"]
+
+    assert coverage["maximum_complexity"] is None
+    assert coverage["scope_state"] == "UNVERIFIED"
+    assert coverage["threshold_state"] == "UNVERIFIED"
+
+
+def test_stale_review_handoff_blocks_gate_eight_only() -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence_binding"]["head"] = copy.deepcopy(
+        inputs[0]["review_evidence_binding"]["base"]
+    )
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*(["PASS"] * 7), "BLOCK"]
+    assert _entry(payload, 8)["policy_blocks"] == ["STALE_HANDOFF_EVIDENCE"]
+    assert payload["shared_failures"] == []
+
+
+def test_unbound_review_handoff_blocks_gate_eight_only() -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence_binding"]["head"] = None
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*(["PASS"] * 7), "BLOCK"]
+    assert _entry(payload, 8)["policy_blocks"] == ["UNAUTHENTICATED_HANDOFF_EVIDENCE"]
+    assert payload["shared_failures"] == []
+
+
+def test_missing_review_handoff_summary_blocks_gate_eight_only() -> None:
+    inputs = _inputs()
+    block = "MISSING_REVIEW_EVIDENCE:review_handoff.summary"
+    inputs[0]["review_evidence"] = {
+        "separation_of_concerns": inputs[0]["review_evidence"]["separation_of_concerns"]
+    }
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*(["PASS"] * 7), "BLOCK"]
+    assert _entry(payload, 8)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "block"),
+    [
+        (
+            "summary",
+            "All validation passed.",
+            "UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary",
+        ),
+        (
+            "remaining_risks",
+            ["None."],
+            "UNSUPPORTED_HANDOFF_CLAIM:review_handoff.remaining_risks",
+        ),
+    ],
+)
+def test_schema_valid_ungrounded_handoff_claim_blocks_gate_eight_only(
+    field: str, value: object, block: str
+) -> None:
+    inputs = _inputs()
+    inputs[0]["review_evidence"]["review_handoff"][field] = value
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*(["PASS"] * 7), "BLOCK"]
+    assert _entry(payload, 8)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
+
+
+def test_declared_unsupported_handoff_claim_blocks_gate_eight_only() -> None:
+    inputs = _inputs()
+    block = "UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary"
+    inputs[0]["review_evidence"] = {
+        "separation_of_concerns": inputs[0]["review_evidence"]["separation_of_concerns"]
+    }
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [*(["PASS"] * 7), "BLOCK"]
+    assert _entry(payload, 8)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
+
+
 def test_standard_results_import_does_not_require_analysis_dependencies() -> None:
     script = """
 import sys
@@ -695,9 +986,16 @@ def test_refactor_result_cross_binds_authenticated_change_evidence(defect: str) 
         if defect == "target_shape"
         else "REFACTOR_RESULT_BINDING_MISMATCH"
     )
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == [expected]
-    assert payload["shared_failures"] == []
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [expected] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": expected,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 def test_refactor_result_rejects_same_path_forged_target_identity() -> None:
@@ -710,9 +1008,17 @@ def test_refactor_result_rejects_same_path_forged_target_identity() -> None:
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
-    assert payload["shared_failures"] == []
+    code = "REFACTOR_RESULT_BINDING_MISMATCH"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 def test_refactor_binding_preserves_deleted_old_path_identity_on_rename() -> None:
@@ -838,9 +1144,16 @@ def test_forged_predecessor_evidence_is_gate_six_technical(defect: str, expected
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == [expected]
-    assert payload["shared_failures"] == []
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [expected] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": expected,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 @pytest.mark.parametrize("predecessor_state", ["missing", "wrong_step"])
@@ -877,8 +1190,17 @@ def test_spurious_sequence_block_is_gate_six_technical() -> None:
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+    code = "REFACTOR_RESULT_BINDING_MISMATCH"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 def test_sequence_and_predecessor_lookup_blocks_are_aggregated_together() -> None:
@@ -910,8 +1232,17 @@ def test_unsorted_refactor_blocks_are_malformed() -> None:
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]
+    code = "MALFORMED_REFACTOR_RESULT"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 @pytest.mark.parametrize(
@@ -949,8 +1280,17 @@ def test_current_authorization_failure_rejects_impossible_predecessor_evidence()
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+    code = "REFACTOR_RESULT_BINDING_MISMATCH"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 def test_nonapplicable_refactor_rejects_impossible_predecessor_evidence() -> None:
@@ -960,8 +1300,17 @@ def test_nonapplicable_refactor_rejects_impossible_predecessor_evidence() -> Non
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
+    code = "REFACTOR_RESULT_BINDING_MISMATCH"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 def test_unverifiable_authorized_target_remains_a_gate_six_block() -> None:
@@ -1029,9 +1378,17 @@ def test_non_applicable_refactor_rejects_owner_authorization_blocks() -> None:
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["REFACTOR_RESULT_BINDING_MISMATCH"]
-    assert payload["shared_failures"] == []
+    code = "REFACTOR_RESULT_BINDING_MISMATCH"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 def test_non_applicable_refactor_does_not_require_runnability_extension() -> None:
@@ -1059,9 +1416,17 @@ def test_refactor_authorization_lists_are_canonical(field: str, block: str) -> N
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS"] * 5 + ["TECHNICAL_FAILURE"] + ["PASS"] * 2
-    assert _entry(payload, 6)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]
-    assert payload["shared_failures"] == []
+    code = "MALFORMED_REFACTOR_RESULT"
+    assert _technical_standards(payload) == {6, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (6, 8))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 @pytest.mark.parametrize(
@@ -1500,10 +1865,10 @@ def test_characterization_aggregate_rejects_semantic_forgery(case: str) -> None:
 
     payload = _compose(inputs)
 
-    assert _technical_standards(payload) == {5, 6}
+    assert _technical_standards(payload) == {5, 6, 8}
     assert all(
         _entry(payload, standard)["technical_errors"] == ["MALFORMED_CHARACTERIZATION_RESULT"]
-        for standard in (5, 6)
+        for standard in (5, 6, 8)
     )
 
 
@@ -1516,11 +1881,11 @@ def test_characterization_artifacts_require_external_binding(side: str, field: s
 
     payload = _compose(inputs)
 
-    assert _technical_standards(payload) == {5, 6}
+    assert _technical_standards(payload) == {5, 6, 8}
     assert all(
         _entry(payload, standard)["technical_errors"]
         == ["CHARACTERIZATION_RESULT_BINDING_MISMATCH"]
-        for standard in (5, 6)
+        for standard in (5, 6, 8)
     )
 
 
@@ -1530,10 +1895,11 @@ def test_high_risk_paths_require_authenticated_profile_binding() -> None:
 
     payload = _compose(inputs)
 
-    assert _technical_standards(payload) == {4, 7}
+    assert _technical_standards(payload) == {4, 7, 8}
     code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
     assert _entry(payload, 4)["technical_errors"] == [code]
     assert _entry(payload, 7)["technical_errors"] == [code]
+    assert _entry(payload, 8)["technical_errors"] == [code]
 
 
 def test_gate_four_aggregate_requires_authentic_changed_path_coupling() -> None:
@@ -1611,7 +1977,7 @@ def test_indexed_boundary_evidence_poison_blocks_gate_two_only(block: str) -> No
     assert payload["shared_failures"] == []
 
 
-def test_boundary_derivation_failure_is_gate_two_technical_only() -> None:
+def test_boundary_derivation_failure_affects_only_gate_two_and_handoff() -> None:
     inputs = _inputs()
     code = "SEPARATION_BOUNDARY_DERIVATION_FAILURE"
     inputs[0]["technical_errors"] = [{"code": code, "message": "invalid source"}]
@@ -1619,15 +1985,14 @@ def test_boundary_derivation_failure_is_gate_two_technical_only() -> None:
 
     payload = _compose(inputs)
 
-    assert _results(payload) == ["PASS", "TECHNICAL_FAILURE", *["PASS"] * 6]
+    assert _technical_standards(payload) == {2, 8}
     assert _entry(payload, 2)["technical_errors"] == [f"COMPLEXITY_RESULT:{code}"]
     assert standard_block_ownership.expected_technical_dependency(
         f"COMPLEXITY_RESULT:{code}", "complexity-result:technical-errors"
-    ) == ("complexity-result:technical-errors", frozenset({2}))
-    assert payload["shared_failures"] == []
+    ) == ("complexity-result:technical-errors", frozenset({2, 8}))
 
 
-def test_refactor_target_derivation_failure_is_gate_six_technical_only() -> None:
+def test_refactor_target_derivation_failure_affects_only_gate_six_and_handoff() -> None:
     inputs = _inputs()
     code = "REFACTOR_TARGET_DERIVATION_FAILURE"
     inputs[0]["technical_errors"] = [{"code": code, "message": "target derivation failed"}]
@@ -1637,9 +2002,16 @@ def test_refactor_target_derivation_failure_is_gate_six_technical_only() -> None
 
     payload = _compose(inputs)
 
-    assert _results(payload) == [*(["PASS"] * 5), "TECHNICAL_FAILURE", "PASS", "PASS"]
+    assert _technical_standards(payload) == {6, 8}
     assert _entry(payload, 6)["technical_errors"] == [f"COMPLEXITY_RESULT:{code}"]
-    assert payload["shared_failures"] == []
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [6, 8],
+            "code": f"COMPLEXITY_RESULT:{code}",
+            "dependency": "complexity-result:technical-errors",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
     forged = copy.deepcopy(inputs)
     forged[2]["changed_paths"] = ["src/forged.py"]
@@ -1678,8 +2050,11 @@ def test_quality_provenance_binding_mismatch_is_gate_seven_technical_only(
 
     payload = _compose(inputs)
 
-    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
-    assert "QUALITY_RESULT_BINDING_MISMATCH" in _entry(payload, 7)["technical_errors"]
+    assert _technical_standards(payload) == {7, 8}
+    assert all(
+        "QUALITY_RESULT_BINDING_MISMATCH" in _entry(payload, standard)["technical_errors"]
+        for standard in (7, 8)
+    )
 
 
 def test_malformed_quality_profile_affects_only_its_explicit_dependents() -> None:
@@ -1688,19 +2063,9 @@ def test_malformed_quality_profile_affects_only_its_explicit_dependents() -> Non
 
     payload = _compose(inputs)
 
-    assert _results(payload) == [
-        "PASS",
-        "PASS",
-        "PASS",
-        "TECHNICAL_FAILURE",
-        "PASS",
-        "PASS",
-        "TECHNICAL_FAILURE",
-        "PASS",
-    ]
+    assert _technical_standards(payload) == {4, 7, 8}
     code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
-    assert _entry(payload, 4)["technical_errors"] == [code]
-    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
 
 
 def test_malformed_quality_profile_cannot_abort_added_path_isolation() -> None:
@@ -1709,10 +2074,9 @@ def test_malformed_quality_profile_cannot_abort_added_path_isolation() -> None:
 
     payload = _compose(inputs)
 
-    assert _technical_standards(payload) == {4, 7}
+    assert _technical_standards(payload) == {4, 7, 8}
     code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
-    assert _entry(payload, 4)["technical_errors"] == [code]
-    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
 
 
 @pytest.mark.parametrize(
@@ -1732,8 +2096,11 @@ def test_quality_capture_rejects_valid_shaped_split_forgery_in_gate_seven_only(
 
     payload = _compose(inputs, expected_quality_artifact=trusted)
 
-    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
-    assert _entry(payload, 7)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
+    assert _technical_standards(payload) == {7, 8}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
+        for standard in (7, 8)
+    )
     assert payload["quality_artifact"] is None
 
 
@@ -1744,8 +2111,11 @@ def test_freshly_authenticated_quality_argv_poison_is_gate_seven_technical_only(
 
     payload = _compose(inputs, expected_quality_artifact=trusted)
 
-    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
-    assert _entry(payload, 7)["technical_errors"] == ["MALFORMED_QUALITY_RESULT_BINDING"]
+    assert _technical_standards(payload) == {7, 8}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["MALFORMED_QUALITY_RESULT_BINDING"]
+        for standard in (7, 8)
+    )
     assert payload["quality_artifact"] is None
 
 
@@ -1757,10 +2127,9 @@ def test_freshly_authenticated_quality_template_poison_is_quality_evidence_failu
 
     payload = _compose(inputs, expected_quality_artifact=trusted)
 
-    assert _technical_standards(payload) == {4, 7}
+    assert _technical_standards(payload) == {4, 7, 8}
     code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
-    assert _entry(payload, 4)["technical_errors"] == [code]
-    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
     assert payload["quality_artifact"] is None
 
 
@@ -1777,10 +2146,9 @@ def test_freshly_authenticated_quality_adapter_sequence_is_required(mutation: st
 
     payload = _compose(inputs, expected_quality_artifact=trusted)
 
-    assert _technical_standards(payload) == {4, 7}
+    assert _technical_standards(payload) == {4, 7, 8}
     code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
-    assert _entry(payload, 4)["technical_errors"] == [code]
-    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
     assert payload["quality_artifact"] is None
 
 
@@ -1823,8 +2191,11 @@ def test_missing_executed_argv_is_gate_seven_technical_only() -> None:
 
     payload = _compose(inputs)
 
-    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
-    assert _entry(payload, 7)["technical_errors"] == ["MALFORMED_QUALITY_RESULT_BINDING"]
+    assert _technical_standards(payload) == {7, 8}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["MALFORMED_QUALITY_RESULT_BINDING"]
+        for standard in (7, 8)
+    )
 
 
 @pytest.mark.parametrize(
@@ -1844,8 +2215,11 @@ def test_valid_looking_quality_artifact_poison_is_gate_seven_technical_only(
 
     payload = _compose(inputs, expected_quality_artifact=trusted)
 
-    assert _results(payload) == [*("PASS",) * 6, "TECHNICAL_FAILURE", "PASS"]
-    assert _entry(payload, 7)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
+    assert _technical_standards(payload) == {7, 8}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
+        for standard in (7, 8)
+    )
     assert payload["quality_artifact"] is None
 
 
@@ -1867,7 +2241,7 @@ def test_simultaneous_gate_three_and_gate_seven_poisons_remain_independent() -> 
         "PASS",
         "PASS",
         "TECHNICAL_FAILURE",
-        "PASS",
+        "TECHNICAL_FAILURE",
     ]
 
 
@@ -1912,7 +2286,7 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
     isolated[0]["architecture"] = _complexity()["architecture"]
     isolated[0]["modularity"] = _complexity()["modularity"]
     isolated_payload = _compose(isolated)
-    assert _technical_standards(isolated_payload) == {1}
+    assert _technical_standards(isolated_payload) == {1, 8}
     assert _entry(isolated_payload, 1)["technical_errors"] == [
         "COMPLEXITY_RESULT:MCCABE_GRAPH_MISMATCH"
     ]
@@ -1938,14 +2312,14 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
     quality[0]["modularity"] = None
     quality[0]["quality_profile"] = None
     quality_payload = _compose(quality)
-    assert _technical_standards(quality_payload) == {4, 7}
+    assert _technical_standards(quality_payload) == {4, 7, 8}
 
     simultaneous = copy.deepcopy(quality)
     simultaneous[0]["technical_errors"].insert(
         0, {"code": "MCCABE_GRAPH_MISMATCH", "message": "graph mismatch"}
     )
     simultaneous_payload = _compose(simultaneous)
-    assert _technical_standards(simultaneous_payload) == {1, 4, 7}
+    assert _technical_standards(simultaneous_payload) == {1, 4, 7, 8}
 
     syntax = _inputs()
     syntax[0]["technical_errors"] = [
@@ -1956,9 +2330,9 @@ def test_unmapped_aggregate_analyzer_error_stays_with_aggregate_owners() -> None
     syntax[0]["architecture"] = None
     syntax[0]["modularity"] = None
     syntax_payload = _compose(syntax)
-    assert _technical_standards(syntax_payload) == {1, 3, 4}
+    assert _technical_standards(syntax_payload) == {1, 3, 4, 8}
     assert _entry(syntax_payload, 7)["result"] == "PASS"
-    assert _entry(syntax_payload, 8)["result"] == "PASS"
+    assert _entry(syntax_payload, 8)["result"] == "TECHNICAL_FAILURE"
 
 
 def test_wrong_source_block_affects_source_dependents_and_claimed_owner_only() -> None:
@@ -1970,7 +2344,7 @@ def test_wrong_source_block_affects_source_dependents_and_claimed_owner_only() -
 
     payload = _compose(inputs)
 
-    expected = {3, 5, 6}
+    expected = {3, 5, 6, 8}
     code = f"STANDARD_BLOCK_SOURCE_MISMATCH:{block}"
     assert _technical_standards(payload) == expected
     assert payload["shared_failures"] == [
@@ -1978,6 +2352,26 @@ def test_wrong_source_block_affects_source_dependents_and_claimed_owner_only() -
             "affected_standards": sorted(expected),
             "code": code,
             "dependency": "characterization-result:policy-blocks",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
+
+
+def test_wrong_refactor_source_block_affects_handoff_dependency() -> None:
+    inputs = _inputs()
+    block = "IMPORT_CYCLE:src/a.py:1:src.b"
+    inputs[2]["policy_blocks"] = [block]
+    inputs[2]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    code = f"STANDARD_BLOCK_SOURCE_MISMATCH:{block}"
+    assert _technical_standards(payload) == {3, 6, 8}
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": [3, 6, 8],
+            "code": code,
+            "dependency": "refactor-policy-result:policy-blocks",
             "kind": "TECHNICAL_ERROR",
         }
     ]
@@ -2043,13 +2437,13 @@ def test_unknown_root_review_key_is_shared_document_defect() -> None:
     "code",
     ["PROFILE_NODE_MISMATCH", "MCCABE_GRAPH_MISMATCH", "MISSING_FUNCTION_BODY"],
 )
-def test_metric_technical_failures_belong_only_to_gate_one(code: str) -> None:
+def test_metric_technical_failures_affect_only_gate_one_and_handoff(code: str) -> None:
     rendered = f"COMPLEXITY_RESULT:{code}"
 
-    assert standard_block_ownership.technical_owners(rendered) == frozenset({1})
+    assert standard_block_ownership.technical_owners(rendered) == frozenset({1, 8})
     assert standard_block_ownership.expected_technical_dependency(rendered, "") == (
         "complexity-result:technical-errors",
-        frozenset({1}),
+        frozenset({1, 8}),
     )
 
 
@@ -2087,6 +2481,24 @@ def test_one_added_document_line_is_authenticated_short_task() -> None:
     assert "quality-provenance.json" in _entry(payload, 7)["evidence_sources"]
     assert payload["source_outcomes"]["quality"] == "success"
     assert standard_results.review_required(payload) is False
+
+
+def test_short_task_quality_failure_stays_in_the_only_applicable_lane() -> None:
+    inputs = _inputs("docs/release-note.md", [7], status="ADDED")
+    inputs[3]["run_id"] = "999"
+
+    payload = _compose(inputs)
+
+    assert payload["short_task"] is True
+    assert _results(payload) == [
+        *("NOT_APPLICABLE_SHORT_TASK",) * 6,
+        "TECHNICAL_FAILURE",
+        "NOT_APPLICABLE_SHORT_TASK",
+    ]
+    assert "QUALITY_RESULT_BINDING_MISMATCH" in _entry(payload, 7)["technical_errors"]
+    assert _entry(payload, 8)["technical_errors"] == []
+    assert payload["shared_failures"] == []
+    assert standard_results.validate_payload(payload, IDENTITY) is None
 
 
 def test_short_task_ignores_review_blocks_owned_by_inapplicable_lanes() -> None:
@@ -2225,10 +2637,10 @@ def test_cli_captures_one_added_document_line_without_broadening_other_files(
             "characterization",
             "failure",
             "MALFORMED_CHARACTERIZATION_RESULT",
-            {5, 6},
+            {5, 6, 8},
         ),
-        ("refactor", "failure", "MALFORMED_REFACTOR_RESULT", {6}),
-        ("quality", "failure", "MALFORMED_QUALITY_PROVENANCE", {7}),
+        ("refactor", "failure", "MALFORMED_REFACTOR_RESULT", {6, 8}),
+        ("quality", "failure", "MALFORMED_QUALITY_PROVENANCE", {7, 8}),
     ],
 )
 def test_completed_passing_source_requires_success_outcome(
@@ -2297,10 +2709,9 @@ def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
 
     payload = _compose(inputs, source_outcomes=outcomes)
 
-    assert _technical_standards(payload) == {4, 7}
+    assert _technical_standards(payload) == {4, 7, 8}
     code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
-    assert _entry(payload, 4)["technical_errors"] == [code]
-    assert _entry(payload, 7)["technical_errors"] == [code]
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
 
 
 @pytest.mark.parametrize(
@@ -2350,7 +2761,7 @@ def test_complexity_policy_exit_blocks_gate_one_only(
     forged = copy.deepcopy(inputs)
     forged[0]["policy_blocks"] = [f"QUALITY_GATE_FAILED:{adapter}"]
     forged_payload = _compose(forged, source_outcomes=outcomes)
-    assert _technical_standards(forged_payload) == {4, 7}
+    assert _technical_standards(forged_payload) == {4, 7, 8}
 
 
 @pytest.mark.parametrize(
@@ -2429,6 +2840,23 @@ def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> No
     assert _results(payload) == ["PASS"] * 8
     assert payload["source_outcomes"]["quality"] == "success"
     assert standard_results.review_required(payload) is True
+    assert payload["review_handoff"]["gaps"] == [
+        {"path": "src/sample.py", "qualified_name": "legacy", "remaining_gap": 2}
+    ]
+    assert payload["review_handoff"]["follow_up"] == [
+        {"next_target": 10, "path": "src/sample.py", "qualified_name": "legacy"}
+    ]
+
+    false_no_gap = copy.deepcopy(payload)
+    false_no_gap["review_handoff"]["gaps"] = []
+    false_no_gap["review_handoff_sha256"] = hashlib.sha256(
+        _canonical(false_no_gap["review_handoff"])
+    ).hexdigest()
+    with pytest.raises(
+        standard_results.StandardResultsError,
+        match="HANDOFF_RESULT_BINDING_MISMATCH",
+    ):
+        standard_results.validate_payload(false_no_gap, IDENTITY, standard=8)
 
     forged = copy.deepcopy(inputs)
     forged[0]["language"] = "typescript"
@@ -2646,18 +3074,23 @@ def test_uncertain_or_broad_docs_default_to_full_process(path: str, lines: list[
         ),
         (
             "quality_profile",
-            {4, 7},
+            {4, 7, 8},
             "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE",
             "complexity-result:technical-errors",
         ),
         (
             "characterization",
-            {5, 6},
+            {5, 6, 8},
             "MALFORMED_CHARACTERIZATION_RESULT",
             "characterization-result",
         ),
-        ("refactor", {6}, "MALFORMED_REFACTOR_RESULT", None),
-        ("quality_provenance", {7}, "MALFORMED_QUALITY_RESULT_BINDING", None),
+        ("refactor", {6, 8}, "MALFORMED_REFACTOR_RESULT", "refactor-policy-result"),
+        (
+            "quality_provenance",
+            {7, 8},
+            "MALFORMED_QUALITY_RESULT_BINDING",
+            "quality-profile:artifact-binding",
+        ),
     ],
 )
 def test_missing_critical_source_fields_fail_closed(
@@ -2838,6 +3271,73 @@ def test_exact_result_artifact_identity_mismatch_is_shared_via_enforcer(tmp_path
     } == {2}
 
 
+def test_handoff_tampering_is_technical_failure_for_gate_eight_only(
+    tmp_path: Path,
+) -> None:
+    payload = _compose(_inputs())
+    payload["review_handoff"]["identity"]["head_sha"] = "e" * 40
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert [
+        standard_results_enforcer.main(_enforcer_arguments(path, standard))
+        for standard in range(1, 9)
+    ] == [*([0] * 7), 2]
+
+
+@pytest.mark.parametrize("poison", ["changed-file", "command", "citation", "standard"])
+def test_rehashed_handoff_fact_tampering_fails_gate_eight_only(tmp_path: Path, poison: str) -> None:
+    payload = _compose(_inputs())
+    handoff = payload["review_handoff"]
+    if poison == "changed-file":
+        handoff["changed_files"][0]["new_path"] = "src/invented.py"
+    elif poison == "command":
+        handoff["validation"]["commands"][0]["executed_arguments"].append("--invented")
+    elif poison == "citation":
+        handoff["sources"]["change"]["citations"] = ["invented.json:changed_files"]
+    else:
+        handoff["validation"]["standards"][0]["result"] = "BLOCK"
+    payload["review_handoff_sha256"] = hashlib.sha256(_canonical(handoff)).hexdigest()
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 1)) == 0
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 8)) == 2
+
+
+def test_coordinated_rehash_cannot_detach_change_fact_from_authenticated_source(
+    tmp_path: Path,
+) -> None:
+    payload = _compose(_inputs())
+    handoff = payload["review_handoff"]
+    handoff["changed_files"][0]["new_path"] = "src/invented.py"
+    handoff["sources"]["change"]["sha256"] = hashlib.sha256(
+        _canonical(handoff["changed_files"])
+    ).hexdigest()
+    payload["review_handoff_sha256"] = hashlib.sha256(_canonical(handoff)).hexdigest()
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 1)) == 0
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 8)) == 2
+
+
+def test_rehashed_false_no_risk_claim_fails_gate_eight_only(tmp_path: Path) -> None:
+    inputs = _inputs()
+    inputs[0]["policy_blocks"] = ["QUALITY_SCOPE_NARROWING"]
+    inputs[0]["overall_result"] = "BLOCK"
+    payload = _compose(inputs)
+    handoff = payload["review_handoff"]
+    assert handoff["risks"]
+    handoff["risks"] = []
+    payload["review_handoff_sha256"] = hashlib.sha256(_canonical(handoff)).hexdigest()
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 1)) == 0
+    assert standard_results_enforcer.main(_enforcer_arguments(path, 8)) == 2
+
+
 def _producer_arguments(tmp_path: Path) -> tuple[list[str], dict[str, Path], Path]:
     inputs = _inputs()
     _bind_quality(inputs)
@@ -2924,12 +3424,17 @@ def _producer_arguments(tmp_path: Path) -> tuple[list[str], dict[str, Path], Pat
         ),
         (
             "characterization",
-            {5, 6},
+            {5, 6, 8},
             "MISSING_CHARACTERIZATION_RESULT",
             "characterization-result",
         ),
-        ("refactor", {6}, "MISSING_REFACTOR_RESULT", None),
-        ("quality", {7}, "MISSING_QUALITY_PROVENANCE", None),
+        ("refactor", {6, 8}, "MISSING_REFACTOR_RESULT", "refactor-policy-result"),
+        (
+            "quality",
+            {7, 8},
+            "MISSING_QUALITY_PROVENANCE",
+            "quality-profile:artifact-binding",
+        ),
     ],
 )
 def test_producer_missing_inputs_have_independent_outcomes(
@@ -2982,10 +3487,10 @@ def test_missing_characterization_suppresses_derived_refactor_missing(
 
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert capsys.readouterr().out.strip() == "false"
-    assert _technical_standards(payload) == {5, 6}
+    assert _technical_standards(payload) == {5, 6, 8}
     assert payload["shared_failures"] == [
         {
-            "affected_standards": [5, 6],
+            "affected_standards": [5, 6, 8],
             "code": "MISSING_CHARACTERIZATION_RESULT",
             "dependency": "characterization-result",
             "kind": "TECHNICAL_ERROR",
@@ -3034,9 +3539,9 @@ def _duplicate_root_key(value: dict[str, Any]) -> str:
     ("source", "expected_technical", "code"),
     [
         ("complexity", set(range(1, 9)), "MALFORMED_COMPLEXITY_RESULT"),
-        ("characterization", {5, 6}, "MALFORMED_CHARACTERIZATION_RESULT"),
-        ("refactor", {6}, "MALFORMED_REFACTOR_RESULT"),
-        ("quality", {7}, "MALFORMED_QUALITY_PROVENANCE"),
+        ("characterization", {5, 6, 8}, "MALFORMED_CHARACTERIZATION_RESULT"),
+        ("refactor", {6, 8}, "MALFORMED_REFACTOR_RESULT"),
+        ("quality", {7, 8}, "MALFORMED_QUALITY_PROVENANCE"),
     ],
 )
 def test_producer_rejects_duplicate_json_keys(

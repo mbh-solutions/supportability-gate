@@ -101,7 +101,15 @@
           "applicable": true,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
           "result": "PASS"
         }
@@ -218,7 +226,15 @@
           "applicable": true,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
           "result": "PASS"
         }
@@ -253,12 +269,19 @@
         0,
         0,
         2,
-        0
+        2
       ],
       "lane_failures": [
         {
           "policy_blocks": [],
           "standard": 7,
+          "technical_errors": [
+            "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 8,
           "technical_errors": [
             "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
           ]
@@ -335,12 +358,30 @@
           "applicable": true,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
-          "result": "PASS"
+          "result": "TECHNICAL_FAILURE"
         }
       ],
-      "shared_failures": [],
+      "shared_failures": [
+        {
+          "affected_standards": [
+            7,
+            8
+          ],
+          "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+          "dependency": "quality-profile:artifact-binding",
+          "kind": "TECHNICAL_ERROR"
+        }
+      ],
       "short_task": false
     },
     "shared-complexity-identity": {
@@ -489,7 +530,15 @@
           "applicable": true,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
           "result": "TECHNICAL_FAILURE"
         }
@@ -664,7 +713,15 @@
           "applicable": true,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
           "result": "BLOCK"
         }
@@ -788,7 +845,15 @@
           "applicable": false,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
           "result": "NOT_APPLICABLE_SHORT_TASK"
         }
@@ -823,7 +888,7 @@
         0,
         0,
         2,
-        0
+        2
       ],
       "lane_failures": [
         {
@@ -836,6 +901,13 @@
         {
           "policy_blocks": [],
           "standard": 7,
+          "technical_errors": [
+            "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 8,
           "technical_errors": [
             "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
           ]
@@ -912,12 +984,30 @@
           "applicable": true,
           "evidence_sources": [
             "complexity-result.json:changed_files",
-            "complexity-result.json:review_evidence.review_handoff"
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
           ],
-          "result": "PASS"
+          "result": "TECHNICAL_FAILURE"
         }
       ],
-      "shared_failures": [],
+      "shared_failures": [
+        {
+          "affected_standards": [
+            7,
+            8
+          ],
+          "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+          "dependency": "quality-profile:artifact-binding",
+          "kind": "TECHNICAL_ERROR"
+        }
+      ],
       "short_task": false
     }
   },
@@ -935,5 +1025,5 @@
     "accepted": true,
     "blocks": []
   },
-  "schema_version": "standard-results.v2"
+  "schema_version": "standard-results.v3"
 }

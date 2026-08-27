@@ -61,7 +61,11 @@ def _parser() -> argparse.ArgumentParser:
 
 def _entry(arguments: argparse.Namespace) -> dict[str, object]:
     payload = _read_json(Path(arguments.input))
-    standard_results.validate_payload(payload, _identity(arguments))
+    standard_results.validate_payload(
+        payload,
+        _identity(arguments),
+        standard=arguments.standard,
+    )
     rows = cast(dict[str, object], payload)["entries"]
     return cast(list[dict[str, object]], rows)[int(arguments.standard) - 1]
 

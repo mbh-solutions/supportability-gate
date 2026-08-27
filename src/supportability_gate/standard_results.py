@@ -14,6 +14,7 @@ from supportability_gate import (
     contract,
     modularity_policy,
     quality_profile,
+    review_evidence,
     standard_block_ownership,
 )
 
@@ -63,7 +64,7 @@ def _string_list(value: object, code: str) -> list[str]:
 
 
 # Deterministic S02 result contract.
-SCHEMA_VERSION = "standard-results.v2"
+SCHEMA_VERSION = "standard-results.v3"
 RESULTS = frozenset({"PASS", "BLOCK", "TECHNICAL_FAILURE", "NOT_APPLICABLE_SHORT_TASK"})
 SOURCE_OUTCOMES = frozenset({"success", "failure", "cancelled", "skipped"})
 SOURCE_KEYS = ("install", "complexity", "characterization", "refactor", "quality")
@@ -104,9 +105,42 @@ EVIDENCE_SOURCES = (
     ),
     (
         "complexity-result.json:changed_files",
+        "complexity-result.json:functions",
+        "complexity-result.json:gate_coverage",
+        "complexity-result.json:quality_profile",
+        "complexity-result.json:review_evidence_binding",
+        "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
         "complexity-result.json:review_evidence.review_handoff",
+        "characterization-result.json",
+        "refactor-policy-result.json",
+        "quality-provenance.json",
     ),
 )
+_HANDOFF_CITATIONS = {
+    "change": ("complexity-result.json:changed_files",),
+    "coverage": (
+        "complexity-result.json:gate_coverage",
+        "complexity-result.json:policy_blocks",
+        "complexity-result.json:quality_profile",
+    ),
+    "functions": ("complexity-result.json:functions",),
+    "identity": (
+        "characterization-result.json",
+        "complexity-result.json",
+        "quality-provenance.json",
+        "refactor-policy-result.json",
+        "workflow-run-identity",
+    ),
+    "responsibilities": (
+        "complexity-result.json:responsibility_targets",
+        "complexity-result.json:review_evidence.separation_of_concerns",
+    ),
+    "review_identity": ("complexity-result.json:review_evidence_binding",),
+    "validation": (
+        "complexity-result.json:quality_profile.commands",
+        "quality-provenance.json:commands",
+    ),
+}
 _S02_SHA40 = re.compile(r"[0-9a-f]{40}\Z")
 _S02_SHA64 = re.compile(r"[0-9a-f]{64}\Z")
 _S02_QUALITY_TOKEN = re.compile(r"\$[A-Z_]+")
@@ -167,6 +201,7 @@ _S02_COMPLEXITY_KEYS = {
     "responsibility_targets",
     "repository_remote",
     "review_evidence",
+    "review_evidence_binding",
     "review_evidence_path",
     "ruff_diagnostics",
     "schema_version",
@@ -301,6 +336,7 @@ class _S02Complexity:
     result: str
     source_sha256: str
     unbounded_production_paths: tuple[str, ...]
+    source: dict[str, Any]
 
 
 class _S02State:
@@ -318,10 +354,11 @@ class _S02State:
             self.shared.add(("POLICY_BLOCK", code, dependency, tuple(sorted(active))))
 
     def technical(self, code: str, dependency: str, affected: frozenset[int]) -> None:
-        for standard in affected:
+        active = affected & self.applicable
+        for standard in active:
             self.errors[standard].add(code)
-        if len(affected) > 1:
-            self.shared.add(("TECHNICAL_ERROR", code, dependency, tuple(sorted(affected))))
+        if len(active) > 1:
+            self.shared.add(("TECHNICAL_ERROR", code, dependency, tuple(sorted(active))))
 
 
 def _s02_exact(value: object, keys: set[str], code: str) -> dict[str, Any]:
@@ -605,6 +642,32 @@ def _s02_review(value: object, blocks: list[str], code: str) -> None:
         else:
             _s02_review_section(row[name], text_fields, list_fields, code)
     _s02_review_boundaries(row["module_boundaries"], code)
+
+
+def _s02_handoff_claim_blocks(value: object) -> list[str]:
+    if not isinstance(value, dict) or not isinstance(value.get("review_handoff"), dict):
+        return []
+    handoff = value["review_handoff"]
+    blocks = []
+    if handoff.get("summary") != review_evidence.HANDOFF_SENTINEL:
+        blocks.append("UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary")
+    if handoff.get("remaining_risks") != [review_evidence.HANDOFF_SENTINEL]:
+        blocks.append("UNSUPPORTED_HANDOFF_CLAIM:review_handoff.remaining_risks")
+    return blocks
+
+
+def _s02_review_binding(value: object, code: str) -> dict[str, Any]:
+    row = _s02_exact(value, {"base", "head"}, code)
+    for name in ("base", "head"):
+        binding = row[name]
+        if binding is None:
+            continue
+        binding = _s02_exact(binding, {"blob_sha", "sha256"}, code)
+        if not _s02_sha(binding["blob_sha"], _S02_SHA40) or not _s02_sha(
+            binding["sha256"], _S02_SHA64
+        ):
+            raise StandardResultsError(code)
+    return row
 
 
 def _s02_metric(value: object, code: str) -> dict[str, Any] | None:
@@ -1164,10 +1227,12 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
     ruff = _s02_ruff(row["ruff_diagnostics"], code)
     _s02_ruff_bindings(ruff, row["language"], heads, set(head_lines), code)
     _s02_commands(row["commands"], code, True)
+    _s02_review_binding(row["review_evidence_binding"], code)
     _s02_gate_coverage(row["gate_coverage"], row["language"], code, common_required)
     quality_adapters, quality_result = _s02_complexity_components(
         row, blocks, technical, changed, identity, code
     )
+    blocks = list(dict.fromkeys((*blocks, *_s02_handoff_claim_blocks(row["review_evidence"]))))
     return _S02Complexity(
         tuple((*blocks, *function_blocks)),
         tuple(technical),
@@ -1180,6 +1245,7 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         result,
         hashlib.sha256(_canonical(row)).hexdigest(),
         tuple(unbounded_production_paths),
+        row,
     )
 
 
@@ -2131,6 +2197,238 @@ def _s02_add_quality(
         return None
 
 
+def _s02_handoff_commands(
+    data: _S02Complexity,
+    provenance: object,
+    artifact: dict[str, object] | None,
+) -> list[dict[str, object]]:
+    profile = data.source["quality_profile"]
+    if artifact is None or not isinstance(profile, dict) or not isinstance(provenance, dict):
+        return []
+    proof_rows = provenance.get("commands")
+    if not isinstance(proof_rows, list):
+        return []
+    proof = {row["adapter"]: row for row in proof_rows if isinstance(row, dict)}
+    return [{**row, **proof[row["adapter"]]} for row in profile["commands"]]
+
+
+def _s02_handoff_boundaries(source: dict[str, Any]) -> list[dict[str, str]] | None:
+    review = source["review_evidence"]
+    if not isinstance(review, dict):
+        return None
+    separation = review.get("separation_of_concerns")
+    if not isinstance(separation, dict):
+        return None
+    boundaries = separation.get("boundaries")
+    if not isinstance(boundaries, list):
+        return None
+    return [
+        {name: row[name] for name in ("kind", "path", "symbol")}
+        for row in boundaries
+        if isinstance(row, dict)
+    ]
+
+
+def _s02_handoff_coverage(data: _S02Complexity) -> dict[str, object]:
+    source = data.source
+    profile = source["quality_profile"]
+    profile_verified = data.quality_result is not None and isinstance(profile, dict)
+    if not profile_verified:
+        profile = {}
+    candidate_changed = "CANDIDATE_CONTRACT_CHANGE" in data.blocks
+    weakened = bool({"THRESHOLD_WEAKENING", "QUALITY_THRESHOLD_WEAKENING"} & set(data.blocks))
+    mismatch = "QUALITY_THRESHOLD_MISMATCH" in data.blocks
+    narrowed = bool({"GATE_SCOPE_NARROWING", "QUALITY_SCOPE_NARROWING"} & set(data.blocks))
+    zero_statement = {
+        path
+        for command in profile.get("commands", [])
+        for path in command.get("zero_statement_paths", [])
+    }
+    untested = {
+        block.split(":", 2)[-1] for block in data.blocks if block.startswith("UNTESTED_AREA:")
+    }
+    return {
+        "candidate_contract_changed": candidate_changed,
+        "changed_paths": profile.get("changed_paths", []),
+        "exclusions": profile.get("exclusions", []),
+        "gate_coverage": source["gate_coverage"],
+        "high_risk_paths": profile.get("high_risk_paths", []),
+        "maximum_complexity": profile.get("maximum_complexity"),
+        "production_files": profile.get("production_files", []),
+        "production_paths": profile.get("production_paths", []),
+        "scope_state": (
+            "UNVERIFIED"
+            if not profile_verified
+            else "NARROWED"
+            if narrowed
+            else "UNVERIFIED_CANDIDATE_CHANGE"
+            if candidate_changed
+            else "UNCHANGED"
+        ),
+        "test_files": profile.get("test_files", []),
+        "threshold_state": (
+            "UNVERIFIED"
+            if not profile_verified
+            else "WEAKENED"
+            if weakened
+            else "MISMATCH"
+            if mismatch
+            else "UNVERIFIED_CANDIDATE_CHANGE"
+            if candidate_changed
+            else "UNCHANGED"
+        ),
+        "untested_paths": sorted(zero_statement | untested),
+    }
+
+
+def _s02_handoff_blocks(state: _S02State, data: _S02Complexity) -> None:
+    binding = data.source["review_evidence_binding"]
+    head = binding["head"]
+    base = binding["base"]
+    if head is None:
+        _s02_apply_block(state, "UNAUTHENTICATED_HANDOFF_EVIDENCE", "complexity-result")
+    elif base is not None and base["blob_sha"] == head["blob_sha"]:
+        _s02_apply_block(state, "STALE_HANDOFF_EVIDENCE", "complexity-result")
+
+
+def _s02_handoff_risks(entries: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        {"code": code, "kind": kind, "standard": row["standard"]}
+        for row in entries
+        for kind, codes in (
+            ("POLICY_BLOCK", row["policy_blocks"]),
+            ("TECHNICAL_ERROR", row["technical_errors"]),
+        )
+        if isinstance(codes, list)
+        for code in codes
+    ]
+
+
+def _s02_handoff_gaps(functions: list[dict[str, Any]]) -> list[dict[str, object]]:
+    return [
+        {
+            "path": (row["head"] or row["base"])["path"],
+            "qualified_name": (row["head"] or row["base"])["qualified_name"],
+            "remaining_gap": row["remaining_gap"],
+        }
+        for row in functions
+        if row["remaining_gap"]
+    ]
+
+
+def _s02_handoff_follow_up(functions: list[dict[str, Any]]) -> list[dict[str, object]]:
+    return [
+        {
+            "next_target": row["next_target"],
+            "path": (row["head"] or row["base"])["path"],
+            "qualified_name": (row["head"] or row["base"])["qualified_name"],
+        }
+        for row in functions
+        if row["next_target"] is not None
+    ]
+
+
+def _s02_handoff_source(name: str, value: object) -> dict[str, object]:
+    return {
+        "citations": list(_HANDOFF_CITATIONS[name]),
+        "sha256": hashlib.sha256(_canonical(value)).hexdigest(),
+    }
+
+
+def _s02_handoff(
+    state: _S02State,
+    data: _S02Complexity | None,
+    characterization_result: object,
+    refactor_result: object,
+    quality_provenance: object,
+    quality_artifact: dict[str, object] | None,
+    identity: RunIdentity,
+    outcomes: dict[str, str],
+) -> dict[str, object] | None:
+    if data is None:
+        return None
+    _s02_handoff_blocks(state, data)
+    entries = _s02_entries(state)
+    functions = data.source["functions"]
+    changed_files = json.loads(_canonical(data.changed_files))
+    coverage = _s02_handoff_coverage(data)
+    boundaries = _s02_handoff_boundaries(data.source)
+    targets = list(data.responsibility_targets)
+    commands = _s02_handoff_commands(data, quality_provenance, quality_artifact)
+    characterization_valid = not state.errors[5]
+    refactor_valid = not state.errors[6]
+    characterization_artifacts = (
+        characterization_result.get("artifacts")
+        if isinstance(characterization_result, dict)
+        and characterization_valid
+        and outcomes["characterization"] == "success"
+        else None
+    )
+    identity_facts = {
+        "base_sha": identity.base_sha,
+        "characterization_artifacts": characterization_artifacts,
+        "characterization_result_sha256": (
+            hashlib.sha256(_canonical(characterization_result)).hexdigest()
+            if characterization_valid
+            else None
+        ),
+        "complexity_result_sha256": data.source_sha256,
+        "head_sha": identity.head_sha,
+        "quality_artifact": quality_artifact,
+        "quality_provenance_sha256": (
+            hashlib.sha256(_canonical(quality_provenance)).hexdigest()
+            if quality_artifact is not None
+            else None
+        ),
+        "refactor_result_sha256": (
+            hashlib.sha256(_canonical(refactor_result)).hexdigest() if refactor_valid else None
+        ),
+        "repository": identity.repository,
+        "repository_id": identity.repository_id,
+        "review_evidence": data.source["review_evidence_binding"],
+        "run_attempt": identity.run_attempt,
+        "run_id": identity.run_id,
+        "workflow_sha": identity.workflow_sha,
+    }
+    responsibility_facts = {"boundaries": boundaries, "targets": targets}
+    return {
+        "changed_files": changed_files,
+        "coverage": coverage,
+        "follow_up": _s02_handoff_follow_up(functions),
+        "functions": functions,
+        "gaps": _s02_handoff_gaps(functions),
+        "identity": identity_facts,
+        "responsibility_boundaries": boundaries,
+        "responsibility_targets": targets,
+        "risks": _s02_handoff_risks(entries),
+        "schema_version": "review-handoff.v1",
+        "sources": {
+            "change": _s02_handoff_source("change", changed_files),
+            "coverage": _s02_handoff_source("coverage", coverage),
+            "functions": _s02_handoff_source("functions", functions),
+            "identity": _s02_handoff_source("identity", identity_facts),
+            "responsibilities": _s02_handoff_source("responsibilities", responsibility_facts),
+            "review_identity": _s02_handoff_source(
+                "review_identity", data.source["review_evidence_binding"]
+            ),
+            "validation": _s02_handoff_source("validation", commands),
+        },
+        "validation": {
+            "commands": commands,
+            "source_outcomes": outcomes,
+            "standards": [
+                {
+                    "policy_blocks": row["policy_blocks"],
+                    "result": row["result"],
+                    "standard": row["standard"],
+                    "technical_errors": row["technical_errors"],
+                }
+                for row in entries
+            ],
+        },
+    }
+
+
 def compose_results(
     complexity: dict[str, Any] | None,
     characterization: dict[str, Any] | None,
@@ -2174,6 +2472,16 @@ def compose_results(
         outcomes,
         complexity_error,
     )
+    handoff = _s02_handoff(
+        state,
+        data,
+        characterization,
+        refactor,
+        quality_provenance,
+        artifact,
+        identity,
+        outcomes,
+    )
     source_validated = bool(data and not data.technical)
     applicability: dict[str, object] = {
         "changed_files": list(data.changed_files) if data else [],
@@ -2191,6 +2499,10 @@ def compose_results(
         "quality_artifact": artifact,
         "repository": identity.repository,
         "repository_id": identity.repository_id,
+        "review_handoff": handoff,
+        "review_handoff_sha256": (
+            hashlib.sha256(_canonical(handoff)).hexdigest() if handoff is not None else None
+        ),
         "run_attempt": identity.run_attempt,
         "run_id": identity.run_id,
         "schema_version": SCHEMA_VERSION,
@@ -2270,13 +2582,17 @@ def _s02_source_uncertain(entries: list[dict[str, Any]]) -> bool:
     if any(row["policy_blocks"] for row in entries):
         return True
     codes = {code for row in entries for code in row["technical_errors"]}
-    return any(
-        standard_block_ownership.expected_technical_dependency(
+    for code in codes:
+        binding = standard_block_ownership.expected_technical_dependency(
             code, "quality-profile:artifact-binding"
         )
-        != ("quality-profile:artifact-binding", frozenset({7}))
-        for code in codes
-    )
+        if (
+            binding is None
+            or binding[0] != "quality-profile:artifact-binding"
+            or 7 not in binding[1]
+        ):
+            return True
+    return False
 
 
 def _s02_entry(value: object, standard: int, short_task: bool) -> dict[str, Any]:
@@ -2384,15 +2700,17 @@ def _s02_policy_ownership(
 def _s02_technical_ownership(
     technical: dict[str, set[int]],
     shared: dict[tuple[str, str], tuple[str, frozenset[int]]],
+    applicable: frozenset[int],
 ) -> None:
     for code, actual in technical.items():
         bound = shared.get(("TECHNICAL_ERROR", code))
         expected = standard_block_ownership.expected_technical_dependency(
             code, bound[0] if bound else ""
         )
-        if expected is None or expected[1] != frozenset(actual):
+        if expected is None or expected[1] & applicable != frozenset(actual):
             raise StandardResultsError("MALFORMED_STANDARD_TECHNICAL_OWNERSHIP")
-        if len(actual) > 1 and bound != expected:
+        active_expected = (expected[0], expected[1] & applicable)
+        if len(actual) > 1 and bound != active_expected:
             raise StandardResultsError("MALFORMED_SHARED_FAILURE")
         if len(actual) == 1 and bound is not None:
             raise StandardResultsError("MALFORMED_SHARED_FAILURE")
@@ -2401,10 +2719,11 @@ def _s02_technical_ownership(
 def _s02_ownership(
     entries: list[dict[str, Any]],
     shared: dict[tuple[str, str], tuple[str, frozenset[int]]],
+    applicable: frozenset[int],
 ) -> None:
     policies, technical = _s02_claims(entries)
     _s02_policy_ownership(policies, shared)
-    _s02_technical_ownership(technical, shared)
+    _s02_technical_ownership(technical, shared, applicable)
     used = {("POLICY_BLOCK", code) for code in policies} | {
         ("TECHNICAL_ERROR", code) for code in technical
     }
@@ -2412,7 +2731,158 @@ def _s02_ownership(
         raise StandardResultsError("MALFORMED_SHARED_FAILURE")
 
 
-def validate_payload(value: object, identity: RunIdentity | None = None) -> None:
+def _s02_handoff_sources(handoff: dict[str, Any], code: str) -> None:
+    responsibility_facts = {
+        "boundaries": handoff["responsibility_boundaries"],
+        "targets": handoff["responsibility_targets"],
+    }
+    identity = handoff["identity"]
+    validation = handoff["validation"]
+    expected = {
+        "change": handoff["changed_files"],
+        "coverage": handoff["coverage"],
+        "functions": handoff["functions"],
+        "identity": identity,
+        "responsibilities": responsibility_facts,
+        "review_identity": identity["review_evidence"],
+        "validation": validation["commands"],
+    }
+    sources = _s02_exact(handoff["sources"], set(expected), code)
+    for name, fact in expected.items():
+        source = _s02_exact(sources[name], {"citations", "sha256"}, code)
+        if (
+            source["citations"] != list(_HANDOFF_CITATIONS[name])
+            or source["sha256"] != hashlib.sha256(_canonical(fact)).hexdigest()
+        ):
+            raise StandardResultsError(code)
+
+
+def _s02_handoff_payload(
+    value: object,
+    sha256: object,
+    row: dict[str, Any],
+    entries: list[dict[str, Any]],
+) -> None:
+    if value is None:
+        if sha256 is not None or entries[7]["result"] in {"PASS", "BLOCK"}:
+            raise StandardResultsError("HANDOFF_RESULT_BINDING_MISMATCH")
+        return
+    handoff = _s02_exact(
+        value,
+        {
+            "changed_files",
+            "coverage",
+            "follow_up",
+            "functions",
+            "gaps",
+            "identity",
+            "responsibility_boundaries",
+            "responsibility_targets",
+            "risks",
+            "schema_version",
+            "sources",
+            "validation",
+        },
+        "HANDOFF_RESULT_BINDING_MISMATCH",
+    )
+    if (
+        handoff["schema_version"] != "review-handoff.v1"
+        or not _s02_sha(sha256, _S02_SHA64)
+        or hashlib.sha256(_canonical(handoff)).hexdigest() != sha256
+    ):
+        raise StandardResultsError("HANDOFF_RESULT_BINDING_MISMATCH")
+    identity = _s02_exact(
+        handoff["identity"],
+        {
+            "base_sha",
+            "characterization_artifacts",
+            "characterization_result_sha256",
+            "complexity_result_sha256",
+            "head_sha",
+            "quality_artifact",
+            "quality_provenance_sha256",
+            "refactor_result_sha256",
+            "repository",
+            "repository_id",
+            "review_evidence",
+            "run_attempt",
+            "run_id",
+            "workflow_sha",
+        },
+        "HANDOFF_RESULT_BINDING_MISMATCH",
+    )
+    actual = tuple(
+        identity[name]
+        for name in (
+            "repository",
+            "repository_id",
+            "base_sha",
+            "head_sha",
+            "workflow_sha",
+            "run_id",
+            "run_attempt",
+        )
+    )
+    expected = tuple(
+        row[name]
+        for name in (
+            "repository",
+            "repository_id",
+            "base_sha",
+            "head_sha",
+            "workflow_sha",
+            "run_id",
+            "run_attempt",
+        )
+    )
+    validation = _s02_exact(
+        handoff["validation"],
+        {"commands", "source_outcomes", "standards"},
+        "HANDOFF_RESULT_BINDING_MISMATCH",
+    )
+    code = "HANDOFF_RESULT_BINDING_MISMATCH"
+    _s02_handoff_sources(handoff, code)
+    standards = [
+        {
+            "policy_blocks": entry["policy_blocks"],
+            "result": entry["result"],
+            "standard": entry["standard"],
+            "technical_errors": entry["technical_errors"],
+        }
+        for entry in entries
+    ]
+    try:
+        gaps = _s02_handoff_gaps(handoff["functions"])
+        follow_up = _s02_handoff_follow_up(handoff["functions"])
+    except (KeyError, TypeError):
+        raise StandardResultsError(code) from None
+    if (
+        actual != expected
+        or handoff["changed_files"] != row["applicability_evidence"]["changed_files"]
+        or identity["complexity_result_sha256"] != row["applicability_evidence"]["source_sha256"]
+        or identity["quality_artifact"] != row["quality_artifact"]
+        or validation["source_outcomes"] != row["source_outcomes"]
+        or validation["standards"] != standards
+        or handoff["risks"] != _s02_handoff_risks(entries)
+        or handoff["gaps"] != gaps
+        or handoff["follow_up"] != follow_up
+    ):
+        raise StandardResultsError(code)
+
+
+def _s02_validate_handoff(
+    row: dict[str, Any], entries: list[dict[str, Any]], standard: int | None
+) -> None:
+    if standard in {None, 8}:
+        _s02_handoff_payload(row["review_handoff"], row["review_handoff_sha256"], row, entries)
+
+
+def validate_payload(
+    value: object,
+    identity: RunIdentity | None = None,
+    *,
+    standard: int | None = None,
+) -> None:
     """Validate exact identity, applicability, ownership, and provenance bindings."""
     keys = {
         "applicability_evidence",
@@ -2422,6 +2892,8 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> None
         "quality_artifact",
         "repository",
         "repository_id",
+        "review_handoff",
+        "review_handoff_sha256",
         "run_attempt",
         "run_id",
         "schema_version",
@@ -2478,7 +2950,9 @@ def validate_payload(value: object, identity: RunIdentity | None = None) -> None
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_SOURCE_OUTCOMES")
     shared = _s02_shared(row["shared_failures"])
-    _s02_ownership(entries, shared)
+    applicable = frozenset(entry["standard"] for entry in entries if entry["applicable"])
+    _s02_ownership(entries, shared, applicable)
+    _s02_validate_handoff(row, entries, standard)
     if row["short_task"] is not (eligible_short and not _s02_source_uncertain(entries)):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_APPLICABILITY")
     artifact = row["quality_artifact"]
