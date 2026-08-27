@@ -13,7 +13,8 @@ proof = "tests/test_standard_results.py::test_workflow_keeps_advisory_review_out
 before = "The required deterministic workflow also owned connector observation and completion, turning advisory review availability into a delivery dependency."
 after = "The required workflow owns deterministic evidence and enforcement only. Optional Codex review remains outside the required path, while native review-thread resolution governs any actual inline conversation."
 boundaries = [
-    { path = ".github/workflows/organization-required.yml", kind = "module", symbol = ".github/workflows/organization-required.yml", before = "Required workflow completion depended on connector observer and collector jobs.", after = "Required workflow completion depends only on authenticated deterministic evidence and the eight independent lane checks." },
+    { path = "tests/test_standard_results.py", kind = "function", symbol = "test_workflow_keeps_advisory_review_out_of_the_required_path", before = "No direct structural regression named or enforced the advisory-only connector boundary.", after = "The direct structural regression proves connector jobs and aggregate connector dependencies are absent from the required workflow." },
+    { path = "tests/test_standard_results.py", kind = "function", symbol = "test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate", before = "The structural regression required connector observer and collector wiring in the merge path.", after = "That blocking contract is removed and replaced by the advisory-only regression." },
 ]
 
 [architecture]
