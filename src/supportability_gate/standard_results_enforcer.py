@@ -21,15 +21,15 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return value
 
 
-def _read_json(path: Path) -> object:
+def _read_json(path: Path, missing: str, malformed: str) -> object:
     try:
         content = path.read_bytes()
     except OSError as error:
-        raise standard_results.StandardResultsError("MISSING_STANDARD_RESULTS") from error
+        raise standard_results.StandardResultsError(missing) from error
     try:
         value: object = json.loads(content, object_pairs_hook=_unique_object)
     except (UnicodeDecodeError, json.JSONDecodeError, _DuplicateJsonKeyError) as error:
-        raise standard_results.StandardResultsError("MALFORMED_STANDARD_RESULTS") from error
+        raise standard_results.StandardResultsError(malformed) from error
     return value
 
 
@@ -55,15 +55,41 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-id", required=True, type=int)
     parser.add_argument("--run-attempt", required=True, type=int)
     parser.add_argument("--input", required=True)
+    parser.add_argument("--complexity-result")
+    parser.add_argument("--quality-provenance")
     parser.add_argument("--standard", required=True, type=int, choices=range(1, 9))
     return parser
 
 
+def _handoff_sources(arguments: argparse.Namespace) -> tuple[object, object]:
+    if arguments.complexity_result is None or arguments.quality_provenance is None:
+        raise standard_results.StandardResultsError("MISSING_HANDOFF_SOURCE")
+    return (
+        _read_json(
+            Path(arguments.complexity_result),
+            "MISSING_HANDOFF_SOURCE",
+            "MALFORMED_HANDOFF_SOURCE",
+        ),
+        _read_json(
+            Path(arguments.quality_provenance),
+            "MISSING_HANDOFF_SOURCE",
+            "MALFORMED_HANDOFF_SOURCE",
+        ),
+    )
+
+
 def _entry(arguments: argparse.Namespace) -> dict[str, object]:
-    payload = _read_json(Path(arguments.input))
-    standard_results.validate_payload(payload, _identity(arguments))
+    payload = _read_json(
+        Path(arguments.input), "MISSING_STANDARD_RESULTS", "MALFORMED_STANDARD_RESULTS"
+    )
+    identity = _identity(arguments)
+    standard_results.validate_payload(payload, identity, standard=arguments.standard)
     rows = cast(dict[str, object], payload)["entries"]
-    return cast(list[dict[str, object]], rows)[int(arguments.standard) - 1]
+    entry = cast(list[dict[str, object]], rows)[int(arguments.standard) - 1]
+    if arguments.standard == 8 and entry["applicable"]:
+        complexity, provenance = _handoff_sources(arguments)
+        standard_results.validate_handoff_sources(payload, complexity, provenance, identity)
+    return entry
 
 
 def main(argv: list[str] | None = None) -> int:

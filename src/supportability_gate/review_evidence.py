@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import tomllib
+from contextlib import suppress
 from typing import Any
 
 REVIEW_EVIDENCE_PATH = ".supportability-review.toml"
+HANDOFF_SENTINEL = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 _TEXT_FIELDS = {
     "behavior": ("intended_behavior", "proof"),
     "characterization": ("captured_behavior", "proof"),
@@ -39,6 +41,13 @@ class ReviewEvidenceError(ValueError):
         super().__init__(location)
         self.kind = kind
         self.location = location
+
+
+def _error_block(error: ReviewEvidenceError) -> str:
+    prefix = (
+        error.kind if error.kind == "UNSUPPORTED_HANDOFF_CLAIM" else f"{error.kind}_REVIEW_EVIDENCE"
+    )
+    return f"{prefix}:{error.location}"
 
 
 def _require_keys(data: dict[str, Any], expected: set[str], location: str) -> None:
@@ -113,6 +122,33 @@ def _validate_separation_boundaries(
     return value
 
 
+def _validate_handoff(section: dict[str, Any]) -> None:
+    if section["summary"] != HANDOFF_SENTINEL:
+        raise ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", "review_handoff.summary")
+    if section["remaining_risks"] != [HANDOFF_SENTINEL]:
+        raise ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", "review_handoff.remaining_risks")
+
+
+def _validate_section(
+    data: dict[str, Any],
+    name: str,
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
+) -> None:
+    section = _section(data, name)
+    text_fields = _TEXT_FIELDS.get(name, ())
+    list_fields = _LIST_FIELDS.get(name, ())
+    fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
+    _require_keys(section, fields, name)
+    for field in text_fields:
+        _validate_text(section[field], f"{name}.{field}")
+    for field in list_fields:
+        _validate_text_list(section[field], f"{name}.{field}")
+    if name == "review_handoff":
+        _validate_handoff(section)
+    if name == "separation_of_concerns":
+        _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+
+
 def parse_review_evidence(
     content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...] | None
 ) -> ReviewEvidence:
@@ -132,17 +168,7 @@ def parse_review_evidence(
     if data["schema_version"] != "1.0":
         raise ReviewEvidenceError("MALFORMED", "schema_version")
     for name in sorted(expected_sections):
-        section = _section(data, name)
-        text_fields = _TEXT_FIELDS.get(name, ())
-        list_fields = _LIST_FIELDS.get(name, ())
-        fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
-        _require_keys(section, fields, name)
-        for field in text_fields:
-            _validate_text(section[field], f"{name}.{field}")
-        for field in list_fields:
-            _validate_text_list(section[field], f"{name}.{field}")
-        if name == "separation_of_concerns":
-            _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+        _validate_section(data, name, expected_boundaries)
     data["module_boundaries"] = _validate_module_boundaries(data.get("module_boundaries", []))
     return data
 
@@ -165,14 +191,18 @@ def evaluate_review_evidence(
             _validate_text(section[field], f"separation_of_concerns.{field}")
         _validate_separation_boundaries(section["boundaries"], expected_boundaries)
         gate_two_review = {"separation_of_concerns": section}
+        with suppress(ReviewEvidenceError):
+            gate_two_review["module_boundaries"] = _validate_module_boundaries(
+                data.get("module_boundaries", [])
+            )
     except (KeyError, UnicodeDecodeError, tomllib.TOMLDecodeError):
         pass
     except ReviewEvidenceError as error:
-        gate_two_block = f"{error.kind}_REVIEW_EVIDENCE:{error.location}"
+        gate_two_block = _error_block(error)
     try:
         return parse_review_evidence(content, expected_boundaries), ()
     except ReviewEvidenceError as error:
-        block = f"{error.kind}_REVIEW_EVIDENCE:{error.location}"
+        block = _error_block(error)
         location = error.location.removeprefix("review_evidence.")
         root = location.partition(".")[0].partition("[")[0]
         review = gate_two_review if root in _GATE_TWO_INDEPENDENT_SECTIONS else None

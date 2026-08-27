@@ -58,6 +58,7 @@ class EvaluationResult:
     architecture: ArchitectureResult | None = None
     modularity: ModularityResult | None = None
     quality_profile: QualityEvidence | None = None
+    review_evidence_binding: dict[str, object] | None = None
 
 
 def _span_metric(metric: object | None) -> dict[str, Any] | None:
@@ -207,6 +208,7 @@ def result_payload(result: EvaluationResult) -> dict[str, Any]:
         "rename_bindings": renames,
         "repository_remote": identity["remote"],
         "review_evidence": result.review_evidence,
+        "review_evidence_binding": result.review_evidence_binding,
         "review_evidence_path": ".supportability-review.toml",
         "ruff_diagnostics": [
             asdict(item)
@@ -267,7 +269,14 @@ def markdown_from_json(payload: dict[str, Any]) -> str:
                 "",
                 "```json",
                 json.dumps(
-                    payload["review_evidence"], ensure_ascii=False, indent=2, sort_keys=True
+                    {
+                        name: value
+                        for name, value in payload["review_evidence"].items()
+                        if name != "review_handoff"
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
                 ),
                 "```",
             ]

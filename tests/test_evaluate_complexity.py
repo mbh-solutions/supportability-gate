@@ -30,6 +30,7 @@ def test_reported_package_version_matches_distribution_version() -> None:
 
 
 WORKFLOW_SHA = "f" * 40
+HANDOFF_SENTINEL = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 
 
 def _executed_quality_arguments(
@@ -140,8 +141,8 @@ target = "One focused sample boundary."
 completed_step = "Characterized and changed only that boundary."
 
 [review_handoff]
-summary = "Focused behavior-preserving change ready for review."
-remaining_risks = ["No known remaining risk in the focused boundary."]
+summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
+remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
 naming = "Names express owned responsibilities."
@@ -1586,6 +1587,156 @@ def test_valid_milestone_three_evidence_passes_and_reports_judgment(tmp_path: Pa
     markdown = (tmp_path / "result" / "complexity-result.md").read_text(encoding="utf-8")
     assert "## Structured review evidence" in markdown
     assert '"reviewability": "Change is small enough for direct review."' in markdown
+    assert '"review_handoff"' not in markdown
+    assert HANDOFF_SENTINEL not in markdown
+
+
+def test_review_handoff_binds_exact_base_and_head_blobs(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        REVIEW_EVIDENCE.replace(
+            "Names express owned responsibilities.",
+            "Names precisely express owned responsibilities.",
+        ),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    base_blob = git_changes.read_regular_blob(
+        repository, base_sha, ".supportability-review.toml", []
+    )
+    head_blob = git_changes.read_regular_blob(
+        repository, head_sha, ".supportability-review.toml", []
+    )
+    assert exit_code == 0
+    assert result["review_evidence_binding"] == {
+        "base": {
+            "blob_sha": base_blob.object_sha,
+            "sha256": hashlib.sha256(base_blob.content).hexdigest(),
+        },
+        "head": {
+            "blob_sha": head_blob.object_sha,
+            "sha256": hashlib.sha256(head_blob.content).hexdigest(),
+        },
+    }
+
+
+def test_unreadable_base_review_binding_fails_gate_eight_only(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    _run_git(repository, "add", "--all")
+    link = (
+        subprocess.run(
+            ["git", "hash-object", "-w", "--stdin"],
+            cwd=repository,
+            input=b"elsewhere.toml\n",
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    _run_git(
+        repository,
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        f"120000,{link},.supportability-review.toml",
+    )
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    head_review = _review_evidence_with_boundaries(("src/sample.py", "function", "existing"))
+    _write(repository / ".supportability-review.toml", head_review)
+    _run_git(repository, "add", "src/sample.py")
+    review_blob = (
+        subprocess.run(
+            ["git", "hash-object", "-w", "--stdin"],
+            cwd=repository,
+            input=head_review.encode(),
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    _run_git(
+        repository,
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        f"100644,{review_blob},.supportability-review.toml",
+    )
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+
+    assert exit_code == 2
+    assert result["review_evidence"] is not None
+    assert result["review_evidence_binding"]["base"] is None
+    assert result["review_evidence_binding"]["head"] is not None
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        *["PASS"] * 7,
+        "TECHNICAL_FAILURE",
+    ]
+    assert aggregate["entries"][7]["technical_errors"] == [
+        "COMPLEXITY_RESULT:REVIEW_EVIDENCE_BINDING_UNAVAILABLE"
+    ]
+    assert aggregate["shared_failures"] == []
+
+
+def test_unsupported_handoff_summary_blocks(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("added", 1))
+    _write(
+        repository / ".supportability-review.toml",
+        _review_evidence_for_new_path("src/sample.py").replace(
+            f'summary = "{HANDOFF_SENTINEL}"',
+            'summary = "All gates green; fictional-check --all passed."',
+        ),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary"]
+    assert [entry["result"] for entry in aggregate["entries"]] == [
+        *["PASS"] * 7,
+        "BLOCK",
+    ]
+    assert aggregate["shared_failures"] == []
+
+
+def test_false_no_risk_handoff_claim_blocks(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        REVIEW_EVIDENCE.replace(
+            f'remaining_risks = ["{HANDOFF_SENTINEL}"]',
+            'remaining_risks = ["No risks, gaps, or follow-up work."]',
+        ),
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["UNSUPPORTED_HANDOFF_CLAIM:review_handoff.remaining_risks"]
 
 
 def _boundary_identities(result: dict[str, object]) -> list[tuple[str, str, str]]:
