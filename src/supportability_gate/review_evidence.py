@@ -128,6 +128,26 @@ def _validate_handoff(section: dict[str, Any]) -> None:
         raise ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", "review_handoff.remaining_risks")
 
 
+def _validate_section(
+    data: dict[str, Any],
+    name: str,
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
+) -> None:
+    section = _section(data, name)
+    text_fields = _TEXT_FIELDS.get(name, ())
+    list_fields = _LIST_FIELDS.get(name, ())
+    fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
+    _require_keys(section, fields, name)
+    for field in text_fields:
+        _validate_text(section[field], f"{name}.{field}")
+    for field in list_fields:
+        _validate_text_list(section[field], f"{name}.{field}")
+    if name == "review_handoff":
+        _validate_handoff(section)
+    if name == "separation_of_concerns":
+        _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+
+
 def parse_review_evidence(
     content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...] | None
 ) -> ReviewEvidence:
@@ -147,19 +167,7 @@ def parse_review_evidence(
     if data["schema_version"] != "1.0":
         raise ReviewEvidenceError("MALFORMED", "schema_version")
     for name in sorted(expected_sections):
-        section = _section(data, name)
-        text_fields = _TEXT_FIELDS.get(name, ())
-        list_fields = _LIST_FIELDS.get(name, ())
-        fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
-        _require_keys(section, fields, name)
-        for field in text_fields:
-            _validate_text(section[field], f"{name}.{field}")
-        for field in list_fields:
-            _validate_text_list(section[field], f"{name}.{field}")
-        if name == "review_handoff":
-            _validate_handoff(section)
-        if name == "separation_of_concerns":
-            _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+        _validate_section(data, name, expected_boundaries)
     data["module_boundaries"] = _validate_module_boundaries(data.get("module_boundaries", []))
     return data
 
