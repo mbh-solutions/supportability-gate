@@ -7,7 +7,7 @@ proof = "tests/test_evaluate_complexity.py; tests/test_standard_results.py"
 
 [characterization]
 captured_behavior = "The versioned aggregate boundary retains predecessor behavior while standard-results.v3 adds Gate 8 evidence dependencies, canonical handoff facts, source citations and hashes, active-lane failure ownership, and exact dependent-lane outcomes."
-proof = "tests/characterization/gate7-standard-results-boundary.characterization.py; tests/characterization/gate7-standard-results-boundary.golden.json; tests/test_standard_results.py"
+proof = "tests/characterization/gate8-standard-results-boundary.characterization.py; tests/characterization/gate8-standard-results-boundary.golden.json; tests/test_standard_results.py"
 
 [separation_of_concerns]
 before = "The source accepted author-written handoff prose, read only the head review blob, and exposed no canonical aggregate cross-check of change, responsibility, validation, coverage, risk, gap, follow-up, citation, or exact review-blob identity."
@@ -66,8 +66,8 @@ reviewed_paths = [
     "src/supportability_gate/standard_block_ownership.py",
     "src/supportability_gate/standard_results.py",
     "src/supportability_gate/standard_results_enforcer.py",
-    "tests/characterization/gate7-standard-results-boundary.characterization.py",
-    "tests/characterization/gate7-standard-results-boundary.golden.json",
+    "tests/characterization/gate8-standard-results-boundary.characterization.py",
+    "tests/characterization/gate8-standard-results-boundary.golden.json",
     "tests/test_evaluate_complexity.py",
     "tests/test_standard_results.py",
 ]
@@ -89,4 +89,4 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 naming = "review_binding, validate_handoff, handoff_claim_blocks, handoff_commands, handoff_coverage, handoff_risks, handoff_gaps, handoff_follow_up, handoff_sources, and handoff_payload state their single evidence responsibilities."
 cohesion = "Git reading, source parsing, result serialization, ownership, aggregate derivation, aggregate validation, and one-lane enforcement remain in their existing modules."
 intended_behavior = "Gate 8 exposes only facts reconstructed from authenticated inputs and fails closed for unsupported, stale, missing, contradictory, or altered evidence while independent lanes retain correct results."
-reviewability = "The bounded S10 change modifies six existing production modules, two direct suites, and one predecessor characterization boundary; it adds no package, workflow, command, or abstraction layer."
+reviewability = "The bounded S10 change modifies six existing production modules, two direct suites, and one S10 characterization boundary; it adds no package, workflow, command, or abstraction layer."

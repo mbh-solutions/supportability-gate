@@ -524,9 +524,10 @@ def main() -> None:
         "blocks": list(blocks),
     }
     payload["behavior"]["schema_version"] = "standard-results.v3"
-    payload["scenario"] = "gate7-standard-results-boundary"
+    payload["scenario"] = "gate8-standard-results-boundary"
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))
 
 
 if __name__ == "__main__":
     main()
+
