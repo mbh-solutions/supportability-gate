@@ -2166,7 +2166,11 @@ Do not create a new terminal label not authorized by an active milestone directi
   ownership. One targeted regression reproduced that exact added-location failure before the
   shared parser and aggregate validator were corrected to preserve and validate independently
   valid Gate 2 and Gate 4 evidence. Poison cases 2-4 already proved Gate-8-only isolation and are
-  not repeated; only corrected case 1 remains for protected rerun.
+  not repeated; only corrected case 1 remains for protected rerun. First corrected source run
+  `33045707591` then proved Gate 4 passed but exposed exact Gate 1/Gate 8 shared technical error
+  `RUFF_PARITY_MISMATCH`: internal mccabe measured `evaluate_review_evidence` at 11 while Ruff
+  reported no over-limit diagnostic. Replacing the added nested exception branch with stdlib
+  suppression preserved behavior and reduced the internal measurement to 9 before fresh proof.
 - Qualification limit: no Gate 1-7 redesign, target-code import or execution, arbitrary command,
   package, workflow redesign, consumer activation, ruleset migration, threshold, exclusion, waiver,
   scope narrowing, immutable/frozen source change, completed-review rerun, or S11 behavior is part
