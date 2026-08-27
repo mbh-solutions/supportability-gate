@@ -2,43 +2,40 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The required Supportability workflow and merge rules depend only on eight deterministic gate lanes. Codex connector review is optional advisory input; missing acknowledgement, timeout, outage, unavailable review, or absent completion never delays or fails delivery."
-proof = "tests/test_standard_results.py::test_workflow_keeps_advisory_review_out_of_the_required_path; .github/workflows/organization-required.yml; AGENTS.md; docs/product_completion_contract.md"
+intended_behavior = "README.md gives adopters a concise, current overview of the completed product, eight deterministic required checks, committed repository inputs, exact CLI surface, evidence artifacts, exit codes, and the long-form wiki."
+proof = "README.md; src/supportability_gate/cli.py; src/supportability_gate/reporting.py; src/supportability_gate/standard_results.py; .github/workflows/organization-required.yml; docs/product_completion_contract.md"
 
 [characterization]
-captured_behavior = "Before this correction, the required workflow waited up to 70 minutes for connector acknowledgement and completion, and the aggregate Gate failed when those jobs did not succeed. The direct workflow test now proves observer and collector jobs are absent and the aggregate depends only on deterministic evidence plus the eight-lane matrix."
-proof = "tests/test_standard_results.py::test_workflow_keeps_advisory_review_out_of_the_required_path"
+captured_behavior = "The base README called Project #10 active and omitted current CLI and evidence details. The head updates documentation only; production code, workflows, contracts, thresholds, and runtime behavior are unchanged."
+proof = "README.md; git diff of the authenticated base and head; docs/product_completion_contract.md"
 
 [separation_of_concerns]
-before = "The required deterministic workflow also owned connector observation and completion, turning advisory review availability into a delivery dependency."
-after = "The required workflow owns deterministic evidence and enforcement only. Optional Codex review remains outside the required path, while native review-thread resolution governs any actual inline conversation."
+before = "The README mixed stale project status with an incomplete adopter path and omitted several current interface details."
+after = "The README remains a concise overview and directs long-form operational material to the wiki while naming the current required checks, inputs, CLI outputs, and boundaries."
 boundaries = []
 
 [architecture]
-dependency_direction = "Required enforcement depends on authenticated deterministic artifacts and eight lane enforcers only. Optional external review cannot feed a required job, check, ruleset, merge, milestone, or completion decision."
+dependency_direction = "README.md describes existing repository and hosted-workflow behavior but does not define or alter enforcement; authoritative behavior remains owned by source, workflows, the immutable Standard, and the completion contract."
 reviewed_paths = [
-    ".github/workflows/organization-required.yml",
     ".supportability-review.toml",
-    "AGENTS.md",
-    "docs/product_completion_contract.md",
-    "tests/test_standard_results.py",
+    "README.md",
 ]
 
 [responsibility_boundary]
-path = ".github/workflows/organization-required.yml"
-owns = "Authenticated deterministic evidence production, eight independent Standard checks, and their aggregate result."
-does_not_own = "Codex availability, acknowledgement, completion, advisory judgment, retries, or optional review scheduling."
+path = "README.md"
+owns = "A concise adopter-facing overview, start links, current interface summary, and repository boundaries."
+does_not_own = "Normative Standard text, product status evidence, executable enforcement, workflow policy, rulesets, or detailed wiki procedures."
 
 [incremental_refactor]
-target = "Restore the intended non-blocking advisory boundary without changing any deterministic lane, threshold, scope, target command, package, or ruleset safety property."
-completed_step = "Removed two connector jobs and their aggregate dependencies from the required workflow, replaced the repository review contract with a best-effort advisory rule, and aligned the terminal S11 ledger."
+target = "Refresh the adopter overview and establish a matching manual wiki snapshot without changing executable behavior or protected repository policy."
+completed_step = "Updated README.md and its authenticated review handoff as one bounded documentation pull request; wiki publication remains a separate wiki-repository commit after merge."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The required job is explicitly named deterministic; the repository contract names Codex review optional and advisory."
-cohesion = "Workflow enforcement, its direct structural regression, repository instructions, and terminal product status each retain one existing responsibility."
-intended_behavior = "Connector failure means move on; deterministic failure still blocks; an existing inline conversation still requires native resolution."
-reviewability = "The executable change deletes connector wiring from one workflow and adjusts one direct structural test. No production Python, target code, package, command, threshold, exclusion, waiver, or bypass changes."
+naming = "Required context names, input filenames, CLI flags, artifact names, schema version, and exit codes match their authoritative sources."
+cohesion = "README.md stays concise; detailed architecture, lifecycle, evidence, module, and validation material is reserved for the wiki."
+intended_behavior = "The documentation reports the existing deterministic enforcement and advisory Codex boundary without changing either."
+reviewability = "The pull request changes README.md plus this required handoff evidence only. It changes no production code, workflow, package, command vector, threshold, exclusion, waiver, ruleset, or bypass."

@@ -1,35 +1,69 @@
 # Supportability Gate
 
-`supportability-gate` produces deterministic PASS or BLOCK evidence from immutable Git commits.
-Static evaluation never imports target code; fixed stack-native quality commands run only in
-isolated GitHub-hosted jobs.
+`supportability-gate` turns immutable pull-request base and head commits into deterministic
+PASS, BLOCK, or TECHNICAL_FAILURE evidence. Static evaluation never imports target code; fixed
+stack-native quality commands run only in isolated GitHub-hosted jobs.
+
+**[Read the Supportability Gate wiki](https://github.com/mbh-solutions/supportability-gate/wiki)**
+for architecture, configuration, evidence, lifecycle, and module details.
 
 ## Status
 
-Current product status, authorized work, milestone evidence, and remaining work are recorded only
-in the [Product Completion Contract](docs/product_completion_contract.md).
+Integrated qualification and organization-wide activation completed on 2026-08-27. Project #10 is
+closed, and [terminal issue #154](https://github.com/mbh-solutions/supportability-gate/issues/154)
+records the direct proof. Durable product status and historical evidence remain in the
+[Product Completion Contract](docs/product_completion_contract.md).
 
-The [Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10)
-organization project is successor execution authority. Projects #2, #3, #6, and #8 are historical;
-Project #9 becomes historical through the S00 retirement transaction.
+Protected `main` requires Source Validation plus eight strict, independently owned deterministic
+contexts:
+
+1. `Supportability 1 - Cyclomatic Complexity`
+2. `Supportability 2 - Separation of Concerns`
+3. `Supportability 3 - Dependency Direction`
+4. `Supportability 4 - Domain Modularity`
+5. `Supportability 5 - Characterization`
+6. `Supportability 6 - Incremental Refactor`
+7. `Supportability 7 - Quality Gates`
+8. `Supportability 8 - Review Handoff`
+
+One lane's policy failure does not become another lane's failure. Shared technical failure is
+allowed only for an explicitly named identity or artifact dependency. Codex review is optional,
+advisory, and non-blocking; GitHub's native review-thread rule still blocks unresolved inline
+conversations.
+
+## Repository inputs
+
+Each participating repository commits three fixed inputs:
+
+- `.supportability.toml` — language, production and high-risk paths, approved adapters, and
+  complexity maximum. The Gate loads this contract from the base commit; weakening or narrowing
+  it in the pull request blocks.
+- `.supportability-review.toml` — structured behavior, architecture, responsibility, refactor,
+  and handoff evidence bound to exact base/head Git blobs.
+- `.supportability-characterization.json` — fixed hosted scenarios and their covered source
+  paths for authenticated base/head behavior capture.
+
+The contract cannot add arbitrary commands, executable paths, environment controls, exclusions,
+waivers, or threshold overrides.
 
 ## Requirements
 
 - Python `>=3.12,<3.13`
 - Git
-- Dependencies installed from `requirements-dev.lock`
+- Dependencies pinned by `requirements-dev.lock`
 
-## Evaluate
+## CLI
 
-Complexity evaluation uses adapter `python.c901-touched.v1` with maximum complexity `10`.
+The public command is `evaluate-complexity`. Its fixed complexity adapter is
+`python.c901-touched.v1` with maximum `10`.
 
 ```powershell
 python -m supportability_gate evaluate-complexity `
-  --repository C:\absolute\target-repository `
+  --repository C:/absolute/target-repository `
   --base-ref <full-commit-sha> `
   --head-ref <full-commit-sha> `
   --contract-path .supportability.toml `
-  --quality-evidence C:\absolute\quality-gates.json `
+  --quality-evidence C:/absolute/quality-gates.json `
   --quality-repository owner/repository `
   --quality-repository-id <github-repository-id> `
   --quality-run-id <github-actions-run-id> `
@@ -37,27 +71,48 @@ python -m supportability_gate evaluate-complexity `
   --quality-job quality-profile `
   --quality-artifact-id <github-artifact-id> `
   --quality-artifact-digest <github-artifact-digest> `
+  --quality-artifact-metadata C:/absolute/artifact-metadata.json `
   --quality-capture-sha256 <quality-evidence-sha256> `
   --workflow-sha <full-workflow-commit-sha> `
-  --output-directory C:\absolute\evidence-directory
+  --output-directory C:/absolute/evidence-directory
 ```
 
-Exit `0` means PASS, `1` means BLOCK, and `2` means TECHNICAL_FAILURE. JSON is
-authoritative; Markdown is derived from that JSON.
+`supportability-gate --version` prints the package version.
+
+A normal authenticated evaluation writes:
+
+- `complexity-result.json` — authoritative evaluator result;
+- `complexity-result.md` — Markdown derived from that JSON;
+- `quality-provenance.json` — validated hosted quality-command provenance.
+
+The required workflow combines those sources with characterization and refactor evidence into
+`standard-results.json`, schema `standard-results.v3`, then enforces its eight rows separately.
+
+Exit `0` means PASS, `1` means BLOCK, and `2` means TECHNICAL_FAILURE.
+
+## Enforcement boundary
+
+- Full commit SHAs, exact Git blobs, artifact digests, workflow/run identity, and source hashes are
+  bound into evidence.
+- Missing, malformed, stale, mismatched, or unresolved required evidence fails closed.
+- Target source is parsed statically by the Gate; target-native commands execute only in isolated
+  GitHub-hosted jobs.
+- An eligible one-line added `README.md` or `docs/*.md` file can classify as SHORT_TASK. Gate 7
+  still runs; irrelevant lanes emit authenticated `NOT_APPLICABLE_SHORT_TASK`. Uncertain or
+  broader changes use the full process.
 
 ## Source validation
 
-GitHub Actions runs lint, format, C901, strict typing, import boundaries, all tests, compile,
-wheel build, fresh-environment wheel install, installed CLI smoke, and these owner-required source
-controls:
+GitHub Actions runs Ruff lint and format, C901 at maximum 10, strict mypy, Import Linter, all
+tests, compileall, wheel build, fresh-environment wheel install, installed CLI help, and these
+owner-required controls:
 
-1. `docs/supportability_standard.md` must have SHA-256
+1. `docs/supportability_standard.md` must retain SHA-256
    `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
-2. All other changed files must pass:
+2. Every other changed file must pass:
 
    ```powershell
    git diff --check <base-sha> <head-sha> -- . ":(exclude)docs/supportability_standard.md"
    ```
 
-The path exclusion is limited to the immutable owner-authored standard. It does not waive its
-integrity check or exclude any other file.
+That exclusion applies only to whitespace checking. The immutable Standard remains hash-protected.
