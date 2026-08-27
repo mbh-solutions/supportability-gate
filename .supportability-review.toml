@@ -2,45 +2,45 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The focused-review observer preserves already seen serial acknowledgements across a transient GitHub HTTP 5xx response within its existing bounded poll window, while nontransient evidence failures remain fail-closed. The protected ledger records S11 as the terminal authorized slice with no successor and keeps completion prospective until every issue #154 proof and final protected merge readback exists."
-proof = "tests/test_codex_review.py::test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement; tests/test_codex_review.py::test_focused_observer_fails_fast_for_nontransient_github_evidence; docs/product_completion_contract.md; issues #153 and #154"
+intended_behavior = "The required Supportability workflow and merge rules depend only on eight deterministic gate lanes. Codex connector review is optional advisory input; missing acknowledgement, timeout, outage, unavailable review, or absent completion never delays or fails delivery."
+proof = "tests/test_standard_results.py::test_workflow_keeps_advisory_review_out_of_the_required_path; .github/workflows/organization-required.yml; AGENTS.md; docs/product_completion_contract.md"
 
 [characterization]
-captured_behavior = "Before this correction, any GitHub evidence HTTP failure terminated the focused observer immediately and discarded its in-memory acknowledgement set; the regression injects one HTTP 502 after Focus 1 acknowledgement, removes the later Focus 1 reaction, and proves its summary is accepted only through the preserved acknowledgement. Separate cases prove HTTP 403, URLError, and malformed evidence still fail before sleep or a second request."
-proof = "tests/test_codex_review.py::test_focused_observer_retries_transient_github_failure_without_losing_acknowledgement; tests/test_codex_review.py::test_focused_observer_fails_fast_for_nontransient_github_evidence"
+captured_behavior = "Before this correction, the required workflow waited up to 70 minutes for connector acknowledgement and completion, and the aggregate Gate failed when those jobs did not succeed. The direct workflow test now proves observer and collector jobs are absent and the aggregate depends only on deterministic evidence plus the eight-lane matrix."
+proof = "tests/test_standard_results.py::test_workflow_keeps_advisory_review_out_of_the_required_path"
 
 [separation_of_concerns]
-before = "The focused observer treated a transient GitHub server response like a permanent evidence failure, terminating the only process that retained already observed request acknowledgements."
-after = "One predicate classifies only HTTP 5xx causes as transient; the existing focused observer loop alone owns bounded retry and preserves its acknowledgement set, while all other evidence failures retain immediate fail-closed behavior."
+before = "The required deterministic workflow also owned connector observation and completion, turning advisory review availability into a delivery dependency."
+after = "The required workflow owns deterministic evidence and enforcement only. Optional Codex review remains outside the required path, while native review-thread resolution governs any actual inline conversation."
 boundaries = [
-    { path = "src/supportability_gate/codex_review.py", kind = "function", symbol = "_transient_github_failure", before = "No narrow classification distinguished transient GitHub server responses from permanent evidence failures.", after = "The predicate accepts only HTTPError causes with status 500 through 599." },
-    { path = "src/supportability_gate/codex_review.py", kind = "function", symbol = "require_focused_acknowledgements", before = "Every GitHub evidence failure terminated the observer immediately and lost prior in-memory acknowledgements.", after = "Only transient HTTP 5xx failures consume another existing bounded poll attempt; every other evidence failure still raises immediately." },
+    { path = ".github/workflows/organization-required.yml", kind = "module", symbol = ".github/workflows/organization-required.yml", before = "Required workflow completion depended on connector observer and collector jobs.", after = "Required workflow completion depends only on authenticated deterministic evidence and the eight independent lane checks." },
 ]
 
 [architecture]
-dependency_direction = "The existing observer continues to depend only on stdlib HTTP errors and its current GitHub evidence readers. No production module, workflow, package, target command, or target execution boundary was added."
+dependency_direction = "Required enforcement depends on authenticated deterministic artifacts and eight lane enforcers only. Optional external review cannot feed a required job, check, ruleset, merge, milestone, or completion decision."
 reviewed_paths = [
+    ".github/workflows/organization-required.yml",
     ".supportability-review.toml",
+    "AGENTS.md",
     "docs/product_completion_contract.md",
-    "src/supportability_gate/codex_review.py",
-    "tests/test_codex_review.py",
+    "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/codex_review.py"
-owns = "Trusted focused-review request, acknowledgement, completion, and bounded GitHub evidence observation for one exact pull-request head and workflow run."
-does_not_own = "Connector judgment, deterministic gate results, arbitrary retry policy, target execution, ruleset activation, waivers, or product-status proof."
+path = ".github/workflows/organization-required.yml"
+owns = "Authenticated deterministic evidence production, eight independent Standard checks, and their aggregate result."
+does_not_own = "Codex availability, acknowledgement, completion, advisory judgment, retries, or optional review scheduling."
 
 [incremental_refactor]
-target = "Correct only the observed transient-5xx failure in the existing focused acknowledgement loop and record the terminal S11 transaction."
-completed_step = "Added one narrow predicate and one conditional; direct regressions prove saved-acknowledgement continuity across HTTP 502 and immediate failure for representative nontransient evidence errors. The existing poll count, delay, transport, validation, and fail-closed boundary remain unchanged; the ledger also records S10 terminal proof before prospective S11 state."
+target = "Restore the intended non-blocking advisory boundary without changing any deterministic lane, threshold, scope, target command, package, or ruleset safety property."
+completed_step = "Removed two connector jobs and their aggregate dependencies from the required workflow, replaced the repository review contract with a best-effort advisory rule, and aligned the terminal S11 ledger."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "_transient_github_failure states the exact classification; require_focused_acknowledgements retains ownership of bounded observation."
-cohesion = "HTTP cause classification and focused polling remain in the existing Codex review evidence module; the regression remains in its direct suite; product status remains in the ledger."
-intended_behavior = "A temporary GitHub 5xx cannot erase already observed focus acknowledgements, but authentication, malformed, unavailable, timeout, and trust failures remain fail-closed and S11 is not presented before S10 terminal evidence."
-reviewability = "The executable change is one predicate and one conditional with direct continuity and fail-fast regressions; the ledger reconciles S10 before S11. No package, workflow, command, abstraction layer, or target code changed."
+naming = "The required job is explicitly named deterministic; the repository contract names Codex review optional and advisory."
+cohesion = "Workflow enforcement, its direct structural regression, repository instructions, and terminal product status each retain one existing responsibility."
+intended_behavior = "Connector failure means move on; deterministic failure still blocks; an existing inline conversation still requires native resolution."
+reviewability = "The executable change deletes connector wiring from one workflow and adjusts one direct structural test. No production Python, target code, package, command, threshold, exclusion, waiver, or bypass changes."

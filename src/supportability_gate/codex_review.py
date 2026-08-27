@@ -107,11 +107,6 @@ def _timestamp(value: object) -> datetime:
     return parsed
 
 
-def _transient_github_failure(error: CodexReviewError) -> bool:
-    cause = error.__cause__
-    return isinstance(cause, urllib.error.HTTPError) and 500 <= cause.code < 600
-
-
 def _page(
     endpoint: str,
     token: str,
@@ -1117,10 +1112,7 @@ def require_focused_acknowledgements(
                 return bound
             last_code = block
         except CodexReviewError as error:
-            if (
-                error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE"
-                and not _transient_github_failure(error)
-            ):
+            if error.code == "GITHUB_CODEX_REVIEW_EVIDENCE_FAILURE":
                 raise
             last_code = error.code
         if attempt + 1 < attempts:

@@ -3704,11 +3704,12 @@ def _job(name: str, next_name: str | None) -> str:
     return body.split(f"\n  {next_name}:\n", 1)[0] if next_name else body
 
 
-def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() -> None:
+def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
+    workflow = (
+        Path(__file__).parents[1] / ".github/workflows/organization-required.yml"
+    ).read_text(encoding="utf-8")
     quality = _job("quality-profile", "deterministic-evidence")
-    evidence = _job("deterministic-evidence", "observe-codex-review")
-    observer = _job("observe-codex-review", "collect-codex-review")
-    connector = _job("collect-codex-review", "standard-results")
+    evidence = _job("deterministic-evidence", "standard-results")
     matrix = _job("standard-results", "supportability-gate")
     gate = _job("supportability-gate", None)
 
@@ -3716,7 +3717,6 @@ def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() 
     assert "id: capture\n        continue-on-error: true" in quality
     assert "id: upload\n        if: always()" in quality
     assert 'exit "$status"' in quality
-    assert "review-required: ${{ steps.standard_results.outputs.review-required }}" in evidence
     assert "python -P -m supportability_gate.standard_results_producer" in evidence
     assert '--install-outcome "${{ steps.install.outcome }}"' in evidence
     download_quality = evidence.split("- name: Download authenticated quality evidence", 1)[
@@ -3757,9 +3757,9 @@ def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() 
                 f"--expected-{side}-characterization-{field} "
                 f'"${{{{ needs.characterize-{side}.outputs.{field} }}}}"' in evidence
             )
-    condition = "needs.deterministic-evidence.outputs.review-required == 'true'"
-    assert condition in observer
-    assert condition in connector
+    assert "observe-codex-review:" not in workflow
+    assert "collect-codex-review:" not in workflow
+    assert "supportability_gate.codex_review" not in workflow
     rows = re.findall(r"(?m)^          - standard: ([1-8])\n            context: (.+)$", matrix)
     assert rows == [
         (str(standard), context)
@@ -3772,8 +3772,7 @@ def test_workflow_wires_conditional_reviews_independent_matrix_and_final_gate() 
     assert "if: always()" in matrix
     assert "name: Supportability Gate" in gate
     assert "standard-results" in gate
-    assert "REVIEW_REQUIRED: ${{ needs.deterministic-evidence.outputs.review-required }}" in gate
     assert "STANDARD_RESULTS_RESULT: ${{ needs.standard-results.result }}" in gate
-    assert "COLLECTOR_RESULT: ${{ needs.collect-codex-review.result }}" in gate
-    assert 'if [ "$OBSERVER_RESULT" != "skipped" ]' in gate
-    assert '[ "$COLLECTOR_RESULT" != "skipped" ]' in gate
+    assert "OBSERVER_RESULT" not in gate
+    assert "COLLECTOR_RESULT" not in gate
+    assert "REVIEW_REQUIRED" not in gate
