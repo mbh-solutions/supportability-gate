@@ -98,15 +98,14 @@ Stop condition:
   evidence required by the Milestone 1 directive.
 - Do not claim full Supportability Standard runtime while any required milestone remains incomplete.
 
-## Codex review boundary
+## Codex review
 
-- Codex connector review is optional, advisory, and never part of required workflow, ruleset,
-  merge, milestone, or completion criteria.
-- Missing acknowledgement, timeout, outage, unavailable review, or absent completion never blocks
-  deterministic delivery. Move on without retrying or waiting.
-- Do not request automatic broad review. An owner may request focused advisory review separately.
-- Resolve any inline conversation that exists before merge; native review-thread resolution remains
-  the enforcement boundary for actual findings.
+Codex review is owner opt-in only. An agent may post `@codex review` only when the owner explicitly
+requests it in the current task. A push, check failure, timeout, missing acknowledgement, or earlier
+review request never authorizes an automatic request, retry, or blocking wait. Codex review is
+advisory and is never required for qualification, merge, or completion. If an owner-requested
+review creates an inline conversation, resolve that conversation through GitHub's native
+review-thread resolution before merge.
 
 ## Active milestone control
 

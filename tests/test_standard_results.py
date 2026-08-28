@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import pkgutil
 import re
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from typing import Any
 
 import pytest
 
+import supportability_gate
 from supportability_gate import (
     clause_inventory,
     cli,
@@ -606,7 +608,6 @@ def test_clean_current_aggregate_schema_passes_without_prototype_standard_blocks
         "source_validated": True,
     }
     assert standard_results.validate_payload(payload, IDENTITY) is None
-    assert standard_results.review_required(payload) is True
 
 
 def test_gate_eight_exposes_exact_canonical_handoff_facts() -> None:
@@ -2480,7 +2481,6 @@ def test_one_added_document_line_is_authenticated_short_task() -> None:
     ]
     assert "quality-provenance.json" in _entry(payload, 7)["evidence_sources"]
     assert payload["source_outcomes"]["quality"] == "success"
-    assert standard_results.review_required(payload) is False
 
 
 def test_short_task_quality_failure_stays_in_the_only_applicable_lane() -> None:
@@ -2756,7 +2756,6 @@ def test_complexity_policy_exit_blocks_gate_one_only(
     assert _results(payload) == ["BLOCK", *("PASS",) * 7]
     assert _entry(payload, 1)["policy_blocks"] == ["FUNCTION_COMPLEXITY:too_complex"]
     assert payload["shared_failures"] == []
-    assert standard_results.review_required(payload) is False
 
     forged = copy.deepcopy(inputs)
     forged[0]["policy_blocks"] = [f"QUALITY_GATE_FAILED:{adapter}"]
@@ -2839,7 +2838,6 @@ def test_progressive_complexity_policy_exit_remains_a_successful_capture() -> No
 
     assert _results(payload) == ["PASS"] * 8
     assert payload["source_outcomes"]["quality"] == "success"
-    assert standard_results.review_required(payload) is True
     assert payload["review_handoff"]["gaps"] == [
         {"path": "src/sample.py", "qualified_name": "legacy", "remaining_gap": 2}
     ]
@@ -3080,7 +3078,18 @@ def test_uncertain_or_broad_docs_default_to_full_process(path: str, lines: list[
 
     assert payload["short_task"] is False
     assert _results(payload) == ["PASS"] * 8
-    assert standard_results.review_required(payload) is True
+
+
+def test_producer_writes_valid_evidence_without_stdout(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    arguments, _, output = _producer_arguments(tmp_path)
+
+    assert standard_results_producer.main(arguments) == 0
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert standard_results.validate_payload(payload, IDENTITY) is None
+    assert capsys.readouterr().out == ""
 
 
 @pytest.mark.parametrize(
@@ -3531,7 +3540,7 @@ def test_producer_missing_inputs_have_independent_outcomes(
     assert standard_results_producer.main(arguments) == 0
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert capsys.readouterr().out.strip() == "false"
+    assert capsys.readouterr().out == ""
     assert _technical_standards(payload) == expected_technical
     assert payload["source_outcomes"][source] == "failure"
     assert all(
@@ -3565,7 +3574,7 @@ def test_missing_characterization_suppresses_derived_refactor_missing(
     assert standard_results_producer.main(arguments) == 0
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert capsys.readouterr().out.strip() == "false"
+    assert capsys.readouterr().out == ""
     assert _technical_standards(payload) == {5, 6, 8}
     assert payload["shared_failures"] == [
         {
@@ -3593,7 +3602,7 @@ def test_install_failure_suppresses_all_derived_source_errors(
     assert standard_results_producer.main(arguments) == 0
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert capsys.readouterr().out.strip() == "false"
+    assert capsys.readouterr().out == ""
     assert _technical_standards(payload) == set(range(1, 9))
     assert payload["shared_failures"] == [
         {
@@ -3637,7 +3646,7 @@ def test_producer_rejects_duplicate_json_keys(
     assert standard_results_producer.main(arguments) == 0
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert capsys.readouterr().out.strip() == "false"
+    assert capsys.readouterr().out == ""
     assert _technical_standards(payload) == expected_technical
     assert all(
         _entry(payload, standard)["technical_errors"] == [code] for standard in expected_technical
@@ -3712,6 +3721,9 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     evidence = _job("deterministic-evidence", "standard-results")
     matrix = _job("standard-results", "supportability-gate")
     gate = _job("supportability-gate", None)
+    packaged_modules = {
+        module.name for module in pkgutil.iter_modules(supportability_gate.__path__)
+    }
 
     assert "capture-outcome: ${{ steps.capture.outcome }}" in quality
     assert "id: capture\n        continue-on-error: true" in quality
@@ -3759,7 +3771,11 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
             )
     assert "observe-codex-review:" not in workflow
     assert "collect-codex-review:" not in workflow
+    assert "review-required" not in workflow
+    assert "review_required" not in workflow
+    assert "@codex review" not in workflow
     assert "supportability_gate.codex_review" not in workflow
+    assert {"codex_review", "focused_review"}.isdisjoint(packaged_modules)
     rows = re.findall(r"(?m)^          - standard: ([1-8])\n            context: (.+)$", matrix)
     assert rows == [
         (str(standard), context)

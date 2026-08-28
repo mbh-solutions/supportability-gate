@@ -2,40 +2,394 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "README.md gives adopters a concise, current overview of the completed product, eight deterministic required checks, committed repository inputs, exact CLI surface, evidence artifacts, exit codes, and the long-form wiki."
-proof = "README.md; src/supportability_gate/cli.py; src/supportability_gate/reporting.py; src/supportability_gate/standard_results.py; .github/workflows/organization-required.yml; docs/product_completion_contract.md"
+intended_behavior = "The required Supportability workflow and shipped Gate package depend only on eight deterministic lanes. The producer writes standard-results.v3 with empty stdout. Codex review is owner opt-in advisory input outside qualification, merge, and completion."
+proof = "tests/test_standard_results.py::test_producer_writes_valid_evidence_without_stdout; tests/test_standard_results.py::test_workflow_keeps_advisory_review_out_of_the_required_path; .github/workflows/organization-required.yml"
 
 [characterization]
-captured_behavior = "The base README called Project #10 active and omitted current CLI and evidence details. The head updates documentation only; production code, workflows, contracts, thresholds, and runtime behavior are unchanged."
-proof = "README.md; git diff of the authenticated base and head; docs/product_completion_contract.md"
+captured_behavior = "The protected base shipped dormant connector and focused-review modules, derived a review-required Boolean, printed it from the producer, and carried dead workflow output validation. The head deletes those modules and characterizations and removes every review-required signal while preserving the deterministic artifact and eight lane enforcers."
+proof = "tests/characterization/standard-results-boundary.characterization.py; tests/characterization/standard-results-boundary.golden.json; tests/characterization/gate8-standard-results-boundary.golden.json"
 
 [separation_of_concerns]
-before = "The README mixed stale project status with an incomplete adopter path and omitted several current interface details."
-after = "The README remains a concise overview and directs long-form operational material to the wiki while naming the current required checks, inputs, CLI outputs, and boundaries."
-boundaries = []
-
+before = "Dormant connector transport and focused-review policy remained packaged beside deterministic enforcement, and the deterministic producer exposed an unused connector decision."
+after = "The package and required workflow own deterministic evidence only. Owner-requested Codex review remains external advisory activity; native review-thread resolution governs any resulting inline conversation."
 [architecture]
-dependency_direction = "README.md describes existing repository and hosted-workflow behavior but does not define or alter enforcement; authoritative behavior remains owned by source, workflows, the immutable Standard, and the completion contract."
+dependency_direction = "Required enforcement flows from authenticated source evidence into standard-results.v3 and eight lane enforcers. No required module, workflow job, output, environment variable, or aggregate decision depends on Codex connector state."
 reviewed_paths = [
+    ".github/workflows/organization-required.yml",
+    ".supportability-characterization.json",
     ".supportability-review.toml",
-    "README.md",
+    "AGENTS.md",
+    "docs/product_completion_contract.md",
+    "pyproject.toml",
+    "src/supportability_gate/codex_review.py",
+    "src/supportability_gate/focused_review.py",
+    "src/supportability_gate/standard_results.py",
+    "src/supportability_gate/standard_results_producer.py",
+    "tests/characterization/codex-review-boundary.characterization.py",
+    "tests/characterization/focused-review-contract.characterization.py",
+    "tests/characterization/standard-results-boundary.characterization.py",
+    "tests/test_codex_review.py",
+    "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "README.md"
-owns = "A concise adopter-facing overview, start links, current interface summary, and repository boundaries."
-does_not_own = "Normative Standard text, product status evidence, executable enforcement, workflow policy, rulesets, or detailed wiki procedures."
+path = ".github/workflows/organization-required.yml"
+owns = "Authenticated deterministic evidence production, exactly eight Standard contexts, their artifacts, and aggregate deterministic result."
+does_not_own = "Codex requests, connector availability, acknowledgement, completion, retries, advisory judgment, or optional review scheduling."
 
 [incremental_refactor]
-target = "Refresh the adopter overview and establish a matching manual wiki snapshot without changing executable behavior or protected repository policy."
-completed_step = "Updated README.md and its authenticated review handoff as one bounded documentation pull request; wiki publication remains a separate wiki-repository commit after merge."
+target = "Retire connector coupling without changing deterministic schemas, contexts, thresholds, artifacts, target execution, or GitHub protection."
+completed_step = "Deleted dormant connector code and its tests and characterizations, removed the producer Boolean and workflow plumbing, and retained the existing deterministic enforcement path."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Required context names, input filenames, CLI flags, artifact names, schema version, and exit codes match their authoritative sources."
-cohesion = "README.md stays concise; detailed architecture, lifecycle, evidence, module, and validation material is reserved for the wiki."
-intended_behavior = "The documentation reports the existing deterministic enforcement and advisory Codex boundary without changing either."
-reviewability = "The pull request changes README.md plus this required handoff evidence only. It changes no production code, workflow, package, command vector, threshold, exclusion, waiver, ruleset, or bypass."
+naming = "The remaining production modules and workflow values describe deterministic evidence only; the removed review-required names no longer imply a connector prerequisite."
+cohesion = "Connector transport and focus policy are deleted. Standard result composition, production, enforcement, and workflow orchestration retain their existing separate responsibilities."
+intended_behavior = "A push, failure, timeout, or prior request cannot trigger or retry Codex review. Exactly eight deterministic contexts remain the required enforcement surface."
+reviewability = "The executable diff is deletion-led: two dormant modules, their tests and characterizations, one Boolean function, one stdout line, and dead workflow plumbing are removed. No package, command vector, threshold, exclusion, waiver, schema, context name, target-code execution, or bypass is added."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "CodexReviewError.__init__"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_NoAuthRedirect.redirect_request"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_clean_summary"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_comparison_scope"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_completed"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_completed_lifecycles"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_evaluate_lifecycle"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_acknowledgement_state"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_completion_artifact"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_observer_comment_ids"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_reactions"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_request_values"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_review_requests"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_focused_state"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_in_focus_window"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_job_page"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_lifecycle_requests"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_object"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_observed_eyes"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_observer_comment_id"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_observer_jobs"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_observer_log"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_one_artifact"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_page"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_pages"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_parse_remediation"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_positive_id"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_positive_integer"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_reaction_artifact"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_remediation_authorization"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_remediation_paths"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_remediation_scope"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_request_values"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_reusable_lifecycle"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_review_request"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_state"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_submitted_review_artifact"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_summary_artifact"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_timestamp"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_trusted_owner"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "_trusted_user"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "require_acknowledgement"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "require_completion"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "require_focused_acknowledgements"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "function"
+symbol = "require_focused_completion"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/codex_review.py"
+kind = "module"
+symbol = "src/supportability_gate/codex_review.py"
+before = "Owned dormant connector transport, request observation, or focused completion verification."
+after = "Deleted; deterministic enforcement has no connector transport or completion dependency."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/focused_review.py"
+kind = "module"
+symbol = "src/supportability_gate/focused_review.py"
+before = "Owned fixed connector focus commands and output-contract constants."
+after = "Deleted; owner-authored review requests are outside Gate enforcement."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "review_required"
+before = "Derived an advisory-review Boolean from deterministic results."
+after = "Deleted; deterministic evidence no longer derives or exposes a connector decision."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results_producer.py"
+kind = "function"
+symbol = "main"
+before = "Wrote standard-results.v3 and printed a review-required Boolean."
+after = "Writes standard-results.v3 and returns with empty stdout."

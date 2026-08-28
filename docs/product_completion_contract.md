@@ -1274,7 +1274,8 @@ workflow, check-run, ruleset, or GitHub state supports them.
 Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
-Current authorized work: Project #10 S11 issue #154 is the terminal slice; none after exact protected completion
+Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
+Current authorized work: Project #10 S11 issue #154 connector-retirement correction
 Next milestone authorized: NONE; S11 has no successor
 ```
 
@@ -2237,7 +2238,19 @@ Do not create a new terminal label not authorized by an active milestone directi
   exact artifacts, required workflows and status contexts, native conversation resolution, separate
   source validation, strict current-head enforcement, and zero bypass remain the enforcement
   boundary. No target code is imported or executed on the owner workstation.
-- Remaining work: complete and record every issue #154 terminal proof, merge this exact protected
-  pull request normally, read back protected `main`, automatic issue closure, rulesets, target set,
-  canaries, Project fields, and cleanup, set S11 `Done / Complete / On scope / Yes`, close Project
-  #10, and stop. No successor or unrelated work is authorized.
+- Connector-retirement correction: owner authorization on 2026-08-28 reopened S11 only to remove
+  dormant connector transport and focused-review code, producer Boolean stdout, and all
+  `review-required` workflow plumbing. Gate, TWMN, and DC Training use one owner-opt-in rule: only
+  an explicit owner request in the current task authorizes `@codex review`; pushes, failures,
+  timeouts, missing acknowledgements, and prior requests never authorize automatic requests,
+  retries, or blocking waits. The immutable Standard, frozen roadmap, deterministic
+  `standard-results.v3` artifact, eight check contexts, thresholds, and native review-thread
+  resolution remain unchanged. Historical connector evidence above remains historical evidence.
+- Correction completion status: this source entry records the final product boundary but does not
+  claim the rollout complete. Direct terminal evidence remains in issue #154: normal protected Gate
+  and DC Training merges, ruleset `21664395` pinned only to the corrected Gate merge, one passing
+  public `supportability-audit` canary with exactly eight App-15368 contexts and zero connector
+  activity or bypass, and normal recovery/merge of existing TWMN PR #118 after included private
+  Actions minutes reset. After those readbacks, set S11 `Done / Complete / On scope / Yes`, close
+  issue #154 and Project #10, remove the canary branch, and stop. No successor or unrelated work is
+  authorized.

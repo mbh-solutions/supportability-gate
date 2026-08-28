@@ -249,7 +249,6 @@ jobs:
     outputs:
       artifact-digest: ${{ steps.upload_evidence.outputs.artifact-digest }}
       artifact-id: ${{ steps.upload_evidence.outputs.artifact-id }}
-      review-required: ${{ steps.standard_results.outputs.review-required }}
     steps:
       - name: Check out target pull-request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -429,7 +428,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/gate/src
         run: |
           set +e
-          review_required=$(python -P -m supportability_gate.standard_results_producer \
+          python -P -m supportability_gate.standard_results_producer \
             --repository "$GITHUB_REPOSITORY" \
             --repository-id "$GITHUB_REPOSITORY_ID" \
             --base-sha "$BASE_SHA" \
@@ -455,14 +454,9 @@ jobs:
             --characterization-result "$RUNNER_TEMP/evidence/characterization-result.json" \
             --refactor-result "$RUNNER_TEMP/evidence/refactor-policy-result.json" \
             --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
-            --output "$RUNNER_TEMP/evidence/standard-results.json")
+            --output "$RUNNER_TEMP/evidence/standard-results.json"
           status=$?
           if [ "$status" -ne 0 ]; then exit "$status"; fi
-          case "$review_required" in
-            true|false) ;;
-            *) echo "INVALID_REVIEW_REQUIRED_OUTPUT"; exit 2 ;;
-          esac
-          echo "review-required=$review_required" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/evidence/standard-results.json"
 
       - name: Upload authoritative supportability evidence
@@ -480,7 +474,6 @@ jobs:
         env:
           ARTIFACT_DIGEST: ${{ steps.upload_evidence.outputs.artifact-digest }}
           ARTIFACT_ID: ${{ steps.upload_evidence.outputs.artifact-id }}
-          REVIEW_REQUIRED: ${{ steps.standard_results.outputs.review-required }}
           STANDARD_RESULTS_OUTCOME: ${{ steps.standard_results.outcome }}
           UPLOAD_OUTCOME: ${{ steps.upload_evidence.outcome }}
         run: |
@@ -488,7 +481,6 @@ jobs:
           for result in "$STANDARD_RESULTS_OUTCOME" "$UPLOAD_OUTCOME"; do
             if [ "$result" != "success" ]; then status=1; fi
           done
-          case "$REVIEW_REQUIRED" in true|false) ;; *) status=1 ;; esac
           if ! [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then status=1; fi
           if ! [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]; then status=1; fi
           exit "$status"
