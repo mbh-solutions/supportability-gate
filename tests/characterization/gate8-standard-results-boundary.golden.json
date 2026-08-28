@@ -519,7 +519,6 @@
         }
       },
       "review_handoff_sha256": "7173ff3710e87322d18435d151f91c185240a72c2aab679e091e378eba02e393",
-      "review_required": "true",
       "rows": [
         {
           "applicable": true,
@@ -1140,7 +1139,6 @@
         }
       },
       "review_handoff_sha256": "e4718c4b78d65767bc3fd844fc4eeb1f5b131b57c36867ae020f2561a5072f0b",
-      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -1493,7 +1491,6 @@
         }
       },
       "review_handoff_sha256": "a6f26d0f36af7f7fadfaed438faf2d0f7d1e6821109b74587d39a68a9dfe7701",
-      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -1667,7 +1664,6 @@
       "producer_exit": 0,
       "review_handoff": null,
       "review_handoff_sha256": null,
-      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -2388,7 +2384,6 @@
         }
       },
       "review_handoff_sha256": "3a0bb0286d2eecc11762e43cfe9ffcd940308d7dbd9855c52f992ed9aa5e6e6b",
-      "review_required": "false",
       "rows": [
         {
           "applicable": true,
@@ -3006,7 +3001,6 @@
         }
       },
       "review_handoff_sha256": "162984aabdb27dedae65e08105d54c9c1f7736ab283845b4c15e53566c749b64",
-      "review_required": "false",
       "rows": [
         {
           "applicable": false,
@@ -3373,7 +3367,6 @@
         }
       },
       "review_handoff_sha256": "d7531c96212e37118cd5255a2e6cece65632ab9dc729de6ec8ed2356ee85d6e1",
-      "review_required": "false",
       "rows": [
         {
           "applicable": true,

@@ -3052,10 +3052,3 @@ def validate_handoff_sources(
     )
     if actual != expected:
         raise StandardResultsError("HANDOFF_SOURCE_BINDING_MISMATCH")
-
-
-def review_required(payload: object) -> bool:
-    """Require advisory review only after all non-short deterministic rows pass."""
-    validate_payload(payload)
-    assert isinstance(payload, dict)
-    return not payload["short_task"] and all(row["result"] == "PASS" for row in payload["entries"])

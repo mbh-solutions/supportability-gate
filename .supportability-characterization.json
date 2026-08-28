@@ -14,20 +14,6 @@
     },
     {
       "covers": [
-        "src/supportability_gate/codex_review.py"
-      ],
-      "id": "codex-review-boundary",
-      "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/focused_review.py"
-      ],
-      "id": "focused-review-contract",
-      "kind": "regression"
-    },
-    {
-      "covers": [
         "src/supportability_gate/quality_profile.py",
         "src/supportability_gate/quality_runner.py",
         "src/supportability_gate/refactor_policy.py",

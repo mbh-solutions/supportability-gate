@@ -181,7 +181,6 @@ def main(argv: list[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     payload = _compose(arguments)
     _write_json(Path(arguments.output), payload)
-    print(str(standard_results.review_required(payload)).lower())
     return 0
 
 

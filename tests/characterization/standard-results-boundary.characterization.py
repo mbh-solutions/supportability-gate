@@ -363,9 +363,7 @@ def _run_case(
         "--output",
         str(output),
     ]
-    producer_stdout = io.StringIO()
-    with contextlib.redirect_stdout(producer_stdout):
-        producer_exit = producer.main(arguments)
+    producer_exit = producer.main(arguments)
     with contextlib.redirect_stdout(io.StringIO()):
         enforcer_exits = [
             enforcer.main([*common, "--input", str(output), "--standard", str(standard)])
@@ -385,7 +383,6 @@ def _run_case(
             if entry["policy_blocks"] or entry["technical_errors"]
         ],
         "producer_exit": producer_exit,
-        "review_required": producer_stdout.getvalue().rstrip("\n"),
         "rows": [
             {
                 "applicable": entry["applicable"],
