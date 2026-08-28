@@ -13,7 +13,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
-LEGACY_DRIVER_SHA256 = "1626a072f0d358bb5f4eaa5d9a6cc0a718cd76f00ab2c732a447c79bd0d0d31b"
+LEGACY_DRIVER_SHA256 = "70da5a0977835013d7f03fcfdecd0b0391a74c25023e1fc4b5a97e47ba808413"
 LEGACY_STANDARD_RESULTS_SHA256 = "43b1e96099a314aac1f2059589705161b5681157e07a752674aac9748d551f5b"
 LEGACY_GATE_EIGHT_STANDARD_RESULTS_SHA256 = (
     "942d2127b636240bb3695ce489fccd7a27736a82b358fc4fe9db9a33d355ede0"
@@ -406,7 +406,7 @@ def main() -> None:
     legacy_cases = (
         json.loads(
             (
-                definition / "tests/characterization/gate8-standard-results-boundary.golden.json"
+                definition / "tests/characterization/gate8-standard-results-boundary-v2.golden.json"
             ).read_bytes()
         )["cases"]
         if not gate_eight_binding
@@ -581,7 +581,7 @@ def main() -> None:
         "blocks": list(blocks),
     }
     payload["behavior"]["schema_version"] = "standard-results.v3"
-    payload["scenario"] = "gate8-standard-results-boundary"
+    payload["scenario"] = "gate8-standard-results-boundary-v2"
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))
 
 

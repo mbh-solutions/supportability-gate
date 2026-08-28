@@ -363,7 +363,8 @@ def _run_case(
         "--output",
         str(output),
     ]
-    producer_exit = producer.main(arguments)
+    with contextlib.redirect_stdout(io.StringIO()):
+        producer_exit = producer.main(arguments)
     with contextlib.redirect_stdout(io.StringIO()):
         enforcer_exits = [
             enforcer.main([*common, "--input", str(output), "--standard", str(standard)])

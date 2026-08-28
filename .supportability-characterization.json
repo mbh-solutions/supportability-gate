@@ -24,7 +24,7 @@
         "src/supportability_gate/standard_results_enforcer.py",
         "src/supportability_gate/standard_results_producer.py"
       ],
-      "id": "gate8-standard-results-boundary",
+      "id": "gate8-standard-results-boundary-v2",
       "kind": "regression"
     },
     {
