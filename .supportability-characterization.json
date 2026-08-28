@@ -14,6 +14,8 @@
     },
     {
       "covers": [
+        "src/supportability_gate/codex_review.py",
+        "src/supportability_gate/focused_review.py",
         "src/supportability_gate/quality_profile.py",
         "src/supportability_gate/quality_runner.py",
         "src/supportability_gate/refactor_policy.py",
