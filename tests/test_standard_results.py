@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import supportability_gate
 
+import supportability_gate
 from supportability_gate import (
     clause_inventory,
     cli,
