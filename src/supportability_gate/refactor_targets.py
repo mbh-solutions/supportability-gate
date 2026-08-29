@@ -122,7 +122,7 @@ def _renamed_spans(
             (old_path, policy.is_production_path(old_path), base_profiled, base),
             (new_path, policy.is_production_path(new_path), head_profiled, head),
         )
-        if production and (not profiled or side is None)
+        if production and profiled and side is None
     )
     if base is not None and head is not None:
         try:
@@ -192,6 +192,13 @@ def derive(
     targets: list[str] = []
     unbounded: list[str] = []
     for change in changes:
+        profiled_paths = tuple(
+            path
+            for path in (change.old_path, change.new_path)
+            if path and policy.is_production_path(path) and _profile_source(path, policy.language)
+        )
+        if not profiled_paths:
+            continue
         path = _production_change_path(change, policy)
         if path is None:
             continue
@@ -200,13 +207,14 @@ def derive(
         )
         unbounded.extend(newly_unbounded)
         if not spans:
-            unbounded.append(path)
+            unbounded.extend(profiled_paths)
             continue
         if (
             change.old_path is not None
             and change.new_path is not None
             and change.old_path != change.new_path
             and policy.is_production_path(change.new_path)
+            and _profile_source(change.new_path, policy.language)
             and all(target_path != change.new_path for target_path, _ in spans)
         ):
             unbounded.append(change.new_path)
