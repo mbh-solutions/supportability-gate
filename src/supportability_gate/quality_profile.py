@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import zlib
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,7 +15,7 @@ from supportability_gate import contract, git_changes
 if TYPE_CHECKING:
     from supportability_gate.function_changes import ChangedFileAssessment
 
-SCHEMA_VERSION = "quality-gates.v5"
+SCHEMA_VERSION = "quality-gates.v6"
 TIMEOUT_SECONDS = 180
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {
@@ -24,6 +25,20 @@ SOURCE_SUFFIXES = {
 TEST_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts"),
+}
+ASSET_VALIDATORS = {
+    ".json": ("json", "json.stdlib.v1"),
+    ".md": ("markdown", "markdown.utf8.v1"),
+    ".png": ("png", "png.crc.v1"),
+}
+UNSUPPORTED_ASSET_IDENTITY = ("unsupported", "unsupported.v1")
+ASSET_RESULTS = frozenset({"PASS", "MALFORMED", "UNSUPPORTED"})
+_PNG_BIT_DEPTHS = {
+    0: (1, 2, 4, 8, 16),
+    2: (8, 16),
+    3: (1, 2, 4, 8),
+    4: (8, 16),
+    6: (8, 16),
 }
 _PYTHON_COMMANDS = (
     (
@@ -283,6 +298,17 @@ class GateResult:
 
 
 @dataclass(frozen=True)
+class AssetReceipt:
+    """One immutable production-asset validation result."""
+
+    path: str
+    kind: str
+    validator: str
+    blob_sha256: str
+    result: str
+
+
+@dataclass(frozen=True)
 class QualityEvidence:
     """Exact immutable quality-profile attestation."""
 
@@ -294,7 +320,9 @@ class QualityEvidence:
     high_risk_paths: tuple[str, ...]
     language: str
     maximum_complexity: int
+    asset_receipts: tuple[AssetReceipt, ...]
     production_files: tuple[str, ...]
+    source_files: tuple[str, ...]
     test_files: tuple[str, ...]
     production_paths: tuple[str, ...]
     repository: str
@@ -331,14 +359,117 @@ def production_files(
     policy: contract.Contract,
     records: list[git_changes.CommandRecord],
 ) -> tuple[str, ...]:
-    """Recompute the exact quality source manifest from the immutable head tree."""
+    """Recompute the complete production manifest from the immutable head tree."""
     return tuple(
         item.path
         for item in git_changes.list_regular_blobs(
             repository, head_sha, policy.production_paths, records
         )
-        if item.path.endswith(SOURCE_SUFFIXES[policy.language])
     )
+
+
+def source_files(production: tuple[str, ...], language: str) -> tuple[str, ...]:
+    """Return the language-source subset eligible for fixed code commands."""
+    return tuple(path for path in production if path.endswith(SOURCE_SUFFIXES[language]))
+
+
+def _valid_json(content: bytes) -> bool:
+    def reject_constant(value: str) -> None:
+        raise ValueError(value)
+
+    def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        value = dict(pairs)
+        if len(value) != len(pairs):
+            raise ValueError("duplicate object key")
+        return value
+
+    try:
+        json.loads(
+            content.decode("utf-8"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_constant=reject_constant,
+        )
+    except (UnicodeDecodeError, ValueError):
+        return False
+    return True
+
+
+def _valid_markdown(content: bytes) -> bool:
+    try:
+        return "\0" not in content.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+
+
+def _valid_ihdr(data: bytes) -> bool:
+    return (
+        len(data) == 13
+        and int.from_bytes(data[:4], "big") > 0
+        and int.from_bytes(data[4:8], "big") > 0
+        and data[8] in _PNG_BIT_DEPTHS.get(data[9], ())
+        and data[10] == 0
+        and data[11] == 0
+        and data[12] in {0, 1}
+    )
+
+
+def _valid_png(content: bytes) -> bool:
+    if not content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return False
+    offset = 8
+    first = True
+    while offset < len(content):
+        if len(content) - offset < 12:
+            return False
+        size = int.from_bytes(content[offset : offset + 4], "big")
+        end = offset + 12 + size
+        if end > len(content):
+            return False
+        kind = content[offset + 4 : offset + 8]
+        data = content[offset + 8 : offset + 8 + size]
+        expected_crc = int.from_bytes(content[offset + 8 + size : end], "big")
+        if zlib.crc32(kind + data) != expected_crc:
+            return False
+        if first and (kind != b"IHDR" or not _valid_ihdr(data)):
+            return False
+        first = False
+        if kind == b"IEND":
+            return size == 0 and end == len(content)
+        offset = end
+    return False
+
+
+def _asset_result(validator: str, content: bytes) -> str:
+    validators = {
+        "json.stdlib.v1": _valid_json,
+        "markdown.utf8.v1": _valid_markdown,
+        "png.crc.v1": _valid_png,
+    }
+    return "PASS" if validators[validator](content) else "MALFORMED"
+
+
+def asset_receipts(
+    repository: Path,
+    head_sha: str,
+    production: tuple[str, ...],
+    sources: tuple[str, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[AssetReceipt, ...]:
+    """Validate every non-source production blob at the immutable head."""
+    receipts: list[AssetReceipt] = []
+    for path in production:
+        if path in sources:
+            continue
+        blob = git_changes.read_regular_blob(repository, head_sha, path, records)
+        identity = ASSET_VALIDATORS.get(Path(path).suffix, UNSUPPORTED_ASSET_IDENTITY)
+        kind, validator = identity
+        result = (
+            "UNSUPPORTED"
+            if identity == UNSUPPORTED_ASSET_IDENTITY
+            else _asset_result(validator, blob.content)
+        )
+        receipts.append(AssetReceipt(path, kind, validator, _sha256(blob.content), result))
+    return tuple(receipts)
 
 
 def test_files(
@@ -478,8 +609,34 @@ def _gate_result(value: object) -> GateResult:
     )
 
 
+def _asset_receipt(value: object) -> AssetReceipt:
+    keys = {"blob_sha256", "kind", "path", "result", "validator"}
+    if (
+        not isinstance(value, dict)
+        or set(value) != keys
+        or any(not isinstance(value[field], str) for field in keys)
+        or not value["path"]
+        or re.fullmatch(r"[0-9a-f]{64}", value["blob_sha256"]) is None
+        or value["result"] not in ASSET_RESULTS
+    ):
+        raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid asset receipt")
+    identity = ASSET_VALIDATORS.get(Path(value["path"]).suffix, UNSUPPORTED_ASSET_IDENTITY)
+    if (value["kind"], value["validator"]) != identity or (
+        value["result"] == "UNSUPPORTED"
+    ) is not (identity == UNSUPPORTED_ASSET_IDENTITY):
+        raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid asset identity")
+    return AssetReceipt(
+        value["path"],
+        value["kind"],
+        value["validator"],
+        value["blob_sha256"],
+        value["result"],
+    )
+
+
 def _parse_evidence(data: object) -> QualityEvidence:
     expected = {
+        "asset_receipts",
         "base_sha",
         "changed_paths",
         "commands",
@@ -489,6 +646,7 @@ def _parse_evidence(data: object) -> QualityEvidence:
         "language",
         "maximum_complexity",
         "production_files",
+        "source_files",
         "test_files",
         "production_paths",
         "repository",
@@ -525,19 +683,47 @@ def _parse_evidence(data: object) -> QualityEvidence:
     )
     if any(not isinstance(data[field], str) for field in scalar_strings):
         raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid quality identity")
-    if type(data["maximum_complexity"]) is not int or not isinstance(data["commands"], list):
+    if (
+        type(data["maximum_complexity"]) is not int
+        or not isinstance(data["commands"], list)
+        or not isinstance(data["asset_receipts"], list)
+    ):
         raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid quality values")
+    receipts = tuple(_asset_receipt(item) for item in data["asset_receipts"])
+    if tuple(sorted(receipts, key=lambda item: item.path)) != receipts or len(
+        {item.path for item in receipts}
+    ) != len(receipts):
+        raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "asset receipts not unique/sorted")
+    production = _string_tuple(data["production_files"], "production_files")
+    sources = _string_tuple(data["source_files"], "source_files")
+    tests = _string_tuple(data["test_files"], "test_files")
+    commands = tuple(_gate_result(item) for item in data["commands"])
+    if (
+        data["language"] not in SOURCE_SUFFIXES
+        or production != tuple(sorted(set(production)))
+        or sources != tuple(sorted(set(sources)))
+        or any(not path.endswith(SOURCE_SUFFIXES[data["language"]]) for path in sources)
+        or production != tuple(sorted((*sources, *(item.path for item in receipts))))
+        or any(
+            path not in sources
+            for command in commands
+            for path in (*command.observed_paths, *command.zero_statement_paths)
+        )
+    ):
+        raise QualityProfileError("MALFORMED_QUALITY_EVIDENCE", "invalid production partition")
     return QualityEvidence(
         data["base_sha"],
         _string_tuple(data["changed_paths"], "changed_paths"),
-        tuple(_gate_result(item) for item in data["commands"]),
+        commands,
         _string_tuple(data["exclusions"], "exclusions"),
         data["head_sha"],
         _string_tuple(data["high_risk_paths"], "high_risk_paths"),
         data["language"],
         data["maximum_complexity"],
-        _string_tuple(data["production_files"], "production_files"),
-        _string_tuple(data["test_files"], "test_files"),
+        receipts,
+        production,
+        sources,
+        tests,
         _string_tuple(data["production_paths"], "production_paths"),
         data["repository"],
         data["repository_id"],
@@ -764,6 +950,7 @@ def _command_blocks(
     evidence: QualityEvidence,
     policy: contract.Contract,
     changed_paths: tuple[str, ...],
+    high_risk_paths: tuple[str, ...],
 ) -> list[str]:
     expected = dict(command_templates(policy.language))
     commands = {item.adapter: item for item in evidence.commands}
@@ -795,7 +982,7 @@ def _command_blocks(
             )
             blocks.extend(
                 f"QUALITY_HIGH_RISK_FILE_COVERAGE:{adapter}:{path}"
-                for path in policy.high_risk_paths
+                for path in high_risk_paths
                 if not _covers(result, path)
             )
     test_adapter = "python.pytest.v1" if policy.language == "python" else "typescript.test.v1"
@@ -803,7 +990,7 @@ def _command_blocks(
     if test_result is not None:
         blocks.extend(
             f"UNTESTED_AREA:{path}"
-            for path in sorted(set((*changed_paths, *policy.high_risk_paths)))
+            for path in sorted(set((*changed_paths, *high_risk_paths)))
             if not _covers(test_result, path)
         )
     return blocks
@@ -814,6 +1001,8 @@ def _policy_blocks(
     policy: contract.Contract,
     assessments: tuple[ChangedFileAssessment, ...],
     production_files: tuple[str, ...],
+    source_files: tuple[str, ...],
+    asset_receipts: tuple[AssetReceipt, ...],
     test_files: tuple[str, ...],
 ) -> list[str]:
     blocks: list[str] = []
@@ -821,6 +1010,22 @@ def _policy_blocks(
         blocks.append("QUALITY_PRODUCTION_MANIFEST_MISMATCH")
     if evidence.test_files != test_files:
         blocks.append("QUALITY_TEST_MANIFEST_MISMATCH")
+    if evidence.source_files != source_files:
+        blocks.append("QUALITY_SOURCE_MANIFEST_MISMATCH")
+    if evidence.asset_receipts != asset_receipts:
+        blocks.append("QUALITY_ASSET_RECEIPT_MISMATCH")
+    if production_files != tuple(sorted((*source_files, *(item.path for item in asset_receipts)))):
+        blocks.append("QUALITY_PRODUCTION_PARTITION_MISMATCH")
+    blocks.extend(
+        f"MALFORMED_PRODUCTION_ASSET:{item.path}"
+        for item in asset_receipts
+        if item.result == "MALFORMED"
+    )
+    blocks.extend(
+        f"UNSUPPORTED_PRODUCTION_ASSET:{item.path}"
+        for item in asset_receipts
+        if item.result == "UNSUPPORTED"
+    )
     changed_paths = _changed_production_paths(assessments)
     if evidence.production_paths != policy.production_paths:
         blocks.append("QUALITY_SCOPE_NARROWING")
@@ -836,12 +1041,12 @@ def _policy_blocks(
     blocks.extend(
         f"QUALITY_CHANGED_FILE_NOT_ATTESTED:{path}"
         for path in head_paths
-        if path.endswith(SOURCE_SUFFIXES[policy.language]) and path not in evidence.production_files
+        if path not in evidence.production_files
     )
     blocks.extend(
         f"QUALITY_HIGH_RISK_FILE_NOT_ATTESTED:{path}"
         for path in policy.high_risk_paths
-        if path.endswith(SOURCE_SUFFIXES[policy.language]) and path not in evidence.production_files
+        if path not in evidence.production_files
     )
     if (
         evidence.changed_paths != changed_paths
@@ -857,14 +1062,29 @@ def evidence_blocks(
     identity: git_changes.RepositoryIdentity,
     assessments: tuple[ChangedFileAssessment, ...],
     production_files: tuple[str, ...],
+    source_files: tuple[str, ...],
+    asset_receipts: tuple[AssetReceipt, ...],
     test_files: tuple[str, ...],
     workflow_sha: str,
 ) -> tuple[str, ...]:
     """Bind exact attestation identity and return deterministic quality blocks."""
     _verify_evidence_identity(evidence, policy, identity, workflow_sha)
-    changed_paths = _changed_head_production_paths(assessments)
-    blocks = _command_blocks(evidence, policy, changed_paths)
-    blocks.extend(_policy_blocks(evidence, policy, assessments, production_files, test_files))
+    changed_paths = tuple(
+        path for path in _changed_head_production_paths(assessments) if path in source_files
+    )
+    high_risk_paths = tuple(path for path in policy.high_risk_paths if path in source_files)
+    blocks = _command_blocks(evidence, policy, changed_paths, high_risk_paths)
+    blocks.extend(
+        _policy_blocks(
+            evidence,
+            policy,
+            assessments,
+            production_files,
+            source_files,
+            asset_receipts,
+            test_files,
+        )
+    )
     return tuple(sorted(set(blocks)))
 
 
@@ -899,7 +1119,9 @@ def decision_payload(evidence: QualityEvidence) -> dict[str, object]:
         "high_risk_paths": list(evidence.high_risk_paths),
         "language": evidence.language,
         "maximum_complexity": evidence.maximum_complexity,
+        "asset_receipts": [asdict(item) for item in evidence.asset_receipts],
         "production_files": list(evidence.production_files),
+        "source_files": list(evidence.source_files),
         "test_files": list(evidence.test_files),
         "production_paths": list(evidence.production_paths),
         "repository_remote": evidence.repository_remote,

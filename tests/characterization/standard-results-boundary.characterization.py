@@ -265,11 +265,21 @@ def _run_case(
     expected_capture = "c" * 64
     if hasattr(producer.standard_results, "_s02_quality_capture"):
         profile = inputs["complexity"]["quality_profile"]
-        current = "test_files" in producer.standard_results._S02_PROFILE_KEYS
-        profile["schema_version"] = "quality-gates.v5" if current else "quality-gates.v4"
-        if current:
+        manifest_current = "test_files" in producer.standard_results._S02_PROFILE_KEYS
+        asset_current = "source_files" in producer.standard_results._S02_PROFILE_KEYS
+        profile["schema_version"] = (
+            "quality-gates.v6"
+            if asset_current
+            else "quality-gates.v5"
+            if manifest_current
+            else "quality-gates.v4"
+        )
+        if manifest_current:
             profile["test_files"] = []
-        quality = producer.standard_results.quality_profile if current else None
+        if asset_current:
+            profile["asset_receipts"] = []
+            profile["source_files"] = list(profile["production_files"])
+        quality = producer.standard_results.quality_profile if manifest_current else None
         if quality is not None:
             decision = profile["commands"][0]
             proof = inputs["quality"]["commands"][0]
@@ -283,7 +293,10 @@ def _run_case(
                 "$TOOLS": "/quality/quality-tools",
             }
             list_values = {
-                "$SOURCE_FILES": [f"/repo/target/{path}" for path in profile["production_files"]],
+                "$SOURCE_FILES": [
+                    f"/repo/target/{path}"
+                    for path in profile.get("source_files", profile["production_files"])
+                ],
                 "$TEST_FILES": [f"/repo/target/{path}" for path in profile["test_files"]],
             }
             profile["commands"] = []

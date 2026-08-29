@@ -2,37 +2,232 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The private canonical repository preserves the exact S03 webhook delivery metadata that previously existed only in the intentionally deleted proof repository."
-proof = "docs/s03_webhook_deliveries.jsonl"
+intended_behavior = "Gate 7 inventories every in-scope production file, validates supported JSON, Markdown, and PNG assets, and keeps asset paths out of source-command observations; Gate 8 independently verifies the same v6 evidence contract."
+proof = "tests/test_quality_profile.py; tests/test_standard_results.py"
 
 [characterization]
-captured_behavior = "The preserved JSONL contains 29 delivery records, 8,271 bytes, SHA-256 1114965c02a2e91587988fdb2a8fac92c005214f1954fdd7968c20f8d8d45e9a, and no raw webhook bodies or secrets."
-proof = "docs/s03_webhook_deliveries.jsonl; docs/product_completion_contract.md"
+captured_behavior = "The v3 boundary scenario validates the fixed base v5 and head v6 contracts, then normalizes only the intentional asset-schema and derived-digest differences before comparing deterministic behavior."
+proof = "tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.golden.json"
 
 [separation_of_concerns]
-before = "The only accessible raw copy of the S03 delivery metadata remained inside a deleted proof checkout in the Recycle Bin."
-after = "The canonical private repository owns the immutable evidence file; runtime code, workflows, policy, and the historical record remain unchanged."
-boundaries = []
+before = "The v5 evidence boundary treated production inventory as source files and had no production-asset receipt contract."
+after = "The v6 boundary separates production inventory, command-observed source files, and validated asset receipts while preserving independent Gate 8 verification."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_quality_evidence"
+before = "Gate 7 wiring read the v5 source-only evidence shape."
+after = "Gate 7 wiring reads the v6 mixed-asset evidence without treating assets as command observations."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_asset_receipt"
+before = "No canonical production-asset receipt was derived."
+after = "A canonical receipt records each asset path, kind, fixed validator identity, SHA-256 digest, and validation result."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_asset_result"
+before = "Gate 7 had no asset format result mapping."
+after = "Supported, unsupported, and malformed production assets map to fixed receipt results."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_command_blocks"
+before = "Command evidence was checked against the source-only production inventory."
+after = "Command evidence is checked against source files so asset paths cannot appear in argv, observations, or zero-statement paths."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_parse_evidence"
+before = "The v5 parser accepted no asset receipts or explicit source-file inventory."
+after = "The v6 parser validates exact production, source, and asset evidence fields and their source-only command boundaries."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_policy_blocks"
+before = "Gate 7 policy blocks covered source-command and manifest defects only."
+after = "Gate 7 policy blocks also require exact asset receipts and fixed malformed or unsupported asset failures."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_ihdr"
+before = "PNG IHDR field legality was not independently checked."
+after = "PNG width, height, color-depth pairing, compression, filter, and interlace fields are validated."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_json"
+before = "Production JSON had no Gate 7 asset validator."
+after = "Production JSON requires strict UTF-8, finite constants, unique object keys, and valid JSON syntax."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_json.reject_constant"
+before = "Non-finite JSON constants were not rejected as production-asset defects."
+after = "Non-finite JSON constants fail the fixed JSON asset validator."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_json.reject_duplicate_keys"
+before = "Duplicate JSON object keys were not rejected as production-asset defects."
+after = "Duplicate keys in every JSON object fail the fixed JSON asset validator."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_markdown"
+before = "Production Markdown had no Gate 7 asset validator."
+after = "Production Markdown requires strict UTF-8 and rejects NUL content."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_png"
+before = "Production PNG files had no structural Gate 7 validator."
+after = "Production PNG files require valid signature, chunk framing, CRCs, legal IHDR fields, terminal empty IEND, and no trailing data."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "asset_receipts"
+before = "The profile exposed no deterministic production-asset receipt collection."
+after = "The profile emits sorted receipts for every non-source production blob and explicitly classifies unsupported suffixes without executing asset content."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "decision_payload"
+before = "The v5 public decision omitted asset receipts and explicit source files."
+after = "The v6 public decision includes exact asset receipts and source files alongside the complete production inventory."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "evidence_blocks"
+before = "Evidence validation did not compare production assets to canonical receipts."
+after = "Evidence validation fails closed on missing, extra, malformed, unsupported, or altered asset receipts and source-only command violations."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "production_files"
+before = "Production discovery returned only language source files."
+after = "Production discovery returns every contract-in-scope file, including supported and unsupported assets."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "source_files"
+before = "There was no explicit source-only projection of the production inventory."
+after = "A source-only projection defines the exclusive command-observation boundary."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "module"
+symbol = "src/supportability_gate/quality_profile.py"
+before = "The module owned source-only Gate 7 evidence."
+after = "The module owns mixed production inventory and asset validation while keeping command evidence source-only."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_runner.py"
+kind = "function"
+symbol = "profile_files"
+before = "The runner profiled source and test files without a complete production inventory."
+after = "The runner supplies complete production files while commands still receive only source and test files."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_block_ownership.py"
+kind = "module"
+symbol = "src/supportability_gate/standard_block_ownership.py"
+before = "Gate 7 owned no fixed production-asset failure families."
+after = "Gate 7 owns the fixed malformed and unsupported production-asset block families."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_asset_blocks"
+before = "Gate 8 derived no expected asset-failure block set."
+after = "Gate 8 derives the exact malformed and unsupported asset block set from authenticated receipts."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_asset_receipts"
+before = "Gate 8 accepted no v6 asset receipt collection."
+after = "Gate 8 validates canonical asset receipt fields, order, suffix-derived identities, SHA-256 digests, and results."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_complexity_components"
+before = "Gate 8 complexity binding did not include v6 asset and source evidence."
+after = "Gate 8 independently binds the v6 production inventory, source files, asset receipts, and source-only command observations."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_handoff_coverage"
+before = "The review handoff exposed production and test coverage only."
+after = "The review handoff exposes production, source, test, and asset-receipt coverage as separate authenticated facts."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_profile"
+before = "Gate 8 validated the v5 quality profile schema."
+after = "Gate 8 validates v6 source and asset fields, exact asset failures, and source-only command observations."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_quality_argv"
+before = "Gate 8 argv reconstruction used the full production list as its source boundary."
+after = "Gate 8 argv reconstruction uses only authenticated source files and rejects asset paths."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_quality_paths"
+before = "Gate 8 command path validation compared observations to the v5 production inventory."
+after = "Gate 8 requires every observed or zero-statement command path to belong to source files."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "module"
+symbol = "src/supportability_gate/standard_results.py"
+before = "The module independently verified the v5 standard-results boundary."
+after = "The module independently verifies v6 mixed-asset evidence and exact Gate 7 asset-failure ownership."
 
 [architecture]
-dependency_direction = "The archived evidence is inert data under docs and has no executable dependency on or from the Supportability Gate runtime."
-reviewed_paths = [".supportability-review.toml", "docs/s03_webhook_deliveries.jsonl"]
+dependency_direction = "The runner and CLI produce Gate 7 evidence; quality_profile owns asset classification and source-only command rules; standard_results independently validates the serialized evidence and handoff without importing target code."
+reviewed_paths = ["src/supportability_gate/cli.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "docs/s03_webhook_deliveries.jsonl"
-owns = "The exact S03 webhook delivery metadata recovered from the intentionally deleted proof repository."
-does_not_own = "Runtime behavior, workflow execution, policy, secrets, raw webhook bodies, or live webhook handling."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Gate 7 production inventory partitioning, fixed asset validation and receipts, and source-only command evidence."
+does_not_own = "Gate 8 independent verification, target-code execution, contract overrides, or external delivery state."
 
 [incremental_refactor]
-target = "Preserve the one unique S03 evidence artifact without changing executable behavior."
-completed_step = "Copied the exact verified JSONL bytes into the canonical private repository and bound this review evidence to the archival change."
+target = "Add one exact mixed-asset evidence schema without changing the fixed command contract or allowing assets into source-command observations."
+completed_step = "Implemented the v6 source and asset evidence boundary, independently bound it in standard results, and versioned its characterization as v3 while retaining v2 bytes."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The destination name identifies the S03 webhook delivery evidence directly."
-cohesion = "The JSONL remains one immutable evidence artifact under docs; no runtime responsibility was added."
-intended_behavior = "Merging the change makes the unique raw S03 metadata durable before its recycled proof checkout is permanently removed."
-reviewability = "The product diff is one exact data file; this TOML records its scope for deterministic gate review."
+naming = "Production files, source files, asset receipts, and asset failure blocks use distinct names matching their fixed responsibilities."
+cohesion = "Asset parsing and receipt construction remain in quality_profile; independent serialized-evidence checks remain in standard_results."
+intended_behavior = "The local change records all production assets, blocks malformed or unsupported assets, and never treats an asset as a command-observed source path."
+reviewability = "The exact 28 changed production responsibility identities are enumerated above; hosted authorization, protection, and merge completion remain unclaimed."

@@ -301,7 +301,13 @@ def _quality_evidence(
     errors: list[Exception],
 ) -> tuple[quality_profile.QualityEvidence | None, tuple[str, ...]]:
     try:
-        sources = quality_profile.production_files(repository, identity.head_sha, policy, records)
+        production = quality_profile.production_files(
+            repository, identity.head_sha, policy, records
+        )
+        sources = quality_profile.source_files(production, policy.language)
+        receipts = quality_profile.asset_receipts(
+            repository, identity.head_sha, production, sources, records
+        )
         tests = quality_profile.test_files(repository, identity.head_sha, policy.language, records)
         path = Path(arguments.quality_evidence)
         if not path.is_absolute():
@@ -325,7 +331,9 @@ def _quality_evidence(
             policy,
             identity,
             assessments,
+            production,
             sources,
+            receipts,
             tests,
             str(arguments.workflow_sha),
         )

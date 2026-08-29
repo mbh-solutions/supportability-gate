@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from supportability_gate import (
@@ -279,6 +280,7 @@ _S02_QUALITY_KEYS = {
     "runner_environment",
 }
 _S02_PROFILE_KEYS = {
+    "asset_receipts",
     "base_sha",
     "changed_paths",
     "commands",
@@ -291,6 +293,7 @@ _S02_PROFILE_KEYS = {
     "production_paths",
     "repository_remote",
     "schema_version",
+    "source_files",
     "test_files",
     "workflow_sha",
 }
@@ -489,9 +492,56 @@ def _s02_profile_command(row: dict[str, Any], code: str) -> str:
     return adapter
 
 
+def _s02_asset_receipts(value: object, code: str) -> tuple[dict[str, Any], ...]:
+    keys = {"blob_sha256", "kind", "path", "result", "validator"}
+    rows = _s02_rows(value, keys, code)
+    paths: list[str] = []
+    for row in rows:
+        path = row["path"]
+        identity = (
+            quality_profile.ASSET_VALIDATORS.get(Path(path).suffix)
+            if isinstance(path, str)
+            else None
+        ) or quality_profile.UNSUPPORTED_ASSET_IDENTITY
+        if (
+            not isinstance(path, str)
+            or not path
+            or (row["kind"], row["validator"]) != identity
+            or not _s02_sha(row["blob_sha256"], _S02_SHA64)
+            or not isinstance(row["result"], str)
+            or row["result"] not in quality_profile.ASSET_RESULTS
+            or (row["result"] == "UNSUPPORTED")
+            is not (identity == quality_profile.UNSUPPORTED_ASSET_IDENTITY)
+        ):
+            raise StandardResultsError(code)
+        paths.append(path)
+    if paths != sorted(set(paths)):
+        raise StandardResultsError(code)
+    return tuple(rows)
+
+
+def _s02_asset_blocks(receipts: tuple[dict[str, Any], ...]) -> frozenset[str]:
+    families = {
+        "MALFORMED": "MALFORMED_PRODUCTION_ASSET",
+        "UNSUPPORTED": "UNSUPPORTED_PRODUCTION_ASSET",
+    }
+    return frozenset(
+        f"{families[receipt['result']]}:{receipt['path']}"
+        for receipt in receipts
+        if receipt["result"] != "PASS"
+    )
+
+
 def _s02_profile(
     value: object, identity: RunIdentity, language: str, code: str
-) -> tuple[tuple[str, ...], str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+) -> tuple[
+    tuple[str, ...],
+    str,
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    frozenset[str],
+]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
         row[name] for name in ("base_sha", "head_sha", "repository_remote", "workflow_sha")
@@ -514,12 +564,13 @@ def _s02_profile(
         "zero_statement_paths",
     }
     commands = _s02_rows(row["commands"], command_keys, code, True)
+    receipts = _s02_asset_receipts(row["asset_receipts"], code)
     adapters = tuple(_s02_profile_command(command, code) for command in commands)
     expected_commands = dict(quality_profile.command_templates(language))
     required_adapters = quality_profile.required_adapters(language)
     if (
         actual != expected
-        or row["schema_version"] != "quality-gates.v5"
+        or row["schema_version"] != "quality-gates.v6"
         or row["maximum_complexity"] != 10
         or adapters != tuple(adapter for adapter in required_adapters if adapter in adapters)
         or any(
@@ -536,12 +587,30 @@ def _s02_profile(
         "high_risk_paths",
         "production_files",
         "production_paths",
+        "source_files",
         "test_files",
     ):
         _s02_strings(row[name], code)
+    production = row["production_files"]
+    sources = row["source_files"]
+    if (
+        production != sorted(set(production))
+        or sources != sorted(set(sources))
+        or any(path not in production for path in sources)
+        or any(not path.endswith(quality_profile.SOURCE_SUFFIXES[language]) for path in sources)
+        or production != sorted([*sources, *(receipt["path"] for receipt in receipts)])
+        or any(
+            path not in sources
+            for command in commands
+            for field in ("observed_paths", "zero_statement_paths")
+            for path in command[field]
+        )
+    ):
+        raise StandardResultsError(code)
     result = (
         "BLOCK"
-        if any(
+        if any(receipt["result"] != "PASS" for receipt in receipts)
+        or any(
             contract.command_failed(
                 row["language"],
                 command["adapter"],
@@ -571,7 +640,7 @@ def _s02_profile(
         and contract.POLICY_EXIT_STANDARDS[row["language"]].get(command["adapter"]) == 3
     )
     missing = tuple(adapter for adapter in required_adapters if adapter not in adapters)
-    return adapters, result, failed, architecture_failed, missing
+    return adapters, result, failed, architecture_failed, missing, _s02_asset_blocks(receipts)
 
 
 def _s02_review_section(
@@ -1102,11 +1171,11 @@ def _s02_complexity_components(
         profile = (
             _s02_profile(row["quality_profile"], identity, row["language"], code)
             if row["quality_profile"] is not None
-            else ((), None, (), (), ())
+            else ((), None, (), (), (), frozenset())
         )
     except StandardResultsError:
         technical[:] = list(dict.fromkeys((*technical, "MALFORMED_QUALITY_EVIDENCE")))
-        profile = ((), None, (), (), ())
+        profile = ((), None, (), (), (), frozenset())
     if profile[1] is None:
         return (), None
     if row["modularity"] is not None:
@@ -1121,7 +1190,11 @@ def _s02_complexity_components(
         for block in blocks
         if block.startswith("MISSING_QUALITY_COMMAND:")
     }
-    quality_invalid = failed != set(profile[2]) or missing != set(profile[4])
+    asset_prefixes = ("MALFORMED_PRODUCTION_ASSET:", "UNSUPPORTED_PRODUCTION_ASSET:")
+    asset_blocks = frozenset(block for block in blocks if block.startswith(asset_prefixes))
+    quality_invalid = (
+        failed != set(profile[2]) or missing != set(profile[4]) or asset_blocks != profile[5]
+    )
     architecture_failed = {
         block.removeprefix("ARCHITECTURE_GATE_FAILED:")
         for block in blocks
@@ -1826,16 +1899,16 @@ def _s02_quality_paths(
     }
     repository = normalized.get("$REPOSITORY", (None,))[0]
     source = normalized.get("$SOURCE_FILES")
-    production = tuple(profile["production_files"])
-    if source is not None and production:
-        suffix = f"/{production[0]}"
+    source_files = tuple(profile["source_files"])
+    if source is not None and source_files:
+        suffix = f"/{source_files[0]}"
         if not source[0].endswith(suffix):
             raise StandardResultsError(code)
         derived = source[0][: -len(suffix)]
         if repository not in {None, derived}:
             raise StandardResultsError(code)
         repository = derived
-        if source != tuple(f"{repository}/{path}" for path in production):
+        if source != tuple(f"{repository}/{path}" for path in source_files):
             raise StandardResultsError(code)
     tests = normalized.get("$TEST_FILES")
     test_files = tuple(profile["test_files"])
@@ -1858,7 +1931,7 @@ def _s02_quality_paths(
 def _s02_quality_argv(profile: dict[str, Any], provenance: dict[str, Any], code: str) -> None:
     values: dict[str, tuple[str, ...]] = {}
     list_counts = {
-        "$SOURCE_FILES": len(profile["production_files"]),
+        "$SOURCE_FILES": len(profile["source_files"]),
         "$TEST_FILES": len(profile["test_files"]),
     }
     for decision, proof in zip(profile["commands"], provenance["commands"], strict=True):
@@ -2259,8 +2332,10 @@ def _s02_handoff_coverage(data: _S02Complexity) -> dict[str, object]:
         "gate_coverage": source["gate_coverage"],
         "high_risk_paths": profile.get("high_risk_paths", []),
         "maximum_complexity": profile.get("maximum_complexity"),
+        "asset_receipts": profile.get("asset_receipts", []),
         "production_files": profile.get("production_files", []),
         "production_paths": profile.get("production_paths", []),
+        "source_files": profile.get("source_files", []),
         "scope_state": (
             "UNVERIFIED"
             if not profile_verified

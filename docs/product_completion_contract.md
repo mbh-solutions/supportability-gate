@@ -1275,8 +1275,8 @@ Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #10 S11 issue #154 connector-retirement correction
-Next milestone authorized: NONE; S11 has no successor
+Current authorized work: Project #10 S12 issue #175 mixed production-asset quality coverage
+Next milestone authorized: NONE; S12 has no successor
 ```
 
 ## Milestone transition rules
@@ -2254,3 +2254,29 @@ Do not create a new terminal label not authorized by an active milestone directi
   Actions minutes reset. After those readbacks, set S11 `Done / Complete / On scope / Yes`, close
   issue #154 and Project #10, remove the canary branch, and stop. No successor or unrelated work is
   authorized.
+
+## Project #10 S12 mixed production-asset quality coverage
+
+- Prospective terminal result recorded by this protected ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after the
+  pull request closing issue #175 merges normally with no bypass, ruleset `21664395` is pinned to the
+  protected merge, passing and blocking mixed-asset canaries plus a fresh plugin PR Gate run have
+  direct evidence, and final cleanup/readbacks complete. Project #10 then closes with no successor.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg4jdWA`, repository issue #175, and protected source base
+  `ee6722449bd04c55e4deae3673dd695422e5dd56`.
+- Capability boundary: every regular blob inside the immutable contract's production paths is in the
+  exact-head production manifest. Existing Python and TypeScript code commands remain source-only;
+  JSON, Markdown, and PNG assets receive fixed Gate-owned path, kind, validator, and SHA-256 receipts.
+  Unsupported or malformed assets fail closed in Gate 7.
+- Validator boundary: Python 3.12 standard library only. JSON requires strict UTF-8, valid finite JSON,
+  and unique object keys; Markdown requires strict UTF-8 without NUL; PNG requires its fixed signature,
+  valid IHDR fields, bounded chunk framing and CRCs, terminal empty `IEND`, and no trailing bytes.
+- Enforcement boundary: target repositories cannot configure asset adapters, exclusions, waivers, or
+  non-applicability. Assets never enter code-command argv, `observed_paths`, or
+  `zero_statement_paths`; exact-head recomputation rejects missing, duplicate, forged, stale, or
+  mismatched receipts. No target code is imported or executed.
+- Remaining work: the exact Python 3.12 source proof, normal protected source merge, post-merge
+  workflow-pin activation/readback, protected passing and focused blocking canaries, fresh plugin PR
+  proof, Project/issue closure, and temporary-reference cleanup remain required before this
+  prospective result becomes canonical.

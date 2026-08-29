@@ -219,9 +219,11 @@ def profile_files(
     head_sha: str,
     policy: contract.Contract,
     records: list[git_changes.CommandRecord],
-) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Read the exact source and test file manifests from the head tree."""
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """Read complete production, source, and test manifests from the head tree."""
+    production = quality_profile.production_files(repository, head_sha, policy, records)
     return (
-        quality_profile.production_files(repository, head_sha, policy, records),
+        production,
+        quality_profile.source_files(production, policy.language),
         quality_profile.test_files(repository, head_sha, policy.language, records),
     )
