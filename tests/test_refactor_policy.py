@@ -945,18 +945,26 @@ def test_multiline_typescript_declarator_rename_binds_old_and_new_identities(
     assert result["targets"] == targets
 
 
-@pytest.mark.parametrize(
-    ("old_path", "expected_unbounded", "expected_blocks"),
-    [
-        ("sample.bin", [], []),
-        ("src/sample.bin", ["src/sample.bin"], ["UNVERIFIABLE_BOUNDED_TARGET"]),
-    ],
-)
-def test_refactor_targets_unprofiled_to_python_rename_distinguishes_old_production(
-    tmp_path: Path,
-    old_path: str,
-    expected_unbounded: list[str],
-    expected_blocks: list[str],
+def test_refactor_targets_leave_mixed_assets_to_quality_gate(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path, "typescript")
+    _git(repository, "reset", "--hard", base_sha)
+    _write(
+        repository / "src/sample.ts",
+        "export function calculate(value: number): number {\n  return value + 2;\n}\n",
+    )
+    _write(repository / "src/plugin.json", '{"name":"fixture"}\n')
+    _write(repository / "src/readme.md", "# Fixture\n")
+    head_sha = _commit(repository, "change source and assets")
+
+    assert _derived_targets(repository, base_sha, head_sha) == (
+        ("src/sample.ts::function:calculate:1-3",),
+        (),
+    )
+
+
+@pytest.mark.parametrize("old_path", ["sample.bin", "src/sample.bin"])
+def test_refactor_targets_unprofiled_to_python_rename_ignores_old_asset(
+    tmp_path: Path, old_path: str
 ) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
@@ -982,22 +990,28 @@ def test_refactor_targets_unprofiled_to_python_rename_distinguishes_old_producti
 
     assert _derived_targets(repository, base_sha, head_sha) == (
         (target,),
-        tuple(expected_unbounded),
+        (),
     )
     result = _verify(repository, event, _characterization(base_sha, head_sha, ["src/sample.py"]))
 
-    assert result["overall_result"] == ("BLOCK" if expected_blocks else "PASS")
+    assert result["overall_result"] == "PASS"
     assert result["targets"] == [target]
-    assert result["unbounded_paths"] == expected_unbounded
-    assert result["policy_blocks"] == expected_blocks
+    assert result["unbounded_paths"] == []
+    assert result["policy_blocks"] == []
 
 
 @pytest.mark.parametrize(
-    ("new_path", "head_source"),
-    [("src/sample.txt", "not Python\n"), ("src/renamed.py", "def broken(:\n")],
+    ("new_path", "head_source", "expected_unbounded"),
+    [
+        ("src/sample.txt", "not Python\n", ()),
+        ("src/renamed.py", "def broken(:\n", ("src/renamed.py",)),
+    ],
 )
-def test_renamed_profiled_source_retains_old_target_when_head_is_unbounded(
-    tmp_path: Path, new_path: str, head_source: str
+def test_renamed_profiled_source_distinguishes_asset_from_malformed_head(
+    tmp_path: Path,
+    new_path: str,
+    head_source: str,
+    expected_unbounded: tuple[str, ...],
 ) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
@@ -1020,7 +1034,24 @@ def test_renamed_profiled_source_retains_old_target_when_head_is_unbounded(
         records,
     ) == (
         ("src/sample.py::function:calculate:1-2",),
-        (new_path,),
+        expected_unbounded,
+    )
+
+
+@pytest.mark.parametrize("base_source", ["", "def broken(:\n"])
+def test_source_to_asset_rename_keeps_only_unbounded_source_path(
+    tmp_path: Path, base_source: str
+) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    _write(repository / "src/sample.py", base_source)
+    base_sha = _commit(repository, "unbounded source")
+    _git(repository, "mv", "src/sample.py", "src/sample.json")
+    head_sha = _commit(repository, "replace source with asset")
+
+    assert _derived_targets(repository, base_sha, head_sha) == (
+        (),
+        ("src/sample.py",),
     )
 
 
@@ -1135,15 +1166,32 @@ def test_python_deletion_authorization_remains_exact(
     assert result["policy_blocks"] == [code]
 
 
-@pytest.mark.parametrize(
-    ("path", "content"),
-    [("src/data.bin", "data\n"), ("src/broken.py", "def broken(:\n")],
-)
-def test_unbounded_deleted_production_files_fail_closed(
-    tmp_path: Path, path: str, content: str
-) -> None:
+def test_deleted_production_asset_is_not_a_refactor(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
+    path = "src/data.bin"
+    _write(repository / path, "data\n")
+    base_sha = _commit(repository, "asset base")
+    (repository / path).unlink()
+    head_sha = _commit(repository, "delete asset")
+
+    result = _verify(
+        repository,
+        _event(base_sha, head_sha, None),
+        _characterization(base_sha, head_sha, []),
+    )
+
+    assert result["overall_result"] == "PASS"
+    assert result["applicable"] is False
+    assert result["targets"] == []
+    assert result["unbounded_paths"] == []
+
+
+def test_unbounded_deleted_production_source_fails_closed(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    path = "src/broken.py"
+    content = "def broken(:\n"
     _write(repository / path, content)
     base_sha = _commit(repository, "unbounded base")
     (repository / path).unlink()
