@@ -455,17 +455,10 @@ def _evaluate(
                 }
             )
         )
-        suffixes = (
-            (".py", ".pyi")
-            if policy.language == "python"
-            else (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx")
-        )
-        production_files = tuple(
-            item.path
-            for item in git_changes.list_regular_blobs(
-                repository, head_sha, policy.production_paths, records
-            )
-            if item.path.endswith(suffixes)
+        production_files = quality_profile.production_files(repository, head_sha, policy, records)
+        source_files = quality_profile.source_files(production_files, policy.language)
+        receipts = quality_profile.asset_receipts(
+            repository, head_sha, production_files, source_files, records
         )
         test_files = quality_profile.test_files(repository, head_sha, policy.language, records)
         commands = tuple(
@@ -475,7 +468,7 @@ def _evaluate(
                 quality_profile.expected_proof_kind(adapter),
                 ()
                 if quality_profile.expected_proof_kind(adapter) == "provisioning"
-                else production_files,
+                else source_files,
                 (),
                 True,
                 complexity_exit_code
@@ -484,7 +477,7 @@ def _evaluate(
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
-                _executed_quality_arguments(arguments, production_files, test_files),
+                _executed_quality_arguments(arguments, source_files, test_files),
             )
             for adapter, arguments in quality_profile.command_templates(policy.language)
         )
@@ -498,7 +491,9 @@ def _evaluate(
                 high_risk_paths=policy.high_risk_paths,
                 language=policy.language,
                 maximum_complexity=policy.maximum,
+                asset_receipts=receipts,
                 production_files=production_files,
+                source_files=source_files,
                 test_files=test_files,
                 production_paths=policy.production_paths,
                 repository="example/fixture",
@@ -682,9 +677,9 @@ def _compose_cli_result(
     assert isinstance(profile, dict)
     commands = profile["commands"]
     assert isinstance(commands, list)
-    production_files = profile["production_files"]
+    source_files = profile["source_files"]
     test_files = profile["test_files"]
-    assert isinstance(production_files, list) and isinstance(test_files, list)
+    assert isinstance(source_files, list) and isinstance(test_files, list)
     provenance = {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
@@ -693,7 +688,7 @@ def _compose_cli_result(
             {
                 "adapter": command["adapter"],
                 "executed_arguments": list(
-                    _executed_quality_arguments(command["arguments"], production_files, test_files)
+                    _executed_quality_arguments(command["arguments"], source_files, test_files)
                 ),
                 "raw_proof_sha256": "a" * 64,
                 "stderr_sha256": "b" * 64,

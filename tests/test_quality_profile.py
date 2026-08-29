@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import zlib
 from dataclasses import replace
 from pathlib import Path
 
@@ -48,6 +49,23 @@ adapter = "python.c901-touched.v1"
 maximum = 10
 """
 POLICY = contract.parse_contract(POLICY_TEXT.encode())
+TYPESCRIPT_POLICY_TEXT = """schema_version = "1.0"
+language = "typescript"
+production_paths = ["src"]
+high_risk_paths = []
+
+[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["src"]
+
+[complexity]
+adapter = "typescript.c901-equivalent-touched.v1"
+maximum = 10
+"""
 IDENTITY = git_changes.RepositoryIdentity(
     "github.com/example/fixture",
     BASE_SHA,
@@ -87,7 +105,9 @@ def _evidence(**changes: object) -> quality_profile.QualityEvidence:
         "high_risk_paths": ("src/risk.py",),
         "language": "python",
         "maximum_complexity": 10,
+        "asset_receipts": (),
         "production_files": ("src/risk.py",),
+        "source_files": ("src/risk.py",),
         "test_files": ("tests/test_sample.py",),
         "production_paths": ("src",),
         "repository": "example/fixture",
@@ -126,10 +146,20 @@ def _blocks(
     evidence: quality_profile.QualityEvidence,
     assessments: tuple[ChangedFileAssessment, ...] = (),
     production_files: tuple[str, ...] = ("src/risk.py",),
+    source_files: tuple[str, ...] = ("src/risk.py",),
+    asset_receipts: tuple[quality_profile.AssetReceipt, ...] = (),
     test_files: tuple[str, ...] = ("tests/test_sample.py",),
 ) -> tuple[str, ...]:
     return quality_profile.evidence_blocks(
-        evidence, POLICY, IDENTITY, assessments, production_files, test_files, WORKFLOW_SHA
+        evidence,
+        POLICY,
+        IDENTITY,
+        assessments,
+        production_files,
+        source_files,
+        asset_receipts,
+        test_files,
+        WORKFLOW_SHA,
     )
 
 
@@ -174,9 +204,17 @@ def test_untrusted_command_result_blocks(field: str, value: object, code: str) -
 def test_uncovered_changed_and_high_risk_paths_block() -> None:
     assessment = _assessment("src/changed.py", "src/changed.py", True, True)
     commands = tuple(replace(item, observed_paths=("other",)) for item in _commands())
+    sources = ("src/changed.py", "src/risk.py")
     blocks = _blocks(
-        _evidence(changed_paths=("src/changed.py",), commands=commands),
+        _evidence(
+            changed_paths=("src/changed.py",),
+            commands=commands,
+            production_files=sources,
+            source_files=sources,
+        ),
         (assessment,),
+        production_files=sources,
+        source_files=sources,
     )
     assert "QUALITY_CHANGED_FILE_COVERAGE:python.ruff-lint.v1:src/changed.py" in blocks
     assert "QUALITY_HIGH_RISK_FILE_COVERAGE:python.ruff-lint.v1:src/risk.py" in blocks
@@ -288,6 +326,26 @@ def test_quality_evidence_is_byte_identical(tmp_path: Path) -> None:
     first = quality_profile.write_evidence(_evidence(), tmp_path / "first.json")
     second = quality_profile.write_evidence(_evidence(), tmp_path / "second.json")
     assert first == second
+
+
+@pytest.mark.parametrize("field", ["observed_paths", "zero_statement_paths"])
+def test_quality_evidence_rejects_asset_command_observation(tmp_path: Path, field: str) -> None:
+    receipt = quality_profile.AssetReceipt(
+        "src/config.json", "json", "json.stdlib.v1", "1" * 64, "PASS"
+    )
+    command = replace(_commands()[0], **{field: ("src/config.json",)})
+    evidence = _evidence(
+        asset_receipts=(receipt,),
+        commands=(command, *_commands()[1:]),
+        production_files=("src/config.json", "src/risk.py"),
+    )
+    path = tmp_path / "quality.json"
+    quality_profile.write_evidence(evidence, path)
+
+    with pytest.raises(quality_profile.QualityProfileError) as caught:
+        quality_profile.load_evidence(path)
+
+    assert caught.value.code == "MALFORMED_QUALITY_EVIDENCE"
 
 
 def test_decision_payload_excludes_run_specific_provenance() -> None:
@@ -453,6 +511,270 @@ def _run_git(repository: Path, *arguments: str) -> str:
     return completed.stdout.strip()
 
 
+def _png_with_ihdr(ihdr: bytes) -> bytes:
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return (
+            len(data).to_bytes(4, "big") + kind + data + zlib.crc32(kind + data).to_bytes(4, "big")
+        )
+
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IEND", b"")
+
+
+def test_mixed_production_assets_are_attested_without_entering_source_manifest(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "plugin-target"
+    repository.mkdir()
+    _run_git(repository, "init", "--initial-branch=main")
+    _run_git(repository, "config", "user.name", "Fixture")
+    _run_git(repository, "config", "user.email", "fixture@example.invalid")
+    (repository / ".supportability.toml").write_text(
+        TYPESCRIPT_POLICY_TEXT,
+        encoding="utf-8",
+        newline="\n",
+    )
+    source = repository / "src"
+    source.mkdir()
+    (source / "index.ts").write_text("export const ready = true;\n", encoding="utf-8")
+    (source / "manifest.json").write_text('{"name":"plugin"}\n', encoding="utf-8")
+    (source / "README.md").write_text("# Plugin\n", encoding="utf-8")
+
+    png = _png_with_ihdr(b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00")
+    (source / "icon.png").write_bytes(png)
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "fixture")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+    policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
+    records: list[git_changes.CommandRecord] = []
+
+    production, source_files, tests = quality_runner.profile_files(
+        repository, head_sha, policy, records
+    )
+    receipts = quality_profile.asset_receipts(
+        repository, head_sha, production, source_files, records
+    )
+
+    assert production == (
+        "src/README.md",
+        "src/icon.png",
+        "src/index.ts",
+        "src/manifest.json",
+    )
+    assert source_files == ("src/index.ts",)
+    assert tests == ()
+    assert tuple(receipt.path for receipt in receipts) == (
+        "src/README.md",
+        "src/icon.png",
+        "src/manifest.json",
+    )
+    assert all(receipt.result == "PASS" for receipt in receipts)
+    assert tuple(receipt.blob_sha256 for receipt in receipts) == tuple(
+        hashlib.sha256((repository / receipt.path).read_bytes()).hexdigest() for receipt in receipts
+    )
+
+
+def test_valid_asset_can_pass_without_code_command_observation() -> None:
+    policy = contract.parse_contract(
+        TYPESCRIPT_POLICY_TEXT.replace(
+            "high_risk_paths = []", 'high_risk_paths = ["src/config.json"]'
+        ).encode()
+    )
+    receipt = quality_profile.AssetReceipt(
+        "src/config.json", "json", "json.stdlib.v1", "1" * 64, "PASS"
+    )
+    commands = tuple(
+        quality_profile.GateResult(
+            adapter,
+            arguments,
+            quality_profile.expected_proof_kind(adapter),
+            ()
+            if quality_profile.expected_proof_kind(adapter) == "provisioning"
+            else ("src/index.ts",),
+            (),
+            True,
+            0,
+            EMPTY_SHA,
+            EMPTY_SHA,
+            EMPTY_SHA,
+            arguments,
+        )
+        for adapter, arguments in quality_profile.command_templates("typescript")
+    )
+    evidence = replace(
+        _evidence(),
+        asset_receipts=(receipt,),
+        changed_paths=("src/config.json",),
+        commands=commands,
+        high_risk_paths=("src/config.json",),
+        language="typescript",
+        production_files=("src/config.json", "src/index.ts"),
+        source_files=("src/index.ts",),
+        test_files=(),
+    )
+    assessment = _assessment(None, "src/config.json", False, True)
+
+    blocks = quality_profile.evidence_blocks(
+        evidence,
+        policy,
+        IDENTITY,
+        (assessment,),
+        evidence.production_files,
+        evidence.source_files,
+        evidence.asset_receipts,
+        evidence.test_files,
+        WORKFLOW_SHA,
+    )
+
+    assert blocks == ()
+    assert all(
+        "src/config.json" not in (*command.observed_paths, *command.zero_statement_paths)
+        for command in commands
+    )
+
+
+@pytest.mark.parametrize(
+    ("name", "content", "result", "block"),
+    [
+        ("bad.json", b"{", "MALFORMED", "MALFORMED_PRODUCTION_ASSET:src/bad.json"),
+        pytest.param(
+            "duplicate.json",
+            b'{"name":"first","name":"second"}',
+            "MALFORMED",
+            "MALFORMED_PRODUCTION_ASSET:src/duplicate.json",
+            id="duplicate-json-keys",
+        ),
+        ("bad.md", b"\xff", "MALFORMED", "MALFORMED_PRODUCTION_ASSET:src/bad.md"),
+        (
+            "bad.png",
+            b"\x89PNG\r\n\x1a\n\x00",
+            "MALFORMED",
+            "MALFORMED_PRODUCTION_ASSET:src/bad.png",
+        ),
+        (
+            "bad.bin",
+            b"unsupported",
+            "UNSUPPORTED",
+            "UNSUPPORTED_PRODUCTION_ASSET:src/bad.bin",
+        ),
+    ],
+)
+def test_invalid_or_unsupported_production_asset_blocks(
+    tmp_path: Path,
+    name: str,
+    content: bytes,
+    result: str,
+    block: str,
+) -> None:
+    repository = tmp_path / "asset-target"
+    repository.mkdir()
+    _run_git(repository, "init", "--initial-branch=main")
+    _run_git(repository, "config", "user.name", "Fixture")
+    _run_git(repository, "config", "user.email", "fixture@example.invalid")
+    (repository / ".supportability.toml").write_text(
+        TYPESCRIPT_POLICY_TEXT, encoding="utf-8", newline="\n"
+    )
+    source = repository / "src"
+    source.mkdir()
+    (source / "index.ts").write_text("export const ready = true;\n", encoding="utf-8")
+    (source / name).write_bytes(content)
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "fixture")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+    policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
+    records: list[git_changes.CommandRecord] = []
+    production, sources, tests = quality_runner.profile_files(repository, head_sha, policy, records)
+    receipts = quality_profile.asset_receipts(repository, head_sha, production, sources, records)
+    evidence = replace(
+        _evidence(),
+        asset_receipts=receipts,
+        high_risk_paths=(),
+        language="typescript",
+        production_files=production,
+        production_paths=("src",),
+        source_files=sources,
+        test_files=tests,
+    )
+
+    blocks = quality_profile._policy_blocks(
+        evidence, policy, (), production, sources, receipts, tests
+    )
+
+    assert receipts[0].result == result
+    assert block in blocks
+
+
+@pytest.mark.parametrize(
+    "ihdr",
+    [
+        pytest.param(
+            b"\x00\x00\x00\x00\x00\x00\x00\x01\x08\x06\x00\x00\x00",
+            id="zero-width",
+        ),
+        pytest.param(
+            b"\x00\x00\x00\x01\x00\x00\x00\x00\x08\x06\x00\x00\x00",
+            id="zero-height",
+        ),
+        pytest.param(
+            b"\x00\x00\x00\x01\x00\x00\x00\x01\x01\x02\x00\x00\x00",
+            id="illegal-bit-depth-color-type",
+        ),
+        pytest.param(
+            b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x01\x00\x00",
+            id="invalid-compression",
+        ),
+        pytest.param(
+            b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x01\x00",
+            id="invalid-filter",
+        ),
+        pytest.param(
+            b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x02",
+            id="invalid-interlace",
+        ),
+    ],
+)
+def test_crc_valid_png_with_invalid_ihdr_is_malformed(ihdr: bytes) -> None:
+    assert quality_profile._asset_result("png.crc.v1", _png_with_ihdr(ihdr)) == "MALFORMED"
+
+
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "forged"])
+def test_asset_receipt_evidence_mismatch_blocks(mutation: str) -> None:
+    receipt = quality_profile.AssetReceipt(
+        "src/config.json", "json", "json.stdlib.v1", "1" * 64, "PASS"
+    )
+    poisoned = {
+        "missing": (),
+        "duplicate": (receipt, receipt),
+        "forged": (replace(receipt, blob_sha256="2" * 64),),
+    }[mutation]
+    production = ("src/config.json", "src/risk.py")
+
+    blocks = _blocks(
+        _evidence(
+            asset_receipts=poisoned,
+            production_files=production,
+            source_files=("src/risk.py",),
+        ),
+        production_files=production,
+        source_files=("src/risk.py",),
+        asset_receipts=(receipt,),
+    )
+
+    assert "QUALITY_ASSET_RECEIPT_MISMATCH" in blocks
+
+
+def test_duplicate_asset_receipts_are_rejected_by_strict_loader(tmp_path: Path) -> None:
+    receipt = quality_profile.AssetReceipt(
+        "src/config.json", "json", "json.stdlib.v1", "1" * 64, "PASS"
+    )
+    path = tmp_path / "quality.json"
+    quality_profile.write_evidence(_evidence(asset_receipts=(receipt, receipt)), path)
+
+    with pytest.raises(quality_profile.QualityProfileError) as caught:
+        quality_profile.load_evidence(path)
+
+    assert caught.value.code == "MALFORMED_QUALITY_EVIDENCE"
+
+
 @pytest.mark.skipif(
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="target quality commands are forbidden outside GitHub-hosted runners",
@@ -564,6 +886,8 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         identity,
         (assessment,),
         evidence.production_files,
+        evidence.source_files,
+        evidence.asset_receipts,
         evidence.test_files,
         WORKFLOW_SHA,
     )
@@ -891,6 +1215,8 @@ maximum = 10
         identity,
         assessments,
         evidence.production_files,
+        evidence.source_files,
+        evidence.asset_receipts,
         evidence.test_files,
         WORKFLOW_SHA,
     )

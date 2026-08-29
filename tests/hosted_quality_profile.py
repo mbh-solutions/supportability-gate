@@ -226,8 +226,11 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         )
     )
     output = Path(arguments.output)
-    source_files, test_files = quality_runner.profile_files(
+    production_files, source_files, test_files = quality_runner.profile_files(
         target, identity.head_sha, policy, records
+    )
+    receipts = quality_profile.asset_receipts(
+        target, identity.head_sha, production_files, source_files, records
     )
     plans = quality_runner.command_plans(
         policy.language, target, output.parent, test_files, source_files
@@ -242,7 +245,9 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         high_risk_paths=policy.high_risk_paths,
         language=policy.language,
         maximum_complexity=policy.maximum,
-        production_files=source_files,
+        asset_receipts=receipts,
+        production_files=production_files,
+        source_files=source_files,
         test_files=test_files,
         production_paths=policy.production_paths,
         repository=str(arguments.repository_name),
@@ -289,6 +294,7 @@ def main() -> int:
             contract.command_failed(evidence.language, item.adapter, item.executed, item.exit_code)
             for item in evidence.commands
         )
+        or any(item.result != "PASS" for item in evidence.asset_receipts)
     )
 
 

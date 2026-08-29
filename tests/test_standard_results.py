@@ -37,7 +37,7 @@ SUCCESS_OUTCOMES = {
     "quality": "success",
 }
 EXPECTED_QUALITY_ARTIFACT = {
-    "capture_sha256": "d23641fbfaa702069691cd5b1fa7bf6fb14d73b25a85fe4ae769308828220cb5",
+    "capture_sha256": "54a168bb3fe0cb5640dfaa0e5ec96862fa3ff98b42702e9d6c71a0845c42d753",
     "digest": "d" * 64,
     "id": "789",
 }
@@ -179,9 +179,12 @@ def _set_quality_commands(
     production_files: tuple[str, ...],
     test_files: tuple[str, ...] = (),
 ) -> None:
+    production_files = tuple(sorted(production_files))
     profile = inputs[0]["quality_profile"]
     profile["language"] = language
     profile["production_files"] = list(production_files)
+    profile["source_files"] = list(production_files)
+    profile["asset_receipts"] = []
     profile["test_files"] = list(test_files)
     profile["commands"] = _profile_commands(language, production_files, test_files)
     inputs[3]["commands"] = _provenance_commands(language, production_files, test_files)
@@ -258,10 +261,12 @@ def _complexity(
             "high_risk_paths": [],
             "language": "python",
             "maximum_complexity": 10,
+            "asset_receipts": [],
             "production_files": ["src/sample.py"],
             "production_paths": ["src"],
             "repository_remote": f"github.com/{IDENTITY.repository}",
-            "schema_version": "quality-gates.v5",
+            "schema_version": "quality-gates.v6",
+            "source_files": ["src/sample.py"],
             "test_files": [],
             "workflow_sha": IDENTITY.workflow_sha,
         },
@@ -372,7 +377,7 @@ def _quality() -> dict[str, Any]:
     return {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
-        "capture_sha256": "d23641fbfaa702069691cd5b1fa7bf6fb14d73b25a85fe4ae769308828220cb5",
+        "capture_sha256": "54a168bb3fe0cb5640dfaa0e5ec96862fa3ff98b42702e9d6c71a0845c42d753",
         "commands": _provenance_commands("python", ("src/sample.py",)),
         "job": "quality-profile",
         "repository": IDENTITY.repository,
@@ -560,11 +565,18 @@ def _compose(
                 "success" if value.get("overall_result") == "PASS" else "failure"
             )
         profile = inputs[0].get("quality_profile")
-        if isinstance(profile, dict) and any(
-            not command["executed"] or command["exit_code"]
-            for command in profile.get("commands", [])
-        ):
-            source_outcomes["quality"] = "failure"
+        if isinstance(profile, dict):
+            failed_command = any(
+                not command["executed"] or command["exit_code"]
+                for command in profile.get("commands", [])
+            )
+            failed_asset = any(
+                receipt.get("result") != "PASS"
+                for receipt in profile.get("asset_receipts", [])
+                if isinstance(receipt, dict)
+            )
+            if failed_command or failed_asset:
+                source_outcomes["quality"] = "failure"
     return standard_results.compose_results(
         *inputs,
         IDENTITY,
@@ -666,8 +678,10 @@ def test_gate_eight_exposes_exact_canonical_handoff_facts() -> None:
         ],
         "high_risk_paths": [],
         "maximum_complexity": 10,
+        "asset_receipts": [],
         "production_files": ["src/sample.py"],
         "production_paths": ["src"],
+        "source_files": ["src/sample.py"],
         "scope_state": "UNCHANGED",
         "test_files": [],
         "threshold_state": "UNCHANGED",
@@ -2173,6 +2187,7 @@ def test_authenticated_missing_quality_adapter_block_is_gate_seven_only() -> Non
 def test_quality_argv_requires_exact_test_manifest() -> None:
     profile = {
         "production_files": [],
+        "source_files": [],
         "test_files": ["tests/test_sample.py"],
         "commands": [{"arguments": ["tool", "--root=$REPOSITORY", "$TEST_FILES"]}],
     }
@@ -2184,6 +2199,148 @@ def test_quality_argv_requires_exact_test_manifest() -> None:
         standard_results.StandardResultsError, match="MALFORMED_QUALITY_RESULT_BINDING"
     ):
         standard_results._s02_quality_argv(profile, provenance, "MALFORMED_QUALITY_RESULT_BINDING")
+
+
+def _mixed_asset_inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    inputs = _inputs()
+    profile = inputs[0]["quality_profile"]
+    profile["asset_receipts"] = [
+        {
+            "blob_sha256": "1" * 64,
+            "kind": "json",
+            "path": "src/config.json",
+            "result": "PASS",
+            "validator": "json.stdlib.v1",
+        }
+    ]
+    profile["production_files"] = ["src/config.json", "src/sample.py"]
+    profile["source_files"] = ["src/sample.py"]
+    return inputs
+
+
+def test_mixed_asset_profile_keeps_assets_out_of_source_argv_and_handoff() -> None:
+    inputs = _mixed_asset_inputs()
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    commands = payload["review_handoff"]["validation"]["commands"]
+    assert all(
+        "C:/repo/target/src/config.json" not in command["executed_arguments"]
+        for command in commands
+    )
+    assert payload["review_handoff"]["coverage"]["source_files"] == ["src/sample.py"]
+    assert (
+        payload["review_handoff"]["coverage"]["asset_receipts"]
+        == inputs[0]["quality_profile"]["asset_receipts"]
+    )
+    assert _results(payload) == ["PASS"] * 8
+
+
+@pytest.mark.parametrize("field", ["observed_paths", "zero_statement_paths"])
+def test_standard_results_rejects_asset_command_observation(field: str) -> None:
+    inputs = _mixed_asset_inputs()
+    inputs[0]["quality_profile"]["commands"][0][field] = ["src/config.json"]
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _technical_standards(payload) == {4, 7, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
+
+
+def test_forged_asset_receipt_breaks_authenticated_capture() -> None:
+    inputs = _mixed_asset_inputs()
+    trusted = _bind_quality(inputs)
+    inputs[0]["quality_profile"]["asset_receipts"][0]["blob_sha256"] = "2" * 64
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _technical_standards(payload) == {7, 8}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["QUALITY_ARTIFACT_IDENTITY_MISMATCH"]
+        for standard in (7, 8)
+    )
+
+
+def test_authenticated_malformed_asset_blocks_only_gate_seven() -> None:
+    inputs = _mixed_asset_inputs()
+    block = "MALFORMED_PRODUCTION_ASSET:src/config.json"
+    inputs[0]["quality_profile"]["asset_receipts"][0]["result"] = "MALFORMED"
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    assert _results(payload) == [*(["PASS"] * 6), "BLOCK", "PASS"]
+    assert _entry(payload, 7)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+
+
+@pytest.mark.parametrize(
+    "blocks",
+    [
+        pytest.param([], id="omitted"),
+        pytest.param(["QUALITY_SCOPE_NARROWING"], id="substitution"),
+        pytest.param(
+            [
+                "MALFORMED_PRODUCTION_ASSET:src/config.json",
+                "UNSUPPORTED_PRODUCTION_ASSET:src/other.bin",
+            ],
+            id="extra",
+        ),
+    ],
+)
+def test_asset_failure_blocks_must_exactly_match_receipts(blocks: list[str]) -> None:
+    inputs = _mixed_asset_inputs()
+    inputs[0]["quality_profile"]["asset_receipts"][0]["result"] = "MALFORMED"
+    inputs[0]["policy_blocks"] = blocks
+    inputs[0]["overall_result"] = "BLOCK" if blocks else "PASS"
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _technical_standards(payload) == {4, 7, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
+
+
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "wrong-kind", "asset-as-source"])
+def test_asset_receipt_partition_and_identity_are_strict(mutation: str) -> None:
+    inputs = _mixed_asset_inputs()
+    receipts = inputs[0]["quality_profile"]["asset_receipts"]
+    if mutation == "missing":
+        receipts.clear()
+    elif mutation == "duplicate":
+        receipts.append(copy.deepcopy(receipts[0]))
+    elif mutation == "wrong-kind":
+        receipts[0]["kind"] = "png"
+    else:
+        receipts.clear()
+        inputs[0]["quality_profile"]["source_files"].insert(0, "src/config.json")
+    trusted = _bind_quality(inputs)
+
+    payload = _compose(inputs, expected_quality_artifact=trusted)
+
+    code = "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE"
+    assert _technical_standards(payload) == {4, 7, 8}
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in (4, 7, 8))
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "MALFORMED_PRODUCTION_ASSET:src/config.json",
+        "UNSUPPORTED_PRODUCTION_ASSET:src/config.bin",
+        "QUALITY_ASSET_RECEIPT_MISMATCH",
+        "QUALITY_PRODUCTION_PARTITION_MISMATCH",
+        "QUALITY_SOURCE_MANIFEST_MISMATCH",
+    ],
+)
+def test_asset_policy_blocks_are_owned_only_by_gate_seven(block: str) -> None:
+    assert standard_block_ownership.owners(block) == frozenset({7})
 
 
 def test_missing_executed_argv_is_gate_seven_technical_only() -> None:

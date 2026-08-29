@@ -1,0 +1,3505 @@
+{
+  "cases": {
+    "clean": {
+      "applicability_evidence": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "classification": "FULL_PROCESS",
+        "source_sha256": "normalized",
+        "source_validated": true
+      },
+      "enforcer_exits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "lane_failures": [],
+      "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "asset_receipts": [],
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "source_files": [
+            "src/sample.py"
+          ],
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "normalized",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "normalized",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "normalized"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "normalized"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "success",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "normalized",
+      "rows": [
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "PASS"
+        }
+      ],
+      "shared_failures": [],
+      "short_task": false
+    },
+    "gate-3-policy": {
+      "applicability_evidence": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "classification": "FULL_PROCESS",
+        "source_sha256": "normalized",
+        "source_validated": true
+      },
+      "enforcer_exits": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "lane_failures": [
+        {
+          "policy_blocks": [
+            "IMPORT_CYCLE:src/a.py:1:src.b"
+          ],
+          "standard": 3,
+          "technical_errors": []
+        }
+      ],
+      "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "asset_receipts": [],
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "source_files": [
+            "src/sample.py"
+          ],
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "normalized",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "normalized",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "IMPORT_CYCLE:src/a.py:1:src.b",
+            "kind": "POLICY_BLOCK",
+            "standard": 3
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "normalized"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "normalized"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "failure",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "IMPORT_CYCLE:src/a.py:1:src.b"
+              ],
+              "result": "BLOCK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "normalized",
+      "rows": [
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "PASS"
+        }
+      ],
+      "shared_failures": [],
+      "short_task": false
+    },
+    "gate-7-technical": {
+      "applicability_evidence": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "classification": "FULL_PROCESS",
+        "source_sha256": "normalized",
+        "source_validated": true
+      },
+      "enforcer_exits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        2
+      ],
+      "lane_failures": [
+        {
+          "policy_blocks": [],
+          "standard": 7,
+          "technical_errors": [
+            "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 8,
+          "technical_errors": [
+            "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+          ]
+        }
+      ],
+      "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "asset_receipts": [],
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "source_files": [
+            "src/sample.py"
+          ],
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "normalized",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": null,
+          "quality_provenance_sha256": null,
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 7
+          },
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 8
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "normalized"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "normalized"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "validation": {
+          "commands": [],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "success",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 7,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 8,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "normalized",
+      "rows": [
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        }
+      ],
+      "shared_failures": [
+        {
+          "affected_standards": [
+            7,
+            8
+          ],
+          "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+          "dependency": "quality-profile:artifact-binding",
+          "kind": "TECHNICAL_ERROR"
+        }
+      ],
+      "short_task": false
+    },
+    "shared-complexity-identity": {
+      "applicability_evidence": {
+        "changed_files": [],
+        "classification": "FULL_PROCESS",
+        "source_sha256": "normalized",
+        "source_validated": false
+      },
+      "enforcer_exits": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "lane_failures": [
+        {
+          "policy_blocks": [],
+          "standard": 1,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 2,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 3,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 4,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 5,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 6,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 7,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 8,
+          "technical_errors": [
+            "COMPLEXITY_RESULT_BINDING_MISMATCH"
+          ]
+        }
+      ],
+      "producer_exit": 0,
+      "review_handoff": null,
+      "review_handoff_sha256": null,
+      "rows": [
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        }
+      ],
+      "shared_failures": [
+        {
+          "affected_standards": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "code": "COMPLEXITY_RESULT_BINDING_MISMATCH",
+          "dependency": "complexity-result",
+          "kind": "TECHNICAL_ERROR"
+        }
+      ],
+      "short_task": false
+    },
+    "shared-review-document": {
+      "applicability_evidence": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "classification": "FULL_PROCESS",
+        "source_sha256": "normalized",
+        "source_validated": true
+      },
+      "enforcer_exits": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        1
+      ],
+      "lane_failures": [
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 1,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 2,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 3,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 4,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 5,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 6,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [
+            "MALFORMED_REVIEW_EVIDENCE:document"
+          ],
+          "standard": 8,
+          "technical_errors": []
+        }
+      ],
+      "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "asset_receipts": [],
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "source_files": [
+            "src/sample.py"
+          ],
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "normalized",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "normalized",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": null,
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 1
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 2
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 3
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 4
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 5
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 6
+          },
+          {
+            "code": "MALFORMED_REVIEW_EVIDENCE:document",
+            "kind": "POLICY_BLOCK",
+            "standard": 8
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "normalized"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "normalized"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "5bd97f4e5343f6878785fa9374c9c6a8de7edd1696df19912afa62a6c3b32cae"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "failure",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "MALFORMED_REVIEW_EVIDENCE:document"
+              ],
+              "result": "BLOCK",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "normalized",
+      "rows": [
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "BLOCK"
+        }
+      ],
+      "shared_failures": [
+        {
+          "affected_standards": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8
+          ],
+          "code": "MALFORMED_REVIEW_EVIDENCE:document",
+          "dependency": "structured-review-document",
+          "kind": "POLICY_BLOCK"
+        }
+      ],
+      "short_task": false
+    },
+    "short-task": {
+      "applicability_evidence": {
+        "changed_files": [
+          {
+            "base_production": false,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": false,
+            "head_production": false,
+            "new_path": "docs/release-note.md",
+            "old_path": null,
+            "status": "ADDED"
+          }
+        ],
+        "classification": "SHORT_TASK",
+        "source_sha256": "normalized",
+        "source_validated": true
+      },
+      "enforcer_exits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "lane_failures": [],
+      "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": false,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": false,
+            "head_production": false,
+            "new_path": "docs/release-note.md",
+            "old_path": null,
+            "status": "ADDED"
+          }
+        ],
+        "coverage": {
+          "asset_receipts": [],
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "docs/release-note.md"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "source_files": [
+            "src/sample.py"
+          ],
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "1b735aea6dba71da3e7cc6ac384541cec02649206bf7c7bde7f8b9f3cb4eb6e9",
+          "complexity_result_sha256": "normalized",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": {
+            "capture_sha256": "normalized",
+            "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "id": 789
+          },
+          "quality_provenance_sha256": "normalized",
+          "refactor_result_sha256": "9b5f82241f9488c3958b8270786ba898df82cd0d9e7c236ceec2edaf6982b752",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [],
+        "risks": [],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "c65525a46c8d363c2e72439282fb78344ddae29c05d5ecca2a5cdb70d40b9fd1"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "normalized"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "normalized"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "a729ef0f4fcefcaf9db6ddd3d6aff18396e066813ca008cdac58dbf4df02d594"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+          }
+        },
+        "validation": {
+          "commands": [
+            {
+              "adapter": "python.ruff-lint.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "E4,E7,E9,F,I,UP",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.ruff-format.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "$SOURCE_FILES",
+                "$TEST_FILES",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "/repo/target/src/sample.py",
+                "--line-length",
+                "100",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.c901-touched.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "$SOURCE_FILES",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "ruff",
+                "check",
+                "/repo/target/src/sample.py",
+                "--select",
+                "C901",
+                "--config",
+                "lint.mccabe.max-complexity = 10",
+                "--target-version",
+                "py312",
+                "--isolated",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "explicit-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.mypy-strict.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "$OUTPUT/mypy.ini",
+                "--cache-dir",
+                "$OUTPUT/mypy-cache",
+                "$SOURCE_FILES"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                "/quality/mypy.ini",
+                "--cache-dir",
+                "/quality/mypy-cache",
+                "/repo/target/src/sample.py"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "config-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.pytest.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=$OUTPUT/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=$OUTPUT/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "$OUTPUT/pytest.ini",
+                "--rootdir",
+                "$REPOSITORY"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "coverage",
+                "run",
+                "--rcfile=/quality/coverage.ini",
+                "--branch",
+                "--source=src",
+                "--data-file=/quality/.coverage",
+                "-m",
+                "pytest",
+                "-q",
+                "-c",
+                "/quality/pytest.ini",
+                "--rootdir",
+                "/repo/target"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "runtime-lines",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.build-wheel.v1",
+              "arguments": [
+                "$PYTHON",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "$OUTPUT/wheel"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "python",
+                "-I",
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                "/quality/wheel"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "artifact-members",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            },
+            {
+              "adapter": "python.import-linter.v1",
+              "arguments": [
+                "$LINT_IMPORTS",
+                "--config",
+                "$OUTPUT/importlinter.ini",
+                "--no-cache"
+              ],
+              "executed": true,
+              "executed_arguments": [
+                "lint-imports",
+                "--config",
+                "/quality/importlinter.ini",
+                "--no-cache"
+              ],
+              "exit_code": 0,
+              "observed_paths": [
+                "src/sample.py"
+              ],
+              "proof_kind": "parsed-source",
+              "raw_proof_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "stderr_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "stdout_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "zero_statement_paths": []
+            }
+          ],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "success",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 7,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "NOT_APPLICABLE_SHORT_TASK",
+              "standard": 8,
+              "technical_errors": []
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "normalized",
+      "rows": [
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        },
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        },
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        },
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        },
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        },
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": false,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "NOT_APPLICABLE_SHORT_TASK"
+        }
+      ],
+      "shared_failures": [],
+      "short_task": true
+    },
+    "simultaneous": {
+      "applicability_evidence": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "classification": "FULL_PROCESS",
+        "source_sha256": "normalized",
+        "source_validated": true
+      },
+      "enforcer_exits": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        2,
+        2
+      ],
+      "lane_failures": [
+        {
+          "policy_blocks": [
+            "IMPORT_CYCLE:src/a.py:1:src.b"
+          ],
+          "standard": 3,
+          "technical_errors": []
+        },
+        {
+          "policy_blocks": [],
+          "standard": 7,
+          "technical_errors": [
+            "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+          ]
+        },
+        {
+          "policy_blocks": [],
+          "standard": 8,
+          "technical_errors": [
+            "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+          ]
+        }
+      ],
+      "producer_exit": 0,
+      "review_handoff": {
+        "changed_files": [
+          {
+            "base_production": true,
+            "changed_head_lines": [
+              7
+            ],
+            "complexity_assessed": true,
+            "head_production": true,
+            "new_path": "src/sample.py",
+            "old_path": "src/sample.py",
+            "status": "MODIFIED"
+          }
+        ],
+        "coverage": {
+          "asset_receipts": [],
+          "candidate_contract_changed": false,
+          "changed_paths": [
+            "src/sample.py"
+          ],
+          "exclusions": [],
+          "gate_coverage": [
+            {
+              "adapter": "python.c901-touched.v1",
+              "paths": [
+                "src"
+              ]
+            },
+            {
+              "adapter": "python.ast-imports.v1",
+              "paths": [
+                "src"
+              ]
+            }
+          ],
+          "high_risk_paths": [],
+          "maximum_complexity": 10,
+          "production_files": [
+            "src/sample.py"
+          ],
+          "production_paths": [
+            "src"
+          ],
+          "scope_state": "UNCHANGED",
+          "source_files": [
+            "src/sample.py"
+          ],
+          "test_files": [],
+          "threshold_state": "UNCHANGED",
+          "untested_paths": []
+        },
+        "follow_up": [],
+        "functions": [],
+        "gaps": [],
+        "identity": {
+          "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "characterization_artifacts": {
+            "base": {
+              "capture_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "digest": "4444444444444444444444444444444444444444444444444444444444444444",
+              "id": "701"
+            },
+            "head": {
+              "capture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "digest": "6666666666666666666666666666666666666666666666666666666666666666",
+              "id": "702"
+            }
+          },
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
+          "complexity_result_sha256": "normalized",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "quality_artifact": null,
+          "quality_provenance_sha256": null,
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
+          "repository": "example/repository",
+          "repository_id": 123,
+          "review_evidence": {
+            "base": {
+              "blob_sha": "7777777777777777777777777777777777777777",
+              "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            "head": {
+              "blob_sha": "8888888888888888888888888888888888888888",
+              "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          },
+          "run_attempt": 1,
+          "run_id": 456,
+          "workflow_sha": "ffffffffffffffffffffffffffffffffffffffff"
+        },
+        "responsibility_boundaries": [],
+        "responsibility_targets": [
+          "src/sample.py::function:calculate:1-2"
+        ],
+        "risks": [
+          {
+            "code": "IMPORT_CYCLE:src/a.py:1:src.b",
+            "kind": "POLICY_BLOCK",
+            "standard": 3
+          },
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 7
+          },
+          {
+            "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+            "kind": "TECHNICAL_ERROR",
+            "standard": 8
+          }
+        ],
+        "schema_version": "review-handoff.v1",
+        "sources": {
+          "change": {
+            "citations": [
+              "complexity-result.json:changed_files"
+            ],
+            "sha256": "8533d08155156d66c08534b9ba0c7936e618bc84cb9f4a8c2d7174f9616353d8"
+          },
+          "coverage": {
+            "citations": [
+              "complexity-result.json:gate_coverage",
+              "complexity-result.json:policy_blocks",
+              "complexity-result.json:quality_profile"
+            ],
+            "sha256": "normalized"
+          },
+          "functions": {
+            "citations": [
+              "complexity-result.json:functions"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "identity": {
+            "citations": [
+              "characterization-result.json",
+              "complexity-result.json",
+              "quality-provenance.json",
+              "refactor-policy-result.json",
+              "workflow-run-identity"
+            ],
+            "sha256": "normalized"
+          },
+          "responsibilities": {
+            "citations": [
+              "complexity-result.json:responsibility_targets",
+              "complexity-result.json:review_evidence.separation_of_concerns"
+            ],
+            "sha256": "6ceda7f08c44e90a5ee327f95b7d1e3f84df9a877bbe15c3da75b77c636aa135"
+          },
+          "review_identity": {
+            "citations": [
+              "complexity-result.json:review_evidence_binding"
+            ],
+            "sha256": "22293b85c5d96853c7fd0c93e65637be5ade24d9550e46ac6cd52adbe74be7e6"
+          },
+          "validation": {
+            "citations": [
+              "complexity-result.json:quality_profile.commands",
+              "quality-provenance.json:commands"
+            ],
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "validation": {
+          "commands": [],
+          "source_outcomes": {
+            "characterization": "success",
+            "complexity": "failure",
+            "install": "success",
+            "quality": "success",
+            "refactor": "success"
+          },
+          "standards": [
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 1,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 2,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [
+                "IMPORT_CYCLE:src/a.py:1:src.b"
+              ],
+              "result": "BLOCK",
+              "standard": 3,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 4,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 5,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "PASS",
+              "standard": 6,
+              "technical_errors": []
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 7,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            },
+            {
+              "policy_blocks": [],
+              "result": "TECHNICAL_FAILURE",
+              "standard": 8,
+              "technical_errors": [
+                "QUALITY_ARTIFACT_IDENTITY_MISMATCH"
+              ]
+            }
+          ]
+        }
+      },
+      "review_handoff_sha256": "normalized",
+      "rows": [
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:functions",
+            "complexity-result.json:ruff_diagnostics",
+            "complexity-result.json:review_evidence.human_review"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:review_evidence.separation_of_concerns"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:architecture",
+            "complexity-result.json:dependency_direction_explanation",
+            "complexity-result.json:review_evidence.architecture"
+          ],
+          "result": "BLOCK"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:modularity",
+            "complexity-result.json:review_evidence.module_boundaries",
+            "complexity-result.json:review_evidence.responsibility_boundary"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "characterization-result.json",
+            "complexity-result.json:review_evidence.behavior",
+            "complexity-result.json:review_evidence.characterization"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "refactor-policy-result.json",
+            "characterization-result.json:refactor_runnability",
+            "complexity-result.json:responsibility_targets",
+            "complexity-result.json:unbounded_production_paths",
+            "complexity-result.json:review_evidence.incremental_refactor"
+          ],
+          "result": "PASS"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "quality-provenance.json"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        },
+        {
+          "applicable": true,
+          "evidence_sources": [
+            "complexity-result.json:changed_files",
+            "complexity-result.json:functions",
+            "complexity-result.json:gate_coverage",
+            "complexity-result.json:quality_profile",
+            "complexity-result.json:review_evidence_binding",
+            "complexity-result.json:review_evidence.separation_of_concerns.boundaries",
+            "complexity-result.json:review_evidence.review_handoff",
+            "characterization-result.json",
+            "refactor-policy-result.json",
+            "quality-provenance.json"
+          ],
+          "result": "TECHNICAL_FAILURE"
+        }
+      ],
+      "shared_failures": [
+        {
+          "affected_standards": [
+            7,
+            8
+          ],
+          "code": "QUALITY_ARTIFACT_IDENTITY_MISMATCH",
+          "dependency": "quality-profile:artifact-binding",
+          "kind": "TECHNICAL_ERROR"
+        }
+      ],
+      "short_task": false
+    }
+  },
+  "contexts": [
+    "Supportability 1 - Cyclomatic Complexity",
+    "Supportability 2 - Separation of Concerns",
+    "Supportability 3 - Dependency Direction",
+    "Supportability 4 - Domain Modularity",
+    "Supportability 5 - Characterization",
+    "Supportability 6 - Incremental Refactor",
+    "Supportability 7 - Quality Gates",
+    "Supportability 8 - Review Handoff"
+  ],
+  "review_evidence": {
+    "accepted": true,
+    "blocks": []
+  },
+  "schema_version": "standard-results.v3"
+}
