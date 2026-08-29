@@ -2,50 +2,64 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Gate 6 derives refactor targets only for contract-language source responsibilities; production assets remain in the exact changed scope and are owned by Gate 7 receipts."
-proof = "tests/test_refactor_policy.py::test_refactor_targets_leave_mixed_assets_to_quality_gate; tests/test_refactor_policy.py::test_deleted_production_asset_is_not_a_refactor"
+intended_behavior = "The standard-results binder requires Gate 6 targets only for complexity-assessed source changes while retaining every changed asset in authorization scope and Gate 7 coverage."
+proof = "tests/test_standard_results.py::test_refactor_binding_leaves_mixed_asset_to_quality_gate; tests/test_standard_results.py::test_refactor_binding_source_to_asset_keeps_source_requirement; tests/test_standard_results.py::test_unbounded_source_path_has_exact_gate_six_blocks"
 
 [characterization]
-captured_behavior = "The refactor-assets scenario normalizes the prior unbounded-asset result to the fixed quality-gate ownership boundary while preserving the exact TypeScript source target."
-proof = "tests/characterization/refactor-assets.characterization.py; tests/characterization/refactor-assets.golden.json"
+captured_behavior = "The existing standard-results boundary scenario preserves authenticated Gate 6 and Gate 8 result composition while the focused binding test covers the mixed-asset requirement."
+proof = "tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.golden.json"
 
 [separation_of_concerns]
-before = "Gate 6 treated every non-source production asset as an unbounded source responsibility, making mixed source-and-asset changes impossible to authorize."
-after = "Gate 6 remains fail-closed for malformed contract-language source but leaves non-source production assets to Gate 7's exact structural receipts."
+before = "The result binder still required every production asset to appear in Gate 6's source targets after target derivation stopped doing so."
+after = "The result binder uses the existing complexity-assessed classification plus the contract language for exact Gate 6 source-side requirements and leaves asset validity to Gate 7."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/refactor_targets.py"
+path = "src/supportability_gate/standard_results.py"
 kind = "function"
-symbol = "_renamed_spans"
-before = "A production rename marked every non-profiled asset side as an unbounded source responsibility."
-after = "Only a profiled source side that cannot be parsed remains unbounded; an asset side stays outside Gate 6 source targeting."
+symbol = "_s02_refactor"
+before = "The refactor result binder received changed-file evidence without the authenticated contract language needed to distinguish rename sides."
+after = "The refactor result binder receives the already-validated contract language from the complexity result."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/refactor_targets.py"
+path = "src/supportability_gate/standard_results.py"
 kind = "function"
-symbol = "derive"
-before = "Non-source production changes entered the refactor target pipeline and became unbounded paths."
-after = "Only production changes with a contract-language source side enter refactor targeting, while source-to-asset renames retain the deleted source target."
+symbol = "_s02_refactor_binding"
+before = "Binding delegated change-path classification without a contract-language identity."
+after = "Binding threads the contract language into exact source-side requirement classification."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_refactor_change_paths"
+before = "All production paths were classified as required Gate 6 target paths, including assets that have no source responsibility identity."
+after = "Only contract-language source sides of complexity-assessed changes are required Gate 6 targets; all production paths remain allowed and all changed paths remain in authorization scope."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_refactor_shape"
+before = "Binding required every selected production path directly, which could choose an asset side of a rename."
+after = "Each complexity-assessed change must bind at least one exact source side, preserving moved source identities without accepting asset sides."
 
 [architecture]
-dependency_direction = "refactor_targets derives contract-language source responsibilities through function_changes and Git blobs; quality_profile independently owns exact production-asset receipts."
-reviewed_paths = ["src/supportability_gate/refactor_targets.py"]
+dependency_direction = "standard_results consumes the authenticated source classification already emitted by complexity evaluation; quality_profile independently owns production-asset receipts."
+reviewed_paths = ["src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/refactor_targets.py"
-owns = "Exact bounded source responsibility identities and fail-closed malformed-source paths for Gate 6."
-does_not_own = "Production-asset parsing, structural validity, receipts, or Gate 7 block ownership."
+path = "src/supportability_gate/standard_results.py"
+owns = "Cross-binding exact Gate 6 source targets, changed authorization scope, and authenticated result identities."
+does_not_own = "Production-asset parsing, structural validity, receipt generation, or Gate 7 block ownership."
 
 [incremental_refactor]
-target = "Remove the residual Gate 6 mixed-asset false block without changing source responsibility enforcement."
-completed_step = "Restricted refactor applicability to contract-language source sides and retained fail-closed malformed-source behavior."
+target = "Remove the stale result-binding mismatch exposed by the real mixed-asset plugin run."
+completed_step = "Aligned Gate 6 result requirements with the existing complexity-assessed source classification in one binder condition."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Profiled source, asset, target, and unbounded path retain distinct fixed meanings."
-cohesion = "Refactor target applicability remains in refactor_targets; asset validation remains in quality_profile."
-intended_behavior = "Mixed changes keep exact source targets, assets never become unbounded source paths, and malformed source still fails closed."
-reviewability = "The two changed production responsibility identities are enumerated above; protected authorization and merge remain unclaimed."
+naming = "Required source paths, allowed production paths, and full changed scope retain distinct fixed meanings."
+cohesion = "Result cross-binding remains in standard_results; asset validation remains in quality_profile."
+intended_behavior = "Mixed changes bind exact source targets without requiring assets as Gate 6 targets, while malformed source remains fail-closed."
+reviewability = "The four changed production responsibility identities are enumerated above; protected authorization and merge remain unclaimed."

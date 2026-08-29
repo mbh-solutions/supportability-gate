@@ -1040,6 +1040,7 @@ def test_refactor_binding_preserves_deleted_old_path_identity_on_rename() -> Non
     changed = (
         {
             "base_production": True,
+            "complexity_assessed": True,
             "head_production": True,
             "new_path": "src/renamed.py",
             "old_path": "src/sample.py",
@@ -1065,18 +1066,123 @@ def test_refactor_binding_preserves_deleted_old_path_identity_on_rename() -> Non
         "unbounded_paths": [],
     }
 
-    assert standard_results._s02_refactor_change_paths(changed) == (
+    assert standard_results._s02_refactor_change_paths(changed, "python") == (
         ["src/renamed.py", "src/sample.py"],
-        ["src/renamed.py"],
+        [("src/renamed.py", "src/sample.py")],
         ["src/renamed.py", "src/sample.py"],
     )
     standard_results._s02_refactor_binding(
-        row, authorization, IDENTITY, changed, targets, (), None, None
+        row, authorization, IDENTITY, changed, targets, (), None, None, "python"
     )
     row["targets"] = [moved]
     authorization["targets"] = [moved]
     standard_results._s02_refactor_binding(
-        row, authorization, IDENTITY, changed, (moved,), (), None, None
+        row, authorization, IDENTITY, changed, (moved,), (), None, None, "python"
+    )
+
+
+def test_refactor_binding_leaves_mixed_asset_to_quality_gate() -> None:
+    source = "src/sample.py"
+    asset = "src/plugin.json"
+    target = f"{source}::function:calculate:1-2"
+    changed = (
+        {
+            "base_production": True,
+            "complexity_assessed": True,
+            "head_production": True,
+            "new_path": source,
+            "old_path": source,
+        },
+        {
+            "base_production": False,
+            "complexity_assessed": False,
+            "head_production": True,
+            "new_path": asset,
+            "old_path": None,
+        },
+    )
+    scope = [asset, source]
+    authorization = {
+        "base_sha": IDENTITY.base_sha,
+        "broad": True,
+        "head_sha": IDENTITY.head_sha,
+        "repository": IDENTITY.repository,
+        "scope": scope,
+        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "targets": [target],
+    }
+    row = {
+        "applicable": True,
+        "changed_paths": scope,
+        "policy_blocks": [],
+        "targets": [target],
+        "unbounded_paths": [],
+    }
+
+    assert standard_results._s02_refactor_change_paths(changed, "python") == (
+        scope,
+        [(source,)],
+        scope,
+    )
+    standard_results._s02_refactor_binding(
+        row, authorization, IDENTITY, changed, (target,), (), None, None, "python"
+    )
+
+
+@pytest.mark.parametrize("malformed", [False, True])
+def test_refactor_binding_source_to_asset_keeps_source_requirement(
+    malformed: bool,
+) -> None:
+    source = "src/sample.py"
+    asset = "src/sample.json"
+    target = f"{source}::function:calculate:1-2"
+    targets = [] if malformed else [target]
+    unbounded = [source] if malformed else []
+    blocks = (
+        ["MISSING_BOUNDED_PRODUCTION_TARGET", "UNVERIFIABLE_BOUNDED_TARGET"] if malformed else []
+    )
+    changed = (
+        {
+            "base_production": True,
+            "complexity_assessed": True,
+            "head_production": True,
+            "new_path": asset,
+            "old_path": source,
+        },
+    )
+    scope = [asset, source]
+    authorization = {
+        "base_sha": IDENTITY.base_sha,
+        "broad": True,
+        "head_sha": IDENTITY.head_sha,
+        "repository": IDENTITY.repository,
+        "scope": scope,
+        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "targets": [target],
+    }
+    row = {
+        "applicable": True,
+        "changed_paths": scope,
+        "policy_blocks": blocks,
+        "targets": targets,
+        "unbounded_paths": unbounded,
+    }
+
+    assert standard_results._s02_refactor_change_paths(changed, "python") == (
+        scope,
+        [(source,)],
+        scope,
+    )
+    standard_results._s02_refactor_binding(
+        row,
+        authorization,
+        IDENTITY,
+        changed,
+        tuple(targets),
+        tuple(unbounded),
+        None,
+        None,
+        "python",
     )
 
 
@@ -1343,16 +1449,15 @@ def test_unverifiable_authorized_target_remains_a_gate_six_block() -> None:
     assert payload["shared_failures"] == []
 
 
-def test_unbounded_production_path_has_exact_gate_six_blocks() -> None:
-    path = "src/sample.bin"
+def test_unbounded_source_path_has_exact_gate_six_blocks() -> None:
+    path = "src/sample.py"
     inputs = _inputs(path)
     target = f"{path}::module:{path}:1-1"
     authorization = inputs[2]["authorization"]
     assert isinstance(authorization, dict)
     authorization["broad"] = True
     authorization["targets"] = [target]
-    inputs[0]["changed_files"][0]["complexity_assessed"] = False
-    inputs[0]["modularity"]["changed_paths"] = []
+    inputs[0]["changed_files"][0]["complexity_assessed"] = True
     inputs[0]["responsibility_targets"] = []
     inputs[0]["unbounded_production_paths"] = [path]
     inputs[1]["refactor_runnability"]["targets"] = []
