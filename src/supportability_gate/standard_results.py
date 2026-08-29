@@ -1460,22 +1460,26 @@ def _s02_refactor_predecessor(
 
 
 def _s02_refactor_change_paths(
-    changed: tuple[dict[str, Any], ...],
-) -> tuple[list[str], list[str], list[str]]:
+    changed: tuple[dict[str, Any], ...], language: str
+) -> tuple[list[str], list[tuple[str, ...]], list[str]]:
+    suffixes = (".py", ".pyi") if language == "python" else (".cts", ".mts", ".ts", ".tsx")
     scope = sorted({path for row in changed for path in (row["old_path"], row["new_path"]) if path})
-    required = sorted(
-        {
-            path
-            for row in changed
-            if (
-                path := row["new_path"]
-                if row["head_production"]
-                else row["old_path"]
-                if row["base_production"]
-                else None
+    required = [
+        tuple(
+            sorted(
+                {
+                    path
+                    for path, production in (
+                        (row["old_path"], row["base_production"]),
+                        (row["new_path"], row["head_production"]),
+                    )
+                    if path and production and path.endswith(suffixes)
+                }
             )
-        }
-    )
+        )
+        for row in changed
+        if row["complexity_assessed"]
+    ]
     allowed = sorted(
         {
             path
@@ -1647,8 +1651,9 @@ def _s02_refactor_shape(
     changed: tuple[dict[str, Any], ...],
     responsibility_targets: tuple[str, ...] | None,
     unbounded_production_paths: tuple[str, ...] | None,
+    language: str,
 ) -> tuple[list[str], list[str], list[str]]:
-    scope, required, allowed = _s02_refactor_change_paths(changed)
+    scope, required, allowed = _s02_refactor_change_paths(changed, language)
     target_paths = _s02_refactor_target_paths(row["targets"])
     bounded_paths = set((*target_paths, *row["unbounded_paths"]))
     if (
@@ -1665,7 +1670,7 @@ def _s02_refactor_shape(
             )
         )
         or row["applicable"] is not bool(required)
-        or not set(required).issubset(bounded_paths)
+        or any(not bounded_paths.intersection(paths) for paths in required)
         or not bounded_paths.issubset(allowed)
         or set(target_paths) & set(row["unbounded_paths"])
     ):
@@ -1726,9 +1731,10 @@ def _s02_refactor_binding(
     unbounded_production_paths: tuple[str, ...] | None,
     predecessor: dict[str, Any] | None,
     predecessor_block: str | None,
+    language: str,
 ) -> None:
     scope, allowed, target_paths = _s02_refactor_shape(
-        row, changed, responsibility_targets, unbounded_production_paths
+        row, changed, responsibility_targets, unbounded_production_paths, language
     )
     if authorization is None:
         _s02_refactor_absent_authorization(row, predecessor, predecessor_block)
@@ -1786,6 +1792,7 @@ def _s02_refactor(
             None if targets_unavailable else complexity.unbounded_production_paths,
             predecessor,
             predecessor_block,
+            complexity.source["language"],
         )
     expected = hashlib.sha256(_canonical(characterization)).hexdigest()
     expected_runnability = (
