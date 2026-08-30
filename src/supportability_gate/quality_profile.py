@@ -952,7 +952,8 @@ def _covers(result: GateResult, path: str) -> bool:
 
 
 def _command_exit_block(language: str, result: GateResult) -> str | None:
-    if result.exit_code == 1 and contract.POLICY_EXIT_STANDARDS[language].get(result.adapter) == 3:
+    profile = result.adapter.split(".", 1)[0] if language == "mixed" else language
+    if result.exit_code == 1 and contract.POLICY_EXIT_STANDARDS[profile].get(result.adapter) == 3:
         return f"ARCHITECTURE_GATE_FAILED:{result.adapter}"
     if contract.command_failed(language, result.adapter, result.executed, result.exit_code):
         return f"QUALITY_GATE_FAILED:{result.adapter}"
