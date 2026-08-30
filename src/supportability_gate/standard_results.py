@@ -1956,16 +1956,41 @@ def _s02_quality_paths(
 
 
 def _s02_quality_argv(profile: dict[str, Any], provenance: dict[str, Any], code: str) -> None:
-    values: dict[str, tuple[str, ...]] = {}
-    list_counts = {
-        "$SOURCE_FILES": len(profile["source_files"]),
-        "$TEST_FILES": len(profile["test_files"]),
-    }
+    values_by_language: dict[str, dict[str, tuple[str, ...]]] = {}
+    files_by_language: dict[str, dict[str, Any]] = {}
     for decision, proof in zip(profile["commands"], provenance["commands"], strict=True):
-        _s02_quality_command(
-            decision["arguments"], proof["executed_arguments"], list_counts, values, code
+        language = (
+            decision["adapter"].split(".", 1)[0]
+            if profile["language"] == "mixed"
+            else profile["language"]
         )
-    _s02_quality_paths(values, profile, code)
+        suffixes = (
+            (".py", ".pyi")
+            if language == "python"
+            else (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx")
+        )
+        files = files_by_language.setdefault(
+            language,
+            {
+                **profile,
+                "source_files": [
+                    path for path in profile["source_files"] if path.endswith(suffixes)
+                ],
+                "test_files": [path for path in profile["test_files"] if path.endswith(suffixes)],
+            },
+        )
+        _s02_quality_command(
+            decision["arguments"],
+            proof["executed_arguments"],
+            {
+                "$SOURCE_FILES": len(files["source_files"]),
+                "$TEST_FILES": len(files["test_files"]),
+            },
+            values_by_language.setdefault(language, {}),
+            code,
+        )
+    for language, values in values_by_language.items():
+        _s02_quality_paths(values, files_by_language[language], code)
 
 
 def _s02_quality_capture(profile: dict[str, Any], provenance: dict[str, Any]) -> str:
