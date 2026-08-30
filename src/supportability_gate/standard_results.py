@@ -1958,11 +1958,12 @@ def _s02_quality_paths(
 def _s02_quality_argv(profile: dict[str, Any], provenance: dict[str, Any], code: str) -> None:
     values_by_language: dict[str, dict[str, tuple[str, ...]]] = {}
     files_by_language: dict[str, dict[str, Any]] = {}
+    profile_language = profile.get("language", "python")
     for decision, proof in zip(profile["commands"], provenance["commands"], strict=True):
         language = (
             decision["adapter"].split(".", 1)[0]
-            if profile["language"] == "mixed"
-            else profile["language"]
+            if profile_language == "mixed"
+            else profile_language
         )
         suffixes = (
             (".py", ".pyi")
