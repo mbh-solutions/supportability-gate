@@ -82,7 +82,7 @@
     },
     {
       "covers": [
-        "src/mixed_canary.ts"
+        "web/mixed_canary.ts"
       ],
       "id": "s13-mixed-stack-canary",
       "kind": "regression"

@@ -41,7 +41,7 @@ def fixed_environment(output: Path, repository: Path) -> dict[str, str]:
 def _replace_tokens(arguments: tuple[str, ...], values: dict[str, str]) -> tuple[str, ...]:
     replaced: list[str] = []
     for argument in arguments:
-        if argument in {"$SOURCE_FILES", "$TEST_FILES"}:
+        if argument in {"$COVERAGE_FILES", "$SOURCE_FILES", "$SOURCE_PATHS", "$TEST_FILES"}:
             replaced.extend(values[argument].split("\0") if values[argument] else ())
         else:
             value = argument
@@ -113,7 +113,7 @@ def _write_typescript_configs(
             "declaration": True,
             "noEmit": False,
             "outDir": str(output / "build"),
-            "rootDir": str(repository / "src"),
+            "rootDir": str(repository),
         }
     )
     (output / "tsconfig-check.json").write_text(
@@ -219,9 +219,13 @@ def command_plans(
         )
         selected = {
             **values,
+            "$COVERAGE_FILES": "\0".join(
+                f"--test-coverage-include={path}" for path in selected_sources
+            ),
             "$SOURCE_FILES": "\0".join(
                 str((repository / path).resolve()) for path in selected_sources
             ),
+            "$SOURCE_PATHS": "\0".join(selected_sources),
             "$TEST_FILES": "\0".join(str((repository / path).resolve()) for path in selected_tests),
         }
         plans.append(

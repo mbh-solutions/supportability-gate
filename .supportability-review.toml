@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The protected Gate blocks one deliberately over-complex TypeScript function while retaining Python coverage."
-proof = "src/mixed_canary.ts exceeds complexity 10 while tests/mixed_canary.test.ts preserves runtime behavior."
+intended_behavior = "The protected Gate blocks one deliberately over-complex TypeScript function outside src while retaining Python coverage and authenticating CSS."
+proof = "web/mixed_canary.ts exceeds complexity 10; tests/mixed_canary.test.ts preserves runtime behavior; web/mixed_canary.css is valid UTF-8."
 
 [characterization]
 captured_behavior = "One stable TypeScript scenario runs beside the retained Python scenarios."
 proof = "tests/characterization/s13-mixed-stack-canary.characterization.mjs"
 
 [separation_of_concerns]
-before = "The passing canary proved both fixed profiles execute."
+before = "The passing canary proved both fixed profiles execute across declared roots."
 after = "The same temporary TypeScript function deliberately exceeds only the fixed complexity threshold."
 
 [[separation_of_concerns.boundaries]]
-path = "src/mixed_canary.ts"
+path = "web/mixed_canary.ts"
 kind = "function"
 symbol = "mixedStackLabel"
 before = "The temporary function passed at complexity one."
@@ -21,15 +21,15 @@ after = "The temporary function preserves its label while exceeding complexity t
 
 [architecture]
 dependency_direction = "The TypeScript canary is dependency-free; existing Python package boundaries remain unchanged."
-reviewed_paths = ["src/mixed_canary.ts"]
+reviewed_paths = ["web/mixed_canary.ts"]
 
 [responsibility_boundary]
-path = "src/mixed_canary.ts"
+path = "web/mixed_canary.ts"
 owns = "One temporary TypeScript runtime label used for protected blocking proof."
 does_not_own = "Gate policy, Python package behavior, or product functionality."
 
 [incremental_refactor]
-target = "Prove the fixed Python-plus-TypeScript profile blocks excessive TypeScript complexity."
+target = "Prove the fixed Python-plus-TypeScript profile blocks excessive TypeScript complexity outside src."
 completed_step = "Raised only the temporary TypeScript function above the fixed threshold."
 
 [review_handoff]
@@ -39,11 +39,11 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 [human_review]
 naming = "mixedStackLabel still names the single canary responsibility."
 cohesion = "The temporary module owns only the deliberate TypeScript complexity block."
-intended_behavior = "Both fixed profiles run and Gate 1 blocks the TypeScript threshold violation."
+intended_behavior = "Both fixed profiles run, CSS authenticates, and Gate 1 blocks the TypeScript threshold violation."
 reviewability = "One deliberately over-complex function isolates the expected block."
 
 [[module_boundaries]]
-path = "src/mixed_canary.ts"
-owner_path = "src/mixed_canary.ts"
+path = "web/mixed_canary.ts"
+owner_path = "web/mixed_canary.ts"
 basis = "responsibility"
 justification = "The dependency-free temporary module is self-owned and exists only for the blocking canary."

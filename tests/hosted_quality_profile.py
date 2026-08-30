@@ -95,9 +95,9 @@ def _typescript_build_proof(
     observed = tuple(
         source
         for source in plan.source_files
-        if str(
-            Path(source.removeprefix("src/")).with_suffix(suffixes.get(Path(source).suffix, ".js"))
-        ).replace("\\", "/")
+        if str(Path(source).with_suffix(suffixes.get(Path(source).suffix, ".js"))).replace(
+            "\\", "/"
+        )
         in built
     )
     raw = (json.dumps(list(built), sort_keys=True) + "\n").encode()

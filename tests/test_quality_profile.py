@@ -93,13 +93,22 @@ IDENTITY = git_changes.RepositoryIdentity(
 
 
 def test_mixed_contract_selects_and_partitions_both_fixed_profiles(tmp_path: Path) -> None:
-    policy = contract.parse_contract(MIXED_POLICY_TEXT.encode())
+    expanded_text = MIXED_POLICY_TEXT.replace(
+        'production_paths = ["src"]', 'production_paths = ["src", "web"]'
+    ).replace('paths = ["src"]', 'paths = ["src", "web"]')
+    policy = contract.parse_contract(expanded_text.encode())
+    later = contract.parse_contract(
+        expanded_text.replace(
+            '["src", "web"]', '["src", "web", "supabase/functions/ask-twmn-gateway"]'
+        ).encode()
+    )
+    narrowed = contract.parse_contract(expanded_text.replace('["src", "web"]', '["web"]').encode())
     assessments = tuple(
         ChangedFileAssessment(git_changes.ChangedPath("ADDED", None, path), False, True, True, (1,))
-        for path in ("src/backend.py", "src/frontend.ts")
+        for path in ("src/backend.py", "web/frontend.ts")
     )
     sources = quality_profile.source_files(
-        ("src/backend.py", "src/config.json", "src/frontend.ts"), policy.language
+        ("src/backend.py", "src/config.json", "web/frontend.ts"), policy.language
     )
     plans = quality_runner.command_plans(
         policy.language,
@@ -110,8 +119,11 @@ def test_mixed_contract_selects_and_partitions_both_fixed_profiles(tmp_path: Pat
     )
 
     assert policy.languages == ("python", "typescript")
+    assert contract.is_profile_expansion(POLICY, policy)
+    assert contract.is_profile_expansion(policy, later)
+    assert not contract.is_profile_expansion(POLICY, narrowed)
     assert gate_policy.evaluate_contract(policy, assessments) == ()
-    assert sources == ("src/backend.py", "src/frontend.ts")
+    assert sources == ("src/backend.py", "web/frontend.ts")
     assert {item.adapter for item in plans} == set(
         quality_profile.required_adapters("python")
     ) | set(quality_profile.required_adapters("typescript"))
@@ -121,6 +133,14 @@ def test_mixed_contract_selects_and_partitions_both_fixed_profiles(tmp_path: Pat
         else all(path.endswith((".ts", ".tsx", ".mts", ".cts")) for path in item.source_files)
         for item in plans
     )
+    test_plan = next(item for item in plans if item.adapter == "typescript.test.v1")
+    architecture_plan = next(
+        item for item in plans if item.adapter == "typescript.import-boundaries.v1"
+    )
+    build_config = json.loads((tmp_path / "evidence" / "tsconfig-build.json").read_text())
+    assert "--test-coverage-include=web/frontend.ts" in test_plan.actual
+    assert architecture_plan.actual[-1] == "web/frontend.ts"
+    assert build_config["compilerOptions"]["rootDir"] == str(tmp_path)
 
 
 def _commands() -> tuple[quality_profile.GateResult, ...]:
@@ -583,6 +603,7 @@ def test_mixed_production_assets_are_attested_without_entering_source_manifest(
     source = repository / "src"
     source.mkdir()
     (source / "index.ts").write_text("export const ready = true;\n", encoding="utf-8")
+    (source / "index.css").write_text("body { color: black; }\n", encoding="utf-8")
     (source / "manifest.json").write_text('{"name":"plugin"}\n', encoding="utf-8")
     (source / "README.md").write_text("# Plugin\n", encoding="utf-8")
 
@@ -604,6 +625,7 @@ def test_mixed_production_assets_are_attested_without_entering_source_manifest(
     assert production == (
         "src/README.md",
         "src/icon.png",
+        "src/index.css",
         "src/index.ts",
         "src/manifest.json",
     )
@@ -612,6 +634,7 @@ def test_mixed_production_assets_are_attested_without_entering_source_manifest(
     assert tuple(receipt.path for receipt in receipts) == (
         "src/README.md",
         "src/icon.png",
+        "src/index.css",
         "src/manifest.json",
     )
     assert all(receipt.result == "PASS" for receipt in receipts)
@@ -690,6 +713,7 @@ def test_valid_asset_can_pass_without_code_command_observation() -> None:
             "MALFORMED_PRODUCTION_ASSET:src/duplicate.json",
             id="duplicate-json-keys",
         ),
+        ("bad.css", b"body {\x00}", "MALFORMED", "MALFORMED_PRODUCTION_ASSET:src/bad.css"),
         ("bad.md", b"\xff", "MALFORMED", "MALFORMED_PRODUCTION_ASSET:src/bad.md"),
         (
             "bad.png",
@@ -1030,16 +1054,16 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
     (repository / ".supportability.toml").write_text(
         """schema_version = "1.0"
 language = "typescript"
-production_paths = ["src"]
-high_risk_paths = ["src/presentation/Card.tsx"]
+production_paths = ["web"]
+high_risk_paths = ["web/presentation/Card.tsx"]
 
 [[gates]]
 adapter = "typescript.c901-equivalent-touched.v1"
-paths = ["src"]
+paths = ["web"]
 
 [[gates]]
 adapter = "typescript.import-boundaries.v1"
-paths = ["src"]
+paths = ["web"]
 
 [complexity]
 adapter = "typescript.c901-equivalent-touched.v1"
@@ -1048,7 +1072,7 @@ maximum = 10
         encoding="utf-8",
         newline="\n",
     )
-    source = repository / "src" / "domain" / "model.ts"
+    source = repository / "web" / "domain" / "model.ts"
     source.parent.mkdir(parents=True)
     source.write_text(
         'import { increment } from "fixture-dependency";\n\n'
@@ -1056,7 +1080,7 @@ maximum = 10
         encoding="utf-8",
         newline="\n",
     )
-    component = repository / "src" / "presentation" / "Card.tsx"
+    component = repository / "web" / "presentation" / "Card.tsx"
     component.parent.mkdir(parents=True)
     component.write_text(
         "declare global {\n"
@@ -1111,8 +1135,8 @@ maximum = 10
         "});\n\n"
         'test("covered component", async () => {\n'
         "  const [{ score }, { default: Card }] = await Promise.all([\n"
-        '    import("../src/domain/model.ts"),\n'
-        '    import("../src/presentation/Card.tsx"),\n'
+        '    import("../web/domain/model.ts"),\n'
+        '    import("../web/presentation/Card.tsx"),\n'
         "  ]);\n"
         "  assert.equal(score(1), 2);\n"
         '  assert.equal(Card({ label: " ready " }).child, "ready");\n'
@@ -1132,7 +1156,7 @@ maximum = 10
     component.write_text(
         component.read_text().replace("{label}", "{label.trim()}"), encoding="utf-8", newline="\n"
     )
-    poison = "src/domain/unexecuted.ts"
+    poison = "web/domain/unexecuted.ts"
     (repository / poison).write_text(
         'throw new Error("poison file executed");\n', encoding="utf-8", newline="\n"
     )
@@ -1237,7 +1261,7 @@ maximum = 10
     policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
     assessments = (
         ChangedFileAssessment(
-            git_changes.ChangedPath("MODIFIED", "src/domain/model.ts", "src/domain/model.ts"),
+            git_changes.ChangedPath("MODIFIED", "web/domain/model.ts", "web/domain/model.ts"),
             True,
             True,
             True,
@@ -1248,7 +1272,7 @@ maximum = 10
         ),
         ChangedFileAssessment(
             git_changes.ChangedPath(
-                "MODIFIED", "src/presentation/Card.tsx", "src/presentation/Card.tsx"
+                "MODIFIED", "web/presentation/Card.tsx", "web/presentation/Card.tsx"
             ),
             True,
             True,
@@ -1269,9 +1293,9 @@ maximum = 10
     )
 
     assert poison not in test_result.observed_paths
-    assert "src/presentation/Card.tsx" in test_result.observed_paths
+    assert "web/presentation/Card.tsx" in test_result.observed_paths
     assert not any(
-        block.endswith(":src/presentation/Card.tsx")
+        block.endswith(":web/presentation/Card.tsx")
         and block.startswith("QUALITY_HIGH_RISK_FILE_COVERAGE:")
         for block in blocks
     )

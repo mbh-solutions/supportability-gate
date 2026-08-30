@@ -1,6 +1,6 @@
 schema_version = "1.1"
 languages = ["python", "typescript"]
-production_paths = ["src"]
+production_paths = ["src", "web"]
 high_risk_paths = [
     "src/supportability_gate/cli.py",
     "src/supportability_gate/complexity_metrics.py",
@@ -10,31 +10,31 @@ high_risk_paths = [
 
 [[gates]]
 adapter = "python.c901-touched.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [[gates]]
 adapter = "python.import-linter.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [[gates]]
 adapter = "python.mypy-strict.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [[gates]]
 adapter = "python.pytest.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [[gates]]
 adapter = "python.ruff-lint.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [[gates]]
 adapter = "typescript.c901-equivalent-touched.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [[gates]]
 adapter = "typescript.import-boundaries.v1"
-paths = ["src"]
+paths = ["src", "web"]
 
 [complexity]
 maximum = 10
