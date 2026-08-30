@@ -15,7 +15,7 @@ from supportability_gate import contract, git_changes
 if TYPE_CHECKING:
     from supportability_gate.function_changes import ChangedFileAssessment
 
-SCHEMA_VERSION = "quality-gates.v7"
+SCHEMA_VERSION = "quality-gates.v6"
 TIMEOUT_SECONDS = 180
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {

@@ -265,7 +265,7 @@ def _complexity(
             "production_files": ["src/sample.py"],
             "production_paths": ["src"],
             "repository_remote": f"github.com/{IDENTITY.repository}",
-            "schema_version": "quality-gates.v7",
+            "schema_version": "quality-gates.v6",
             "source_files": ["src/sample.py"],
             "test_files": [],
             "workflow_sha": IDENTITY.workflow_sha,

@@ -570,7 +570,7 @@ def _s02_profile(
     required_adapters = quality_profile.required_adapters(language)
     if (
         actual != expected
-        or row["schema_version"] != "quality-gates.v7"
+        or row["schema_version"] != "quality-gates.v6"
         or row["maximum_complexity"] != 10
         or adapters != tuple(adapter for adapter in required_adapters if adapter in adapters)
         or any(

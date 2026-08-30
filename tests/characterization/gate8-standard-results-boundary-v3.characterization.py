@@ -13,7 +13,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
-LEGACY_DRIVER_SHA256 = "f4dd7045356da10deac05651cf33957d2f41144a5983f5dc6fc802ad13d6990e"
+LEGACY_DRIVER_SHA256 = "d8413002ab34794c7cf1b71e3ec893dbf8cea62c9c8bb98d6ccc96952d97f3fc"
 LEGACY_STANDARD_RESULTS_SHA256 = "43b1e96099a314aac1f2059589705161b5681157e07a752674aac9748d551f5b"
 LEGACY_GATE_EIGHT_STANDARD_RESULTS_SHA256 = (
     "942d2127b636240bb3695ce489fccd7a27736a82b358fc4fe9db9a33d355ede0"
@@ -215,17 +215,11 @@ def _gate_seven_probe(
         "quality-gates.v4",
         "quality-gates.v5",
         "quality-gates.v6",
-        "quality-gates.v7",
     }:
         raise RuntimeError("unsupported Gate 7 characterization schema")
-    argv_current = schema in {
-        "quality-gates.v4",
-        "quality-gates.v5",
-        "quality-gates.v6",
-        "quality-gates.v7",
-    }
-    manifest_current = schema in {"quality-gates.v5", "quality-gates.v6", "quality-gates.v7"}
-    asset_current = schema in {"quality-gates.v6", "quality-gates.v7"}
+    argv_current = schema in {"quality-gates.v4", "quality-gates.v5", "quality-gates.v6"}
+    manifest_current = schema in {"quality-gates.v5", "quality-gates.v6"}
+    asset_current = schema == "quality-gates.v6"
     with tempfile.TemporaryDirectory() as temporary:
         directory = Path(temporary)
         python_output = directory / "python"
@@ -560,10 +554,7 @@ def main() -> None:
         handoff = case["review_handoff"]
         if handoff is not None:
             coverage = handoff["coverage"]
-            asset_current = quality_profile.SCHEMA_VERSION in {
-                "quality-gates.v6",
-                "quality-gates.v7",
-            }
+            asset_current = quality_profile.SCHEMA_VERSION == "quality-gates.v6"
             if asset_current:
                 if coverage.get("asset_receipts") != [] or coverage.get(
                     "source_files"

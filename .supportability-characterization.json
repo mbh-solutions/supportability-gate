@@ -31,6 +31,13 @@
     },
     {
       "covers": [
+        "src/supportability_gate/gate_policy.py"
+      ],
+      "id": "gate-policy-mixed-compatibility",
+      "kind": "regression"
+    },
+    {
+      "covers": [
         "src/supportability_gate/refactor_targets.py"
       ],
       "id": "refactor-assets",

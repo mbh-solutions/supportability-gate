@@ -6,8 +6,8 @@ intended_behavior = "One immutable contract runs fixed Python and TypeScript pro
 proof = "tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
 
 [characterization]
-captured_behavior = "Existing stack-specific and result-binding scenarios remain bound while schema v7 adds the mixed profile."
-proof = "tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/quality-runner-boundary.characterization.py; tests/characterization/architecture-modularity-baseline.characterization.py"
+captured_behavior = "Existing stack-specific and result-binding scenarios remain bound while the mixed profile composes both fixed profiles without changing their evidence schema."
+proof = "tests/characterization/gate-policy-mixed-compatibility.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/quality-runner-boundary.characterization.py; tests/characterization/architecture-modularity-baseline.characterization.py"
 
 [separation_of_concerns]
 before = "Contract, analysis, quality execution, characterization, architecture, and binding assumed one repository language."
