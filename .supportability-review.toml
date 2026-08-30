@@ -2,50 +2,43 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Mixed refactor evidence uses the exact expansion contract and argv binding validates each fixed language partition."
-proof = "Exact run 33295158612 artifacts reproduce both prior binding failures and pass the focused binders after this change."
+intended_behavior = "A mixed-profile policy exit is classified by its adapter language without becoming a technical failure."
+proof = "Run 33296347911 measured TypeScript complexity 13 and exposed the mixed-key lookup; the focused classifier check now returns the fixed Gate 1 policy result."
 
 [characterization]
-captured_behavior = "The mixed canary executed both fixed profiles successfully while refactor applicability and result binding remained single-profile."
-proof = "Run 33295158612 complexity, quality provenance, characterization, and refactor artifacts."
+captured_behavior = "The blocking canary preserved runtime behavior while TypeScript complexity exited one."
+proof = "Run 33296347911 quality-gates.json and complexity-result.json."
 
 [separation_of_concerns]
-before = "Refactor target derivation used only the base contract and argv binding treated mixed files as one list."
-after = "Refactor selection reuses contract transition identity; result binding validates independent Python and TypeScript argv partitions."
+before = "Quality policy-exit classification indexed the composite mixed identity."
+after = "Quality policy-exit classification derives only the fixed adapter profile before consulting its policy map."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/refactor_policy.py"
+path = "src/supportability_gate/quality_profile.py"
 kind = "function"
-symbol = "verify_refactor"
-before = "Refactor evaluation derived targets only from the base contract."
-after = "Refactor evaluation selects the candidate only for the exact fixed-profile expansion."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results.py"
-kind = "function"
-symbol = "_s02_quality_argv"
-before = "One global source and test count was applied to every mixed-profile command."
-after = "Each fixed language command is validated against its own source and test partition."
+symbol = "_command_exit_block"
+before = "The helper treated mixed as a policy-exit map key."
+after = "The helper uses the command adapter's Python or TypeScript prefix."
 
 [architecture]
-dependency_direction = "Both existing outward policy modules reuse the inward contract identity; no target code is imported or executed."
-reviewed_paths = ["src/supportability_gate/refactor_policy.py", "src/supportability_gate/standard_results.py"]
+dependency_direction = "The existing quality-profile owner continues to depend inward on the fixed contract policy map."
+reviewed_paths = ["src/supportability_gate/quality_profile.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results.py"
-owns = "Independent validation of signed Gate result bindings."
-does_not_own = "Quality execution, contract mutation, or target repository code."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Classification of authenticated fixed quality-command results."
+does_not_own = "Command execution, complexity measurement, or target repository code."
 
 [incremental_refactor]
-target = "Complete mixed-profile evidence binding exposed by the protected canary."
-completed_step = "Reused one transition predicate and partitioned one argv validator."
+target = "Isolate a mixed-profile complexity policy exit to its owning Gate context."
+completed_step = "Derived one fixed adapter profile before the existing policy lookup."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "values_by_language and files_by_language name the exact fixed partitions."
-cohesion = "Refactor selection and result validation remain in their existing owners."
-intended_behavior = "Single-language behavior and arbitrary contract-change blocking remain unchanged."
-reviewability = "Two focused functions and no new command, package, waiver, threshold, or abstraction."
+naming = "profile names the fixed Python or TypeScript command family."
+cohesion = "Policy-exit classification remains in the existing quality-profile owner."
+intended_behavior = "Single-language classifications remain unchanged; mixed uses the adapter's fixed profile."
+reviewability = "One branch-local value, no new command, package, waiver, threshold, or abstraction."
