@@ -88,23 +88,27 @@ class Contract:
 
 
 def is_profile_expansion(base: Contract, head: Contract | None) -> bool:
-    """Return whether one single-language contract safely adds the other fixed profile."""
+    """Return whether a contract safely adds the fixed mixed profile or covered paths."""
     if (
         head is None
-        or base.schema_version != "1.0"
+        or base.schema_version not in {"1.0", "1.1"}
         or head.schema_version != "1.1"
-        or base.production_paths != head.production_paths
-        or base.high_risk_paths != head.high_risk_paths
+        or not set(base.languages).issubset(head.languages)
+        or not set(base.production_paths).issubset(head.production_paths)
+        or not set(base.high_risk_paths).issubset(head.high_risk_paths)
         or base.maximum != head.maximum
     ):
         return False
     base_gates = {gate.adapter: gate for gate in base.gates}
     head_gates = {gate.adapter: gate for gate in head.gates}
-    if any(head_gates.get(adapter) != gate for adapter, gate in base_gates.items()):
+    if any(
+        (head_gate := head_gates.get(adapter)) is None
+        or any(not head_gate.covers(path) for path in gate.paths)
+        for adapter, gate in base_gates.items()
+    ):
         return False
     return set(head_gates) == set(FIXED_ADAPTERS_BY_LANGUAGE["mixed"]) and all(
-        head_gates[adapter].paths == base.production_paths
-        for adapter in set(head_gates) - set(base_gates)
+        gate.paths == head.production_paths for gate in head_gates.values()
     )
 
 

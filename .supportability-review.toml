@@ -1,19 +1,19 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "The protected Gate evaluates one repository containing Python and TypeScript production source."
-proof = "tests/mixed_canary.test.ts and the existing Python proof run through the fixed mixed profile."
+intended_behavior = "The protected Gate evaluates one repository containing Python and TypeScript production source outside src while authenticating CSS."
+proof = "tests/mixed_canary.test.ts and the existing Python proof run through the fixed mixed profile; web/mixed_canary.css is valid UTF-8."
 
 [characterization]
-captured_behavior = "One stable TypeScript scenario runs beside the retained Python scenarios."
+captured_behavior = "One stable TypeScript and CSS scenario runs beside the retained Python scenarios."
 proof = "tests/characterization/s13-mixed-stack-canary.characterization.mjs"
 
 [separation_of_concerns]
 before = "The protected canary exercised only Python production source."
-after = "One temporary TypeScript function proves both fixed profiles execute in one protected evaluation."
+after = "One temporary TypeScript function and inert stylesheet prove both fixed profiles across declared roots."
 
 [[separation_of_concerns.boundaries]]
-path = "src/mixed_canary.ts"
+path = "web/mixed_canary.ts"
 kind = "function"
 symbol = "mixedStackLabel"
 before = "No TypeScript production responsibility existed in the canary."
@@ -21,16 +21,16 @@ after = "The temporary function owns one TypeScript runtime label."
 
 [architecture]
 dependency_direction = "The TypeScript canary is dependency-free; existing Python package boundaries remain unchanged."
-reviewed_paths = ["src/mixed_canary.ts"]
+reviewed_paths = ["web/mixed_canary.ts"]
 
 [responsibility_boundary]
-path = "src/mixed_canary.ts"
+path = "web/mixed_canary.ts"
 owns = "One temporary TypeScript runtime label used for protected mixed-profile proof."
 does_not_own = "Gate policy, Python package behavior, or product functionality."
 
 [incremental_refactor]
-target = "Prove the fixed Python-plus-TypeScript profile on a protected pull request."
-completed_step = "Added one dependency-free TypeScript production function."
+target = "Prove the fixed Python-plus-TypeScript profile across declared production roots."
+completed_step = "Added one dependency-free TypeScript production function and one valid CSS asset outside src."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
@@ -39,11 +39,11 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 [human_review]
 naming = "mixedStackLabel names the single canary responsibility."
 cohesion = "The temporary module owns only the TypeScript canary label."
-intended_behavior = "Both fixed language profiles run in the same protected evaluation."
-reviewability = "One production function, one direct test, and one characterization scenario."
+intended_behavior = "Both fixed language profiles run in the same protected evaluation and CSS authenticates."
+reviewability = "One production function, one direct test, one inert asset, and one characterization scenario."
 
 [[module_boundaries]]
-path = "src/mixed_canary.ts"
-owner_path = "src/mixed_canary.ts"
+path = "web/mixed_canary.ts"
+owner_path = "web/mixed_canary.ts"
 basis = "responsibility"
 justification = "The dependency-free temporary module is self-owned and exists only for the mixed-profile canary."
