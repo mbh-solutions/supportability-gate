@@ -153,12 +153,16 @@ _S02_QUALITY_TOKENS = frozenset(
         "$OUTPUT",
         "$PYTHON",
         "$REPOSITORY",
+        "$COVERAGE_FILES",
         "$SOURCE_FILES",
+        "$SOURCE_PATHS",
         "$TEST_FILES",
         "$TOOLS",
     }
 )
-_S02_QUALITY_LIST_TOKENS = frozenset({"$SOURCE_FILES", "$TEST_FILES"})
+_S02_QUALITY_LIST_TOKENS = frozenset(
+    {"$COVERAGE_FILES", "$SOURCE_FILES", "$SOURCE_PATHS", "$TEST_FILES"}
+)
 _S02_SHORT_EXCLUSIONS = {
     "docs/fixed_roadmap.md",
     "docs/product_completion_contract.md",
@@ -1937,6 +1941,8 @@ def _s02_quality_paths(
         repository = derived
         if source != tuple(f"{repository}/{path}" for path in source_files):
             raise StandardResultsError(code)
+    coverage = normalized.get("$COVERAGE_FILES")
+    source_paths = normalized.get("$SOURCE_PATHS")
     tests = normalized.get("$TEST_FILES")
     test_files = tuple(profile["test_files"])
     if tests is not None and test_files:
@@ -1951,7 +1957,14 @@ def _s02_quality_paths(
         raise StandardResultsError(code)
     output = normalized.get("$OUTPUT")
     tools = normalized.get("$TOOLS")
-    if tools is not None and (output is None or tools != (f"{output[0]}/quality-tools",)):
+    if (
+        (
+            coverage is not None
+            and coverage != tuple(f"--test-coverage-include={path}" for path in source_files)
+        )
+        or (source_paths is not None and source_paths != source_files)
+        or (tools is not None and (output is None or tools != (f"{output[0]}/quality-tools",)))
+    ):
         raise StandardResultsError(code)
 
 
@@ -1984,7 +1997,9 @@ def _s02_quality_argv(profile: dict[str, Any], provenance: dict[str, Any], code:
             decision["arguments"],
             proof["executed_arguments"],
             {
+                "$COVERAGE_FILES": len(files["source_files"]),
                 "$SOURCE_FILES": len(files["source_files"]),
+                "$SOURCE_PATHS": len(files["source_files"]),
                 "$TEST_FILES": len(files["test_files"]),
             },
             values_by_language.setdefault(language, {}),
