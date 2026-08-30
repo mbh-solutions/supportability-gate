@@ -1,72 +1,49 @@
 schema_version = "1.0"
-module_boundaries = []
 
 [behavior]
-intended_behavior = "Characterization verification uses the head contract only for the exact fixed-profile expansion."
-proof = "Exact mixed-canary captures no longer produce unauthenticated characterization evidence."
+intended_behavior = "The protected Gate evaluates one repository containing Python and TypeScript production source."
+proof = "tests/mixed_canary.test.ts and the existing Python proof run through the fixed mixed profile."
 
 [characterization]
-captured_behavior = "Hosted capture selected the exact expansion contract while verification remained on the base Python contract."
-proof = "Run 33294265794 characterization-result.json and exact capture artifacts."
+captured_behavior = "One stable TypeScript scenario runs beside the retained Python scenarios."
+proof = "tests/characterization/s13-mixed-stack-canary.characterization.mjs"
 
 [separation_of_concerns]
-before = "The transition predicate lived in gate policy and characterization always verified with the base contract."
-after = "Contract owns the transition identity; gate policy re-exports it; characterization applies it before capture verification."
+before = "The protected canary exercised only Python production source."
+after = "One temporary TypeScript function proves both fixed profiles execute in one protected evaluation."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/contract.py"
+path = "src/mixed_canary.ts"
 kind = "function"
-symbol = "is_profile_expansion"
-before = "The transition predicate was owned by outward gate policy."
-after = "The inward contract module owns the exact fixed-profile transition identity."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/contract.py"
-kind = "module"
-symbol = "src/supportability_gate/contract.py"
-before = "Fixed adapter identities were owned by outward gate policy."
-after = "The inward contract module owns the fixed adapter identities used to define transitions."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/gate_policy.py"
-kind = "module"
-symbol = "src/supportability_gate/gate_policy.py"
-before = "Gate policy implemented the transition predicate and its adapter identities."
-after = "Gate policy re-exports the contract predicate and fixed adapter identities."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/gate_policy.py"
-kind = "function"
-symbol = "is_profile_expansion"
-before = "Gate policy implemented the transition rule directly."
-after = "Gate policy preserves the existing callable while delegating to the inward contract owner."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/characterization.py"
-kind = "function"
-symbol = "verify_evidence"
-before = "The verifier parsed only the base contract."
-after = "The verifier selects the candidate only when the contract predicate passes."
+symbol = "mixedStackLabel"
+before = "No TypeScript production responsibility existed in the canary."
+after = "The temporary function owns one TypeScript runtime label."
 
 [architecture]
-dependency_direction = "Contract remains inward; gate policy and characterization depend on it without a new outward edge."
-reviewed_paths = ["src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/characterization.py"]
+dependency_direction = "The TypeScript canary is dependency-free; existing Python package boundaries remain unchanged."
+reviewed_paths = ["src/mixed_canary.ts"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/contract.py"
-owns = "Canonical contract identity and the exact fixed-profile transition."
-does_not_own = "Quality execution, characterization capture, or merge qualification."
+path = "src/mixed_canary.ts"
+owns = "One temporary TypeScript runtime label used for protected mixed-profile proof."
+does_not_own = "Gate policy, Python package behavior, or product functionality."
 
 [incremental_refactor]
-target = "Align characterization verification with the protected fixed-profile transition."
-completed_step = "Moved one predicate inward and selected the candidate only through it."
+target = "Prove the fixed Python-plus-TypeScript profile on a protected pull request."
+completed_step = "Added one dependency-free TypeScript production function."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "is_profile_expansion retains the existing exact transition name."
-cohesion = "Contract identity, gate enforcement, and characterization verification remain separate."
-intended_behavior = "Arbitrary contract changes retain base-contract verification and blocking."
-reviewability = "One predicate moved inward and one verifier selection added."
+naming = "mixedStackLabel names the single canary responsibility."
+cohesion = "The temporary module owns only the TypeScript canary label."
+intended_behavior = "Both fixed language profiles run in the same protected evaluation."
+reviewability = "One production function, one direct test, and one characterization scenario."
+
+[[module_boundaries]]
+path = "src/mixed_canary.ts"
+owner_path = "src/mixed_canary.ts"
+basis = "responsibility"
+justification = "The dependency-free temporary module is self-owned and exists only for the mixed-profile canary."

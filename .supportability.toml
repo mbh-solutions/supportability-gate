@@ -1,5 +1,5 @@
-schema_version = "1.0"
-language = "python"
+schema_version = "1.1"
+languages = ["python", "typescript"]
 production_paths = ["src"]
 high_risk_paths = [
     "src/supportability_gate/cli.py",
@@ -28,6 +28,13 @@ paths = ["src"]
 adapter = "python.ruff-lint.v1"
 paths = ["src"]
 
+[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["src"]
+
 [complexity]
-adapter = "python.c901-touched.v1"
 maximum = 10

@@ -79,6 +79,13 @@
       ],
       "id": "package-version",
       "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/mixed_canary.ts"
+      ],
+      "id": "s13-mixed-stack-canary",
+      "kind": "regression"
     }
   ],
   "schema_version": "1.0"
