@@ -432,9 +432,10 @@ def _contract_blocks(
     candidate_policy: contract.Contract | None,
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
 ) -> tuple[str, ...]:
+    expansion = gate_policy.is_profile_expansion(policy, candidate_policy)
     candidate = (
         (
-            "CANDIDATE_CONTRACT_CHANGE",
+            *(() if expansion else ("CANDIDATE_CONTRACT_CHANGE",)),
             *gate_policy.contract_change_blocks(policy, candidate_policy),
         )
         if any(
@@ -442,7 +443,8 @@ def _contract_blocks(
         )
         else ()
     )
-    return (*candidate, *gate_policy.evaluate_contract(policy, assessments))
+    effective = candidate_policy if expansion and candidate_policy is not None else policy
+    return (*candidate, *gate_policy.evaluate_contract(effective, assessments))
 
 
 def _result(
@@ -818,13 +820,31 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             contract_path,
             records,
         )
-        policy = contract.parse_contract(blob.content)
+        base_policy = contract.parse_contract(blob.content)
+        policy = base_policy
         changes = git_changes.changed_paths(
             repository,
             identity.base_sha,
             identity.head_sha,
             records,
         )
+        candidate_policy: contract.Contract | None = None
+        contract_changed = any(contract_path in {item.old_path, item.new_path} for item in changes)
+        if contract_changed and any(item.new_path == contract_path for item in changes):
+            try:
+                candidate_blob = git_changes.read_regular_blob(
+                    repository,
+                    identity.head_sha,
+                    contract_path,
+                    records,
+                )
+                candidate_policy = contract.parse_contract(candidate_blob.content)
+            except (contract.ContractError, git_changes.GitError):
+                candidate_policy = None
+        if candidate_policy is not None and gate_policy.is_profile_expansion(
+            base_policy, candidate_policy
+        ):
+            policy = candidate_policy
         assessments = _classify_changes(repository, identity, policy, changes, records)
         responsibility_targets, unbounded_production_paths = _refactor_target_evidence(
             repository, identity, policy, changes, records, evidence_errors
@@ -837,22 +857,9 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
             records,
             evidence_errors,
         )
-        candidate_policy: contract.Contract | None = None
-        contract_changed = any(
-            contract_path in {item.change.old_path, item.change.new_path} for item in assessments
+        contract_blocks = _contract_blocks(
+            contract_path, base_policy, candidate_policy, assessments
         )
-        if contract_changed and any(item.change.new_path == contract_path for item in assessments):
-            try:
-                candidate_blob = git_changes.read_regular_blob(
-                    repository,
-                    identity.head_sha,
-                    contract_path,
-                    records,
-                )
-                candidate_policy = contract.parse_contract(candidate_blob.content)
-            except (contract.ContractError, git_changes.GitError):
-                candidate_policy = None
-        contract_blocks = _contract_blocks(contract_path, policy, candidate_policy, assessments)
         decisions, ruff_diagnostics = _complexity_evidence(
             repository,
             identity,

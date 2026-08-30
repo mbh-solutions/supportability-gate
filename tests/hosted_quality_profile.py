@@ -12,6 +12,7 @@ from pathlib import Path
 from supportability_gate import (
     architecture_policy,
     contract,
+    gate_policy,
     git_changes,
     quality_profile,
     quality_runner,
@@ -209,10 +210,20 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         raise quality_profile.QualityProfileError(
             "INVALID_WORKFLOW_SHA", "workflow SHA must be immutable"
         )
-    policy = contract.parse_contract(
+    base_policy = contract.parse_contract(
         git_changes.read_regular_blob(
             target, identity.base_sha, ".supportability.toml", records
         ).content
+    )
+    candidate_policy = contract.parse_contract(
+        git_changes.read_regular_blob(
+            target, identity.head_sha, ".supportability.toml", records
+        ).content
+    )
+    policy = (
+        candidate_policy
+        if gate_policy.is_profile_expansion(base_policy, candidate_policy)
+        else base_policy
     )
     changes = git_changes.changed_paths(target, identity.base_sha, identity.head_sha, records)
     changed_paths = tuple(

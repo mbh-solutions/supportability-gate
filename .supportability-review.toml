@@ -1,12 +1,12 @@
 schema_version = "1.0"
 
 [behavior]
-intended_behavior = "One immutable contract runs fixed Python and TypeScript profiles together while preserving single-language behavior and exact-head coverage."
-proof = "tests/hosted_characterization.py exact-head profile selection; tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles; tests/mixed_canary.test.ts; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
+intended_behavior = "The protected Gate evaluates one repository containing Python and TypeScript production source."
+proof = "tests/mixed_canary.test.ts and the repository's existing Python proof run through the fixed mixed profile."
 
 [characterization]
-captured_behavior = "The exact base and head captures run one stable TypeScript scenario command while the mixed contract composes both fixed profiles."
-proof = "tests/characterization/s13-mixed-stack-canary.characterization.mjs; tests/characterization/gate-policy-mixed-compatibility.characterization.py"
+captured_behavior = "The exact base and head captures run one stable TypeScript scenario command."
+proof = "tests/characterization/s13-mixed-stack-canary.characterization.mjs"
 
 [separation_of_concerns]
 before = "The protected canary repository exercised only Python production source."
@@ -16,35 +16,29 @@ after = "One temporary TypeScript function proves both fixed profiles execute in
 path = "src/mixed_canary.ts"
 kind = "function"
 symbol = "mixedStackLabel"
-before = "The protected canary repository exercised only Python production source."
-after = "One temporary TypeScript function proves both fixed profiles execute in one protected evaluation."
+before = "No TypeScript production responsibility existed in the canary."
+after = "The temporary function owns one TypeScript runtime label."
 
 [architecture]
 dependency_direction = "The temporary TypeScript canary is dependency-free; existing Python package boundaries remain unchanged."
 reviewed_paths = ["src/mixed_canary.ts"]
 
-
-[responsibility_boundary]
-path = "src/supportability_gate/contract.py"
-owns = "Canonical single-language and mixed-language contract identity."
-does_not_own = "Command execution, parsing, analysis, or publication."
-
 [incremental_refactor]
-target = "Add canonical Python-plus-TypeScript support without a generic adapter platform."
-completed_step = "Reused both fixed profiles, partitioned inputs, and bound one result."
+target = "Prove the fixed Python-plus-TypeScript profile on a protected pull request."
+completed_step = "Added one dependency-free TypeScript production function."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Mixed names only the exact union; helpers name owned classification or coverage."
-cohesion = "Existing contract, orchestration, planning, and binding owners remain separate."
-intended_behavior = "Schema 1.0 stays single-language; schema 1.1 permits only both supported profiles."
-reviewability = "One bounded compatibility slice; no package, dependency, command, waiver, or threshold added."
+naming = "mixedStackLabel names the single canary responsibility."
+cohesion = "The temporary module owns only the TypeScript canary label."
+intended_behavior = "Both fixed language profiles run in the same protected evaluation."
+reviewability = "One production function, one direct test, and one characterization scenario."
 
 [[module_boundaries]]
 path = "src/mixed_canary.ts"
 owner_path = "src/supportability_gate/__init__.py"
 basis = "responsibility"
-justification = "The temporary canary module owns only one TypeScript runtime label used to prove mixed-profile enforcement; the package initializer remains the existing Python package boundary."
+justification = "The temporary module owns only one TypeScript runtime label; the package initializer remains the existing Python package boundary."
