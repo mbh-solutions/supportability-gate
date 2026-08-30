@@ -157,7 +157,7 @@ def capture_evidence(
     if side not in {"base", "head"} or target_sha != expected_target or definition_sha != head_sha:
         raise characterization.CharacterizationError("STALE_CHARACTERIZATION_CHECKOUT")
     policy_blob = git_changes.read_regular_blob(
-        definition, base_sha, ".supportability.toml", records
+        definition, head_sha, ".supportability.toml", records
     )
     policy = contract.parse_contract(policy_blob.content)
     manifest = characterization._manifest(definition, head_sha, records)
