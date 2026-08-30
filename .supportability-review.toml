@@ -3,16 +3,36 @@ module_boundaries = []
 
 [behavior]
 intended_behavior = "One immutable contract runs fixed Python and TypeScript profiles together while preserving single-language behavior and exact-head coverage."
-proof = "tests/hosted_characterization.py exact-head profile selection; tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
+proof = "Targeted mixed-transition selector and hosted-profile capture; tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles"
 
 [characterization]
 captured_behavior = "Existing stack-specific and result-binding scenarios remain bound while the mixed profile composes both fixed profiles without changing their evidence schema."
 proof = "tests/characterization/gate-policy-mixed-compatibility.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/quality-runner-boundary.characterization.py; tests/characterization/architecture-modularity-baseline.characterization.py"
 
 [separation_of_concerns]
-before = "Base and head captures selected driver profiles from the base contract."
-after = "Both captures select driver profiles from the authenticated exact-head definition while executing behavior against their exact target commits."
-boundaries = []
+before = "Contract evaluation and hosted quality always used the base single-language profile, so the first mixed transition could not run its added profile."
+after = "Only the exact fixed-profile expansion uses the head mixed contract for deterministic analysis and hosted quality; every other contract change remains on the base policy and blocks."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_contract_blocks"
+before = "Every candidate contract change received the generic contract-change block."
+after = "The exact fixed-profile expansion is evaluated without the generic block; all other changes retain it."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_evaluate"
+before = "All analysis remained bound to the base contract."
+after = "Analysis selects the candidate only after the fixed-profile expansion predicate passes."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/gate_policy.py"
+kind = "function"
+symbol = "is_profile_expansion"
+before = "No contract transition was distinguished from arbitrary candidate mutation."
+after = "One predicate owns the exact non-weakening single-to-mixed transition boundary."
 [architecture]
 dependency_direction = "Contract selects profiles; CLI orchestrates existing analyzers; quality runner executes fixed commands; result binding consumes authenticated evidence. No new cycle or target-code import."
 reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/cli.py", "src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/modularity_policy.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/refactor_targets.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "tests/hosted_characterization.py"]

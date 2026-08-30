@@ -123,3 +123,24 @@ def contract_change_blocks(base: Contract, head: Contract | None) -> tuple[str, 
             blocks.append("GATE_SCOPE_NARROWING")
             break
     return tuple(blocks)
+
+
+def is_profile_expansion(base: Contract, head: Contract | None) -> bool:
+    """Return whether one single-language contract safely adds the other fixed profile."""
+    if (
+        head is None
+        or base.schema_version != "1.0"
+        or head.schema_version != "1.1"
+        or base.production_paths != head.production_paths
+        or base.high_risk_paths != head.high_risk_paths
+        or base.maximum != head.maximum
+    ):
+        return False
+    base_gates = _gate_map(base)
+    head_gates = _gate_map(head)
+    if any(head_gates.get(adapter) != gate for adapter, gate in base_gates.items()):
+        return False
+    return set(head_gates) == set(APPROVED_ADAPTERS_BY_LANGUAGE["mixed"]) and all(
+        head_gates[adapter].paths == base.production_paths
+        for adapter in set(head_gates) - set(base_gates)
+    )
