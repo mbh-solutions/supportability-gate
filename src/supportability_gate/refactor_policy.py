@@ -614,9 +614,10 @@ def verify_refactor(
     candidate_blob = git_changes.read_regular_blob(
         repository, head_sha, ".supportability.toml", records
     )
-    candidate_policy = contract.parse_contract(candidate_blob.content)
-    if contract.is_profile_expansion(policy, candidate_policy):
-        policy = candidate_policy
+    if candidate_blob.content != policy_blob.content:
+        candidate_policy = contract.parse_contract(candidate_blob.content)
+        if contract.is_profile_expansion(policy, candidate_policy):
+            policy = candidate_policy
     changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
     actual_scope = _changed_scope(changes)
     targets, unbounded = refactor_targets.derive(repository, identity, policy, changes, records)
