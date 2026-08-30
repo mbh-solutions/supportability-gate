@@ -1,0 +1,6 @@
+{
+  "name": "supportability-gate-s13-canary",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module"
+}
