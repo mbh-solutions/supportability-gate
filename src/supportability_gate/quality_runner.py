@@ -179,15 +179,23 @@ def command_plans(
 ) -> tuple[CommandPlan, ...]:
     """Build executable vectors from the immutable profile templates."""
     tools = output / "quality-tools"
-    if language == "typescript":
+    if language in {"typescript", "mixed"}:
         _write_typescript_configs(
             tools,
             output,
             repository,
-            tuple(str((repository / path).resolve()) for path in source_files),
+            tuple(
+                str((repository / path).resolve())
+                for path in source_files
+                if path.endswith(quality_profile.SOURCE_SUFFIXES["typescript"])
+            ),
         )
-    else:
-        _write_python_configs(output, repository, source_files)
+    if language in {"python", "mixed"}:
+        _write_python_configs(
+            output,
+            repository,
+            tuple(path for path in source_files if path.endswith((".py", ".pyi"))),
+        )
     lint_imports = shutil.which("lint-imports") or str(
         Path(sys.executable).with_name("lint-imports")
     )
@@ -198,20 +206,34 @@ def command_plans(
         "$OUTPUT": str(output),
         "$PYTHON": sys.executable,
         "$REPOSITORY": str(repository),
-        "$SOURCE_FILES": "\0".join(str((repository / path).resolve()) for path in source_files),
-        "$TEST_FILES": "\0".join(str((repository / path).resolve()) for path in test_files),
         "$TOOLS": str(tools),
     }
-    return tuple(
-        CommandPlan(
-            adapter,
-            _replace_tokens(arguments, values),
-            arguments,
-            quality_profile.expected_proof_kind(adapter),
-            source_files,
+    plans: list[CommandPlan] = []
+    for adapter, arguments in quality_profile.command_templates(language):
+        profile = adapter.split(".", 1)[0]
+        selected_sources = tuple(
+            path for path in source_files if path.endswith(quality_profile.SOURCE_SUFFIXES[profile])
         )
-        for adapter, arguments in quality_profile.command_templates(language)
-    )
+        selected_tests = tuple(
+            path for path in test_files if path.endswith(quality_profile.TEST_SUFFIXES[profile])
+        )
+        selected = {
+            **values,
+            "$SOURCE_FILES": "\0".join(
+                str((repository / path).resolve()) for path in selected_sources
+            ),
+            "$TEST_FILES": "\0".join(str((repository / path).resolve()) for path in selected_tests),
+        }
+        plans.append(
+            CommandPlan(
+                adapter,
+                _replace_tokens(arguments, selected),
+                arguments,
+                quality_profile.expected_proof_kind(adapter),
+                selected_sources,
+            )
+        )
+    return tuple(plans)
 
 
 def profile_files(

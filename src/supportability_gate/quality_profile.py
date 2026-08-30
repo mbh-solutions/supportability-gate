@@ -21,10 +21,21 @@ _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx"),
+    "mixed": (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx"),
 }
 TEST_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts"),
+    "mixed": (
+        ".py",
+        ".pyi",
+        ".test.js",
+        ".test.mjs",
+        ".test.cjs",
+        ".test.ts",
+        ".test.mts",
+        ".test.cts",
+    ),
 }
 ASSET_VALIDATORS = {
     ".json": ("json", "json.stdlib.v1"),
@@ -345,6 +356,8 @@ def command_templates(language: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
         return _PYTHON_COMMANDS
     if language == "typescript":
         return _TYPESCRIPT_COMMANDS
+    if language == "mixed":
+        return (*_PYTHON_COMMANDS, *_TYPESCRIPT_COMMANDS)
     raise QualityProfileError("UNSUPPORTED_LANGUAGE", f"unsupported language: {language}")
 
 
@@ -946,6 +959,56 @@ def _command_exit_block(language: str, result: GateResult) -> str | None:
     return None
 
 
+def _command_coverage_blocks(
+    adapter: str,
+    result: GateResult,
+    changed_paths: tuple[str, ...],
+    high_risk_paths: tuple[str, ...],
+) -> list[str]:
+    if result.proof_kind == "provisioning":
+        return []
+    profile = adapter.split(".", 1)[0]
+    applicable_changed = tuple(
+        path for path in changed_paths if path.endswith(SOURCE_SUFFIXES[profile])
+    )
+    applicable_high_risk = tuple(
+        path for path in high_risk_paths if path.endswith(SOURCE_SUFFIXES[profile])
+    )
+    return [
+        *(
+            f"QUALITY_CHANGED_FILE_COVERAGE:{adapter}:{path}"
+            for path in applicable_changed
+            if not _covers(result, path)
+        ),
+        *(
+            f"QUALITY_HIGH_RISK_FILE_COVERAGE:{adapter}:{path}"
+            for path in applicable_high_risk
+            if not _covers(result, path)
+        ),
+    ]
+
+
+def _test_coverage_blocks(
+    policy: contract.Contract,
+    commands: dict[str, GateResult],
+    changed_paths: tuple[str, ...],
+    high_risk_paths: tuple[str, ...],
+) -> list[str]:
+    blocks: list[str] = []
+    for profile, test_adapter in (
+        ("python", "python.pytest.v1"),
+        ("typescript", "typescript.test.v1"),
+    ):
+        if profile not in policy.languages or (test_result := commands.get(test_adapter)) is None:
+            continue
+        blocks.extend(
+            f"UNTESTED_AREA:{path}"
+            for path in sorted(set((*changed_paths, *high_risk_paths)))
+            if path.endswith(SOURCE_SUFFIXES[profile]) and not _covers(test_result, path)
+        )
+    return blocks
+
+
 def _command_blocks(
     evidence: QualityEvidence,
     policy: contract.Contract,
@@ -974,25 +1037,8 @@ def _command_blocks(
             blocks.append(f"DECLARED_TOOL_NOT_EXECUTED:{adapter}")
         elif exit_block := _command_exit_block(policy.language, result):
             blocks.append(exit_block)
-        if result.proof_kind != "provisioning":
-            blocks.extend(
-                f"QUALITY_CHANGED_FILE_COVERAGE:{adapter}:{path}"
-                for path in changed_paths
-                if not _covers(result, path)
-            )
-            blocks.extend(
-                f"QUALITY_HIGH_RISK_FILE_COVERAGE:{adapter}:{path}"
-                for path in high_risk_paths
-                if not _covers(result, path)
-            )
-    test_adapter = "python.pytest.v1" if policy.language == "python" else "typescript.test.v1"
-    test_result = commands.get(test_adapter)
-    if test_result is not None:
-        blocks.extend(
-            f"UNTESTED_AREA:{path}"
-            for path in sorted(set((*changed_paths, *high_risk_paths)))
-            if not _covers(test_result, path)
-        )
+        blocks.extend(_command_coverage_blocks(adapter, result, changed_paths, high_risk_paths))
+    blocks.extend(_test_coverage_blocks(policy, commands, changed_paths, high_risk_paths))
     return blocks
 
 

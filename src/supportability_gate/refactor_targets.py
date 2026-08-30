@@ -10,7 +10,11 @@ TargetSpan = tuple[str, function_changes.ResponsibilitySpan]
 
 
 def _profile_source(path: str, language: str) -> bool:
-    suffixes = (".py", ".pyi") if language == "python" else (".cts", ".mts", ".ts", ".tsx")
+    suffixes = {
+        "python": (".py", ".pyi"),
+        "typescript": (".cts", ".mts", ".ts", ".tsx"),
+        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
+    }[language]
     return path.endswith(suffixes)
 
 

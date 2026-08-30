@@ -637,7 +637,10 @@ def _s02_profile(
         for command in commands
         if command["executed"]
         and command["exit_code"] == 1
-        and contract.POLICY_EXIT_STANDARDS[row["language"]].get(command["adapter"]) == 3
+        and contract.POLICY_EXIT_STANDARDS[command["adapter"].split(".", 1)[0]].get(
+            command["adapter"]
+        )
+        == 3
     )
     missing = tuple(adapter for adapter in required_adapters if adapter not in adapters)
     return adapters, result, failed, architecture_failed, missing, _s02_asset_blocks(receipts)
@@ -943,6 +946,7 @@ def _s02_modularity(
                     for item in expected_coverage
                 ),
                 len(source["gate_coverage"]),
+                source["language"],
             )
         )
     except (contract.ContractError, ValueError):
@@ -1031,7 +1035,11 @@ def _s02_function_bindings(
     language: str,
     code: str,
 ) -> tuple[dict[str, Any], ...]:
-    suffixes = (".py", ".pyi") if language == "python" else (".cts", ".mts", ".ts", ".tsx")
+    suffixes = {
+        "python": (".py", ".pyi"),
+        "typescript": (".cts", ".mts", ".ts", ".tsx"),
+        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
+    }[language]
     base_identities: set[tuple[str, str]] = set()
     head_identities: set[tuple[str, str]] = set()
     heads: list[dict[str, Any]] = []
@@ -1084,7 +1092,11 @@ def _s02_ruff_bindings(
         if rows:
             raise StandardResultsError(code)
         return
-    touched = {(item["path"], item["qualified_name"]): item for item in heads}
+    touched = {
+        (item["path"], item["qualified_name"]): item
+        for item in heads
+        if language != "mixed" or item["path"].endswith((".py", ".pyi"))
+    }
     matched: dict[tuple[str, str], int] = {}
     seen: set[tuple[str, str]] = set()
     for row in rows:
@@ -1120,12 +1132,16 @@ def _s02_gate_coverage(value: object, language: str, code: str, required: bool) 
             raise StandardResultsError(code)
         adapters.append(row["adapter"])
         _s02_strings(row["paths"], code, True)
-    expected = contract.COMPLEXITY_ADAPTERS[language]
-    other = set(contract.COMPLEXITY_ADAPTERS.values()) - {expected}
+    expected = (
+        set(contract.COMPLEXITY_ADAPTERS.values())
+        if language == "mixed"
+        else {contract.COMPLEXITY_ADAPTERS[language]}
+    )
+    other = set(contract.COMPLEXITY_ADAPTERS.values()) - expected
     if (
         len(adapters) != len(set(adapters))
         or any(adapter in other for adapter in adapters)
-        or (required and expected not in adapters)
+        or (required and not expected.issubset(adapters))
     ):
         raise StandardResultsError(code)
 
@@ -1268,7 +1284,7 @@ def _s02_complexity(value: object, identity: RunIdentity) -> _S02Complexity:
         or not _s02_sha(row["head_tree_sha"], _S02_SHA40)
         or not _s02_sha(row["contract_sha256"], _S02_SHA64)
         or row["review_evidence_path"] != ".supportability-review.toml"
-        or row["language"] not in {"python", "typescript"}
+        or row["language"] not in {"python", "typescript", "mixed"}
         or any(
             not isinstance(row[name], str) or not row[name]
             for name in ("contract_path", "dependency_direction_explanation")
@@ -1462,7 +1478,11 @@ def _s02_refactor_predecessor(
 def _s02_refactor_change_paths(
     changed: tuple[dict[str, Any], ...], language: str
 ) -> tuple[list[str], list[tuple[str, ...]], list[str]]:
-    suffixes = (".py", ".pyi") if language == "python" else (".cts", ".mts", ".ts", ".tsx")
+    suffixes = {
+        "python": (".py", ".pyi"),
+        "typescript": (".cts", ".mts", ".ts", ".tsx"),
+        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
+    }[language]
     scope = sorted({path for row in changed for path in (row["old_path"], row["new_path"]) if path})
     required = [
         tuple(

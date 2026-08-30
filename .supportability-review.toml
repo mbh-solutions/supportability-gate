@@ -2,64 +2,260 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The standard-results binder requires Gate 6 targets only for complexity-assessed source changes while retaining every changed asset in authorization scope and Gate 7 coverage."
-proof = "tests/test_standard_results.py::test_refactor_binding_leaves_mixed_asset_to_quality_gate; tests/test_standard_results.py::test_refactor_binding_source_to_asset_keeps_source_requirement; tests/test_standard_results.py::test_unbounded_source_path_has_exact_gate_six_blocks"
+intended_behavior = "One immutable contract runs fixed Python and TypeScript profiles together while preserving single-language behavior and exact-head coverage."
+proof = "tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
 
 [characterization]
-captured_behavior = "The existing standard-results boundary scenario preserves authenticated Gate 6 and Gate 8 result composition while the focused binding test covers the mixed-asset requirement."
-proof = "tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.golden.json"
+captured_behavior = "Existing stack-specific and result-binding scenarios remain bound while the mixed profile composes both fixed profiles without changing their evidence schema."
+proof = "tests/characterization/gate-policy-mixed-compatibility.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/quality-runner-boundary.characterization.py; tests/characterization/architecture-modularity-baseline.characterization.py"
 
 [separation_of_concerns]
-before = "The result binder still required every production asset to appear in Gate 6's source targets after target derivation stopped doing so."
-after = "The result binder uses the existing complexity-assessed classification plus the contract language for exact Gate 6 source-side requirements and leaves asset validity to Gate 7."
+before = "Contract, analysis, quality execution, characterization, architecture, and binding assumed one repository language."
+after = "Contract selects one or both fixed profiles; each existing owner partitions work by source language and emits one bound result."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/characterization.py"
+kind = "function"
+symbol = "_logical_step_runnable"
+before = "Runnable commands used one repository language."
+after = "Runnable commands use each scenario profile."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/characterization.py"
+kind = "function"
+symbol = "_scenario_paths"
+before = "Driver extension used one repository language."
+after = "Driver extension uses each scenario profile."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/characterization.py"
+kind = "function"
+symbol = "scenario_language"
+before = "No mixed scenario classifier existed."
+after = "Each scenario must cover exactly one supported profile."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_analyze_changes"
+before = "Changed files used one repository parser."
+after = "Changed files use their suffix-selected parser."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_architecture_evidence"
+before = "One architecture profile produced one graph."
+after = "Both fixed profiles execute and merge exact graph evidence."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_architecture_inputs"
+before = "Input discovery selected one suffix family."
+after = "Input discovery selects all contract source suffixes."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_complexity_evidence"
+before = "Metrics and Ruff used one language."
+after = "Metrics run per profile; Ruff remains Python-only."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_is_profile_source"
+before = "Classification accepted one source family."
+after = "Mixed classification accepts both supported families."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "function"
+symbol = "_source_language"
+before = "No per-file parser selector existed."
+after = "Source suffix selects Python or TypeScript."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/cli.py"
+kind = "module"
+symbol = "src/supportability_gate/cli.py"
+before = "Orchestration carried one profile."
+after = "Orchestration partitions two profiles in one evaluation."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/contract.py"
+kind = "function"
+symbol = "command_failed"
+before = "Policy exits used repository language."
+after = "Mixed policy exits use immutable adapter identity."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/contract.py"
+kind = "function"
+symbol = "parse_contract"
+before = "Schema 1.0 accepted one language."
+after = "Schema 1.1 accepts only canonical Python plus TypeScript."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/contract.py"
+kind = "module"
+symbol = "src/supportability_gate/contract.py"
+before = "Contract exposed one selected language."
+after = "Contract exposes canonical selected profiles and mixed identity."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/gate_policy.py"
+kind = "function"
+symbol = "contract_change_blocks"
+before = "Weakening omitted profile removal."
+after = "Removing a selected profile blocks."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/gate_policy.py"
+kind = "module"
+symbol = "src/supportability_gate/gate_policy.py"
+before = "Adapters and suffixes indexed one language."
+after = "Mixed identity is the exact existing-profile union."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/modularity_policy.py"
+kind = "function"
+symbol = "derive_modularity_blocks"
+before = "New paths required repository-wide gate count."
+after = "Mixed paths require their profile's complete gate count."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/modularity_policy.py"
+kind = "function"
+symbol = "evaluate_modularity"
+before = "Coverage omitted profile identity."
+after = "Coverage derivation receives authenticated profile identity."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_command_blocks"
+before = "Commands checked every source path."
+after = "Commands delegate profile-specific coverage checks."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_command_coverage_blocks"
+before = "No profile-specific command coverage boundary existed."
+after = "Commands cover only applicable source suffixes."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_test_coverage_blocks"
+before = "One test adapter owned all source coverage."
+after = "Each selected test adapter owns its profile paths."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "command_templates"
+before = "Template selection returned one command set."
+after = "Mixed selection returns both ordered fixed sets."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "module"
+symbol = "src/supportability_gate/quality_profile.py"
+before = "Schema v6 represented one source partition."
+after = "Schema v7 represents a union with profile-specific commands."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_runner.py"
+kind = "function"
+symbol = "command_plans"
+before = "One profile received every source and test."
+after = "Each fixed profile receives only applicable files."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/refactor_targets.py"
+kind = "function"
+symbol = "_profile_source"
+before = "Targeting recognized one source family."
+after = "Mixed targeting recognizes both supported families."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_block_ownership.py"
+kind = "module"
+symbol = "src/supportability_gate/standard_block_ownership.py"
+before = "Profile narrowing had no Standard owner."
+after = "Gate 7 owns profile narrowing."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/standard_results.py"
 kind = "function"
-symbol = "_s02_refactor"
-before = "The refactor result binder received changed-file evidence without the authenticated contract language needed to distinguish rename sides."
-after = "The refactor result binder receives the already-validated contract language from the complexity result."
+symbol = "_s02_complexity"
+before = "Validation accepted single-language identities."
+after = "Validation accepts authenticated mixed identity."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/standard_results.py"
 kind = "function"
-symbol = "_s02_refactor_binding"
-before = "Binding delegated change-path classification without a contract-language identity."
-after = "Binding threads the contract language into exact source-side requirement classification."
+symbol = "_s02_function_bindings"
+before = "Bindings allowed one source family."
+after = "Mixed bindings allow both supported families."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_gate_coverage"
+before = "Coverage required one complexity adapter."
+after = "Mixed coverage requires both fixed adapters."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_modularity"
+before = "Reconstruction omitted profile identity."
+after = "Reconstruction binds authenticated profile identity."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_profile"
+before = "Quality binding used schema v6 and one exit map."
+after = "Quality binding uses schema v7 and adapter-specific exits."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/standard_results.py"
 kind = "function"
 symbol = "_s02_refactor_change_paths"
-before = "All production paths were classified as required Gate 6 target paths, including assets that have no source responsibility identity."
-after = "Only contract-language source sides of complexity-assessed changes are required Gate 6 targets; all production paths remain allowed and all changed paths remain in authorization scope."
+before = "Gate 6 selected one source family."
+after = "Mixed Gate 6 accepts exact sides from either profile."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/standard_results.py"
 kind = "function"
-symbol = "_s02_refactor_shape"
-before = "Binding required every selected production path directly, which could choose an asset side of a rename."
-after = "Each complexity-assessed change must bind at least one exact source side, preserving moved source identities without accepting asset sides."
+symbol = "_s02_ruff_bindings"
+before = "All non-TypeScript identities required Ruff parity."
+after = "Mixed Ruff parity binds only Python identities."
 
 [architecture]
-dependency_direction = "standard_results consumes the authenticated source classification already emitted by complexity evaluation; quality_profile independently owns production-asset receipts."
-reviewed_paths = ["src/supportability_gate/standard_results.py"]
+dependency_direction = "Contract selects profiles; CLI orchestrates existing analyzers; quality runner executes fixed commands; result binding consumes authenticated evidence. No new cycle or target-code import."
+reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/cli.py", "src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/modularity_policy.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/refactor_targets.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results.py"
-owns = "Cross-binding exact Gate 6 source targets, changed authorization scope, and authenticated result identities."
-does_not_own = "Production-asset parsing, structural validity, receipt generation, or Gate 7 block ownership."
+path = "src/supportability_gate/contract.py"
+owns = "Canonical single-language and mixed-language contract identity."
+does_not_own = "Command execution, parsing, analysis, or publication."
 
 [incremental_refactor]
-target = "Remove the stale result-binding mismatch exposed by the real mixed-asset plugin run."
-completed_step = "Aligned Gate 6 result requirements with the existing complexity-assessed source classification in one binder condition."
+target = "Add canonical Python-plus-TypeScript support without a generic adapter platform."
+completed_step = "Reused both fixed profiles, partitioned inputs, and bound one result."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Required source paths, allowed production paths, and full changed scope retain distinct fixed meanings."
-cohesion = "Result cross-binding remains in standard_results; asset validation remains in quality_profile."
-intended_behavior = "Mixed changes bind exact source targets without requiring assets as Gate 6 targets, while malformed source remains fail-closed."
-reviewability = "The four changed production responsibility identities are enumerated above; protected authorization and merge remain unclaimed."
+naming = "Mixed names only the exact union; helpers name owned classification or coverage."
+cohesion = "Existing contract, orchestration, planning, and binding owners remain separate."
+intended_behavior = "Schema 1.0 stays single-language; schema 1.1 permits only both supported profiles."
+reviewability = "One bounded compatibility slice; no package, dependency, command, waiver, or threshold added."

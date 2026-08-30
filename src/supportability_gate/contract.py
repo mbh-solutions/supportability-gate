@@ -20,12 +20,14 @@ POLICY_EXIT_STANDARDS = {
         "typescript.import-boundaries.v1": 3,
     },
 }
+SUPPORTED_LANGUAGES = ("python", "typescript")
 
 
 def command_failed(language: str, adapter: str, executed: bool, exit_code: int) -> bool:
     """Return whether a command failed outside ordinary Gate 1 or 3 policy evidence."""
+    profile = adapter.split(".", 1)[0] if language == "mixed" else language
     return not executed or (
-        exit_code != 0 and (adapter not in POLICY_EXIT_STANDARDS[language] or exit_code != 1)
+        exit_code != 0 and (adapter not in POLICY_EXIT_STANDARDS[profile] or exit_code != 1)
     )
 
 
@@ -55,6 +57,7 @@ class Contract:
 
     schema_version: str
     language: str
+    languages: tuple[str, ...]
     production_paths: tuple[str, ...]
     high_risk_paths: tuple[str, ...]
     adapter: str
@@ -139,11 +142,13 @@ def parse_contract(content: bytes) -> Contract:
         data = tomllib.loads(content.decode("utf-8"))
     except (UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
         raise ContractError("MALFORMED_CONTRACT", str(error)) from error
+    version = data.get("schema_version")
+    language_key = "language" if version == "1.0" else "languages"
     _require_keys(
         data,
         {
             "schema_version",
-            "language",
+            language_key,
             "production_paths",
             "high_risk_paths",
             "complexity",
@@ -154,20 +159,38 @@ def parse_contract(content: bytes) -> Contract:
     complexity = data["complexity"]
     if not isinstance(complexity, dict):
         raise ContractError("INVALID_COMPLEXITY", "complexity must be a table")
-    _require_keys(complexity, {"adapter", "maximum"}, "complexity")
-    if data["schema_version"] != "1.0":
-        raise ContractError("UNSUPPORTED_SCHEMA", "schema_version must equal '1.0'")
-    language = data["language"]
-    if language not in COMPLEXITY_ADAPTERS:
-        raise ContractError("UNSUPPORTED_LANGUAGE", "language must equal 'python' or 'typescript'")
-    expected_adapter = COMPLEXITY_ADAPTERS[language]
-    if complexity["adapter"] != expected_adapter:
-        raise ContractError("UNSUPPORTED_ADAPTER", f"adapter must equal {expected_adapter!r}")
+    language: str
+    languages: tuple[str, ...]
+    if version == "1.0":
+        _require_keys(complexity, {"adapter", "maximum"}, "complexity")
+        language = data["language"]
+        if language not in COMPLEXITY_ADAPTERS:
+            raise ContractError(
+                "UNSUPPORTED_LANGUAGE", "language must equal 'python' or 'typescript'"
+            )
+        languages = (language,)
+        expected_adapter = COMPLEXITY_ADAPTERS[language]
+        if complexity["adapter"] != expected_adapter:
+            raise ContractError("UNSUPPORTED_ADAPTER", f"adapter must equal {expected_adapter!r}")
+    elif version == "1.1":
+        _require_keys(complexity, {"maximum"}, "complexity")
+        raw_languages = data["languages"]
+        if raw_languages != list(SUPPORTED_LANGUAGES):
+            raise ContractError(
+                "UNSUPPORTED_LANGUAGES",
+                "languages must equal ['python', 'typescript']",
+            )
+        languages = SUPPORTED_LANGUAGES
+        language = "mixed"
+        expected_adapter = "mixed"
+    else:
+        raise ContractError("UNSUPPORTED_SCHEMA", "schema_version must equal '1.0' or '1.1'")
     if type(complexity["maximum"]) is not int or complexity["maximum"] < 1:
         raise ContractError("INVALID_MAXIMUM", "complexity.maximum must be a positive integer")
     return Contract(
-        schema_version="1.0",
+        schema_version=version,
         language=language,
+        languages=languages,
         production_paths=_path_list(
             data["production_paths"], "production_paths", allow_empty=False
         ),

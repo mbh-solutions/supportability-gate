@@ -35,7 +35,8 @@ conversations.
 
 Each participating repository commits three fixed inputs:
 
-- `.supportability.toml` — language, production and high-risk paths, approved adapters, and
+- `.supportability.toml` — one language or the fixed Python-plus-TypeScript profile, production
+  and high-risk paths, approved adapters, and
   complexity maximum. The Gate loads this contract from the base commit; weakening or narrowing
   it in the pull request blocks.
 - `.supportability-review.toml` — structured behavior, architecture, responsibility, refactor,
@@ -54,8 +55,8 @@ waivers, or threshold overrides.
 
 ## CLI
 
-The public command is `evaluate-complexity`. Its fixed complexity adapter is
-`python.c901-touched.v1` with maximum `10`.
+The public command is `evaluate-complexity`. It applies each contract-selected fixed complexity
+adapter with maximum `10`.
 
 ```powershell
 python -m supportability_gate evaluate-complexity `
