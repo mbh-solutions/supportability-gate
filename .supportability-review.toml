@@ -23,7 +23,7 @@ after = "The exact fixed-profile expansion is evaluated without the generic bloc
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/cli.py"
 kind = "function"
-symbol = "main"
+symbol = "_evaluate"
 before = "All analysis remained bound to the base contract."
 after = "Analysis selects the candidate only after the fixed-profile expansion predicate passes."
 
