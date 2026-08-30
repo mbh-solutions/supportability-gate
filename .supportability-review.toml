@@ -3,7 +3,7 @@ module_boundaries = []
 
 [behavior]
 intended_behavior = "One immutable contract runs fixed Python and TypeScript profiles together while preserving single-language behavior and exact-head coverage."
-proof = "tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
+proof = "tests/hosted_characterization.py exact-head profile selection; tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles; tests/test_evaluate_complexity.py; tests/test_standard_results.py"
 
 [characterization]
 captured_behavior = "Existing stack-specific and result-binding scenarios remain bound while the mixed profile composes both fixed profiles without changing their evidence schema."
@@ -12,6 +12,13 @@ proof = "tests/characterization/gate-policy-mixed-compatibility.characterization
 [separation_of_concerns]
 before = "Contract, analysis, quality execution, characterization, architecture, and binding assumed one repository language."
 after = "Contract selects one or both fixed profiles; each existing owner partitions work by source language and emits one bound result."
+
+[[separation_of_concerns.boundaries]]
+path = "tests/hosted_characterization.py"
+kind = "function"
+symbol = "capture_evidence"
+before = "Both captures selected their driver profile from the base contract, preventing the first mixed-language transition."
+after = "Both captures select driver profiles from the authenticated exact-head definition while executing behavior against their exact target commits."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/characterization.py"
@@ -239,7 +246,7 @@ after = "Mixed Ruff parity binds only Python identities."
 
 [architecture]
 dependency_direction = "Contract selects profiles; CLI orchestrates existing analyzers; quality runner executes fixed commands; result binding consumes authenticated evidence. No new cycle or target-code import."
-reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/cli.py", "src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/modularity_policy.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/refactor_targets.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py"]
+reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/cli.py", "src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/modularity_policy.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/refactor_targets.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "tests/hosted_characterization.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/contract.py"
