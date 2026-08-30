@@ -2,71 +2,50 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Characterization verification uses the head contract only for the exact fixed-profile expansion."
-proof = "Exact mixed-canary captures no longer produce unauthenticated characterization evidence."
+intended_behavior = "Mixed refactor evidence uses the exact expansion contract and argv binding validates each fixed language partition."
+proof = "Exact run 33295158612 artifacts reproduce both prior binding failures and pass the focused binders after this change."
 
 [characterization]
-captured_behavior = "Hosted capture selected the exact expansion contract while verification remained on the base Python contract."
-proof = "Run 33294265794 characterization-result.json and exact capture artifacts."
+captured_behavior = "The mixed canary executed both fixed profiles successfully while refactor applicability and result binding remained single-profile."
+proof = "Run 33295158612 complexity, quality provenance, characterization, and refactor artifacts."
 
 [separation_of_concerns]
-before = "The transition predicate lived in gate policy and characterization always verified with the base contract."
-after = "Contract owns the transition identity; gate policy re-exports it; characterization applies it before capture verification."
+before = "Refactor target derivation used only the base contract and argv binding treated mixed files as one list."
+after = "Refactor selection reuses contract transition identity; result binding validates independent Python and TypeScript argv partitions."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/contract.py"
+path = "src/supportability_gate/refactor_policy.py"
 kind = "function"
-symbol = "is_profile_expansion"
-before = "The transition predicate was owned by outward gate policy."
-after = "The inward contract module owns the exact fixed-profile transition identity."
+symbol = "verify_refactor"
+before = "Refactor evaluation derived targets only from the base contract."
+after = "Refactor evaluation selects the candidate only for the exact fixed-profile expansion."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/contract.py"
-kind = "module"
-symbol = "src/supportability_gate/contract.py"
-before = "Fixed adapter identities were owned by outward gate policy."
-after = "The inward contract module owns the fixed adapter identities used to define transitions."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/gate_policy.py"
-kind = "module"
-symbol = "src/supportability_gate/gate_policy.py"
-before = "Gate policy implemented the transition predicate and its adapter identities."
-after = "Gate policy re-exports the contract predicate and fixed adapter identities."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/gate_policy.py"
+path = "src/supportability_gate/standard_results.py"
 kind = "function"
-symbol = "is_profile_expansion"
-before = "Gate policy implemented the transition rule directly."
-after = "Gate policy preserves the existing callable while delegating to the inward contract owner."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/characterization.py"
-kind = "function"
-symbol = "verify_evidence"
-before = "The verifier parsed only the base contract."
-after = "The verifier selects the candidate only when the contract predicate passes."
+symbol = "_s02_quality_argv"
+before = "One global source and test count was applied to every mixed-profile command."
+after = "Each fixed language command is validated against its own source and test partition."
 
 [architecture]
-dependency_direction = "Contract remains inward; gate policy and characterization depend on it without a new outward edge."
-reviewed_paths = ["src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/characterization.py"]
+dependency_direction = "Both existing outward policy modules reuse the inward contract identity; no target code is imported or executed."
+reviewed_paths = ["src/supportability_gate/refactor_policy.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/contract.py"
-owns = "Canonical contract identity and the exact fixed-profile transition."
-does_not_own = "Quality execution, characterization capture, or merge qualification."
+path = "src/supportability_gate/standard_results.py"
+owns = "Independent validation of signed Gate result bindings."
+does_not_own = "Quality execution, contract mutation, or target repository code."
 
 [incremental_refactor]
-target = "Align characterization verification with the protected fixed-profile transition."
-completed_step = "Moved one predicate inward and selected the candidate only through it."
+target = "Complete mixed-profile evidence binding exposed by the protected canary."
+completed_step = "Reused one transition predicate and partitioned one argv validator."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "is_profile_expansion retains the existing exact transition name."
-cohesion = "Contract identity, gate enforcement, and characterization verification remain separate."
-intended_behavior = "Arbitrary contract changes retain base-contract verification and blocking."
-reviewability = "One predicate moved inward and one verifier selection added."
+naming = "values_by_language and files_by_language name the exact fixed partitions."
+cohesion = "Refactor selection and result validation remain in their existing owners."
+intended_behavior = "Single-language behavior and arbitrary contract-change blocking remain unchanged."
+reviewability = "Two focused functions and no new command, package, waiver, threshold, or abstraction."
