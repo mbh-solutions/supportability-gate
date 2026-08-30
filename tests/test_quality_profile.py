@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from supportability_gate import contract, git_changes, quality_profile, quality_runner
+from supportability_gate import contract, gate_policy, git_changes, quality_profile, quality_runner
 from supportability_gate.function_changes import ChangedFileAssessment
 
 BASE_SHA = "a" * 40
@@ -66,6 +66,22 @@ paths = ["src"]
 adapter = "typescript.c901-equivalent-touched.v1"
 maximum = 10
 """
+MIXED_POLICY_TEXT = POLICY_TEXT.replace(
+    'schema_version = "1.0"\nlanguage = "python"',
+    'schema_version = "1.1"\nlanguages = ["python", "typescript"]',
+).replace(
+    '[complexity]\nadapter = "python.c901-touched.v1"\nmaximum = 10',
+    """[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["src"]
+
+[complexity]
+maximum = 10""",
+)
 IDENTITY = git_changes.RepositoryIdentity(
     "github.com/example/fixture",
     BASE_SHA,
@@ -74,6 +90,37 @@ IDENTITY = git_changes.RepositoryIdentity(
     "e" * 40,
     "git version fixture",
 )
+
+
+def test_mixed_contract_selects_and_partitions_both_fixed_profiles(tmp_path: Path) -> None:
+    policy = contract.parse_contract(MIXED_POLICY_TEXT.encode())
+    assessments = tuple(
+        ChangedFileAssessment(git_changes.ChangedPath("ADDED", None, path), False, True, True, (1,))
+        for path in ("src/backend.py", "src/frontend.ts")
+    )
+    sources = quality_profile.source_files(
+        ("src/backend.py", "src/config.json", "src/frontend.ts"), policy.language
+    )
+    plans = quality_runner.command_plans(
+        policy.language,
+        tmp_path,
+        tmp_path / "evidence",
+        ("tests/backend_test.py", "tests/frontend.test.ts"),
+        sources,
+    )
+
+    assert policy.languages == ("python", "typescript")
+    assert gate_policy.evaluate_contract(policy, assessments) == ()
+    assert sources == ("src/backend.py", "src/frontend.ts")
+    assert {item.adapter for item in plans} == set(
+        quality_profile.required_adapters("python")
+    ) | set(quality_profile.required_adapters("typescript"))
+    assert all(
+        all(path.endswith((".py", ".pyi")) for path in item.source_files)
+        if item.adapter.startswith("python.")
+        else all(path.endswith((".ts", ".tsx", ".mts", ".cts")) for path in item.source_files)
+        for item in plans
+    )
 
 
 def _commands() -> tuple[quality_profile.GateResult, ...]:

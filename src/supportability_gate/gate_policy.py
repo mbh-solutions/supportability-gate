@@ -19,11 +19,16 @@ APPROVED_ADAPTERS_BY_LANGUAGE = {
         "typescript.import-boundaries.v1",
     ),
 }
+APPROVED_ADAPTERS_BY_LANGUAGE["mixed"] = (
+    *APPROVED_ADAPTERS_BY_LANGUAGE["python"],
+    *APPROVED_ADAPTERS_BY_LANGUAGE["typescript"],
+)
 MAXIMUM_COMPLEXITY = 10
 _SOURCE_SUFFIXES = (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx")
 _PROFILE_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".cts", ".mts", ".ts", ".tsx"),
+    "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
 }
 
 
@@ -109,6 +114,8 @@ def contract_change_blocks(base: Contract, head: Contract | None) -> tuple[str, 
     blocks: list[str] = []
     if head.maximum > base.maximum:
         blocks.append("THRESHOLD_WEAKENING")
+    if not set(base.languages).issubset(head.languages):
+        blocks.append("LANGUAGE_PROFILE_NARROWING")
     head_gates = _gate_map(head)
     for adapter, base_gate in _gate_map(base).items():
         head_gate = head_gates.get(adapter)

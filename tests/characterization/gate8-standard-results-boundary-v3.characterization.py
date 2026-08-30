@@ -215,11 +215,17 @@ def _gate_seven_probe(
         "quality-gates.v4",
         "quality-gates.v5",
         "quality-gates.v6",
+        "quality-gates.v7",
     }:
         raise RuntimeError("unsupported Gate 7 characterization schema")
-    argv_current = schema in {"quality-gates.v4", "quality-gates.v5", "quality-gates.v6"}
-    manifest_current = schema in {"quality-gates.v5", "quality-gates.v6"}
-    asset_current = schema == "quality-gates.v6"
+    argv_current = schema in {
+        "quality-gates.v4",
+        "quality-gates.v5",
+        "quality-gates.v6",
+        "quality-gates.v7",
+    }
+    manifest_current = schema in {"quality-gates.v5", "quality-gates.v6", "quality-gates.v7"}
+    asset_current = schema in {"quality-gates.v6", "quality-gates.v7"}
     with tempfile.TemporaryDirectory() as temporary:
         directory = Path(temporary)
         python_output = directory / "python"
@@ -554,7 +560,10 @@ def main() -> None:
         handoff = case["review_handoff"]
         if handoff is not None:
             coverage = handoff["coverage"]
-            asset_current = quality_profile.SCHEMA_VERSION == "quality-gates.v6"
+            asset_current = quality_profile.SCHEMA_VERSION in {
+                "quality-gates.v6",
+                "quality-gates.v7",
+            }
             if asset_current:
                 if coverage.get("asset_receipts") != [] or coverage.get(
                     "source_files"

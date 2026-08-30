@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from supportability_gate import (
@@ -34,11 +34,16 @@ class _AnalyzedChanges:
 def _is_profile_source(path: str | None, language: str) -> bool:
     if path is None:
         return False
-    return (
-        path.endswith((".py", ".pyi"))
-        if language == "python"
-        else path.endswith((".cts", ".mts", ".ts", ".tsx"))
-    )
+    suffixes = {
+        "python": (".py", ".pyi"),
+        "typescript": (".cts", ".mts", ".ts", ".tsx"),
+        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
+    }
+    return path.endswith(suffixes[language])
+
+
+def _source_language(path: str) -> str:
+    return "python" if path.endswith((".py", ".pyi")) else "typescript"
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -156,8 +161,11 @@ def _analyze_changes(
             policy.language,
             records,
         )
+        path = change.new_path or change.old_path
+        if path is None:
+            continue
         analysis = function_changes.analyze_file(
-            assessment, base_content, head_content, policy.language
+            assessment, base_content, head_content, _source_language(path)
         )
         analyses.append(analysis)
         if change.new_path and head_content is not None:
@@ -200,10 +208,10 @@ def _architecture_inputs(
     policy: contract.Contract,
     records: list[git_changes.CommandRecord],
 ) -> tuple[dict[str, bytes], bytes | None]:
-    suffixes = (".py", ".pyi") if policy.language == "python" else (".cts", ".mts", ".ts", ".tsx")
+    suffixes = quality_profile.SOURCE_SUFFIXES[policy.language]
     roots = (
         (*policy.production_paths, "tsconfig.json")
-        if policy.language == "typescript"
+        if "typescript" in policy.languages
         else policy.production_paths
     )
     blobs = git_changes.list_regular_blobs(repository, head_sha, roots, records)
@@ -232,17 +240,52 @@ def _complexity_evidence(
         analyzed = _analyze_changes(repository, identity, policy, assessments, records)
         base_definitions = _all_definitions(analyzed.analyses, "base")
         head_definitions = _all_definitions(analyzed.analyses, "head")
-        base_metrics = complexity_metrics.measure_definitions(base_definitions, policy.language)
-        head_metrics = complexity_metrics.measure_definitions(head_definitions, policy.language)
+        base_metrics = tuple(
+            metric
+            for language in policy.languages
+            for metric in complexity_metrics.measure_definitions(
+                tuple(
+                    item
+                    for item in base_definitions
+                    if _source_language(item.span.path) == language
+                ),
+                language,
+            )
+        )
+        head_metrics = tuple(
+            metric
+            for language in policy.languages
+            for metric in complexity_metrics.measure_definitions(
+                tuple(
+                    item
+                    for item in head_definitions
+                    if _source_language(item.span.path) == language
+                ),
+                language,
+            )
+        )
+        python_definitions = tuple(
+            item for item in head_definitions if _source_language(item.span.path) == "python"
+        )
         ruff = (
-            complexity_metrics.run_ruff(analyzed.head_sources, head_definitions)
-            if policy.language == "python"
+            complexity_metrics.run_ruff(
+                {
+                    path: content
+                    for path, content in analyzed.head_sources.items()
+                    if _source_language(path) == "python"
+                },
+                python_definitions,
+            )
+            if "python" in policy.languages
             else complexity_metrics.RuffResult((), None)
         )
         if ruff.command:
             ruff_records.append(ruff.command)
-        if policy.language == "python":
-            complexity_metrics.verify_ruff_parity(head_metrics, ruff.diagnostics)
+        if "python" in policy.languages:
+            complexity_metrics.verify_ruff_parity(
+                tuple(item for item in head_metrics if item.span.path.endswith((".py", ".pyi"))),
+                ruff.diagnostics,
+            )
         decisions = complexity_policy.decide_functions(
             policy,
             _all_deltas(analyzed.analyses),
@@ -274,15 +317,39 @@ def _architecture_evidence(
         sources, typescript_config = _architecture_inputs(
             repository, identity.head_sha, policy, records
         )
-        gate = next(
-            (
-                item
-                for item in policy.gates
-                if item.adapter == architecture_policy.ARCHITECTURE_ADAPTERS[policy.language]
+        results = []
+        for language in policy.languages:
+            adapter = architecture_policy.ARCHITECTURE_ADAPTERS[language]
+            gate = next((item for item in policy.gates if item.adapter == adapter), None)
+            profile_sources = {
+                path: content
+                for path, content in sources.items()
+                if _source_language(path) == language
+            }
+            profile_policy = replace(
+                policy,
+                language=language,
+                languages=(language,),
+                adapter=contract.COMPLEXITY_ADAPTERS[language],
+            )
+            results.append(
+                architecture_policy.evaluate_architecture(
+                    profile_policy, profile_sources, gate, typescript_config
+                )
+            )
+        return architecture_policy.ArchitectureResult(
+            "+".join(item.adapter for item in results),
+            all(item.executed for item in results),
+            tuple(sorted(path for item in results for path in item.covered_paths)),
+            tuple(sorted(path for item in results for path in item.nodes)),
+            tuple(
+                sorted(
+                    (edge for item in results for edge in item.edges),
+                    key=lambda edge: (edge.source, edge.line, edge.specifier),
+                )
             ),
-            None,
+            tuple(sorted(block for item in results for block in item.blocks)),
         )
-        return architecture_policy.evaluate_architecture(policy, sources, gate, typescript_config)
     except (function_changes.PythonSourceError, git_changes.GitError) as error:
         code = (
             error.code if error.code.startswith("ARCHITECTURE_") else f"ARCHITECTURE_{error.code}"

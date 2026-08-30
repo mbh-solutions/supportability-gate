@@ -130,9 +130,23 @@ def _manifest(
 
 
 def _scenario_paths(scenario: Scenario, language: str) -> tuple[str, str]:
-    extension = "py" if language == "python" else "mjs"
+    extension = "py" if scenario_language(scenario, language) == "python" else "mjs"
     base = f"{SCENARIO_ROOT}/{scenario.id}"
     return f"{base}.characterization.{extension}", f"{base}.golden.json"
+
+
+def scenario_language(scenario: Scenario, language: str) -> str:
+    """Return the one fixed profile exercised by a characterization scenario."""
+    if language != "mixed":
+        return language
+    profiles = {
+        "python" if path.endswith((".py", ".pyi")) else "typescript"
+        for path in scenario.covers
+        if path.endswith((".py", ".pyi", ".cts", ".mts", ".ts", ".tsx"))
+    }
+    if len(profiles) != 1:
+        raise CharacterizationError("MIXED_PROFILE_CHARACTERIZATION_SCENARIO")
+    return profiles.pop()
 
 
 def _load_capture(path: Path, missing_code: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -396,7 +410,7 @@ def _logical_step_runnable(
         == head.get("command")
         == (
             ["python3.12", "-P", _scenario_paths(scenario, language)[0]]
-            if language == "python"
+            if scenario_language(scenario, language) == "python"
             else ["node", _scenario_paths(scenario, language)[0]]
         )
         for path in scenario.covers

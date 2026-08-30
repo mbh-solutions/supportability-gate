@@ -103,12 +103,13 @@ def _scenario_capture(
     language: str,
     records: list[git_changes.CommandRecord],
 ) -> dict[str, object]:
+    profile = characterization.scenario_language(scenario, language)
     driver_path, golden_path = characterization._scenario_paths(scenario, language)
     driver = git_changes.read_regular_blob(definition, definition_sha, driver_path, records)
     golden = git_changes.read_regular_blob(definition, definition_sha, golden_path, records)
     golden_behavior = characterization._read_json_bytes(golden.content, "MALFORMED_GOLDEN_OUTPUT")
-    first = _run_driver(target, definition, scenario, language, driver.content)
-    second = _run_driver(target, definition, scenario, language, driver.content)
+    first = _run_driver(target, definition, scenario, profile, driver.content)
+    second = _run_driver(target, definition, scenario, profile, driver.content)
     return {
         "behavior": first["behavior"],
         "behavior_sha256": first["behavior_sha256"],

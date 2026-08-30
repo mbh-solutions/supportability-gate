@@ -144,6 +144,7 @@ def derive_modularity_blocks(
     nodes: tuple[str, ...],
     coverage: tuple[LocationCoverage, ...],
     required_gate_count: int,
+    language: str = "python",
 ) -> tuple[str, ...]:
     """Derive canonical Gate 4 policy blocks from authenticated facts."""
     blocks = [block for path in new_paths for block in _path_blocks(path)]
@@ -151,7 +152,15 @@ def derive_modularity_blocks(
     blocks.extend(
         f"NEW_LOCATION_GATE_COVERAGE:{item.path}"
         for item in coverage
-        if len(item.adapters) != required_gate_count or not item.architecture
+        if len(item.adapters)
+        != (
+            5
+            if language == "mixed" and item.path.endswith((".py", ".pyi"))
+            else 2
+            if language == "mixed"
+            else required_gate_count
+        )
+        or not item.architecture
     )
     return tuple(sorted(blocks))
 
@@ -194,6 +203,7 @@ def evaluate_modularity(
         architecture.nodes,
         coverage,
         len(policy.gates),
+        policy.language,
     )
     coupling = tuple(edge for edge in architecture.edges if edge.source in changed_paths)
     return ModularityResult(

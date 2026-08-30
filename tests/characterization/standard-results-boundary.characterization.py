@@ -268,7 +268,7 @@ def _run_case(
         manifest_current = "test_files" in producer.standard_results._S02_PROFILE_KEYS
         asset_current = "source_files" in producer.standard_results._S02_PROFILE_KEYS
         profile["schema_version"] = (
-            "quality-gates.v6"
+            "quality-gates.v7"
             if asset_current
             else "quality-gates.v5"
             if manifest_current
