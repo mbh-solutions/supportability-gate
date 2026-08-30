@@ -1275,8 +1275,8 @@ Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #10 S12 issue #175 mixed production-asset quality coverage
-Next milestone authorized: NONE; S12 has no successor
+Current authorized work: NONE in Supportability Gate; return to TWMN bootstrap after S13 closure readback
+Next milestone authorized: NONE; S13 has no successor Gate work
 ```
 
 ## Milestone transition rules
@@ -2280,3 +2280,56 @@ Do not create a new terminal label not authorized by an active milestone directi
   workflow-pin activation/readback, protected passing and focused blocking canaries, fresh plugin PR
   proof, Project/issue closure, and temporary-reference cleanup remain required before this
   prospective result becomes canonical.
+
+## Project #10 S13 mixed Python and TypeScript profile support
+
+- Prospective terminal result recorded by this protected ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after this
+  pull request merges normally with no bypass, ruleset `21664395` is pinned to that protected merge,
+  and final issue and Project readbacks succeed. Project #10 then closes; TWMN bootstrap resumes. No
+  successor Gate work is authorized.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg4lPG0`, repository issue #180, and initial exact protected source base
+  `462cd0483681dd427fe5121d6ee0fc1c635904fb`.
+- Capability boundary: schema `1.0` retains either fixed single-language profile; schema `1.1`
+  selects the fixed Python plus TypeScript profile. Mixed contracts bind every production root to
+  all seven fixed adapters, permit only additive root and high-risk-path expansion, derive
+  TypeScript coverage and architecture arguments from exact source paths, and attest CSS as strict
+  UTF-8 without NUL. No generic adapter, target command, exclusion, waiver, threshold override,
+  package, dependency, or target-code execution was added.
+- Protected source delivery: PRs #181, #183, #184, #185, #187, #189, and #190 merged normally
+  without bypass at `e389692601025c1a1576373b66df95fea1fe1a8b`,
+  `5311e6b2a4750fad9b81a3db6d8c9825e76233e7`,
+  `60e4d0eb0e7ac45817b5870f9726a2543acd0b01`,
+  `ca5018f3bae57c7d0f962de51b6106e00000ae36`,
+  `c8bf54c43400b538bd8aff309786b12200b1b30d`,
+  `69b52d26dfc13b188b9572cb53430c60292674d7`, and
+  `918a125c28f3541ad19cec2147d94d68b2d41252`. Final source head
+  `d7925c1e6959b93b68619f7a8bb8df74e491c591` passed Python 3.12 exact-lock Source Validation run
+  `33298406746` with 616 tests and required run `33298406782`; all eight deterministic contexts and
+  aggregate passed. No Codex review request occurred.
+- Deployed qualification: passing canary PR #186 exact head
+  `c05c2ec3743a680be53a6ae1353e4f6753bd28a5` passed both fixed profiles, all eight contexts, and
+  aggregate in required run `33299024508`. Its quality artifact `9728324416` has digest
+  `c0de798e763326c770d8a089fe31e84c04abfc79af8ede7c25098242102cf6ff`; authoritative evidence
+  artifact `9728329181` has digest
+  `b85374adae82d85f3f4aa521b7ff6f12b5890319b9ff2a17d06589c73692aeb6`. Blocking canary PR #188
+  exact head `a511a1810bdce614252f6d84d34f1f1f5608b8a8` produced only
+  `FUNCTION_COMPLEXITY:mixedStackLabel` in Gate 1, retained `technical_errors: []`, left Gates 2-8
+  green, and failed aggregate as required in run `33298936368`. Its quality artifact `9728295755`
+  has digest `0dfab9e4242b218803a621d0373d3f3c202882e1e0e978ccc3620f10fcd6e794`; authoritative evidence
+  artifact `9728302027` has digest
+  `4fb57b2450851fb6715a93bfa53db554b633488cc87648dc8f3583a7e8b3797b`.
+- Activation and consumer preflight: pre-ledger ruleset `21664395` reads active, strict, zero bypass,
+  exact `Supportability 1` through `Supportability 8` contexts, and workflow pin
+  `918a125c28f3541ad19cec2147d94d68b2d41252`. Fresh read-only TWMN preflight at
+  `5ff9b790861ea39fbd23c115cb8b2fd3166d6287` accepted schema `1.1` expansions for `src` plus
+  `supabase/functions/ask-twmn-gateway` and separately `src` plus `web`, each with
+  `profile_expansion=true` and `policy_blocks=[]`. This proves Gate admission and coverage only;
+  Deno and Next.js deployment proof remains owned by the applicable TWMN slices. No TWMN mutation
+  occurred.
+- Cleanup: canary PRs #186 and #188 closed unmerged and both remote canary branches were deleted.
+- Remaining transaction: merge this ledger pull request normally, pin and read back ruleset
+  `21664395` at that merge, post terminal issue evidence, set S13
+  `Done / Complete / On scope / Yes`, close issue #180 and Project #10, verify all readbacks, and
+  stop.

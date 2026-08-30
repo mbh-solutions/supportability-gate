@@ -2,113 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "A Python contract can add the fixed TypeScript profile and covered production roots, and an existing mixed contract can add later covered roots without narrowing prior scope."
-proof = "The focused mixed-profile regression uses Python under src and TypeScript under web, retains both through a later gateway-root expansion, and rejects removal of the original root."
+intended_behavior = "Record S13 terminal evidence and the no-successor boundary without changing Gate behavior."
+proof = "The ledger cites protected source delivery, final canaries, ruleset activation, TWMN preflight, cleanup, and the remaining closure transaction."
 
 [characterization]
-captured_behavior = "Fixed Python and TypeScript profiles remain composed while mixed-to-single narrowing stays blocked."
-proof = "tests/characterization/gate-policy-mixed-compatibility.characterization.py"
+captured_behavior = "Gate production behavior and immutable requirements remain unchanged by this nonproduction ledger transaction."
+proof = "The exact diff contains only the product completion ledger and its current structured review evidence."
 
 [separation_of_concerns]
-before = "Mixed transition eligibility, fixed TypeScript execution, and aggregate receipt validation assumed every source lived under src."
-after = "The existing contract, quality-template, runner, and receipt owners bind additive roots and their fixed commands to the exact source manifest."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/contract.py"
-kind = "function"
-symbol = "is_profile_expansion"
-before = "Only unchanged src-style roots qualified during the single-language to mixed transition."
-after = "Existing language, root, risk, threshold, and gate coverage remain while exact fully covered roots may be added."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_profile.py"
-kind = "function"
-symbol = "_asset_result"
-before = "The fixed asset validator map covered JSON, Markdown, and PNG only."
-after = "The same bounded text validator now authenticates CSS as strict UTF-8 without NUL."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_profile.py"
-kind = "function"
-symbol = "_valid_markdown"
-before = "The strict UTF-8 and NUL check was named only for Markdown."
-after = "The unchanged responsibility moved to the accurately named _valid_utf8_text function."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_profile.py"
-kind = "function"
-symbol = "_valid_utf8_text"
-before = "The identical bounded text rule was named only for Markdown."
-after = "The name truthfully owns strict UTF-8 and NUL rejection for both Markdown and CSS."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_profile.py"
-kind = "module"
-symbol = "src/supportability_gate/quality_profile.py"
-before = "Fixed TypeScript templates declared src-only coverage and architecture inputs and no CSS asset identity."
-after = "The same templates declare exact manifest tokens and one bounded CSS asset identity."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_runner.py"
-kind = "function"
-symbol = "_replace_tokens"
-before = "Only absolute source and test manifest tokens expanded into fixed argument vectors."
-after = "Exact relative source and coverage argument lists expand through the same no-shell vector builder."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_runner.py"
-kind = "function"
-symbol = "_write_typescript_configs"
-before = "TypeScript build output required every source below repository src."
-after = "The fixed build root is the repository, preserving every repository-relative source identity."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/quality_runner.py"
-kind = "function"
-symbol = "command_plans"
-before = "Fixed TypeScript coverage and architecture vectors received an implicit src root."
-after = "They receive only the exact language-partitioned source paths already owned by the manifest."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results.py"
-kind = "function"
-symbol = "_s02_quality_argv"
-before = "Authenticated command receipts expanded only absolute source and test manifest tokens."
-after = "The same receipt parser expands exact relative coverage and architecture source lists."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results.py"
-kind = "function"
-symbol = "_s02_quality_paths"
-before = "Receipt binding authenticated absolute source and test paths only."
-after = "Receipt binding also requires coverage arguments and relative architecture inputs to equal the source manifest."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results.py"
-kind = "module"
-symbol = "src/supportability_gate/standard_results.py"
-before = "The fixed authenticated token vocabulary omitted relative source-list identities."
-after = "The same bounded vocabulary recognizes only the two new fixed list tokens."
+before = "The persistent ledger still names S12 and contains no S13 terminal evidence."
+after = "The ledger alone records S13 status, direct evidence, remaining closure transaction, and no successor Gate work."
+boundaries = []
 
 [architecture]
-dependency_direction = "Contract transition policy remains inward; templates remain declarative; the runner materializes vectors; aggregate validation authenticates their receipts."
-reviewed_paths = ["src/supportability_gate/contract.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/standard_results.py"]
+dependency_direction = "No production dependency or module boundary changes."
+reviewed_paths = [".supportability-review.toml", "docs/product_completion_contract.md"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/contract.py"
-owns = "Eligibility of additive fixed-profile and covered-root contract transitions."
-does_not_own = "Target package layout, runtime-specific commands, product code, waivers, or exclusions."
+path = "docs/product_completion_contract.md"
+owns = "Persistent S13 product status, direct evidence, remaining closure transaction, and successor boundary."
+does_not_own = "Gate runtime, target product code, workflow behavior, thresholds, waivers, or future milestones."
 
 [incremental_refactor]
-target = "Make the fixed mixed profile truthful for production source roots outside src."
-completed_step = "Removed only the fixed src assumptions, bound their receipts, and added bounded CSS attestation required by the live TypeScript consumer."
+target = "Close the S13 durable-evidence gap."
+completed_step = "Updated the existing product-status fields, appended one S13 ledger entry, and refreshed current-PR review evidence."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "is_profile_expansion and _valid_utf8_text name the broadened responsibilities directly."
-cohesion = "Contract eligibility, fixed templates, vector materialization, and receipt authentication remain in their existing owners."
-intended_behavior = "Prior roots cannot disappear; every fixed adapter exactly covers added roots; TypeScript commands, receipts, and build proof use the same manifest identities."
-reviewability = "No new package, adapter, executable, threshold, exclusion, waiver, or generic configuration surface was added."
+naming = "The S13 heading and terminal field names match the live issue and Project fields."
+cohesion = "All durable S13 evidence remains in the existing product completion ledger."
+intended_behavior = "The ledger becomes canonical only through normal protected merge and final ruleset, issue, and Project readbacks."
+reviewability = "The two-file nonproduction diff changes no Gate source, workflow, dependency, threshold, exclusion, waiver, Standard, or roadmap."
