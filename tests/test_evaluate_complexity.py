@@ -48,7 +48,9 @@ def _executed_quality_arguments(
         "$TOOLS": "C:/quality/quality-tools",
     }
     list_values = {
+        "$COVERAGE_FILES": tuple(f"--test-coverage-include={path}" for path in production_files),
         "$SOURCE_FILES": tuple(f"C:/repo/target/{path}" for path in production_files),
+        "$SOURCE_PATHS": tuple(production_files),
         "$TEST_FILES": tuple(f"C:/repo/target/{path}" for path in test_files),
     }
     executed: list[str] = []

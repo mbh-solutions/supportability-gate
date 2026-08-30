@@ -38,6 +38,7 @@ TEST_SUFFIXES = {
     ),
 }
 ASSET_VALIDATORS = {
+    ".css": ("css", "css.utf8.v1"),
     ".json": ("json", "json.stdlib.v1"),
     ".md": ("markdown", "markdown.utf8.v1"),
     ".png": ("png", "png.crc.v1"),
@@ -237,7 +238,7 @@ _TYPESCRIPT_COMMANDS = (
             "$NODE",
             "--test",
             "--experimental-test-coverage",
-            "--test-coverage-include=src/**",
+            "$COVERAGE_FILES",
             "--test-reporter=spec",
             "--test-reporter=lcov",
             "--test-reporter-destination=stdout",
@@ -258,7 +259,7 @@ _TYPESCRIPT_COMMANDS = (
             "--ts-config",
             "$OUTPUT/tsconfig-check.json",
             "--",
-            "src",
+            "$SOURCE_PATHS",
         ),
     ),
 )
@@ -407,7 +408,7 @@ def _valid_json(content: bytes) -> bool:
     return True
 
 
-def _valid_markdown(content: bytes) -> bool:
+def _valid_utf8_text(content: bytes) -> bool:
     try:
         return "\0" not in content.decode("utf-8")
     except UnicodeDecodeError:
@@ -454,8 +455,9 @@ def _valid_png(content: bytes) -> bool:
 
 def _asset_result(validator: str, content: bytes) -> str:
     validators = {
+        "css.utf8.v1": _valid_utf8_text,
         "json.stdlib.v1": _valid_json,
-        "markdown.utf8.v1": _valid_markdown,
+        "markdown.utf8.v1": _valid_utf8_text,
         "png.crc.v1": _valid_png,
     }
     return "PASS" if validators[validator](content) else "MALFORMED"

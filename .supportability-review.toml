@@ -2,43 +2,113 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "A mixed-profile policy exit is classified by its adapter language without becoming a technical failure."
-proof = "Run 33296347911 measured TypeScript complexity 13 and exposed the mixed-key lookup; the focused classifier check now returns the fixed Gate 1 policy result."
+intended_behavior = "A Python contract can add the fixed TypeScript profile and covered production roots, and an existing mixed contract can add later covered roots without narrowing prior scope."
+proof = "The focused mixed-profile regression uses Python under src and TypeScript under web, retains both through a later gateway-root expansion, and rejects removal of the original root."
 
 [characterization]
-captured_behavior = "The blocking canary preserved runtime behavior while TypeScript complexity exited one."
-proof = "Run 33296347911 quality-gates.json and complexity-result.json."
+captured_behavior = "Fixed Python and TypeScript profiles remain composed while mixed-to-single narrowing stays blocked."
+proof = "tests/characterization/gate-policy-mixed-compatibility.characterization.py"
 
 [separation_of_concerns]
-before = "Quality policy-exit classification indexed the composite mixed identity."
-after = "Quality policy-exit classification derives only the fixed adapter profile before consulting its policy map."
+before = "Mixed transition eligibility, fixed TypeScript execution, and aggregate receipt validation assumed every source lived under src."
+after = "The existing contract, quality-template, runner, and receipt owners bind additive roots and their fixed commands to the exact source manifest."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/contract.py"
+kind = "function"
+symbol = "is_profile_expansion"
+before = "Only unchanged src-style roots qualified during the single-language to mixed transition."
+after = "Existing language, root, risk, threshold, and gate coverage remain while exact fully covered roots may be added."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/quality_profile.py"
 kind = "function"
-symbol = "_command_exit_block"
-before = "The helper treated mixed as a policy-exit map key."
-after = "The helper uses the command adapter's Python or TypeScript prefix."
+symbol = "_asset_result"
+before = "The fixed asset validator map covered JSON, Markdown, and PNG only."
+after = "The same bounded text validator now authenticates CSS as strict UTF-8 without NUL."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_markdown"
+before = "The strict UTF-8 and NUL check was named only for Markdown."
+after = "The unchanged responsibility moved to the accurately named _valid_utf8_text function."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "function"
+symbol = "_valid_utf8_text"
+before = "The identical bounded text rule was named only for Markdown."
+after = "The name truthfully owns strict UTF-8 and NUL rejection for both Markdown and CSS."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_profile.py"
+kind = "module"
+symbol = "src/supportability_gate/quality_profile.py"
+before = "Fixed TypeScript templates declared src-only coverage and architecture inputs and no CSS asset identity."
+after = "The same templates declare exact manifest tokens and one bounded CSS asset identity."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_runner.py"
+kind = "function"
+symbol = "_replace_tokens"
+before = "Only absolute source and test manifest tokens expanded into fixed argument vectors."
+after = "Exact relative source and coverage argument lists expand through the same no-shell vector builder."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_runner.py"
+kind = "function"
+symbol = "_write_typescript_configs"
+before = "TypeScript build output required every source below repository src."
+after = "The fixed build root is the repository, preserving every repository-relative source identity."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/quality_runner.py"
+kind = "function"
+symbol = "command_plans"
+before = "Fixed TypeScript coverage and architecture vectors received an implicit src root."
+after = "They receive only the exact language-partitioned source paths already owned by the manifest."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_quality_argv"
+before = "Authenticated command receipts expanded only absolute source and test manifest tokens."
+after = "The same receipt parser expands exact relative coverage and architecture source lists."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "function"
+symbol = "_s02_quality_paths"
+before = "Receipt binding authenticated absolute source and test paths only."
+after = "Receipt binding also requires coverage arguments and relative architecture inputs to equal the source manifest."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results.py"
+kind = "module"
+symbol = "src/supportability_gate/standard_results.py"
+before = "The fixed authenticated token vocabulary omitted relative source-list identities."
+after = "The same bounded vocabulary recognizes only the two new fixed list tokens."
 
 [architecture]
-dependency_direction = "The existing quality-profile owner continues to depend inward on the fixed contract policy map."
-reviewed_paths = ["src/supportability_gate/quality_profile.py"]
+dependency_direction = "Contract transition policy remains inward; templates remain declarative; the runner materializes vectors; aggregate validation authenticates their receipts."
+reviewed_paths = ["src/supportability_gate/contract.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/quality_profile.py"
-owns = "Classification of authenticated fixed quality-command results."
-does_not_own = "Command execution, complexity measurement, or target repository code."
+path = "src/supportability_gate/contract.py"
+owns = "Eligibility of additive fixed-profile and covered-root contract transitions."
+does_not_own = "Target package layout, runtime-specific commands, product code, waivers, or exclusions."
 
 [incremental_refactor]
-target = "Isolate a mixed-profile complexity policy exit to its owning Gate context."
-completed_step = "Derived one fixed adapter profile before the existing policy lookup."
+target = "Make the fixed mixed profile truthful for production source roots outside src."
+completed_step = "Removed only the fixed src assumptions, bound their receipts, and added bounded CSS attestation required by the live TypeScript consumer."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "profile names the fixed Python or TypeScript command family."
-cohesion = "Policy-exit classification remains in the existing quality-profile owner."
-intended_behavior = "Single-language classifications remain unchanged; mixed uses the adapter's fixed profile."
-reviewability = "One branch-local value, no new command, package, waiver, threshold, or abstraction."
+naming = "is_profile_expansion and _valid_utf8_text name the broadened responsibilities directly."
+cohesion = "Contract eligibility, fixed templates, vector materialization, and receipt authentication remain in their existing owners."
+intended_behavior = "Prior roots cannot disappear; every fixed adapter exactly covers added roots; TypeScript commands, receipts, and build proof use the same manifest identities."
+reviewability = "No new package, adapter, executable, threshold, exclusion, waiver, or generic configuration surface was added."
