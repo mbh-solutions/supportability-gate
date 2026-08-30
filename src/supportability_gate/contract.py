@@ -21,6 +21,23 @@ POLICY_EXIT_STANDARDS = {
     },
 }
 SUPPORTED_LANGUAGES = ("python", "typescript")
+FIXED_ADAPTERS_BY_LANGUAGE = {
+    "python": (
+        "python.c901-touched.v1",
+        "python.import-linter.v1",
+        "python.mypy-strict.v1",
+        "python.pytest.v1",
+        "python.ruff-lint.v1",
+    ),
+    "typescript": (
+        "typescript.c901-equivalent-touched.v1",
+        "typescript.import-boundaries.v1",
+    ),
+}
+FIXED_ADAPTERS_BY_LANGUAGE["mixed"] = (
+    *FIXED_ADAPTERS_BY_LANGUAGE["python"],
+    *FIXED_ADAPTERS_BY_LANGUAGE["typescript"],
+)
 
 
 def command_failed(language: str, adapter: str, executed: bool, exit_code: int) -> bool:
@@ -68,6 +85,27 @@ class Contract:
     def is_production_path(self, path: str) -> bool:
         """Return whether a repository path is inside configured production scope."""
         return any(path == root or path.startswith(f"{root}/") for root in self.production_paths)
+
+
+def is_profile_expansion(base: Contract, head: Contract | None) -> bool:
+    """Return whether one single-language contract safely adds the other fixed profile."""
+    if (
+        head is None
+        or base.schema_version != "1.0"
+        or head.schema_version != "1.1"
+        or base.production_paths != head.production_paths
+        or base.high_risk_paths != head.high_risk_paths
+        or base.maximum != head.maximum
+    ):
+        return False
+    base_gates = {gate.adapter: gate for gate in base.gates}
+    head_gates = {gate.adapter: gate for gate in head.gates}
+    if any(head_gates.get(adapter) != gate for adapter, gate in base_gates.items()):
+        return False
+    return set(head_gates) == set(FIXED_ADAPTERS_BY_LANGUAGE["mixed"]) and all(
+        head_gates[adapter].paths == base.production_paths
+        for adapter in set(head_gates) - set(base_gates)
+    )
 
 
 def normalize_repository_path(value: object, field: str) -> str:

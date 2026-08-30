@@ -2,56 +2,71 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "One immutable contract runs fixed Python and TypeScript profiles together while preserving single-language behavior and exact-head coverage."
-proof = "Targeted mixed-transition selector and hosted-profile capture; tests/test_quality_profile.py::test_mixed_contract_selects_and_partitions_both_fixed_profiles"
+intended_behavior = "Characterization verification uses the head contract only for the exact fixed-profile expansion."
+proof = "Exact mixed-canary captures no longer produce unauthenticated characterization evidence."
 
 [characterization]
-captured_behavior = "Existing stack-specific and result-binding scenarios remain bound while the mixed profile composes both fixed profiles without changing their evidence schema."
-proof = "tests/characterization/gate-policy-mixed-compatibility.characterization.py; tests/characterization/gate8-standard-results-boundary-v3.characterization.py; tests/characterization/quality-runner-boundary.characterization.py; tests/characterization/architecture-modularity-baseline.characterization.py"
+captured_behavior = "Hosted capture selected the exact expansion contract while verification remained on the base Python contract."
+proof = "Run 33294265794 characterization-result.json and exact capture artifacts."
 
 [separation_of_concerns]
-before = "Contract evaluation and hosted quality always used the base single-language profile, so the first mixed transition could not run its added profile."
-after = "Only the exact fixed-profile expansion uses the head mixed contract for deterministic analysis and hosted quality; every other contract change remains on the base policy and blocks."
+before = "The transition predicate lived in gate policy and characterization always verified with the base contract."
+after = "Contract owns the transition identity; gate policy re-exports it; characterization applies it before capture verification."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/cli.py"
+path = "src/supportability_gate/contract.py"
 kind = "function"
-symbol = "_contract_blocks"
-before = "Every candidate contract change received the generic contract-change block."
-after = "The exact fixed-profile expansion is evaluated without the generic block; all other changes retain it."
+symbol = "is_profile_expansion"
+before = "The transition predicate was owned by outward gate policy."
+after = "The inward contract module owns the exact fixed-profile transition identity."
 
 [[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/cli.py"
-kind = "function"
-symbol = "_evaluate"
-before = "All analysis remained bound to the base contract."
-after = "Analysis selects the candidate only after the fixed-profile expansion predicate passes."
+path = "src/supportability_gate/contract.py"
+kind = "module"
+symbol = "src/supportability_gate/contract.py"
+before = "Fixed adapter identities were owned by outward gate policy."
+after = "The inward contract module owns the fixed adapter identities used to define transitions."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/gate_policy.py"
+kind = "module"
+symbol = "src/supportability_gate/gate_policy.py"
+before = "Gate policy implemented the transition predicate and its adapter identities."
+after = "Gate policy re-exports the contract predicate and fixed adapter identities."
 
 [[separation_of_concerns.boundaries]]
 path = "src/supportability_gate/gate_policy.py"
 kind = "function"
 symbol = "is_profile_expansion"
-before = "No contract transition was distinguished from arbitrary candidate mutation."
-after = "One predicate owns the exact non-weakening single-to-mixed transition boundary."
+before = "Gate policy implemented the transition rule directly."
+after = "Gate policy preserves the existing callable while delegating to the inward contract owner."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/characterization.py"
+kind = "function"
+symbol = "verify_evidence"
+before = "The verifier parsed only the base contract."
+after = "The verifier selects the candidate only when the contract predicate passes."
+
 [architecture]
-dependency_direction = "Contract selects profiles; CLI orchestrates existing analyzers; quality runner executes fixed commands; result binding consumes authenticated evidence. No new cycle or target-code import."
-reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/cli.py", "src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/modularity_policy.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "src/supportability_gate/refactor_targets.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "tests/hosted_characterization.py"]
+dependency_direction = "Contract remains inward; gate policy and characterization depend on it without a new outward edge."
+reviewed_paths = ["src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/characterization.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/contract.py"
-owns = "Canonical single-language and mixed-language contract identity."
-does_not_own = "Command execution, parsing, analysis, or publication."
+owns = "Canonical contract identity and the exact fixed-profile transition."
+does_not_own = "Quality execution, characterization capture, or merge qualification."
 
 [incremental_refactor]
-target = "Add canonical Python-plus-TypeScript support without a generic adapter platform."
-completed_step = "Reused both fixed profiles, partitioned inputs, and bound one result."
+target = "Align characterization verification with the protected fixed-profile transition."
+completed_step = "Moved one predicate inward and selected the candidate only through it."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Mixed names only the exact union; helpers name owned classification or coverage."
-cohesion = "Existing contract, orchestration, planning, and binding owners remain separate."
-intended_behavior = "Schema 1.0 stays single-language; schema 1.1 permits only both supported profiles."
-reviewability = "One bounded compatibility slice; no package, dependency, command, waiver, or threshold added."
+naming = "is_profile_expansion retains the existing exact transition name."
+cohesion = "Contract identity, gate enforcement, and characterization verification remain separate."
+intended_behavior = "Arbitrary contract changes retain base-contract verification and blocking."
+reviewability = "One predicate moved inward and one verifier selection added."
