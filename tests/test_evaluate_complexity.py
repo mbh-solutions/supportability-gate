@@ -16,6 +16,7 @@ from supportability_gate import (
     complexity_policy,
     contract,
     function_changes,
+    gate_policy,
     git_changes,
     quality_profile,
     reporting,
@@ -441,12 +442,22 @@ def _evaluate(
     try:
         records: list[git_changes.CommandRecord] = []
         identity = git_changes.inspect_repository(repository, base_sha, head_sha, records)
-        policy = contract.parse_contract(
+        base_policy = contract.parse_contract(
             git_changes.read_regular_blob(
                 repository, identity.base_sha, ".supportability.toml", records
             ).content
         )
         changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
+        candidate_policy = contract.parse_contract(
+            git_changes.read_regular_blob(
+                repository, identity.head_sha, ".supportability.toml", records
+            ).content
+        )
+        policy = (
+            candidate_policy
+            if gate_policy.is_allowed_contract_transition(base_policy, candidate_policy, changes)
+            else base_policy
+        )
         changed_paths = tuple(
             sorted(
                 {
@@ -1328,6 +1339,64 @@ def test_candidate_contract_change_and_complexity_block_are_reported_together(
     ]
     assert result["functions"][0]["head"]["complexity"] == 11
     assert result["functions"][0]["decision"] == "BLOCK"
+
+
+def test_exact_deleted_high_risk_transition_passes(tmp_path: Path) -> None:
+    policy = CONTRACT.replace("high_risk_paths = []", 'high_risk_paths = ["src/risk.py"]')
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "risk.py", _function_source("risk", 1))
+    base_sha = _commit(repository, "base")
+    (repository / "src" / "risk.py").unlink()
+    _write(repository / ".supportability.toml", CONTRACT)
+    head_sha = _commit(repository, "retire exact high-risk path")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["overall_result"] == "PASS"
+    assert result["high_risk_paths"] == []
+    assert result["policy_blocks"] == []
+
+
+def test_high_risk_contract_removal_without_file_deletion_blocks(tmp_path: Path) -> None:
+    policy = CONTRACT.replace("high_risk_paths = []", 'high_risk_paths = ["src/risk.py"]')
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "risk.py", _function_source("risk", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / ".supportability.toml", CONTRACT)
+    head_sha = _commit(repository, "remove contract entry only")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["CANDIDATE_CONTRACT_CHANGE"]
+
+
+def test_high_risk_file_deletion_without_contract_removal_blocks(tmp_path: Path) -> None:
+    policy = CONTRACT.replace("high_risk_paths = []", 'high_risk_paths = ["src/risk.py"]')
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "risk.py", _function_source("risk", 1))
+    base_sha = _commit(repository, "base")
+    (repository / "src" / "risk.py").unlink()
+    head_sha = _commit(repository, "delete file only")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["policy_blocks"] == ["QUALITY_HIGH_RISK_FILE_NOT_ATTESTED:src/risk.py"]
+
+
+def test_deleted_high_risk_transition_rejects_rename_and_combined_weakening() -> None:
+    base = contract.parse_contract(
+        CONTRACT.replace("high_risk_paths = []", 'high_risk_paths = ["src/risk.py"]').encode()
+    )
+    head = contract.parse_contract(CONTRACT.encode())
+    renamed = (git_changes.ChangedPath("RENAMED", "src/risk.py", "src/moved.py"),)
+    deleted = (git_changes.ChangedPath("DELETED", "src/risk.py", None),)
+    weakened = contract.parse_contract(CONTRACT.replace("maximum = 10", "maximum = 11").encode())
+
+    assert not gate_policy.is_deleted_high_risk_transition(base, head, renamed)
+    assert not gate_policy.is_deleted_high_risk_transition(base, weakened, deleted)
 
 
 def test_policy_and_complexity_blocks_are_reported_together(tmp_path: Path) -> None:

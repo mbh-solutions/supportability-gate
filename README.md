@@ -10,9 +10,10 @@ for architecture, configuration, evidence, lifecycle, and module details.
 ## Status
 
 Integrated qualification and organization-wide activation completed on 2026-08-27. Project #10 is
-closed, and [terminal issue #154](https://github.com/mbh-solutions/supportability-gate/issues/154)
-records the direct proof. Durable product status and historical evidence remain in the
-[Product Completion Contract](docs/product_completion_contract.md).
+temporarily reopened only for the bounded
+[S14 maintenance issue](https://github.com/mbh-solutions/supportability-gate/issues/192), which
+permits an exact high-risk contract entry to retire with its deleted file. Durable product status
+and historical evidence remain in the [Product Completion Contract](docs/product_completion_contract.md).
 
 Protected `main` requires Source Validation plus eight strict, independently owned deterministic
 contexts:
@@ -36,9 +37,9 @@ conversations.
 Each participating repository commits three fixed inputs:
 
 - `.supportability.toml` — one language or the fixed Python-plus-TypeScript profile, production
-  and high-risk paths, approved adapters, and
-  complexity maximum. The Gate loads this contract from the base commit; weakening or narrowing
-  it in the pull request blocks.
+  and high-risk paths, approved adapters, and complexity maximum. The Gate loads this contract
+  from the base commit; weakening or narrowing it in the pull request blocks. The only removal
+  exception is an exact high-risk path whose tracked file is deleted in the same diff.
 - `.supportability-review.toml` — structured behavior, architecture, responsibility, refactor,
   and handoff evidence bound to exact base/head Git blobs.
 - `.supportability-characterization.json` — fixed hosted scenarios and their covered source

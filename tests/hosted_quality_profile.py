@@ -220,12 +220,12 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
             target, identity.head_sha, ".supportability.toml", records
         ).content
     )
+    changes = git_changes.changed_paths(target, identity.base_sha, identity.head_sha, records)
     policy = (
         candidate_policy
-        if gate_policy.is_profile_expansion(base_policy, candidate_policy)
+        if gate_policy.is_allowed_contract_transition(base_policy, candidate_policy, changes)
         else base_policy
     )
-    changes = git_changes.changed_paths(target, identity.base_sha, identity.head_sha, records)
     changed_paths = tuple(
         sorted(
             {

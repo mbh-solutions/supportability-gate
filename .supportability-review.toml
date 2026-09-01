@@ -2,37 +2,43 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Record S13 terminal evidence and the no-successor boundary without changing Gate behavior."
-proof = "The ledger cites protected source delivery, final canaries, ruleset activation, TWMN preflight, cleanup, and the remaining closure transaction."
+intended_behavior = "A high-risk contract entry retires only with the exact tracked file deleted in the same immutable diff; every other weakening remains blocked."
+proof = "tests/test_evaluate_complexity.py covers exact deletion, contract-only removal, deletion-only, rename, and combined threshold weakening."
 
 [characterization]
-captured_behavior = "Gate production behavior and immutable requirements remain unchanged by this nonproduction ledger transaction."
-proof = "The exact diff contains only the product completion ledger and its current structured review evidence."
+captured_behavior = "Contract changes were previously allowed only for fixed profile expansion, while quality attestation still required every base high-risk path at the head."
+proof = "The focused red run returned TECHNICAL_FAILURE before the shared transition predicate existed; the directly relevant suite then passed 153 tests with 2 expected skips."
 
 [separation_of_concerns]
-before = "The persistent ledger still names S12 and contains no S13 terminal evidence."
-after = "The ledger alone records S13 status, direct evidence, remaining closure transaction, and no successor Gate work."
-boundaries = []
+before = "The hosted producer and final evaluator selected only profile expansions, so an exact deleted high-risk transition could not share one approved effective contract."
+after = "Gate policy owns one exact transition predicate; the hosted producer and final evaluator consume it, while quality validation remains unchanged."
+boundaries = [
+  { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_contract_blocks", before = "Accepted only profile expansion and otherwise emitted CANDIDATE_CONTRACT_CHANGE.", after = "Uses the shared approved-transition result for candidate blocking and effective policy evaluation." },
+  { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_evaluate", before = "Selected the candidate contract only for profile expansion.", after = "Selects the candidate contract for either profile expansion or an exact deleted high-risk transition." },
+  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "is_allowed_contract_transition", before = "No shared caller-facing predicate represented every approved contract transition.", after = "Combines the existing profile-expansion rule with the exact deleted-high-risk rule." },
+  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "is_deleted_high_risk_transition", before = "No policy function distinguished exact tracked deletion from contract escape.", after = "Requires the ordered remaining high-risk paths and equality of every other contract responsibility." },
+  { path = "src/supportability_gate/gate_policy.py", kind = "module", symbol = "src/supportability_gate/gate_policy.py", before = "The policy module imported only changed-file assessments.", after = "The policy module also consumes immutable changed-path identities for exact deletion classification." },
+]
 
 [architecture]
-dependency_direction = "No production dependency or module boundary changes."
-reviewed_paths = [".supportability-review.toml", "docs/product_completion_contract.md"]
+dependency_direction = "CLI and the hosted producer depend on gate policy; gate policy depends only on lower-layer contract, changed-path, and changed-file types."
+reviewed_paths = ["src/supportability_gate/cli.py", "src/supportability_gate/gate_policy.py", "tests/hosted_quality_profile.py", "tests/test_evaluate_complexity.py"]
 
 [responsibility_boundary]
-path = "docs/product_completion_contract.md"
-owns = "Persistent S13 product status, direct evidence, remaining closure transaction, and successor boundary."
-does_not_own = "Gate runtime, target product code, workflow behavior, thresholds, waivers, or future milestones."
+path = "src/supportability_gate/gate_policy.py"
+owns = "Deterministic approval of the exact candidate contract transition."
+does_not_own = "Quality evidence schema, characterization, workflow orchestration, thresholds, exclusions, waivers, or bypass policy."
 
 [incremental_refactor]
-target = "Close the S13 durable-evidence gap."
-completed_step = "Updated the existing product-status fields, appended one S13 ledger entry, and refreshed current-PR review evidence."
+target = "Permit only the observed exact deleted-high-risk transition through the existing contract-selection path."
+completed_step = "Added one shared predicate, reused it in both existing consumers, and left the quality verifier and schemas unchanged."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The S13 heading and terminal field names match the live issue and Project fields."
-cohesion = "All durable S13 evidence remains in the existing product completion ledger."
-intended_behavior = "The ledger becomes canonical only through normal protected merge and final ruleset, issue, and Project readbacks."
-reviewability = "The two-file nonproduction diff changes no Gate source, workflow, dependency, threshold, exclusion, waiver, Standard, or roadmap."
+naming = "Transition names state the exact allowed event and avoid generic deletion exemptions."
+cohesion = "Contract-transition logic remains in gate policy and both orchestration callers only select its result."
+intended_behavior = "Exact deletion passes; contract-only removal, deletion-only, rename, and combined weakening block."
+reviewability = "The production change is one predicate plus two caller substitutions, with no schema, dependency, threshold, or workflow expansion."
