@@ -432,10 +432,11 @@ def _contract_blocks(
     candidate_policy: contract.Contract | None,
     assessments: tuple[function_changes.ChangedFileAssessment, ...],
 ) -> tuple[str, ...]:
-    expansion = gate_policy.is_profile_expansion(policy, candidate_policy)
+    changes = tuple(item.change for item in assessments)
+    allowed = gate_policy.is_allowed_contract_transition(policy, candidate_policy, changes)
     candidate = (
         (
-            *(() if expansion else ("CANDIDATE_CONTRACT_CHANGE",)),
+            *(() if allowed else ("CANDIDATE_CONTRACT_CHANGE",)),
             *gate_policy.contract_change_blocks(policy, candidate_policy),
         )
         if any(
@@ -443,7 +444,7 @@ def _contract_blocks(
         )
         else ()
     )
-    effective = candidate_policy if expansion and candidate_policy is not None else policy
+    effective = candidate_policy if allowed and candidate_policy is not None else policy
     return (*candidate, *gate_policy.evaluate_contract(effective, assessments))
 
 
@@ -841,8 +842,8 @@ def _evaluate(arguments: argparse.Namespace) -> reporting.EvaluationResult:
                 candidate_policy = contract.parse_contract(candidate_blob.content)
             except (contract.ContractError, git_changes.GitError):
                 candidate_policy = None
-        if candidate_policy is not None and gate_policy.is_profile_expansion(
-            base_policy, candidate_policy
+        if candidate_policy is not None and gate_policy.is_allowed_contract_transition(
+            base_policy, candidate_policy, changes
         ):
             policy = candidate_policy
         assessments = _classify_changes(repository, identity, policy, changes, records)

@@ -9,6 +9,7 @@ from supportability_gate.contract import (
     GateAdapter,
 )
 from supportability_gate.function_changes import ChangedFileAssessment
+from supportability_gate.git_changes import ChangedPath
 
 APPROVED_ADAPTERS_BY_LANGUAGE = FIXED_ADAPTERS_BY_LANGUAGE
 APPROVED_ADAPTERS = APPROVED_ADAPTERS_BY_LANGUAGE["python"]
@@ -17,6 +18,42 @@ APPROVED_ADAPTERS = APPROVED_ADAPTERS_BY_LANGUAGE["python"]
 def is_profile_expansion(base: Contract, head: Contract | None) -> bool:
     """Expose the inward contract transition predicate to existing callers."""
     return contract.is_profile_expansion(base, head)
+
+
+def is_deleted_high_risk_transition(
+    base: Contract,
+    head: Contract | None,
+    changes: tuple[ChangedPath, ...],
+) -> bool:
+    """Allow only high-risk entries whose exact tracked files were deleted."""
+    if head is None:
+        return False
+    deleted = {
+        item.old_path
+        for item in changes
+        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
+    }
+    remaining = tuple(path for path in base.high_risk_paths if path not in deleted)
+    return (
+        remaining != base.high_risk_paths
+        and head.high_risk_paths == remaining
+        and head.schema_version == base.schema_version
+        and head.language == base.language
+        and head.languages == base.languages
+        and head.production_paths == base.production_paths
+        and head.adapter == base.adapter
+        and head.maximum == base.maximum
+        and head.gates == base.gates
+    )
+
+
+def is_allowed_contract_transition(
+    base: Contract,
+    head: Contract | None,
+    changes: tuple[ChangedPath, ...],
+) -> bool:
+    """Return whether the exact candidate contract transition is approved."""
+    return is_profile_expansion(base, head) or is_deleted_high_risk_transition(base, head, changes)
 
 
 MAXIMUM_COMPLEXITY = 10

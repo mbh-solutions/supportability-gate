@@ -1275,8 +1275,8 @@ Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: NONE in Supportability Gate; return to TWMN bootstrap after S13 closure readback
-Next milestone authorized: NONE; S13 has no successor Gate work
+Current authorized work: Project #10 S14 issue #192, exact deleted high-risk transition
+Next milestone authorized: NONE; after S14 return only to TWMN issue #155 and PR #164
 ```
 
 ## Milestone transition rules
@@ -2333,3 +2333,32 @@ Do not create a new terminal label not authorized by an active milestone directi
   `21664395` at that merge, post terminal issue evidence, set S13
   `Done / Complete / On scope / Yes`, close issue #180 and Project #10, verify all readbacks, and
   stop.
+
+## Project #10 S14 exact deleted high-risk transition
+
+- Prospective terminal result recorded by this protected ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after this
+  pull request merges normally without bypass, ruleset `21664395` is pinned to that protected
+  merge, and TWMN PR #164 passes all eight deterministic contexts plus aggregate Gate on its exact
+  head. Project #10 then closes and only the authorized TWMN issue #155 recovery transaction resumes.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg48uCA`, repository issue #192, blocked consumer TWMN PR #164 at
+  `6de5a8700aa94919e2809f2d97de8df38c9a7aba`, failed required run `33533991213`, and exact source
+  base/workflow rollback pin `b83682464a2853a3b68c36056d82676fc0ac1a08`.
+- Capability boundary: a candidate contract may remove only the ordered subset of base high-risk
+  paths whose exact Git identities are `DELETED` in the same base/head diff. Every schema,
+  language, production path, adapter, threshold, and gate scope must remain byte-semantically
+  unchanged. Contract-only removal, deletion-only, rename/move, and combined weakening remain
+  fail-closed through existing deterministic block ownership.
+- Implementation boundary: one shared predicate selects the same effective candidate contract for
+  the hosted quality producer and final evaluator. Existing quality evidence schema, attestation,
+  characterization, thresholds, eight check names, dependencies, exclusions, waivers, and bypass
+  policy remain unchanged.
+- Local development evidence: the focused red test reproduced the current technical failure; the
+  three exact positive/negative integration canaries then passed. The directly relevant
+  `tests/test_evaluate_complexity.py` plus `tests/test_quality_profile.py` suite passed once with
+  `153 passed, 2 skipped` in 428.93 seconds.
+- Remaining transaction: complete the exact Python 3.12 source proof once, merge one protected
+  source pull request normally, update and read back only ruleset `21664395`'s workflow SHA, obtain
+  fresh exact-head TWMN PR #164 proof, record terminal issue evidence, set S14
+  `Done / Complete / On scope / Yes`, close issue #192 and Project #10, then stop Gate work.
