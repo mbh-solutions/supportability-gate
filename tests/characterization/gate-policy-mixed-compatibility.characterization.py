@@ -64,10 +64,13 @@ def main() -> None:
             raise RuntimeError("mixed profile does not compose both fixed profiles")
         if "LANGUAGE_PROFILE_NARROWING" not in gate_policy.contract_change_blocks(mixed, python):
             raise RuntimeError("mixed profile narrowing was not blocked")
+        if not gate_policy.is_profile_retirement(mixed, python, ()):
+            raise RuntimeError("verified profile retirement was not allowed")
     payload = {
         "behavior": {
             "fixed_profiles": "preserved",
             "mixed_extension": "compatible",
+            "profile_retirement": "verified",
         },
         "scenario": "gate-policy-mixed-compatibility",
         "schema_version": "1.0",

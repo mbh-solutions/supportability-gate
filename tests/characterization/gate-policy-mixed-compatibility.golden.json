@@ -1,4 +1,5 @@
 {
   "fixed_profiles": "preserved",
-  "mixed_extension": "compatible"
+  "mixed_extension": "compatible",
+  "profile_retirement": "verified"
 }

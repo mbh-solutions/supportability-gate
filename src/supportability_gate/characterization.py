@@ -785,9 +785,16 @@ def verify_evidence(
         repository, head_sha, ".supportability.toml", records
     )
     candidate_policy = contract.parse_contract(candidate_blob.content)
-    if contract.is_profile_expansion(policy, candidate_policy):
-        policy = candidate_policy
     changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
+    exact_deleted_paths = {
+        item.old_path
+        for item in changes
+        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
+    }
+    if contract.is_profile_expansion(policy, candidate_policy) or contract.is_profile_retirement(
+        policy, candidate_policy, exact_deleted_paths
+    ):
+        policy = candidate_policy
     from supportability_gate import (
         refactor_targets,
     )  # local: keep result validator dependency-light

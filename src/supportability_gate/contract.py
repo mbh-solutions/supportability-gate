@@ -112,6 +112,29 @@ def is_profile_expansion(base: Contract, head: Contract | None) -> bool:
     )
 
 
+def is_profile_retirement(
+    base: Contract,
+    head: Contract | None,
+    deleted_paths: set[str],
+) -> bool:
+    """Allow one fixed mixed profile to retire without shrinking production scope."""
+    if (
+        head is None
+        or base.schema_version != "1.1"
+        or head.schema_version != "1.0"
+        or head.languages[0] not in base.languages
+        or head.production_paths != base.production_paths
+        or head.maximum != base.maximum
+    ):
+        return False
+    expected_gates = tuple(
+        GateAdapter(adapter, head.production_paths)
+        for adapter in FIXED_ADAPTERS_BY_LANGUAGE[head.language]
+    )
+    remaining_high_risk = tuple(path for path in base.high_risk_paths if path not in deleted_paths)
+    return head.gates == expected_gates and head.high_risk_paths == remaining_high_risk
+
+
 def normalize_repository_path(value: object, field: str) -> str:
     """Validate one normalized repository-relative POSIX path."""
     if not isinstance(value, str) or not value:

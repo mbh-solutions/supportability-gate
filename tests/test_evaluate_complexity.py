@@ -115,6 +115,24 @@ adapter = "typescript.c901-equivalent-touched.v1"
 maximum = 10
 """
 
+PYTHON_TWO_ROOT_CONTRACT = CONTRACT.replace('["src"]', '["src", "web"]')
+MIXED_TWO_ROOT_CONTRACT = PYTHON_TWO_ROOT_CONTRACT.replace(
+    'schema_version = "1.0"\nlanguage = "python"',
+    'schema_version = "1.1"\nlanguages = ["python", "typescript"]',
+).replace(
+    '[complexity]\nadapter = "python.c901-touched.v1"\nmaximum = 10',
+    """[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["src", "web"]
+
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["src", "web"]
+
+[complexity]
+maximum = 10""",
+)
+
 REVIEW_EVIDENCE = """\
 schema_version = "1.0"
 
@@ -485,7 +503,8 @@ def _evaluate(
                 (),
                 True,
                 complexity_exit_code
-                if adapter == contract.COMPLEXITY_ADAPTERS[policy.language]
+                if adapter
+                in {contract.COMPLEXITY_ADAPTERS[language] for language in policy.languages}
                 else 0,
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
@@ -1356,6 +1375,66 @@ def test_exact_deleted_high_risk_transition_passes(tmp_path: Path) -> None:
     assert result["overall_result"] == "PASS"
     assert result["high_risk_paths"] == []
     assert result["policy_blocks"] == []
+
+
+def test_deleted_typescript_product_selects_only_python_quality_commands(
+    tmp_path: Path,
+) -> None:
+    base_contract = MIXED_TWO_ROOT_CONTRACT.replace(
+        "high_risk_paths = []", 'high_risk_paths = ["web/frontend.ts"]'
+    )
+    repository = _initialize_repository(tmp_path, base_contract)
+    _write(repository / "src" / "sample.py", _function_source("sample", 1))
+    _write(repository / "web" / "frontend.ts", _typescript_source("frontend", 1))
+    base_sha = _commit(repository, "base")
+    (repository / "web" / "frontend.ts").unlink()
+    _write(repository / ".supportability.toml", PYTHON_TWO_ROOT_CONTRACT)
+    head_sha = _commit(repository, "retire TypeScript product")
+
+    _, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    commands = result["quality_profile"]["commands"]
+    assert result["language"] == "python"
+    assert {item["adapter"] for item in commands} == set(
+        quality_profile.required_adapters("python")
+    )
+    assert all(not item["adapter"].startswith("typescript.") for item in commands)
+    assert not any(
+        block.startswith(("CANDIDATE_CONTRACT_CHANGE", "LANGUAGE_PROFILE_NARROWING", "QUALITY_"))
+        for block in result["policy_blocks"]
+    )
+
+
+def test_profile_retirement_blocks_retained_typescript_source(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path, MIXED_TWO_ROOT_CONTRACT)
+    _write(repository / "web" / "frontend.ts", _typescript_source("frontend", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / ".supportability.toml", PYTHON_TWO_ROOT_CONTRACT)
+    head_sha = _commit(repository, "falsely retire TypeScript profile")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert result["language"] == "python"
+    assert result["policy_blocks"] == ["UNSUPPORTED_PRODUCTION_ASSET:web/frontend.ts"]
+    assert all(
+        not item["adapter"].startswith("typescript.")
+        for item in result["quality_profile"]["commands"]
+    )
+
+
+def test_profile_retirement_blocks_renamed_typescript_source(tmp_path: Path) -> None:
+    repository = _initialize_repository(tmp_path, MIXED_TWO_ROOT_CONTRACT)
+    _write(repository / "web" / "frontend.ts", _typescript_source("frontend", 1))
+    base_sha = _commit(repository, "base")
+    (repository / "web" / "frontend.ts").rename(repository / "web" / "frontend.md")
+    _write(repository / ".supportability.toml", PYTHON_TWO_ROOT_CONTRACT)
+    head_sha = _commit(repository, "hide TypeScript source")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert "PROFILE_SOURCE_MISMATCH:web/frontend.ts" in result["policy_blocks"]
 
 
 def test_high_risk_contract_removal_without_file_deletion_blocks(tmp_path: Path) -> None:

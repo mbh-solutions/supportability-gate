@@ -1275,8 +1275,8 @@ Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #10 S14 issue #192, exact deleted high-risk transition
-Next milestone authorized: NONE; after S14 return only to TWMN issue #155 and PR #164
+Current authorized work: Project #10 S15 issue #194, exact language-profile retirement
+Next milestone authorized: NONE; after S15 no successor Gate work starts
 ```
 
 ## Milestone transition rules
@@ -2362,3 +2362,39 @@ Do not create a new terminal label not authorized by an active milestone directi
   source pull request normally, update and read back only ruleset `21664395`'s workflow SHA, obtain
   fresh exact-head TWMN PR #164 proof, record terminal issue evidence, set S14
   `Done / Complete / On scope / Yes`, close issue #192 and Project #10, then stop Gate work.
+
+## Project #10 S15 exact language-profile retirement
+
+- Prospective terminal result recorded by this protected ledger transaction: Status `COMPLETE`;
+  Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after this
+  pull request merges normally without bypass, ruleset `21664395` is pinned to that protected
+  merge, and TWMN PR #194 passes Gate 7 on its exact head with zero TypeScript adapters executed.
+- Authority: private Project #10 `PVT_kwDOEmzFKc4BhXlK`, item
+  `PVTI_lADOEmzFKc4BhXlKzg5f5es`, repository issue #194, blocked consumer TWMN PR #194 at
+  `b492c9798183b79813aea491015e95d163f38ff6`, failed required run `33820702512`, and exact source
+  base/workflow rollback pin `c897d1c83ea5b259c6ca7afd19174b06cc494131`.
+- Capability boundary: an exact schema `1.1` mixed contract may retire to either existing schema
+  `1.0` fixed profile. Production roots, threshold, and surviving gate coverage remain unchanged;
+  removed high-risk entries require exact file deletion. Exact-head Git inventory remains
+  authoritative, so retained removed-profile source and unknown production blobs fail closed.
+- Implementation boundary: existing transition selection chooses one effective candidate for the
+  hosted quality producer, evaluator, characterization, and refactor-policy consumers. Deleted
+  old-profile source does not poison cleanup; remaining source selects only its existing fixed
+  command templates. Existing evidence schema, asset validators, eight contexts, target-command
+  boundary, exclusions, waivers, and bypass policy remain unchanged.
+- Local development evidence: the focused red reproduced base `mixed`, all sixteen Python and
+  TypeScript commands, and `CANDIDATE_CONTRACT_CHANGE`, `LANGUAGE_PROFILE_NARROWING`, and
+  `GATE_SCOPE_NARROWING`. The focused green selected `python`, emitted exactly the seven Python
+  commands, and emitted zero TypeScript adapters. Retained TypeScript source blocked as
+  `UNSUPPORTED_PRODUCTION_ASSET:web/frontend.ts`; renaming it to an asset remained blocked as
+  `PROFILE_SOURCE_MISMATCH:web/frontend.ts`. The directly relevant evaluator, quality,
+  characterization, and refactor-policy suite passed once with `287 passed, 2 skipped` in 517.76
+  seconds.
+- Qualification limit: no Linguist, schema `1.2`, language registry, manual inspector, reusable
+  canary framework, package, dependency, repository-defined command, production-root contraction,
+  new language, Gate 2 or Gate 6 repair, PR #194 merge, or cloud-project deletion is part of S15.
+- Remaining transaction: complete the exact Python 3.12 source proof once, merge one protected
+  source pull request normally, update and read back only ruleset
+  `21664395`'s workflow SHA, restore TWMN PR #194's surviving Python contract, obtain fresh
+  exact-head Gate 7 proof with zero TypeScript adapters, record terminal issue evidence, set S15
+  `Done / Complete / On scope / Yes`, close issue #194 and Project #10, then stop Gate work.
