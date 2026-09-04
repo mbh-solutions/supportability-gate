@@ -435,8 +435,10 @@ def _contract_blocks(
     changes = tuple(item.change for item in assessments)
     allowed = gate_policy.is_allowed_contract_transition(policy, candidate_policy, changes)
     candidate = (
-        (
-            *(() if allowed else ("CANDIDATE_CONTRACT_CHANGE",)),
+        ()
+        if allowed
+        else (
+            "CANDIDATE_CONTRACT_CHANGE",
             *gate_policy.contract_change_blocks(policy, candidate_policy),
         )
         if any(

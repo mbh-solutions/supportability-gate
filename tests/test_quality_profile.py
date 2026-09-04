@@ -143,6 +143,20 @@ def test_mixed_contract_selects_and_partitions_both_fixed_profiles(tmp_path: Pat
     assert build_config["compilerOptions"]["rootDir"] == str(tmp_path)
 
 
+def test_mixed_profile_can_retire_to_either_existing_fixed_profile() -> None:
+    mixed = contract.parse_contract(MIXED_POLICY_TEXT.encode())
+    typescript = contract.parse_contract(TYPESCRIPT_POLICY_TEXT.encode())
+    deleted_risk = (git_changes.ChangedPath("DELETED", "src/risk.py", None),)
+
+    assert gate_policy.is_profile_retirement(mixed, POLICY, ())
+    assert gate_policy.is_profile_retirement(mixed, typescript, deleted_risk)
+    assert not gate_policy.is_profile_retirement(
+        mixed,
+        contract.parse_contract(TYPESCRIPT_POLICY_TEXT.replace('["src"]', '["web"]').encode()),
+        deleted_risk,
+    )
+
+
 def _commands() -> tuple[quality_profile.GateResult, ...]:
     return tuple(
         quality_profile.GateResult(

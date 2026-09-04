@@ -614,11 +614,18 @@ def verify_refactor(
     candidate_blob = git_changes.read_regular_blob(
         repository, head_sha, ".supportability.toml", records
     )
+    changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
     if candidate_blob.content != policy_blob.content:
         candidate_policy = contract.parse_contract(candidate_blob.content)
-        if contract.is_profile_expansion(policy, candidate_policy):
+        deleted_paths = {
+            item.old_path
+            for item in changes
+            if item.status == "DELETED" and item.old_path is not None and item.new_path is None
+        }
+        if contract.is_profile_expansion(
+            policy, candidate_policy
+        ) or contract.is_profile_retirement(policy, candidate_policy, deleted_paths):
             policy = candidate_policy
-    changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
     actual_scope = _changed_scope(changes)
     targets, unbounded = refactor_targets.derive(repository, identity, policy, changes, records)
     applicable = bool(targets or unbounded)

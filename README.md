@@ -11,9 +11,10 @@ for architecture, configuration, evidence, lifecycle, and module details.
 
 Integrated qualification and organization-wide activation completed on 2026-08-27. Project #10 is
 temporarily reopened only for the bounded
-[S14 maintenance issue](https://github.com/mbh-solutions/supportability-gate/issues/192), which
-permits an exact high-risk contract entry to retire with its deleted file. Durable product status
-and historical evidence remain in the [Product Completion Contract](docs/product_completion_contract.md).
+[S15 maintenance issue](https://github.com/mbh-solutions/supportability-gate/issues/194), which
+permits one existing fixed language profile to retire after its product is deleted while unchanged
+production roots preserve fail-closed inventory. Durable product status and historical evidence
+remain in the [Product Completion Contract](docs/product_completion_contract.md).
 
 Protected `main` requires Source Validation plus eight strict, independently owned deterministic
 contexts:

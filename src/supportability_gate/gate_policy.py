@@ -20,6 +20,14 @@ def is_profile_expansion(base: Contract, head: Contract | None) -> bool:
     return contract.is_profile_expansion(base, head)
 
 
+def _deleted_paths(changes: tuple[ChangedPath, ...]) -> set[str]:
+    return {
+        item.old_path
+        for item in changes
+        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
+    }
+
+
 def is_deleted_high_risk_transition(
     base: Contract,
     head: Contract | None,
@@ -28,11 +36,7 @@ def is_deleted_high_risk_transition(
     """Allow only high-risk entries whose exact tracked files were deleted."""
     if head is None:
         return False
-    deleted = {
-        item.old_path
-        for item in changes
-        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
-    }
+    deleted = _deleted_paths(changes)
     remaining = tuple(path for path in base.high_risk_paths if path not in deleted)
     return (
         remaining != base.high_risk_paths
@@ -47,13 +51,26 @@ def is_deleted_high_risk_transition(
     )
 
 
+def is_profile_retirement(
+    base: Contract,
+    head: Contract | None,
+    changes: tuple[ChangedPath, ...],
+) -> bool:
+    """Allow one fixed mixed profile to retire after its product is deleted."""
+    return contract.is_profile_retirement(base, head, _deleted_paths(changes))
+
+
 def is_allowed_contract_transition(
     base: Contract,
     head: Contract | None,
     changes: tuple[ChangedPath, ...],
 ) -> bool:
     """Return whether the exact candidate contract transition is approved."""
-    return is_profile_expansion(base, head) or is_deleted_high_risk_transition(base, head, changes)
+    return (
+        is_profile_expansion(base, head)
+        or is_deleted_high_risk_transition(base, head, changes)
+        or is_profile_retirement(base, head, changes)
+    )
 
 
 MAXIMUM_COMPLEXITY = 10
@@ -89,7 +106,12 @@ def _unassessed_source_paths(
     paths: set[str] = set()
     for item in assessments:
         sides = (
-            (item.change.old_path, item.base_production),
+            (
+                None
+                if item.change.status == "DELETED" and item.change.new_path is None
+                else item.change.old_path,
+                item.base_production,
+            ),
             (item.change.new_path, item.head_production),
         )
         paths.update(
