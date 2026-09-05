@@ -1,38 +1,85 @@
 schema_version = "1.0"
 module_boundaries = []
-
 [behavior]
-intended_behavior = "Hosted characterization prepares each exact target commit's Python runtime dependencies before running head-defined scenarios; failed prerequisites stop capture."
-proof = "Focused runtime-preparation regression and the required exact source proof; protected source and consumer qualification are independently required."
+intended_behavior = "Opt-in GitHub job summaries explain validated Standard results and the three S17 failure families without changing canonical stdout, JSON, decisions, or exit codes."
+proof = "A bounded executable check reuses existing Standard-result fixtures; existing source tests and independent protected GitHub checks qualify the change."
 
 [characterization]
-captured_behavior = "The previous hosted runner supplied only Gate dependencies. A target scenario could lack runtime imports, and TWMN's old driver fabricated success after ImportError."
-proof = "The focused setup regression must fail against the previous runner. Immutable Gate characterization definitions and production source remain unchanged."
+captured_behavior = "The existing enforcer validates exact identity and sources before printing its canonical row and returning the mapped exit code."
+proof = "Existing immutable gate8-standard-results-boundary-v3 and m9-quality-profile scenarios retain their drivers and golden bytes. Summary opt-in defaults off so synthetic callers retain their current behavior."
 
 [separation_of_concerns]
-before = "The hosted runner authenticated checkouts then immediately executed scenarios without target dependency preparation."
-after = "The same runner prepares prerequisites in a temporary directory given only to scenario subprocesses. The static evaluator remains unchanged."
-boundaries = []
+before = "Reporting derives presentation from evidence; the enforcer validates and enforces one independently owned Standard result."
+after = "Reporting formats a validated entry or an explicit validation error; the enforcer optionally appends it to GitHub's native summary file after validation and isolates display failure."
 
 [architecture]
-dependency_direction = "Hosted infrastructure consumes the existing immutable Git reader and characterization contract. No production imports, packages, modules, or evaluator execution paths change."
-reviewed_paths = ["tests/hosted_characterization.py", "tests/test_characterization.py", ".github/workflows/organization-required.yml", "src/supportability_gate/characterization.py"]
+dependency_direction = "The outer enforcer consumes the existing inward reporting module. Reporting receives only validated entry fields and never imports the enforcer or adds evidence collection."
+reviewed_paths = ["src/supportability_gate/reporting.py", "src/supportability_gate/standard_results_enforcer.py", ".github/workflows/organization-required.yml"]
 
 [responsibility_boundary]
-path = "tests/hosted_characterization.py"
-owns = "Authenticated hosted capture and fixed isolated preparation of static index-based Python runtime dependencies."
-does_not_own = "Target packaging hooks, arbitrary commands or indexes, static evaluation, quality adapters, thresholds, or production ingestion."
+path = "src/supportability_gate/reporting.py"
+owns = "Source-faithful presentation of validated result codes and bounded explanations."
+does_not_own = "Policy decisions, authorization, evidence validation, target execution, thresholds, or independent qualification."
 
 [incremental_refactor]
-target = "Repair the missing prerequisite in the existing hosted characterization boundary."
-completed_step = "One runner prepares dependencies without changing production source, contracts, recorded driver commands, or workflow topology."
+target = "Expose existing Gate results in native GitHub job summaries."
+completed_step = "The existing enforcement caller opts into presentation; canonical artifacts and checks remain authoritative."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Dependency preparation names the actual prerequisite; no installer framework."
-cohesion = "Hosted capture owns preparation; trusted evaluation remains static and separate."
-intended_behavior = "Malformed, unsupported, missing, or failed prerequisites stop capture rather than fabricate behavior."
-reviewability = "One runner and its existing regression module. No new package, configuration surface, threshold, or scope exception. The consumer replacement is a separate protected TWMN PR."
+naming = "Summary names describe their presentation responsibility; no generic utility module."
+cohesion = "Formatting stays in reporting; validation and isolated optional output stay in the existing enforcer."
+intended_behavior = "Missing or invalid evidence receives no invented diagnosis; unsupported codes remain visible. Summary failure preserves the Gate result."
+reviewability = "Two existing production modules and their workflow caller; no new dependency, schema, policy, target contract control, waiver, or consumer change."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/reporting.py"
+kind = "function"
+symbol = "_failure_explanation"
+before = "No human explanation of these codes existed."
+after = "Formats fixed source-faithful explanations for three existing failure families; unknown codes remain undiagnosed."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/reporting.py"
+kind = "function"
+symbol = "standard_result_summary"
+before = "Reporting produced complexity Markdown but no validated Standard-row summary."
+after = "Formats an already validated row or an explicit validation error with escaped code and evidence text."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/reporting.py"
+kind = "module"
+symbol = "src/supportability_gate/reporting.py"
+before = "Existing module imports establish its dependency direction."
+after = "Imports connect presentation within the existing layers; reporting annotation imports are type-only so the enforcement runtime needs no new packages."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results_enforcer.py"
+kind = "function"
+symbol = "_parser"
+before = "Accepted exact enforcement inputs and identity arguments."
+after = "Adds an optional presentation flag whose default preserves existing caller behavior."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results_enforcer.py"
+kind = "function"
+symbol = "_write_summary"
+before = "No native GitHub summary output existed."
+after = "Appends optional display output and isolates generation or file failure from enforcement."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results_enforcer.py"
+kind = "function"
+symbol = "main"
+before = "Validated the row, printed canonical output and mapped its result to an exit code."
+after = "Retains validation and canonical output while requesting optional presentation before returning the same mapped result."
+
+[[separation_of_concerns.boundaries]]
+path = "src/supportability_gate/standard_results_enforcer.py"
+kind = "module"
+symbol = "src/supportability_gate/standard_results_enforcer.py"
+before = "Existing module imports establish its dependency direction."
+after = "Imports connect presentation within the existing layers; reporting annotation imports are type-only so the enforcement runtime needs no new packages."

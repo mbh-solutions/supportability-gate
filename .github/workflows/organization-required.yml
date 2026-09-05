@@ -544,6 +544,10 @@ jobs:
         run: |
           if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
             echo "MISSING_STANDARD_RESULTS_ARTIFACT"
+            printf '%s\n' '### Supportability result: TECHNICAL_FAILURE' '' \
+              '`MISSING_STANDARD_RESULTS_ARTIFACT`' \
+              'Diagnosis unavailable: the authoritative artifact could not be downloaded.' \
+              >> "$GITHUB_STEP_SUMMARY" || echo "Job summary unavailable." >&2
             exit 2
           fi
           python -P -m supportability_gate.standard_results_enforcer \
@@ -557,7 +561,8 @@ jobs:
             --input "$RUNNER_TEMP/evidence/standard-results.json" \
             --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
             --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
-            --standard "$STANDARD"
+            --standard "$STANDARD" \
+            --github-summary
 
   supportability-gate:
     name: Supportability Gate
