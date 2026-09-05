@@ -2437,7 +2437,8 @@ Do not create a new terminal label not authorized by an active milestone directi
 
 ## Project #10 S17 validated failure summaries
 
-- Status: `In progress`; Evidence `Missing`; Scope `On scope`; Stop confirmed `No`.
+- Terminal record: Status `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
+  This record becomes canonical after its completion PR merges normally with required checks.
 - Authority: owner-approved Gate-only reporting improvement after adversarial debate; repository
   issue #198 and Project #10 item `PVTI_lADOEmzFKc4BhXlKzg5iCPw`. S16 qualification is separately
   owned and is not a prerequisite for this slice.
@@ -2447,8 +2448,23 @@ Do not create a new terminal label not authorized by an active milestone directi
 - Implementation: the workflow opts into presentation at the existing enforcer boundary. Reporting
   consumes validated entry fields only. Display failures preserve canonical stdout, JSON, verdicts,
   exit codes, check names, policy thresholds, and evidence identities. No dependency or schema changes.
-- Required proof: bounded fixture-based execution, existing source validation, protected source
-  merge, exact workflow-pin deployment, and Gate-only hosted summary output. The immutable Standard
-  and existing characterization drivers and golden bytes remain unchanged.
-- Remaining work: record direct source and runtime evidence, complete the protected ledger
-  transaction, and close S17 only. No successor or consumer changes are authorized.
+- Source delivery: PR #199 head `58dce306779c9ee123595bd4bfbe06c833b036ec` passed Source Validation
+  run `33940076724` (637 tests), all eight Standard checks and aggregate Gate run `33940076726`,
+  and normally merged as `04da3d92c0f0b748bbabe8cdb821ce2bcec84a2d`. Ruleset `21664395` now pins
+  that protected merge; semantic readback preserved every other field and zero bypass.
+- Direct presentation proof: existing fixtures covered complexity, aggregate and indexed boundary
+  evidence, stale authorization, PASS, unknown policy, missing and invalid artifacts. Original
+  stdout, exit codes and artifact bytes matched with summaries enabled and disabled. Injected
+  rendering and file failures preserved exits 0, 1 and 2. Hostile code text remained literal.
+  The missing-download workflow branch preserved exit 2 with writable and failed summary output.
+- The immutable Standard and existing characterization drivers and golden bytes remain unchanged.
+- Hosted display proof: Gate-only run `33940238325`, attempt 1, head
+  `d7da8649f7516635c48f5b957d6834903e31720c`, used the deployed workflow. Native run summaries
+  visibly showed PASS results and Gate 2's unchanged BLOCK with the original boundary-evidence
+  code, its accurate explanation, supported next action, and evidence citation. The completion
+  PR had retained the implementation PR's seven boundary records despite changing no production
+  responsibilities; its review record now binds the correct empty set. This is evidence repair,
+  not an enforcement exception. No renderer or policy change was required.
+- Remaining product work for S17: none after this protected completion transaction. Issue #198
+  records the final PR/head/run/merge and Project readback. No successor or consumer changes are
+  authorized; S16 status and evidence remain separately owned.

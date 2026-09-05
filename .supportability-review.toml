@@ -1,16 +1,17 @@
 schema_version = "1.0"
 module_boundaries = []
 [behavior]
-intended_behavior = "Opt-in GitHub job summaries explain validated Standard results and the three S17 failure families without changing canonical stdout, JSON, decisions, or exit codes."
-proof = "A bounded executable check reuses existing Standard-result fixtures; existing source tests and independent protected GitHub checks qualify the change."
+intended_behavior = "This S17 completion transaction records source and hosted summary evidence; it changes no production behavior."
+proof = "Protected source PR #199 and native summary run 33940238325 provide the recorded evidence; this documentation-only transaction receives its own protected checks."
 
 [characterization]
 captured_behavior = "The existing enforcer validates exact identity and sources before printing its canonical row and returning the mapped exit code."
 proof = "Existing immutable gate8-standard-results-boundary-v3 and m9-quality-profile scenarios retain their drivers and golden bytes. Summary opt-in defaults off so synthetic callers retain their current behavior."
 
 [separation_of_concerns]
-before = "Reporting derives presentation from evidence; the enforcer validates and enforces one independently owned Standard result."
-after = "Reporting formats a validated entry or an explicit validation error; the enforcer optionally appends it to GitHub's native summary file after validation and isolates display failure."
+boundaries = []
+before = "The prior implementation PR carried seven changed production responsibility identities."
+after = "This documentation-only completion PR changes no production responsibility, so its exact boundary record set is empty."
 
 [architecture]
 dependency_direction = "The outer enforcer consumes the existing inward reporting module. Reporting receives only validated entry fields and never imports the enforcer or adds evidence collection."
@@ -34,52 +35,3 @@ naming = "Summary names describe their presentation responsibility; no generic u
 cohesion = "Formatting stays in reporting; validation and isolated optional output stay in the existing enforcer."
 intended_behavior = "Missing or invalid evidence receives no invented diagnosis; unsupported codes remain visible. Summary failure preserves the Gate result."
 reviewability = "Two existing production modules and their workflow caller; no new dependency, schema, policy, target contract control, waiver, or consumer change."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/reporting.py"
-kind = "function"
-symbol = "_failure_explanation"
-before = "No human explanation of these codes existed."
-after = "Formats fixed source-faithful explanations for three existing failure families; unknown codes remain undiagnosed."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/reporting.py"
-kind = "function"
-symbol = "standard_result_summary"
-before = "Reporting produced complexity Markdown but no validated Standard-row summary."
-after = "Formats an already validated row or an explicit validation error with escaped code and evidence text."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/reporting.py"
-kind = "module"
-symbol = "src/supportability_gate/reporting.py"
-before = "Existing module imports establish its dependency direction."
-after = "Imports connect presentation within the existing layers; reporting annotation imports are type-only so the enforcement runtime needs no new packages."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results_enforcer.py"
-kind = "function"
-symbol = "_parser"
-before = "Accepted exact enforcement inputs and identity arguments."
-after = "Adds an optional presentation flag whose default preserves existing caller behavior."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results_enforcer.py"
-kind = "function"
-symbol = "_write_summary"
-before = "No native GitHub summary output existed."
-after = "Appends optional display output and isolates generation or file failure from enforcement."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results_enforcer.py"
-kind = "function"
-symbol = "main"
-before = "Validated the row, printed canonical output and mapped its result to an exit code."
-after = "Retains validation and canonical output while requesting optional presentation before returning the same mapped result."
-
-[[separation_of_concerns.boundaries]]
-path = "src/supportability_gate/standard_results_enforcer.py"
-kind = "module"
-symbol = "src/supportability_gate/standard_results_enforcer.py"
-before = "Existing module imports establish its dependency direction."
-after = "Imports connect presentation within the existing layers; reporting annotation imports are type-only so the enforcement runtime needs no new packages."
