@@ -1275,8 +1275,8 @@ Historical deterministic gate deployable to target repositories: YES
 Full Supportability Standard enforcement deployable to target repositories: YES
 Full Supportability Standard runtime: YES
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #10 S15 issue #194, exact language-profile retirement
-Next milestone authorized: NONE; after S15 no successor Gate work starts
+Current authorized work: Project #10 S16 issue #196, executable Python characterization prerequisites
+Next milestone authorized: NONE; after S16 no successor Gate work starts
 ```
 
 ## Milestone transition rules
@@ -2398,3 +2398,39 @@ Do not create a new terminal label not authorized by an active milestone directi
   `21664395`'s workflow SHA, restore TWMN PR #194's surviving Python contract, obtain fresh
   exact-head Gate 7 proof with zero TypeScript adapters, record terminal issue evidence, set S15
   `Done / Complete / On scope / Yes`, close issue #194 and Project #10, then stop Gate work.
+
+## Project #10 S16 executable Python characterization prerequisites
+
+- Prospective terminal transaction: Status `COMPLETE`; Evidence `Complete`; Scope `On scope`;
+  Stop confirmed `Yes` become canonical only after the protected source merge, exact workflow-pin
+  deployment, real TWMN successor base/head qualification, and issue/Project readbacks below.
+  Until then S16 remains `In progress / Missing / On scope / No`; local tests are not qualification.
+- Authority: owner-approved narrow prerequisite for `mbh-solutions/twmn#198`, Project #10 issue
+  #196, item `PVTI_lADOEmzFKc4BhXlKzg5hwt8`, and source base/workflow rollback pin
+  `b26ce04dc1e3e1da699bfaa3477d4d6e95173445`. Completed S00-S15 remain unchanged; no other Gate
+  proposal or successor is authorized.
+- Capability boundary: existing isolated hosted characterization prepares static index-based Python
+  runtime requirements read from each exact target commit. Dependencies stay in a temporary
+  directory supplied only to scenario subprocesses. The existing fixed driver command and evidence
+  schema remain unchanged; the static evaluator never imports or executes target code.
+- Setup boundary: reuse the exact-lock requirement parser, immutable Git reader, fixed argument
+  vectors, sanitized environment, and finite timeouts. Accept existing range requirements as well
+  as exact pins. Reject dynamic discovery, malformed metadata, direct URLs, local paths and option
+  injection. Wheel-only installation avoids target source/build hooks; failed preparation stops
+  before any scenario runs. Target dependencies never replace the Gate interpreter's packages.
+- Consumer boundary: TWMN replaces one misleading scenario with an immutable successor, preserves
+  historical driver/golden bytes and all 14 covered paths, fixes temporary canonical YouTube
+  ownership, and requires the deliberately injected failure to occur at publication. Missing
+  NumPy must fail nonzero with no success output. No production ingestion, ownership guard,
+  rollback guard, skill, active corpus, archive, or Project #19 change is authorized.
+- Proof and transaction: run the exact Python 3.12 source proof once, qualify and merge the source
+  normally without bypass, change only ruleset `21664395`'s workflow SHA to the protected merge,
+  and obtain fresh authenticated real base/head TWMN successor captures plus protected checks.
+  Issue #196 records exact source PR/head/run/merge/pin, unchanged Standard hash, and consumer
+  capture identities after they exist; TWMN issue #198 records its protected delivery and retained
+  runtime proof. Set S16 `Done / Complete / On scope / Yes`, close issue #196 and Project #10,
+  and stop Gate work after the exact completion readback.
+- Assurance limit: third-party runtime dependencies execute only within already-isolated,
+  read-only hosted scenario jobs; static requirements do not provide transitive hash locking or
+  certify third-party package behavior. This slice does not change Python Quality Profile setup,
+  add a package or contract control, weaken any Gate, or authorize unrelated cleanup.

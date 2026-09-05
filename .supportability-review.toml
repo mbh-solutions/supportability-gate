@@ -2,47 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "A mixed Python and TypeScript contract may retire to either existing fixed profile only when production roots, threshold, surviving gates, and exact high-risk deletion evidence remain intact."
-proof = "Focused evaluator tests prove mixed-to-Python command selection, retained-source rejection, rename rejection, and symmetric fixed-profile eligibility; the full local suite passed with 622 tests and 2 expected skips."
+intended_behavior = "Hosted characterization prepares each exact target commit's Python runtime dependencies before running head-defined scenarios; failed prerequisites stop capture."
+proof = "Focused runtime-preparation regression and the required exact source proof; protected source and consumer qualification are independently required."
 
 [characterization]
-captured_behavior = "The base rejected mixed-to-single contraction, retained the mixed effective profile, and scheduled all Python and TypeScript commands after the TypeScript product was deleted."
-proof = "The focused red reproduced the contraction blocks and all sixteen mixed commands; the focused green selected exactly seven Python commands with zero TypeScript adapters, while sealed characterization scenarios remain unchanged."
+captured_behavior = "The previous hosted runner supplied only Gate dependencies. A target scenario could lack runtime imports, and TWMN's old driver fabricated success after ImportError."
+proof = "The focused setup regression must fail against the previous runner. Immutable Gate characterization definitions and production source remain unchanged."
 
 [separation_of_concerns]
-before = "Mixed-to-single contract changes were rejected, deleted old-profile source poisoned mismatch checks, and lower-layer evidence consumers recognized only profile expansion."
-after = "Contract owns pure structural retirement eligibility; gate policy adds exact Git deletion evidence; callers select the verified candidate while fixed quality execution remains unchanged."
-boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verify_evidence", before = "Selected only a verified profile expansion for characterization validation.", after = "Also selects a structurally verified profile retirement using exact deleted paths." },
-  { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_contract_blocks", before = "Emitted contraction diagnostics even when the shared transition policy approved a candidate.", after = "Suppresses contract-change diagnostics only for a fully approved transition and evaluates its effective policy." },
-  { path = "src/supportability_gate/contract.py", kind = "function", symbol = "is_profile_retirement", before = "No pure contract rule represented retirement from the mixed profile.", after = "Requires an existing single profile with unchanged roots, threshold, exact gates, and deletion-backed high-risk entries." },
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "_deleted_paths", before = "Exact deletion extraction was embedded in one transition rule.", after = "Provides the same narrow exact-deletion set to both approved transition rules." },
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "_unassessed_source_paths", before = "Deleted retired-profile source always produced a base-side mismatch.", after = "Exempts only exact deletions while preserving base-side checks for renames and moves plus head-side checks for retained source." },
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "is_allowed_contract_transition", before = "Combined profile expansion with exact high-risk entry deletion.", after = "Also admits a verified existing-profile retirement." },
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "is_deleted_high_risk_transition", before = "Extracted exact deleted paths within the high-risk transition rule.", after = "Reuses the narrow shared deletion extractor without changing its acceptance conditions." },
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "is_profile_retirement", before = "No change-aware wrapper supplied exact deletions to the pure contract rule.", after = "Binds immutable changed-path evidence to structural retirement eligibility." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "verify_refactor", before = "Selected only profile expansion before deriving refactor scope.", after = "Also selects a structurally verified profile retirement using exact deleted paths." },
-]
+before = "The hosted runner authenticated checkouts then immediately executed scenarios without target dependency preparation."
+after = "The same runner prepares prerequisites in a temporary directory given only to scenario subprocesses. The static evaluator remains unchanged."
+boundaries = []
 
 [architecture]
-dependency_direction = "The pure contract rule stays at the bottom layer; gate policy adds Git change evidence; CLI orchestration depends on gate policy, while characterization and refactor policy depend directly on the lower contract rule without a cycle."
-reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/cli.py", "src/supportability_gate/contract.py", "src/supportability_gate/gate_policy.py", "src/supportability_gate/refactor_policy.py", "tests/test_evaluate_complexity.py", "tests/test_quality_profile.py"]
+dependency_direction = "Hosted infrastructure consumes the existing immutable Git reader and characterization contract. No production imports, packages, modules, or evaluator execution paths change."
+reviewed_paths = ["tests/hosted_characterization.py", "tests/test_characterization.py", ".github/workflows/organization-required.yml", "src/supportability_gate/characterization.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/contract.py"
-owns = "Pure structural eligibility for retiring one existing fixed profile from the mixed contract."
-does_not_own = "Git inventory, deletion discovery, source classification, command execution, evidence schemas, exclusions, waivers, or bypass policy."
+path = "tests/hosted_characterization.py"
+owns = "Authenticated hosted capture and fixed isolated preparation of static index-based Python runtime dependencies."
+does_not_own = "Target packaging hooks, arbitrary commands or indexes, static evaluation, quality adapters, thresholds, or production ingestion."
 
 [incremental_refactor]
-target = "Permit one exact existing-profile retirement through the current contract-selection path."
-completed_step = "Added one pure predicate and one change-aware wrapper, aligned existing consumers, and left command templates, evidence schemas, production roots, and asset validation unchanged."
+target = "Repair the missing prerequisite in the existing hosted characterization boundary."
+completed_step = "One runner prepares dependencies without changing production source, contracts, recorded driver commands, or workflow topology."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Profile-retirement and exact-deletion names state the allowed events without a generic narrowing or waiver abstraction."
-cohesion = "Contract owns structural equality, gate policy owns changed-path evidence, and orchestration callers only select the verified result."
-intended_behavior = "Deleted profile commands stop; retained or renamed removed-profile source, root contraction, threshold weakening, and incomplete gates block."
-reviewability = "The change reuses existing profiles and evidence with no detector, schema, registry, dependency, command surface, or workflow expansion."
+naming = "Dependency preparation names the actual prerequisite; no installer framework."
+cohesion = "Hosted capture owns preparation; trusted evaluation remains static and separate."
+intended_behavior = "Malformed, unsupported, missing, or failed prerequisites stop capture rather than fabricate behavior."
+reviewability = "One runner and its existing regression module. No new package, configuration surface, threshold, or scope exception. The consumer replacement is a separate protected TWMN PR."
