@@ -3,22 +3,23 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
+from html import escape
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-from supportability_gate.architecture_policy import ArchitectureResult
-from supportability_gate.complexity_metrics import RuffCommandRecord, RuffDiagnostic
-from supportability_gate.complexity_policy import FunctionDecision
-from supportability_gate.function_changes import ChangedFileAssessment
-from supportability_gate.git_changes import CommandRecord, RepositoryIdentity
-from supportability_gate.modularity_policy import ModularityResult
-from supportability_gate.quality_profile import (
-    QualityEvidence,
-    decision_payload,
-    provenance_payload,
-)
-from supportability_gate.review_evidence import ReviewEvidence
+from supportability_gate.quality_profile import decision_payload, provenance_payload
+
+if TYPE_CHECKING:
+    from supportability_gate.architecture_policy import ArchitectureResult
+    from supportability_gate.complexity_metrics import RuffCommandRecord, RuffDiagnostic
+    from supportability_gate.complexity_policy import FunctionDecision
+    from supportability_gate.function_changes import ChangedFileAssessment
+    from supportability_gate.git_changes import CommandRecord, RepositoryIdentity
+    from supportability_gate.modularity_policy import ModularityResult
+    from supportability_gate.quality_profile import QualityEvidence
+    from supportability_gate.review_evidence import ReviewEvidence
 
 STANDARD_SHA256 = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
 
@@ -282,6 +283,57 @@ def markdown_from_json(payload: dict[str, Any]) -> str:
             ]
         )
     lines.extend(["", "Derived from `complexity-result.json`.", ""])
+    return "\n".join(lines)
+
+
+def _failure_explanation(code: str) -> str:
+    if code.startswith("FUNCTION_COMPLEXITY:"):
+        return (
+            "The function violates its applicable complexity target. Next action: inspect its "
+            "recorded base/head metrics in complexity-result.json and simplify its responsibility. "
+            "New and previously compliant functions must stay at 10 or lower; touched legacy "
+            "functions above 10 must decrease."
+        )
+    family, _, location = code.partition(":")
+    if family in {"MISSING_REVIEW_EVIDENCE", "INSUFFICIENT_REVIEW_EVIDENCE"} and re.fullmatch(
+        r"separation_of_concerns\.boundaries(?:\[(?:0|[1-9][0-9]*)\]"
+        r"(?:\.(?:path|kind|symbol|before|after))?)?",
+        location,
+    ):
+        return (
+            "Required responsibility evidence is missing, blank, or does not match the changed "
+            "function, component, or module identities. Next action: compare "
+            "separation_of_concerns.boundaries with the changed identities and supply the "
+            "required records and fields. This result does not establish an architectural defect."
+        )
+    if code == "STALE_OWNER_AUTHORIZATION":
+        return (
+            "The available authorization does not apply to this run's base/head. Next action: "
+            "have the owner review the current scope and, if approved, supply authorization bound "
+            "to this base/head. Other checks still apply."
+        )
+    return "Diagnosis unavailable. Inspect the original code and cited evidence."
+
+
+def standard_result_summary(entry: dict[str, object] | None, error: str | None = None) -> str:
+    """Present an already validated entry, or only its validation failure."""
+    if entry is None:
+        return (
+            "## Supportability result\n\n"
+            f"<pre>{escape(error or '')}</pre>\n\nDiagnosis unavailable.\n"
+        )
+    lines = [
+        f"## {entry['check_context']}",
+        "",
+        f"Result: **{entry['result']}**",
+        "",
+        "Derived from validated standard-results.json for this run.",
+    ]
+    for field in ("policy_blocks", "technical_errors"):
+        for code in cast(list[str], entry[field]):
+            lines.extend(["", f"<pre>{escape(code)}</pre>", "", _failure_explanation(code)])
+    sources = "\n".join(cast(list[str], entry["evidence_sources"]))
+    lines.extend(["", "Evidence:", "", f"<pre>{escape(sources)}</pre>", ""])
     return "\n".join(lines)
 
 

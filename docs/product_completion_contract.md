@@ -2434,3 +2434,21 @@ Do not create a new terminal label not authorized by an active milestone directi
   read-only hosted scenario jobs; static requirements do not provide transitive hash locking or
   certify third-party package behavior. This slice does not change Python Quality Profile setup,
   add a package or contract control, weaken any Gate, or authorize unrelated cleanup.
+
+## Project #10 S17 validated failure summaries
+
+- Status: `In progress`; Evidence `Missing`; Scope `On scope`; Stop confirmed `No`.
+- Authority: owner-approved Gate-only reporting improvement after adversarial debate; repository
+  issue #198 and Project #10 item `PVTI_lADOEmzFKc4BhXlKzg5iCPw`. S16 qualification is separately
+  owned and is not a prerequisite for this slice.
+- Capability: native GitHub job summaries explain existing validated check results, including
+  complexity violations, missing or insufficient boundary evidence, and stale owner authorization.
+  Unknown codes and validation errors retain their actual error with diagnosis unavailable.
+- Implementation: the workflow opts into presentation at the existing enforcer boundary. Reporting
+  consumes validated entry fields only. Display failures preserve canonical stdout, JSON, verdicts,
+  exit codes, check names, policy thresholds, and evidence identities. No dependency or schema changes.
+- Required proof: bounded fixture-based execution, existing source validation, protected source
+  merge, exact workflow-pin deployment, and Gate-only hosted summary output. The immutable Standard
+  and existing characterization drivers and golden bytes remain unchanged.
+- Remaining work: record direct source and runtime evidence, complete the protected ledger
+  transaction, and close S17 only. No successor or consumer changes are authorized.

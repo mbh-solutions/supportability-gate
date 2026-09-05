@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any, cast
 
-from supportability_gate import standard_results
+from supportability_gate import reporting, standard_results
 
 
 class _DuplicateJsonKeyError(ValueError):
@@ -58,6 +59,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--complexity-result")
     parser.add_argument("--quality-provenance")
     parser.add_argument("--standard", required=True, type=int, choices=range(1, 9))
+    parser.add_argument("--github-summary", action="store_true")
     return parser
 
 
@@ -92,6 +94,22 @@ def _entry(arguments: argparse.Namespace) -> dict[str, object]:
     return entry
 
 
+def _write_summary(
+    arguments: argparse.Namespace,
+    entry: dict[str, object] | None = None,
+    error: str | None = None,
+) -> None:
+    try:
+        destination = os.environ.get("GITHUB_STEP_SUMMARY")
+        if arguments.github_summary and destination:
+            summary = reporting.standard_result_summary(entry, error)
+            with Path(destination).open("a", encoding="utf-8") as stream:
+                stream.write(summary)
+    except Exception:
+        # Presentation must never change the independently validated Gate result.
+        pass
+
+
 def main(argv: list[str] | None = None) -> int:
     """Print and enforce one independently owned Standard result."""
     arguments = _parser().parse_args(argv)
@@ -99,8 +117,10 @@ def main(argv: list[str] | None = None) -> int:
         entry = _entry(arguments)
     except standard_results.StandardResultsError as error:
         print(error.code)
+        _write_summary(arguments, error=error.code)
         return 2
     print(json.dumps(entry, ensure_ascii=False, sort_keys=True))
+    _write_summary(arguments, entry)
     result = entry["result"]
     return {
         "PASS": 0,
