@@ -7,7 +7,10 @@ import os
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
+
+from packaging.requirements import Requirement
 
 from supportability_gate import characterization, contract, git_changes
 
@@ -24,13 +27,94 @@ def _require_hosted_runner() -> None:
         )
 
 
-def _safe_environment(target: Path, definition: Path) -> dict[str, str]:
+def _safe_environment(
+    target: Path, definition: Path, dependencies: Path | None = None
+) -> dict[str, str]:
     allowed = {"HOME", "LANG", "PATH", "RUNNER_TEMP", "SYSTEMROOT", "TEMP", "TMP", "WINDIR"}
     environment = {name: value for name, value in os.environ.items() if name in allowed}
-    environment["PYTHONPATH"] = str(target / "src")
+    paths = [str(target / "src")]
+    if dependencies is not None:
+        paths.append(str(dependencies))
+    environment["PYTHONPATH"] = os.pathsep.join(paths)
     environment["SUPPORTABILITY_CHARACTERIZATION_TARGET"] = str(target)
     environment["SUPPORTABILITY_CHARACTERIZATION_DEFINITION"] = str(definition)
     return environment
+
+
+def _python_dependencies(
+    target: Path, target_sha: str, records: list[git_changes.CommandRecord]
+) -> tuple[str, ...]:
+    try:
+        metadata = git_changes.read_regular_blob(target, target_sha, "pyproject.toml", records)
+    except git_changes.GitError as error:
+        if error.code == "MISSING_BLOB":
+            return ()
+        raise
+    try:
+        project = tomllib.loads(metadata.content.decode("utf-8")).get("project", {})
+        dynamic = project.get("dynamic", [])
+        dependencies = project.get("dependencies", [])
+        if not isinstance(dynamic, list) or any(not isinstance(item, str) for item in dynamic):
+            raise ValueError("invalid dynamic metadata")
+        if "dependencies" in dynamic or not isinstance(dependencies, list):
+            raise ValueError("runtime dependencies must be static")
+        for item in dependencies:
+            if (
+                not isinstance(item, str)
+                or any(character in item for character in "\r\n\0")
+                or Requirement(item).url is not None
+            ):
+                raise ValueError("runtime dependencies must use index requirements")
+        return tuple(dependencies)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise characterization.CharacterizationError(
+            "CHARACTERIZATION_PREREQUISITE_METADATA_INVALID"
+        ) from error
+
+
+def _install_python_dependencies(
+    target: Path,
+    target_sha: str,
+    destination: Path,
+    records: list[git_changes.CommandRecord],
+) -> None:
+    dependencies = _python_dependencies(target, target_sha, records)
+    if not dependencies:
+        return
+    environment = {
+        key: value
+        for key, value in _safe_environment(target, target).items()
+        if not key.startswith(("PYTHON", "SUPPORTABILITY_"))
+    }
+    environment["PIP_CONFIG_FILE"] = os.devnull
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                "--no-input",
+                "--only-binary=:all:",
+                "--ignore-installed",
+                "--target",
+                str(destination),
+                "--index-url",
+                "https://pypi.org/simple",
+                *dependencies,
+            ],
+            cwd=destination,
+            env=environment,
+            check=True,
+            capture_output=True,
+            timeout=EXECUTION_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise characterization.CharacterizationError(
+            "CHARACTERIZATION_PREREQUISITE_FAILED"
+        ) from error
 
 
 def _command(language: str, relative_driver: str, driver: Path) -> tuple[list[str], list[str]]:
@@ -59,6 +143,7 @@ def _run_driver(
     scenario: characterization.Scenario,
     language: str,
     content: bytes,
+    dependencies: Path | None = None,
 ) -> dict[str, object]:
     relative_driver, _ = characterization._scenario_paths(scenario, language)
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
@@ -69,7 +154,7 @@ def _run_driver(
             completed = subprocess.run(
                 arguments,
                 cwd=target,
-                env=_safe_environment(target, definition),
+                env=_safe_environment(target, definition, dependencies),
                 check=False,
                 capture_output=True,
                 timeout=EXECUTION_TIMEOUT_SECONDS,
@@ -102,14 +187,15 @@ def _scenario_capture(
     scenario: characterization.Scenario,
     language: str,
     records: list[git_changes.CommandRecord],
+    dependencies: Path | None = None,
 ) -> dict[str, object]:
     profile = characterization.scenario_language(scenario, language)
     driver_path, golden_path = characterization._scenario_paths(scenario, language)
     driver = git_changes.read_regular_blob(definition, definition_sha, driver_path, records)
     golden = git_changes.read_regular_blob(definition, definition_sha, golden_path, records)
     golden_behavior = characterization._read_json_bytes(golden.content, "MALFORMED_GOLDEN_OUTPUT")
-    first = _run_driver(target, definition, scenario, profile, driver.content)
-    second = _run_driver(target, definition, scenario, profile, driver.content)
+    first = _run_driver(target, definition, scenario, profile, driver.content, dependencies)
+    second = _run_driver(target, definition, scenario, profile, driver.content, dependencies)
     return {
         "behavior": first["behavior"],
         "behavior_sha256": first["behavior_sha256"],
@@ -161,10 +247,16 @@ def capture_evidence(
     )
     policy = contract.parse_contract(policy_blob.content)
     manifest = characterization._manifest(definition, head_sha, records)
-    scenarios = [
-        _scenario_capture(target, definition, head_sha, item, policy.language, records)
-        for item in manifest.scenarios
-    ]
+    with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
+        dependencies = Path(temporary)
+        if policy.language in {"python", "mixed"}:
+            _install_python_dependencies(target, target_sha, dependencies, records)
+        scenarios = [
+            _scenario_capture(
+                target, definition, head_sha, item, policy.language, records, dependencies
+            )
+            for item in manifest.scenarios
+        ]
     fingerprint = characterization._sha256(
         characterization._canonical([[item["id"], item["behavior_sha256"]] for item in scenarios])
     )

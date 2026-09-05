@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -260,6 +262,146 @@ def test_driver_executes_authenticated_blob_from_fresh_paths(
     assert first["command"] == ["python3.12", "-P", relative]
     assert len(set(seen)) == 2
     assert all(not path.is_relative_to(definition) and not path.exists() for path in seen)
+
+
+def _dependency_repository(tmp_path: Path) -> tuple[Path, Path, str, str]:
+    repository, base_checkout, _, _ = _repository(tmp_path)
+    _write(
+        repository / "src/sample.py",
+        "from s16_runtime_fixture import increment\n\ndef calculate():\n    return increment(3)\n",
+    )
+    _write(
+        repository / "tests/characterization/existing.characterization.py",
+        "import json\nimport os\nfrom pathlib import Path\nfrom sample import calculate\n"
+        "Path(os.environ['SUPPORTABILITY_CHARACTERIZATION_TARGET'], 'driver-ran').touch()\n"
+        "print(json.dumps({'schema_version': '1.0', 'scenario': 'existing', "
+        "'behavior': {'value': calculate()}}, sort_keys=True))\n",
+    )
+    _write(repository / "tests/characterization/existing.golden.json", '{"value": 4}\n')
+    metadata = '[project]\ndependencies = ["s16-characterization-fixture==1.0"]\n'
+    _write(repository / "pyproject.toml", metadata)
+    base_sha = _commit(repository, "base runtime dependency")
+    _write(repository / "pyproject.toml", metadata.replace("==1.0", ">=2,<3"))
+    head_sha = _commit(repository, "head runtime dependency")
+    _git(base_checkout, "checkout", "--detach", base_sha)
+    return repository, base_checkout, base_sha, head_sha
+
+
+def test_runtime_dependencies_execute_real_driver_from_each_exact_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, base_checkout, base_sha, head_sha = _dependency_repository(tmp_path)
+    # A dirty metadata file must not replace either authenticated dependency list.
+    _write(repository / "pyproject.toml", '[project]\ndependencies = ["untrusted==9.0"]\n')
+    monkeypatch.setenv("GITHUB_TOKEN", "must-not-reach-pip")
+    monkeypatch.setenv("PIP_EXTRA_INDEX_URL", "https://example.invalid")
+    monkeypatch.setenv("PYTHONPATH", str(repository / "src"))
+    run = subprocess.run
+    installed: list[Path] = []
+
+    def provision(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        if arguments[:5] != [sys.executable, "-I", "-m", "pip", "install"]:
+            return run(arguments, **kwargs)
+        destination = Path(arguments[arguments.index("--target") + 1])
+        assert arguments[5:-1] == [
+            "--disable-pip-version-check",
+            "--no-input",
+            "--only-binary=:all:",
+            "--ignore-installed",
+            "--target",
+            str(destination),
+            "--index-url",
+            "https://pypi.org/simple",
+        ]
+        environment = kwargs["env"]
+        assert environment["PIP_CONFIG_FILE"] == os.devnull
+        assert not {"PYTHONPATH", "GITHUB_TOKEN", "PIP_EXTRA_INDEX_URL"} & environment.keys()
+        assert kwargs["capture_output"] is True and 0 < kwargs["timeout"] <= 180
+        increment = {
+            "s16-characterization-fixture==1.0": 1,
+            "s16-characterization-fixture>=2,<3": 2,
+        }[arguments[-1]]
+        _write(
+            destination / "s16_runtime_fixture.py",
+            f"def increment(value):\n    return value + {increment}\n",
+        )
+        installed.append(destination)
+        return subprocess.CompletedProcess(arguments, 0, b"", b"")
+
+    monkeypatch.setattr(hosted_characterization.subprocess, "run", provision)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+
+    assert base["scenarios"][0]["behavior"] == {"value": 4}
+    assert head["scenarios"][0]["behavior"] == {"value": 5}
+    assert base["scenarios"][0]["deterministic"] is True
+    assert head["scenarios"][0]["deterministic"] is True
+    assert (base_checkout / "driver-ran").is_file() and (repository / "driver-ran").is_file()
+    assert len(set(installed)) == 2 and all(not path.exists() for path in installed)
+    assert importlib.util.find_spec("s16_runtime_fixture") is None
+    paths = _write_artifacts(tmp_path, base, head)
+    result = _verify(repository, base_sha, head_sha, *paths)
+    assert "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:existing" in result["policy_blocks"]
+
+
+@pytest.mark.parametrize("failure", ["exit", "timeout", "missing"])
+def test_runtime_dependency_setup_failure_prevents_driver_execution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    repository, base_checkout, base_sha, head_sha = _dependency_repository(tmp_path)
+    run = subprocess.run
+
+    def provision(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        if arguments[:5] != [sys.executable, "-I", "-m", "pip", "install"]:
+            return run(arguments, **kwargs)
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(arguments, 120)
+        if failure == "missing":
+            raise OSError("pip unavailable")
+        raise subprocess.CalledProcessError(1, arguments, b"", b"dependency unavailable")
+
+    monkeypatch.setattr(hosted_characterization.subprocess, "run", provision)
+    with pytest.raises(
+        characterization.CharacterizationError, match="CHARACTERIZATION_PREREQUISITE_FAILED"
+    ):
+        _captures(repository, base_checkout, base_sha, head_sha)
+    assert not (base_checkout / "driver-ran").exists()
+    assert not (repository / "driver-ran").exists()
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        "[project",
+        'project = "malformed"\n',
+        '[project]\ndynamic = ["dependencies"]\n',
+        '[project]\ndependencies = "fixture==1.0"\n',
+        "[project]\ndependencies = [false]\n",
+        '[project]\ndependencies = ["fixture @ https://example.invalid/fixture.whl"]\n',
+        '[project]\ndependencies = ["./fixture"]\n',
+        '[project]\ndependencies = ["--extra-index-url=https://example.invalid"]\n',
+        '[project]\ndependencies = ["fixture==1.0\\n--extra-index-url=https://example.invalid"]\n',
+    ],
+)
+def test_runtime_dependency_metadata_fails_closed_before_pip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, metadata: str
+) -> None:
+    repository, base_checkout, base_sha, _ = _dependency_repository(tmp_path)
+    _write(repository / "pyproject.toml", metadata)
+    head_sha = _commit(repository, "unsupported dependency metadata")
+    run = subprocess.run
+
+    def refuse_pip(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        if arguments[:5] == [sys.executable, "-I", "-m", "pip", "install"]:
+            pytest.fail("unsupported metadata reached pip")
+        return run(arguments, **kwargs)
+
+    monkeypatch.setattr(hosted_characterization.subprocess, "run", refuse_pip)
+    with pytest.raises(
+        characterization.CharacterizationError,
+        match="CHARACTERIZATION_PREREQUISITE_METADATA_INVALID",
+    ):
+        _captures(repository, repository, head_sha, head_sha)
+    assert not (repository / "driver-ran").exists()
 
 
 def _write_artifacts(
