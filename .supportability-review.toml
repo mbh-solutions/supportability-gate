@@ -1,37 +1,45 @@
 schema_version = "1.0"
 module_boundaries = []
+
 [behavior]
-intended_behavior = "This S17 completion transaction records source and hosted summary evidence; it changes no production behavior."
-proof = "Protected source PR #199 and native summary run 33940238325 provide the recorded evidence; this documentation-only transaction receives its own protected checks."
+intended_behavior = "The clause inventory validates one canonical deterministic-assurance contract and the protected identity, applicability, owner, proof-class, and test-reference mapping for every normative clause."
+proof = "tests/test_clause_inventory.py exercises the valid registry, every protected row mutation, invalid test references, policy BLOCK decisions, malformed-registry TECHNICAL_FAILURE decisions, and collection of every referenced node."
 
 [characterization]
-captured_behavior = "The existing enforcer validates exact identity and sources before printing its canonical row and returning the mapped exit code."
-proof = "Existing immutable gate8-standard-results-boundary-v3 and m9-quality-profile scenarios retain their drivers and golden bytes. Summary opt-in defaults off so synthetic callers retain their current behavior."
+captured_behavior = "The retained pre-change reproduction demonstrates that submitted applicability text, many submitted owners, and string-only test references could pass before canonical protection was introduced."
+proof = "The red-first focused suite recorded 446 failures and 7 passes before the validator change; the final exact-head suite records 1101 passes and two hosted-only skips."
 
 [separation_of_concerns]
-boundaries = []
-before = "The prior implementation PR carried seven changed production responsibility identities."
-after = "This documentation-only completion PR changes no production responsibility, so its exact boundary record set is empty."
+before = "Canonical owner and applicability meaning were partly derived from the submitted inventory, and test linkage was accepted as a string without proving collection."
+after = "The inventory parser validates shape, the canonical digests authorize protected mappings, and collection validation proves that every retained node exists without claiming one independent behavior test per clause."
+boundaries = [
+  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "ClauseInventoryError.__init__", before = "Inventory failures exposed only an error code.", after = "Inventory failures expose a deterministic BLOCK or TECHNICAL_FAILURE decision alongside the error code." },
+  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "_clause", before = "Clause parsing accepted nonblank applicability and owner fields as their own authority.", after = "Clause parsing requires the complete evidence and proof classifications before canonical digests authorize protected content." },
+  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "_digest", before = "No bounded helper produced canonical registry digests.", after = "One bounded helper serializes protected registry projections for exact digest comparison." },
+  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "_verify_coverage", before = "Coverage validated IDs and source lines but did not authorize every protected mapping dimension.", after = "Coverage validates IDs and lines, all four canonical projections, and actual collection of each referenced test node." },
+  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "validate_inventory", before = "The public validator accepted the schema-1 registry and its self-described mappings.", after = "The public validator requires schema 2, the exact assurance contract, complete clause rows, and canonical coverage." },
+  { path = "src/supportability_gate/clause_inventory.py", kind = "module", symbol = "src/supportability_gate/clause_inventory.py", before = "Module-level constants and test-family references were partly self-authorized by the submitted registry.", after = "The module fixes canonical assurance and mapping digests, validates collected test families, and exposes bounded BLOCK versus TECHNICAL_FAILURE decisions." },
+]
 
 [architecture]
-dependency_direction = "The outer enforcer consumes the existing inward reporting module. Reporting receives only validated entry fields and never imports the enforcer or adds evidence collection."
-reviewed_paths = ["src/supportability_gate/reporting.py", "src/supportability_gate/standard_results_enforcer.py", ".github/workflows/organization-required.yml"]
+dependency_direction = "The existing CLI consumes the clause-inventory validator; the validator depends only on standard-library parsing, hashing, data classes, and typing, and introduces no second policy engine or network dependency."
+reviewed_paths = ["src/supportability_gate/clause_inventory.py", "tests/test_clause_inventory.py", "docs/normative_clause_inventory.json"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/reporting.py"
-owns = "Source-faithful presentation of validated result codes and bounded explanations."
-does_not_own = "Policy decisions, authorization, evidence validation, target execution, thresholds, or independent qualification."
+path = "src/supportability_gate/clause_inventory.py"
+owns = "Deterministic validation of the committed normative registry against immutable and canonical authority plus collection of its retained test references."
+does_not_own = "Semantic judgment of qualitative prose, target-repository execution, exhaustive runtime behavior, outside-profile code, or successor-slice runtime representation."
 
 [incremental_refactor]
-target = "Expose existing Gate results in native GitHub job summaries."
-completed_step = "The existing enforcement caller opts into presentation; canonical artifacts and checks remain authoritative."
+target = "Replace self-authorizing registry fields with one canonical deterministic-assurance boundary for S00 only."
+completed_step = "Protected all 218 mappings, classified evidence and test proof, validated collection, and documented the bounded assurance without implementing S01 or later slices."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Summary names describe their presentation responsibility; no generic utility module."
-cohesion = "Formatting stays in reporting; validation and isolated optional output stay in the existing enforcer."
-intended_behavior = "Missing or invalid evidence receives no invented diagnosis; unsupported codes remain visible. Summary failure preserves the Gate result."
-reviewability = "Two existing production modules and their workflow caller; no new dependency, schema, policy, target contract control, waiver, or consumer change."
+naming = "Assurance, applicability, mapping, proof, and decision names state the bounded deterministic responsibility without semantic-review language."
+cohesion = "Registry shape parsing, canonical authorization, coverage, and test collection remain in the existing clause-inventory module."
+intended_behavior = "Unsupported protected mapping changes BLOCK; malformed evidence is TECHNICAL_FAILURE; structurally valid qualitative declarations are not machine-judged for truth."
+reviewability = "The exact 218-row canonical projections are digest-protected, tests enumerate each mutation class, and documentation states both guarantees and non-guarantees."

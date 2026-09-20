@@ -11,8 +11,8 @@
 
 ## Product boundary
 
-- Execute only the single slice marked `In progress` in the
-  [Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10)
+- Execute only the single slice marked `In Progress` in the
+  [Supportability Gate Deterministic Assurance Remediation](https://github.com/orgs/mbh-solutions/projects/25)
   project under its repository issue.
 - Never import or execute target repository code.
 - Git and Ruff use fixed argument vectors, finite timeouts, captured output, and no shell.
@@ -28,7 +28,7 @@ Before planning or editing, read:
 2. `docs/supportability_standard.md`
 3. `docs/fixed_roadmap.md`
 4. `docs/product_completion_contract.md`
-5. `docs/enforcement_milestone_10.md` while Enforcement Milestone 10 is active
+5. the complete issue for the single active Project #25 slice and the Project #25 README
 
 Before editing, report:
 
@@ -84,7 +84,7 @@ Stop condition:
 ## Completion ledger control
 
 - `docs/product_completion_contract.md` is the persistent product-status ledger.
-- At milestone completion, update only the applicable milestone status, evidence, remaining work,
+- At slice completion, update only the applicable slice status, evidence, remaining work,
   product status, and next authorized milestone fields.
 - Do not rewrite the frozen roadmap or silently add requirements.
 - Do not mark a milestone complete without direct proof.
@@ -111,11 +111,9 @@ review-thread resolution before merge.
 
 Before editing:
 
-1. Identify the single slice marked `In progress` in the
-   [Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10)
-   project. Projects #2, #3, #6, and #8 are historical and must not be changed. Project #9 becomes
-   historical through the exact S00 retirement transaction and must not be used as successor
-   authority.
+1. Identify the single slice marked `In Progress` in the
+   [Supportability Gate Deterministic Assurance Remediation](https://github.com/orgs/mbh-solutions/projects/25)
+   project. Projects #2, #3, #6, #8, #9, and #10 are historical and must not be changed.
 2. Read its milestone issue completely.
 3. State:
    - terminal capability;
@@ -129,13 +127,13 @@ Before editing:
    by the active milestone.
 6. Stop when the terminal capability and required evidence are achieved.
 7. Do not mark Evidence complete without direct proof.
-8. Do not close the milestone until:
-   - Evidence is Complete;
+8. Do not close the slice until:
+   - Evidence is Proven;
    - Scope is On scope;
    - Stop confirmed is Yes.
-9. For Project #10 S00-S11 only, activate the immediate successor automatically after its issue is
-   refreshed and the predecessor's protected merge, ledger, issue, and Project readback prove
-   `Done / Complete / On scope / Yes`. Otherwise do not begin the successor.
+9. Never activate a Project #25 successor from an implementation task. Leave delivery evidence for
+   independent controller verification and stop; Ready still requires separate owner execution
+   authorization.
 
 ## Required source proof
 

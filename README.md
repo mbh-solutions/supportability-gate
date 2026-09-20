@@ -9,12 +9,13 @@ for architecture, configuration, evidence, lifecycle, and module details.
 
 ## Status
 
-Integrated qualification and organization-wide activation completed on 2026-08-27. Project #10 is
-temporarily reopened only for the bounded
-[S15 maintenance issue](https://github.com/mbh-solutions/supportability-gate/issues/194), which
-permits one existing fixed language profile to retire after its product is deleted while unchanged
-production roots preserve fail-closed inventory. Durable product status and historical evidence
-remain in the [Product Completion Contract](docs/product_completion_contract.md).
+Historical integrated qualification and organization-wide activation completed on 2026-08-27.
+Current remediation is governed by
+[Project #25](https://github.com/orgs/mbh-solutions/projects/25); its active slice is
+[S00](https://github.com/mbh-solutions/supportability-gate/issues/201), which makes the
+deterministic assurance contract and normative traceability accurate. Durable current status and
+dated historical evidence remain in the
+[Product Completion Contract](docs/product_completion_contract.md).
 
 Protected `main` requires Source Validation plus eight strict, independently owned deterministic
 contexts:
@@ -32,6 +33,13 @@ One lane's policy failure does not become another lane's failure. Shared technic
 allowed only for an explicitly named identity or artifact dependency. Codex review is optional,
 advisory, and non-blocking; GitHub's native review-thread rule still blocks unresolved inline
 conversations.
+
+The Gate classifies evidence as measured fact, deterministic decision, author declaration, or
+authenticated owner attestation. It validates structure, provenance, exact-change binding, and the
+named deterministic rules; it does not independently judge qualitative prose, naming, cohesion,
+design quality, or exhaustive intended behavior. Certification is limited to committed Python,
+TypeScript, and mixed profiles. Outside-profile code and unclassified or dynamic architecture are
+not certified.
 
 ## Repository inputs
 
