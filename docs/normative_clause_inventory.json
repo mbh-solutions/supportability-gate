@@ -11,7 +11,7 @@
           "python",
           "frontend"
         ],
-        "condition": "Supportability Standard is invoked."
+        "condition": "Never applies to any change."
       },
       "enforcement_owner": "Source Validation - Normative Traceability",
       "evidence_requirement": "A complete, current, exact-change-bound author declaration tied to source line 18; the Gate does not judge its qualitative truth or quality.",
