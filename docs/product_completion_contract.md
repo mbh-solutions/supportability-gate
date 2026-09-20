@@ -11,21 +11,36 @@ Product requirements come only from:
 Global skills, memory, prior chats, former Governance repositories, unrelated repositories, and
 agent assumptions are not product requirement sources.
 
-Successor execution authority is
-[Supportability Gate Qualification and Advisory Review](https://github.com/orgs/mbh-solutions/projects/10).
-Projects #2, #3, #6, and #8 are historical and remain unchanged. Project #9 becomes historical
-through the exact S00 retirement transaction and is not authority for successor work.
+Current remediation authority is
+[Supportability Gate Deterministic Assurance Remediation](https://github.com/orgs/mbh-solutions/projects/25).
+Projects #2, #3, #6, #8, #9, and #10 are historical and remain unchanged. Only the Project #25
+slice explicitly authorized by the owner may execute.
 
 ## Final product objective
 
-`supportability-gate` must centrally enforce every applicable normative Supportability Standard
-clause on Python and frontend/component pull-request changes across repositories in the
-`mbh-solutions` organization.
+`supportability-gate` must provide a deterministic protected-merge decision for committed Python,
+TypeScript, and mixed profiles while describing every assurance at the strength its executable
+evidence supports.
 
-Full Supportability Standard runtime is not complete until all eleven successor milestones have
-direct runtime proof.
+It must not describe authenticated or complete qualitative prose as independently judged truth,
+and it must not certify outside-profile code, unclassified or dynamic architecture, subjective
+cohesion, or exhaustive intended behavior.
 
-## Successor enforcement ledger
+## Current deterministic assurance contract
+
+- `measured_fact`: independently derived or authenticated observation bound to immutable inputs;
+  raw target reports are not automatically measured facts.
+- `deterministic_decision`: reproducible rule result over authenticated inputs.
+- `author_declaration`: complete, current, exact-change-bound author prose; qualitative truth and
+  quality are not machine judged.
+- `authenticated_owner_attestation`: an author declaration authenticated by an existing
+  repository-owner control; the label is unavailable without that authentication.
+- Each of the 218 canonical clause rows records one evidence class and one test-proof class.
+  Family-level tests intentionally share behavior and are not 218 independent behavior tests.
+- The immutable Standard, frozen roadmap, eight required context names, strict current-head rules,
+  exact provenance, and zero-bypass protection remain unchanged.
+
+## Historical successor enforcement ledger
 
 - Enforcement Milestone 1: `COMPLETE`; Evidence `Complete`; Scope `On scope`; Stop confirmed `Yes`.
 - Enforcement Milestone 1 evidence:
@@ -1272,11 +1287,12 @@ workflow, check-run, ruleset, or GitHub state supports them.
 
 ```text
 Historical deterministic gate deployable to target repositories: YES
-Full Supportability Standard enforcement deployable to target repositories: YES
-Full Supportability Standard runtime: YES
+Deterministic protected merge for committed Python/TypeScript/mixed profiles: YES
+Independent semantic or qualitative judgment: NO; not a product capability
+Outside-profile or exhaustive runtime certification: NO
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #10 S16 issue #196, executable Python characterization prerequisites
-Next milestone authorized: NONE; after S16 no successor Gate work starts
+Current authorized work: Project #25 S00 issue #201, deterministic assurance and traceability
+Next slice authorized: NONE; S01 remains Backlog pending independent verification and owner Execute
 ```
 
 ## Milestone transition rules
@@ -1288,19 +1304,18 @@ Next milestone authorized: NONE; after S16 no successor Gate work starts
 - A milestone status changes to `COMPLETE` only after direct evidence satisfies its active execution
   directive.
 - Completion evidence must be recorded in this contract before the milestone is considered closed.
-- After a Project #10 slice completes its transition transaction and activates any permitted
-  immediate successor, stop without implementing successor work in the same session.
-- For Project #10 S00-S11 only, owner authorization covers sequential activation. Refresh and
-  activate only the immediate successor after the predecessor's protected merge, ledger, issue,
-  and Project readback prove `Done / Complete / On scope / Yes`; otherwise no successor begins.
+- After a Project #25 slice completes, leave its delivery evidence for independent controller
+  verification and stop without activating or implementing a successor.
+- A successor may become Ready only after independent predecessor verification and still requires
+  separate owner Execute authorization.
 - Do not add cleanup, hardening, future-proofing, abstractions, adapters, infrastructure, or
   follow-up work outside the active directive.
 
 ## Final completion rule
 
-The product may claim full Supportability Standard runtime only when Enforcement Milestones 1–11
-in Project #3 are `Complete`, their Evidence is `Complete`, Scope is `On scope`, Stop confirmed is
-`Yes`, and their required direct proof is recorded.
+Current completion claims must stay within the deterministic assurance contract above. Historical
+Project #3 completion records do not create independent semantic judgment, outside-profile
+certification, or exhaustive intended-behavior proof.
 
 Do not create a new terminal label not authorized by an active milestone directive.
 
@@ -2468,3 +2483,69 @@ Do not create a new terminal label not authorized by an active milestone directi
 - Remaining product work for S17: none after this protected completion transaction. Issue #198
   records the final PR/head/run/merge and Project readback. No successor or consumer changes are
   authorized; S16 status and evidence remain separately owned.
+
+## Project #25 deterministic assurance remediation
+
+Project #25 is the only current remediation authority. S00 issue #201 is the sole active slice.
+S01–S08 remain Backlog and require serial predecessor verification plus separate owner execution
+authorization. Semantic Review remains retired; no AI reviewer, probabilistic grader, model-backed
+required check, semantic approval, replacement service, or second policy engine is permitted.
+
+### Durable audit disposition
+
+The independent-audit IDs and subfindings below remain distinct. “Demonstrated” means reproduced at
+the stated boundary; it does not imply a protected merge bypass. Accepted boundaries are product
+limits, not hidden PASS conversions.
+
+| Audit ID | Classification | Owning disposition |
+|---|---|---|
+| F1 target rewrites source/tools/capture | Demonstrated deterministic defect | [S02 #203](https://github.com/mbh-solutions/supportability-gate/issues/203) |
+| F2 blanket supported suppressions | Demonstrated deterministic defect | [S04 #205](https://github.com/mbh-solutions/supportability-gate/issues/205) |
+| F3a import-only coverage | Demonstrated assurance limitation | [S05 #206](https://github.com/mbh-solutions/supportability-gate/issues/206) |
+| F3b help/constant-output scenarios | Demonstrated assurance limitation | [S05 #206](https://github.com/mbh-solutions/supportability-gate/issues/206) |
+| F3c scenario replacement drops obligations | Demonstrated deterministic defect | [S05 #206](https://github.com/mbh-solutions/supportability-gate/issues/206) |
+| F4 candidate-controlled source qualification | Untested protected-enforcement risk | [S03 #204](https://github.com/mbh-solutions/supportability-gate/issues/204) |
+| F5a PASS wording implies semantic judgment | Documentation/guarantee mismatch | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S01 #202](https://github.com/mbh-solutions/supportability-gate/issues/202) |
+| F5b prose truth, naming, cohesion, ownership | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201) |
+| F5c static roles, dynamic imports, unusual roots | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| F5d freshness does not prove renewed thought | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S01 #202](https://github.com/mbh-solutions/supportability-gate/issues/202) |
+| F6a inventory validates its own mapping drift | Demonstrated deterministic defect | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201) |
+| F6b 218 IDs/nine references imply exhaustive proof | Documentation/guarantee mismatch | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201) |
+| F7a accessors/overloads rejected | Demonstrated deterministic defect | [S06 #207](https://github.com/mbh-solutions/supportability-gate/issues/207) |
+| F7b Python match McCabe/Ruff parity | Demonstrated deterministic defect | [S06 #207](https://github.com/mbh-solutions/supportability-gate/issues/207) |
+| F8a related tests require broad authorization | Demonstrated deterministic defect | [S07 #208](https://github.com/mbh-solutions/supportability-gate/issues/208) |
+| F8b size/line spans imply semantic smallness | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S07 #208](https://github.com/mbh-solutions/supportability-gate/issues/208) |
+| F8c adjacent counters imply one series | Demonstrated deterministic defect | [S07 #208](https://github.com/mbh-solutions/supportability-gate/issues/208) |
+| F9 missing review sections leave unsupported rows | Demonstrated deterministic defect | [S01 #202](https://github.com/mbh-solutions/supportability-gate/issues/202) |
+| F10a malformed nested payload exits as policy | Demonstrated deterministic defect | [S01 #202](https://github.com/mbh-solutions/supportability-gate/issues/202) |
+| F10b diagnostics/original causes discarded | Demonstrated deterministic defect | [S01 #202](https://github.com/mbh-solutions/supportability-gate/issues/202) |
+| F11a stale retired machinery/status in current docs | Documentation/guarantee mismatch | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| F11b Actions evidence expiry | Demonstrated assurance limitation | [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| F12a moving runtime/dependency resolution | Demonstrated assurance limitation | [S02 #203](https://github.com/mbh-solutions/supportability-gate/issues/203), [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| F12b unused cryptography dependency | Demonstrated assurance limitation | [S02 #203](https://github.com/mbh-solutions/supportability-gate/issues/203) |
+| F12c validator size/dynamic dictionaries | Demonstrated assurance limitation | [S01 #202](https://github.com/mbh-solutions/supportability-gate/issues/202) |
+| F12d CI amplification/no obsolete-head cancellation | Untested protected-enforcement risk | [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| A01 only declared profiles governed | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| A02 no general security/deployment/exhaustive acceptance | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201) |
+| A03 Semantic Review retired; Codex advisory | Accepted product boundary | All slices |
+| A04 two repository IDs unavailable to current credentials | Accepted product boundary | [S08 #209](https://github.com/mbh-solutions/supportability-gate/issues/209) |
+| A05 adversarial outputs and bounded tests | Accepted product boundary | [S00 #201](https://github.com/mbh-solutions/supportability-gate/issues/201), [S02 #203](https://github.com/mbh-solutions/supportability-gate/issues/203), [S05 #206](https://github.com/mbh-solutions/supportability-gate/issues/206) |
+
+### S00 deterministic assurance contract and traceability
+
+- Prospective terminal result recorded by this protected ledger transaction: Status `Done`;
+  Evidence `Proven`; Scope `On scope`; Stop confirmed `Yes`. It becomes canonical only after the
+  implementation PR merges normally, the qualified merge is deployed through the existing pin,
+  issue #201 closes through its PR linkage, and every required live readback succeeds.
+- The versioned `deterministic-assurance.v1` contract and canonical digests protect all 218 IDs,
+  original source text/line, applicability profiles and condition, current lane owner, evidence
+  class, evidence requirement, retained test reference, and test-proof class.
+- Unsupported mapping or applicability changes are policy `BLOCK`; malformed registry documents
+  are `TECHNICAL_FAILURE`. Referenced test nodes are collected during source proof.
+- The qualitative boundary is explicit: nonblank author prose may be structurally accepted, but it
+  is classified as author declaration rather than independently judged truth. Only existing owner
+  authentication permits the owner-attestation class.
+- Size alone does not justify a rewrite. S01 owns only defect-driven validation-boundary work; S02
+  owns the unused cryptography review/cleanup; S08 owns remaining runtime, retention, and CI risks.
+- Terminal protected PR, run, canary, merge, deployment-pin, issue, and Project evidence is recorded
+  in issue #201 after those identities exist. S01 remains untouched.

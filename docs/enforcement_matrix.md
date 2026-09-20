@@ -1,19 +1,22 @@
 # Enforcement Matrix
 
-This matrix maps enforcement responsibilities to milestones. Current product status, milestone
-evidence, authorized work, and remaining work are recorded only in the
+This matrix maps current deterministic responsibilities and assurance boundaries. Current product
+status, authorized work, and historical evidence are recorded in the
 [Product Completion Contract](product_completion_contract.md).
 
-| Successor enforcement requirement | Milestone |
-|---|---:|
-| Complete normative-clause inventory and traceability validator | 1 |
-| Trusted semantic judgment channel | 2 |
-| Python and TypeScript touched-function complexity and narrow anti-gaming | 3 |
-| Exact-head responsibility-boundary enforcement | 4 |
-| Remaining principle-specific enforcement | 5–10 |
-| Full Python/frontend protected-merge qualification | 11 |
+| Current responsibility | Owner | Evidence boundary |
+|---|---|---|
+| Immutable Standard and canonical 218-clause registry | Source Validation | Schema/provenance validation; registry meaning is digest-protected |
+| Touched-function complexity and progressive tightening | Supportability 1 | Measured facts plus deterministic decisions |
+| Separation-of-concerns records | Supportability 2 | Author declarations; qualitative truth is not machine judged |
+| Static dependency direction and cycles | Supportability 3 | Deterministic decisions over the supported static graph |
+| Domain/module placement and coverage | Supportability 4 | Deterministic path/coverage rules plus author declarations for ownership meaning |
+| Base/head characterization | Supportability 5 | Authenticated measured artifacts and deterministic compatibility rules |
+| Focused incremental refactor scope and runnability | Supportability 6 | Deterministic decisions; exact broad scope requires authenticated owner attestation |
+| Fixed quality commands, coverage, and anti-weakening | Supportability 7 | Authenticated measurements and deterministic decisions |
+| Review handoff and remaining-risk records | Supportability 8 | Process evidence and author declarations; no prose-quality judgment |
 
-| Supportability requirement | Enforcement class | Milestone |
+| Supportability requirement | Enforcement class | Historical origin |
 |---|---|---:|
 | Immutable owner-authored standard integrity | DETERMINISTIC | 1 |
 | Git base/head changed-file identity | DETERMINISTIC | 1 |
@@ -27,15 +30,13 @@ evidence, authorized work, and remaining work are recorded only in the
 | Highest-risk-file gate coverage proof | DETERMINISTIC | 2 |
 | Threshold anti-weakening | DETERMINISTIC | 2 |
 | Gate-scope anti-narrowing | DETERMINISTIC | 2 |
-| Behavior and characterization proof | STRUCTURED_REVIEW_EVIDENCE | 3 |
-| Separation-of-concerns evidence | STRUCTURED_REVIEW_EVIDENCE | 3 |
-| Architecture and dependency-direction review evidence | STRUCTURED_REVIEW_EVIDENCE | 3 |
-| Responsibility-boundary reporting | STRUCTURED_REVIEW_EVIDENCE | 3 |
-| Incremental refactor evidence | STRUCTURED_REVIEW_EVIDENCE | 3 |
-| Review handoff and remaining-risk evidence | STRUCTURED_REVIEW_EVIDENCE | 3 |
-| Naming, cohesion, intended behavior, and reviewability judgment | HUMAN_REVIEW | 3 |
-| Organization required-workflow enforcement proof | DETERMINISTIC | 4 |
-| Temporary target-repository protected merge proof | DETERMINISTIC | 4 |
-| TWMN clean and defect canaries | DETERMINISTIC | 5 |
-| TWMN gate-weakening and scope-narrowing canaries | DETERMINISTIC | 5 |
-| Frontend framework gate execution in Python-only V1 | DETERMINISTIC | 1 |
+| Behavior and characterization artifacts | MEASURED_FACT / DETERMINISTIC_DECISION | 5 |
+| Separation-of-concerns evidence | AUTHOR_DECLARATION | 2 |
+| Static architecture and dependency direction | DETERMINISTIC_DECISION | 3 |
+| Responsibility-boundary reporting | AUTHOR_DECLARATION | 2 |
+| Incremental refactor runnability and scope | DETERMINISTIC_DECISION / AUTHENTICATED_OWNER_ATTESTATION | 6 |
+| Review handoff and remaining-risk evidence | AUTHOR_DECLARATION / PROCESS_EVIDENCE | 8 |
+| Naming, cohesion, design quality, and exhaustive intended behavior | ACCEPTED_BOUNDARY | Not independently judged |
+| Outside-profile code and unclassified/dynamic architecture | ACCEPTED_BOUNDARY | Not certified |
+| Organization required-workflow enforcement proof | DETERMINISTIC | Protected workflow |
+| Protected clean, policy-BLOCK, and technical-failure canaries | DETERMINISTIC | Never merge |
