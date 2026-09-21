@@ -573,7 +573,8 @@ def _evaluate(
             ),
             encoding="utf-8",
         )
-    except Exception:
+    except Exception as error:
+        print(f"NEVER_MERGE_SETUP_ERROR:{type(error).__name__}:{error}")
         quality_path.parent.mkdir(parents=True, exist_ok=True)
         quality_path.write_text("{}\n", encoding="utf-8")
     exit_code = cli.main(
