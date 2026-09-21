@@ -55,6 +55,12 @@ def main() -> int:
     if completed.returncode != 2 or completed.stdout.strip() != EXPECTED or completed.stderr:
         print("CANARY_RESULT_MISMATCH", file=sys.stderr)
         return 99
+    if summary_path := os.environ.get("GITHUB_STEP_SUMMARY"):
+        summary = Path(summary_path).read_text(encoding="utf-8")
+        print(summary, end="")
+        if EXPECTED not in summary or "Diagnosis unavailable." not in summary:
+            print("CANARY_SUMMARY_MISMATCH", file=sys.stderr)
+            return 99
     return completed.returncode
 
 
