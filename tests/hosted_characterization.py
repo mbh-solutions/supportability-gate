@@ -501,7 +501,7 @@ def capture_evidence(
     run_attempt: str,
     job: str,
     diagnostics: Path | None = None,
-) -> dict[str, object]:
+) -> tuple[dict[str, object], dict[str, object]]:
     """Execute fixed-convention scenarios only on a GitHub-hosted runner."""
     _require_hosted_runner()
     records: list[git_changes.CommandRecord] = []
@@ -574,7 +574,7 @@ def capture_evidence(
     fingerprint = characterization._sha256(
         characterization._canonical([[item["id"], item["behavior_sha256"]] for item in scenarios])
     )
-    return {
+    evidence = {
         "authentication": {
             "base_sha": base_sha,
             "head_sha": head_sha,
@@ -588,20 +588,21 @@ def capture_evidence(
         },
         "behavior_fingerprint": fingerprint,
         "definition_sha": definition_sha,
-        "environment": {
-            "container_digest": quality_runner.CONTAINER_IMAGE.split("@", 1)[1],
-            "container_id": container_id,
-            "container_image": quality_runner.CONTAINER_IMAGE,
-            "node_runtime": node_runtime,
-            "python_runtime": python_runtime,
-            "resolved_dependencies": list(resolved_dependencies),
-        },
         "language": policy.language,
         "manifest": characterization._manifest_payload(manifest),
         "scenarios": scenarios,
         "schema_version": characterization.CAPTURE_SCHEMA,
         "target_sha": target_sha,
     }
+    environment = {
+        "container_digest": quality_runner.CONTAINER_IMAGE.split("@", 1)[1],
+        "container_id": container_id,
+        "container_image": quality_runner.CONTAINER_IMAGE,
+        "node_runtime": node_runtime,
+        "python_runtime": python_runtime,
+        "resolved_dependencies": list(resolved_dependencies),
+    }
+    return evidence, environment
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -624,7 +625,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     try:
-        result = capture_evidence(
+        result, environment = capture_evidence(
             Path(arguments.target_repository),
             Path(arguments.definition_repository),
             base_sha=arguments.base_ref,
@@ -638,7 +639,17 @@ def main(argv: list[str] | None = None) -> int:
             job=arguments.job,
             diagnostics=Path(arguments.output).parent,
         )
-        characterization._write_json(Path(arguments.output), result)
+        output = Path(arguments.output)
+        characterization._write_json(output, result)
+        characterization._write_json(
+            characterization._provenance_path(output),
+            {
+                "authentication": result["authentication"],
+                "capture_sha256": characterization._sha256(output.read_bytes()),
+                "environment": environment,
+                "schema_version": characterization.PROVENANCE_SCHEMA,
+            },
+        )
     except Exception as error:
         code = getattr(error, "code", "UNEXPECTED_CHARACTERIZATION_FAILURE")
         output = Path(arguments.output)

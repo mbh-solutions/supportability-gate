@@ -816,6 +816,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         )
     )
     output = Path(arguments.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
     production_files, source_files, test_files = quality_runner.profile_files(
         target, identity.head_sha, policy, records
     )
@@ -845,6 +846,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         _verify_materialized_source(execution_target, source_receipts)
         if policy.language in {"typescript", "mixed"}:
             _stage_node_target(target, identity.head_sha, supervisor, records)
+            (execution_target / "node_modules").mkdir()
         container_id = _prepare_container()
         plans = quality_runner.command_plans(
             policy.language, execution_target, supervisor, test_files, source_files

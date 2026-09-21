@@ -14,7 +14,8 @@ from supportability_gate import contract, git_changes
 
 MANIFEST_PATH = ".supportability-characterization.json"
 SCENARIO_ROOT = "tests/characterization"
-CAPTURE_SCHEMA = "characterization-capture.v2"
+CAPTURE_SCHEMA = "characterization-capture.v1"
+PROVENANCE_SCHEMA = "characterization-provenance.v1"
 RESULT_SCHEMA = "characterization-result.v1"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
@@ -186,7 +187,6 @@ def _authentication_blocks(
         "authentication",
         "behavior_fingerprint",
         "definition_sha",
-        "environment",
         "language",
         "manifest",
         "scenarios",
@@ -196,11 +196,7 @@ def _authentication_blocks(
     if set(artifact) != expected_keys or artifact.get("schema_version") != CAPTURE_SCHEMA:
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     authentication = artifact.get("authentication")
-    if (
-        not isinstance(authentication, dict)
-        or authentication != expected
-        or not _valid_environment(artifact.get("environment"))
-    ):
+    if not isinstance(authentication, dict) or authentication != expected:
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     return []
 
@@ -235,6 +231,47 @@ def _valid_environment(value: object) -> bool:
         and all(isinstance(item, str) and item for item in dependencies)
         and dependencies == sorted(set(dependencies))
     )
+
+
+def _provenance_path(capture_path: Path) -> Path:
+    return capture_path.with_name(f"{capture_path.stem}-provenance.json")
+
+
+def _load_environment_provenance(
+    capture_path: Path,
+    capture: dict[str, Any] | None,
+    expected: dict[str, str],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    if capture is None:
+        return None, []
+    try:
+        value = _read_json_bytes(
+            _provenance_path(capture_path).read_bytes(),
+            "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+        )
+    except (FileNotFoundError, OSError, CharacterizationError):
+        return None, ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
+    if not isinstance(value, dict) or set(value) != {
+        "authentication",
+        "capture_sha256",
+        "environment",
+        "schema_version",
+    }:
+        return None, ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
+    environment = value["environment"]
+    if (
+        value["schema_version"] != PROVENANCE_SCHEMA
+        or value["authentication"] != expected
+        or value["capture_sha256"] != capture.get("_capture_sha256")
+        or not _valid_environment(environment)
+    ):
+        return None, ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
+    assert isinstance(environment, dict)
+    return environment, []
+
+
+def _stable_environment(value: dict[str, Any]) -> dict[str, Any]:
+    return {key: item for key, item in value.items() if key != "container_id"}
 
 
 def _definition_blocks(
@@ -882,7 +919,18 @@ def verify_evidence(
         head, "head", expected_common, head_sha, head_sha, repository, policy, manifest, records
     )
     blocks.extend((*base_blocks, *head_blocks))
-    if base is not None and head is not None and base.get("environment") != head.get("environment"):
+    base_environment, base_provenance_blocks = _load_environment_provenance(
+        base_path, base, {**expected_common, "job": "characterize-base", "side": "base"}
+    )
+    head_environment, head_provenance_blocks = _load_environment_provenance(
+        head_path, head, {**expected_common, "job": "characterize-head", "side": "head"}
+    )
+    blocks.extend((*base_provenance_blocks, *head_provenance_blocks))
+    if (
+        base_environment is not None
+        and head_environment is not None
+        and _stable_environment(base_environment) != _stable_environment(head_environment)
+    ):
         blocks.append("CHARACTERIZATION_ENVIRONMENT_DRIFT")
     blocks.extend(
         _definition_blocks(

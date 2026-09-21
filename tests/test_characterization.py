@@ -438,15 +438,17 @@ def test_base_and_head_capture_use_the_same_exact_head_dependency_set(
         "run_id": "456",
         "run_attempt": "1",
     }
-    base = hosted_characterization.capture_evidence(
+    base, base_environment = hosted_characterization.capture_evidence(
         base_checkout, repository, side="base", job="characterize-base", **common
     )
-    head = hosted_characterization.capture_evidence(
+    head, head_environment = hosted_characterization.capture_evidence(
         repository, repository, side="head", job="characterize-head", **common
     )
 
     assert installed == [(repository, head_sha), (repository, head_sha)]
-    assert base["environment"] == head["environment"]
+    assert base_environment == head_environment
+    assert "environment" not in base
+    assert "environment" not in head
     assert hosted_characterization._python_dependencies(repository, head_sha, []) == (
         "s16-characterization-fixture>=2,<3",
     )
@@ -523,8 +525,24 @@ def _write_artifacts(
     tmp_path: Path, base: dict[str, object], head: dict[str, object]
 ) -> tuple[Path, Path]:
     base_path, head_path = tmp_path / "base.json", tmp_path / "head.json"
-    _write(base_path, json.dumps(base, sort_keys=True) + "\n")
-    _write(head_path, json.dumps(head, sort_keys=True) + "\n")
+    for path, source in ((base_path, base), (head_path, head)):
+        capture = json.loads(json.dumps(source))
+        environment = capture.pop("environment", None)
+        _write(path, json.dumps(capture, sort_keys=True) + "\n")
+        if environment is not None:
+            _write(
+                characterization._provenance_path(path),
+                json.dumps(
+                    {
+                        "authentication": capture["authentication"],
+                        "capture_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                        "environment": environment,
+                        "schema_version": characterization.PROVENANCE_SCHEMA,
+                    },
+                    sort_keys=True,
+                )
+                + "\n",
+            )
     return base_path, head_path
 
 

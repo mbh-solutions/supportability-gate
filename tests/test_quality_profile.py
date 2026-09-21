@@ -780,12 +780,22 @@ def test_hostile_fixture_is_denied_without_authoritative_mutation(
         "source_before_sha256": source_sha256,
         "stderr": completed.stderr.decode(errors="replace"),
         "stdout": completed.stdout.decode(errors="replace"),
+        "diagnostics": _retained_diagnostics(output),
     }
 
     assert completed.returncode == 2, json.dumps(reproduction, sort_keys=True)
-    assert completed.stdout.decode().strip() == "TARGET_SANDBOX_WRITE_DENIED"
+    assert completed.stdout.decode().strip() == "TARGET_SANDBOX_WRITE_DENIED", json.dumps(
+        reproduction, sort_keys=True
+    )
     assert source_after == source_sha256
     assert not output.exists()
+
+
+def _retained_diagnostics(output: Path) -> dict[str, str]:
+    return {
+        path.name: path.read_text(encoding="utf-8", errors="replace")
+        for path in sorted((output.parent / "diagnostics").glob("*"))
+    }
 
 
 def test_all_s02_hostile_capture_fixtures_are_retained() -> None:
@@ -1176,7 +1186,14 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode != 2, completed.stderr.decode(errors="replace")
+    assert completed.returncode != 2, json.dumps(
+        {
+            "diagnostics": _retained_diagnostics(output),
+            "stderr": completed.stderr.decode(errors="replace"),
+            "stdout": completed.stdout.decode(errors="replace"),
+        },
+        sort_keys=True,
+    )
     raw_evidence = quality_profile.load_evidence(output)
     assert completed.returncode == 0, [
         (item.adapter, item.exit_code) for item in raw_evidence.commands
@@ -1503,7 +1520,14 @@ maximum = 10
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode != 2, completed.stderr.decode(errors="replace")
+    assert completed.returncode != 2, json.dumps(
+        {
+            "diagnostics": _retained_diagnostics(output),
+            "stderr": completed.stderr.decode(errors="replace"),
+            "stdout": completed.stdout.decode(errors="replace"),
+        },
+        sort_keys=True,
+    )
     evidence = quality_profile.load_evidence(output)
     assert completed.returncode == 0, [(item.adapter, item.exit_code) for item in evidence.commands]
     provenance = json.loads(
