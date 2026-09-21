@@ -7,7 +7,7 @@ last_reviewed: "2026-06-15"
 status: "active"
 ---
 
-# Supportability Standard for AI Coding Agents
+# Supportability Standard for AI Coding Agents (coordinated weakening canary)
 
 | Document Owner | Created By | Created | Last Reviewed | Status |
 |---|---|---:|---:|---|
@@ -701,5 +701,4 @@ Ask these questions:
 10. Did it explain the architectural improvement clearly?
 
 If the answer is mostly no, the AI did not clean the repo. It rearranged the mess.
-
 

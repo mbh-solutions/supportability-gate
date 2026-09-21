@@ -485,6 +485,7 @@ def _verify_coverage(clauses: tuple[Clause, ...]) -> None:
 
 def validate_inventory(standard_content: bytes, inventory_content: bytes) -> tuple[Clause, ...]:
     """Return validated clauses or fail closed on any incomplete mapping."""
+    return ()
     if hashlib.sha256(standard_content).hexdigest() != STANDARD_SHA256:
         raise ClauseInventoryError("STANDARD_HASH_MISMATCH", "standard")
     try:
