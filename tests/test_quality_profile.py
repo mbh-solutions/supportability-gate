@@ -627,6 +627,32 @@ def test_sandbox_vector_has_fixed_read_only_and_resource_controls(
     assert not any("TOKEN=" in item or "SECRET=" in item for item in command)
 
 
+def test_sandbox_command_creates_every_mount_source(tmp_path: Path) -> None:
+    repository = tmp_path / "target"
+    collector = tmp_path / "collector"
+    toolcache = tmp_path / "toolcache"
+    output = tmp_path / "supervisor"
+    for directory in (repository, collector, toolcache):
+        directory.mkdir()
+    plan = quality_runner.CommandPlan(
+        "characterization-scenario",
+        ("python3.12", "--version"),
+        (),
+        "provisioning",
+        (),
+    )
+
+    quality_runner.sandbox_command(
+        plan,
+        repository=repository,
+        output=output,
+        collector=collector,
+        toolcache=toolcache,
+    )
+
+    assert quality_runner.trusted_directory(output).is_dir()
+
+
 def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: Path) -> None:
     repository = tmp_path / "target"
     output = tmp_path / "output"
