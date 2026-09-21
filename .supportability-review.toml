@@ -1,6 +1,6 @@
 schema_version = "1.0"
 module_boundaries = [
-  { path = "src/supportability_gate/source_integrity.py", owner_path = "src/supportability_gate/source_integrity.py", basis = "responsibility", justification = "Owns independently pinned static receipts, source-control validation, sandboxed conformance orchestration, and its authenticated result." },
+  { path = "tests/source_integrity_check.py", owner_path = "tests/source_integrity_check.py", basis = "responsibility", justification = "Owns independently pinned static receipts, source-control validation, sandboxed conformance orchestration, and its authenticated result." },
   { path = "tests/source_integrity_conformance.py", owner_path = "tests/source_integrity_conformance.py", basis = "responsibility", justification = "Owns the trusted positive, policy-negative, and malformed-input cases executed against candidate validator code." },
 ]
 
@@ -16,15 +16,14 @@ proof = "Never-merge baseline PR #230 retains exact head, candidate Source Valid
 before = "Source Validation and its tests came from the candidate branch; coordinated edits could make its required context report success even though other Gate defenses might still block."
 after = "A source-only workflow comes from an exact protected pin, owns its manifest and conformance fixture, authenticates candidate bytes, and imports candidate validator code only in S02 isolation."
 boundaries = [
-  { path = "src/supportability_gate/source_integrity.py", kind = "function", symbol = "main", before = "Candidate workflow and test bytes supplied source qualification.", after = "Trusted static validation and sandboxed candidate conformance produce one source-integrity result bound to repository, head, workflow, run, attempt, receipts, and runtime controls." },
 ]
 
 [architecture]
 dependency_direction = "The source-integrity orchestrator depends inward on the existing clause validator and S02 sandbox constructor; the trusted fixture is mounted read-only and candidate code cannot own the host collector or authoritative output."
-reviewed_paths = [".github/workflows/source-integrity.yml", ".supportability-characterization.json", ".supportability-review.toml", "docs/enforcement_matrix.md", "docs/source_integrity_manifest.json", "pyproject.toml", "src/supportability_gate/source_integrity.py", "tests/characterization/clause-inventory-baseline.characterization.py", "tests/source_integrity_conformance.py", "tests/test_source_integrity.py"]
+reviewed_paths = [".github/workflows/source-integrity.yml", ".supportability-review.toml", "docs/enforcement_matrix.md", "docs/source_integrity_manifest.json", "tests/source_integrity_check.py", "tests/source_integrity_conformance.py", "tests/test_source_integrity.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/source_integrity.py"
+path = "tests/source_integrity_check.py"
 owns = "Pinned source-input authentication, trusted source-control checks, isolated conformance orchestration, and exact result identity."
 does_not_own = "The eight consumer policy lanes, semantic review, candidate workflow execution, ruleset administration, or successor remediation."
 

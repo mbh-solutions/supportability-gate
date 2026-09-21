@@ -48,7 +48,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/source-integrity"
           set +e
-          python -P -m supportability_gate.source_integrity \
+          python -P "$GITHUB_WORKSPACE/guard/tests/source_integrity_check.py" \
             --repository "$GITHUB_WORKSPACE/candidate" \
             --trusted-root "$GITHUB_WORKSPACE/guard" \
             --scratch "$RUNNER_TEMP/source-integrity/scratch" \

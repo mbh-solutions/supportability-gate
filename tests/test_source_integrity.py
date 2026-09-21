@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -8,9 +9,20 @@ from pathlib import Path
 
 import pytest
 
-from supportability_gate import source_integrity
-
 ROOT = Path(__file__).parents[1]
+
+
+def _source_integrity_module():
+    path = ROOT / "tests/source_integrity_check.py"
+    spec = importlib.util.spec_from_file_location("source_integrity_check", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+source_integrity = _source_integrity_module()
 
 
 def _candidate(tmp_path: Path) -> Path:
