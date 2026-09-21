@@ -29,7 +29,7 @@ does_not_own = "Repository policy decisions, semantic review, artifact transport
 
 [incremental_refactor]
 target = "Isolate target execution and bind exact source, runtime, executable, and dependency provenance without changing the public quality evidence schema or adding another policy engine."
-completed_step = "Retained sanitized scenario-level Docker runtime diagnostics and top-level characterization tracebacks without changing production code or the public quality evidence schema."
+completed_step = "Post-deployment diagnostic canary for the retained scenario-level Docker runtime failure; never merge."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
