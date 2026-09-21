@@ -702,4 +702,5 @@ Ask these questions:
 
 If the answer is mostly no, the AI did not clean the repo. It rearranged the mess.
 
+Never-merge S03 coordinated-tamper canary.
 

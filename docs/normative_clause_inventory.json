@@ -13,7 +13,7 @@
         ],
         "condition": "Supportability Standard is invoked."
       },
-      "enforcement_owner": "Source Validation - Normative Traceability",
+      "enforcement_owner": "Supportability 8 - Review Handoff",
       "evidence_requirement": "A complete, current, exact-change-bound author declaration tied to source line 18; the Gate does not judge its qualitative truth or quality.",
       "blocking_test": "tests/test_clause_inventory.py::test_each_clause_blocks_when_required_mapping_is_missing",
       "proof_class": "author_declaration",

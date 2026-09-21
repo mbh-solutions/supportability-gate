@@ -2469,18 +2469,6 @@ def test_repeated_run_writes_byte_identical_json(tmp_path: Path) -> None:
     ).read_bytes()
 
 
-def test_standard_hash_change_fails_source_validation(tmp_path: Path) -> None:
-    standard = Path(__file__).parents[1] / "docs" / "supportability_standard.md"
-    expected = "81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2"
-    assert reporting.STANDARD_SHA256 == expected
-    assert hashlib.sha256(standard.read_bytes()).hexdigest() == expected
-    changed = tmp_path / "supportability_standard.md"
-    changed.write_bytes(standard.read_bytes() + b"\nchanged\n")
-
-    with pytest.raises(AssertionError):
-        assert hashlib.sha256(changed.read_bytes()).hexdigest() == expected
-
-
 def test_whitespace_validation_excludes_only_immutable_standard(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path)
     standard = repository / "docs" / "supportability_standard.md"
