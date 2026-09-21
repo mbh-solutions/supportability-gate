@@ -16,10 +16,7 @@ proof = "The retained hosted baseline run records seven zero exits, runner exit 
 [separation_of_concerns]
 before = "Target commands, source inputs, trusted tools, collector code, and authoritative outputs shared writable checkout authority, while characterization did not bind exact runtime and dependency provenance."
 after = "The runner constructs the fixed restricted container boundary, hosted adapters supervise execution and retain sidecars, and validators independently authenticate exact Git receipts plus quality and characterization provenance."
-boundaries = [
-  { path = "src/supportability_gate/quality_profile.py", kind = "module", symbol = "src/supportability_gate/quality_profile.py", before = "The isolated command ceiling stopped the complete repository suite before it could produce coverage evidence.", after = "The complete suite remains time-bounded but has a measured ten-minute ceiling that covers execution under the fixed CPU and memory limits." },
-  { path = "src/supportability_gate/quality_runner.py", kind = "function", symbol = "sandbox_command", before = "The bounded container ran the target command as PID 1, so orphaned grandchildren could accumulate against the fixed process ceiling.", after = "Docker's fixed init process reaps orphaned grandchildren while the existing 256-process ceiling remains enforced." },
-]
+boundaries = []
 
 [architecture]
 dependency_direction = "Hosted adapters call the fixed runner boundary and emit public evidence plus separate provenance; pure validators authenticate those artifacts from exact Git data. Target code never owns the collector, trusted tools, or final evidence output."
