@@ -67,6 +67,13 @@
     },
     {
       "covers": [
+        "src/supportability_gate/source_integrity.py"
+      ],
+      "id": "source-integrity-boundary",
+      "kind": "regression"
+    },
+    {
+      "covers": [
         "src/supportability_gate/architecture_policy.py",
         "src/supportability_gate/modularity_policy.py"
       ],

@@ -1,0 +1,91 @@
+name: Supportability Gate Source Integrity
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-integrity:
+    name: Source Integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPYCACHEPREFIX: /tmp/supportability-gate-pycache
+    steps:
+      - name: Check out exact candidate head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+
+      - name: Check out exact trusted guard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: guard
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install exact trusted dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --require-hashes -r guard/requirements-dev.lock
+          python -m pip install --disable-pip-version-check --no-build-isolation --no-deps ./guard
+
+      - name: Evaluate independently pinned source controls
+        id: evaluate
+        continue-on-error: true
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/source-integrity"
+          set +e
+          python -P -m supportability_gate.source_integrity \
+            --repository "$GITHUB_WORKSPACE/candidate" \
+            --trusted-root "$GITHUB_WORKSPACE/guard" \
+            --scratch "$RUNNER_TEMP/source-integrity/scratch" \
+            --output "$RUNNER_TEMP/source-integrity/source-integrity-result.json" \
+            --repository-name "$GITHUB_REPOSITORY" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --head-sha "$HEAD_SHA" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Upload source-integrity evidence
+        id: upload
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: source-integrity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/source-integrity
+          if-no-files-found: error
+
+      - name: Require authenticated source-integrity result
+        if: always()
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          EVALUATE_OUTCOME: ${{ steps.evaluate.outcome }}
+          EVALUATE_STATUS: ${{ steps.evaluate.outputs.status }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        run: |
+          if [ "$UPLOAD_OUTCOME" != "success" ] || ! [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]] || ! [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "MISSING_SOURCE_INTEGRITY_ARTIFACT"
+            exit 2
+          fi
+          if [ "$EVALUATE_OUTCOME" = "success" ] && [ "$EVALUATE_STATUS" = "0" ]; then exit 0; fi
+          if [ "$EVALUATE_STATUS" = "1" ]; then exit 1; fi
+          exit 2
