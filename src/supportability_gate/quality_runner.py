@@ -87,6 +87,17 @@ def _sandbox_arguments(plan: CommandPlan, repository: Path, output: Path) -> tup
     return tuple(arguments)
 
 
+def _runtime_mounts(toolcache: Path) -> tuple[str, ...]:
+    mounts: tuple[str, ...] = ()
+    for directory in _SYSTEM_LIBRARY_DIRECTORIES:
+        if directory.is_dir():
+            mounts = (*mounts, *_mount(directory, directory.as_posix()))
+    node_executable = Path(shutil.which("node") or "/usr/bin/node")
+    if node_executable.is_file() and not node_executable.is_relative_to(toolcache):
+        mounts = (*mounts, *_mount(node_executable, node_executable.as_posix()))
+    return mounts
+
+
 def sandbox_command(
     plan: CommandPlan,
     *,
@@ -111,10 +122,8 @@ def sandbox_command(
         *_mount(evidence, "/evidence"),
         *_mount(work, "/work", readonly=False),
         *_mount(toolcache, "/opt/hostedtoolcache"),
+        *_runtime_mounts(toolcache),
     )
-    for directory in _SYSTEM_LIBRARY_DIRECTORIES:
-        if directory.is_dir():
-            mounts = (*mounts, *_mount(directory, directory.as_posix()))
     tools = trusted / "quality-tools"
     if tools.is_dir():
         mounts = (*mounts, *_mount(tools, "/work/quality-tools"))
@@ -310,8 +319,8 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         newline="\n",
     )
     (output / "pytest.ini").write_text(
-        f"[pytest]\ntestpaths = tests\npythonpath =\n    {(repository / 'src').as_posix()}\n"
-        f"    {repository.as_posix()}\n"
+        f"[pytest]\ntestpaths = tests\npythonpath =\n    {repository / 'src'}\n"
+        f"    {repository}\n"
         "addopts = -p no:cacheprovider\n",
         encoding="utf-8",
         newline="\n",

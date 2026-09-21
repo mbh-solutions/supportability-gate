@@ -629,7 +629,8 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert quality_runner._write_coverage_config(trusted) == trusted / "coverage.ini"
     assert (trusted / "coverage.ini").read_bytes() == b"[report]\nexclude_lines =\n"
     assert "testpaths = tests" in (trusted / "pytest.ini").read_text()
-    assert "pythonpath =\n    /target/src\n    /target" in (trusted / "pytest.ini").read_text()
+    trusted_pytest = (trusted / "pytest.ini").read_text().replace("\\", "/")
+    assert "pythonpath =\n    /target/src\n    /target" in trusted_pytest
     assert "mypy_path = src" in (output / "trusted" / "mypy.ini").read_text()
 
 

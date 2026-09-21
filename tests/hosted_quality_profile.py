@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import traceback
 import zipfile
 from dataclasses import asdict
 from pathlib import Path
@@ -939,7 +940,7 @@ def main(argv: list[str] | None = None) -> int:
                 output.parent,
                 stage="quality-profile",
                 code=code,
-                stderr=f"{type(error).__name__}: {error}".encode(errors="replace"),
+                stderr=traceback.format_exc().encode(errors="replace"),
                 roots=(Path(arguments.repository), output.parent),
                 identity={
                     "base_sha": str(arguments.base_ref),
