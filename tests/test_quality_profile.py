@@ -1600,7 +1600,7 @@ maximum = 10
         profile,
         repository,
         output.parent,
-        ("tests/quality.test.mjs",),
+        evidence.test_files,
         source_files,
     )
     assert tuple(item.arguments for item in evidence.commands) == tuple(
