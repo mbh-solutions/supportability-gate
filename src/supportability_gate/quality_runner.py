@@ -20,6 +20,10 @@ CONTAINER_CPUS = "2"
 CONTAINER_PIDS_LIMIT = "256"
 _SAFE_ADAPTER = re.compile(r"[^a-zA-Z0-9_.-]+")
 _SYSTEM_LIBRARY_DIRECTORIES = (Path("/lib/x86_64-linux-gnu"), Path("/usr/lib/x86_64-linux-gnu"))
+_GIT_SUPPORT_DIRECTORIES = (
+    (Path("/usr/lib/git-core"), "/usr/lib/git-core"),
+    (Path("/usr/share/git-core"), "/usr/share/git-core"),
+)
 
 
 @dataclass(frozen=True)
@@ -92,6 +96,12 @@ def _runtime_mounts(toolcache: Path) -> tuple[str, ...]:
     for directory in _SYSTEM_LIBRARY_DIRECTORIES:
         if directory.is_dir():
             mounts = (*mounts, *_mount(directory, directory.as_posix()))
+    git_executable = Path(shutil.which("git") or "/usr/bin/git")
+    if git_executable.is_file():
+        mounts = (*mounts, *_mount(git_executable, "/usr/bin/git"))
+        for source, target in _GIT_SUPPORT_DIRECTORIES:
+            if source.is_dir():
+                mounts = (*mounts, *_mount(source, target))
     node_executable = Path(shutil.which("node") or "/usr/bin/node")
     if node_executable.is_file() and not node_executable.is_relative_to(toolcache):
         mounts = (*mounts, *_mount(node_executable, node_executable.as_posix()))
