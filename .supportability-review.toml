@@ -2,44 +2,91 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The clause inventory validates one canonical deterministic-assurance contract and the protected identity, applicability, owner, proof-class, and test-reference mapping for every normative clause."
-proof = "tests/test_clause_inventory.py exercises the valid registry, every protected row mutation, invalid test references, policy BLOCK decisions, malformed-registry TECHNICAL_FAILURE decisions, and collection of every referenced node."
+intended_behavior = "Every review defect blocks only its owning lanes, unaffected lanes keep their valid evidence, malformed nested values fail closed, and failed stages retain their original typed cause and exact run identity."
+proof = "The scoped suite covers sparse multi-lane TOML, duplicate keys, bounded nested-type fuzzing, real producer/enforcer subprocesses, cross-run poisoning, failing commands, provisioning errors, timeouts, missing downloads, bounded sanitized logs, evidence classes, and summary isolation."
 
 [characterization]
-captured_behavior = "The retained pre-change reproduction demonstrates that submitted applicability text, many submitted owners, and string-only test references could pass before canonical protection was introduced."
-proof = "The red-first focused suite recorded 446 failures and 7 passes before the validator change; the final exact-head suite records 1101 passes and two hosted-only skips."
+captured_behavior = "Before S01, sparse review evidence reported only the first defect while unrelated lanes could PASS, malformed affected_standards/status containers raised uncaught TypeError, and failed upstream stages became generic missing artifacts."
+proof = "Retained red-first nodes reproduced each failure before production edits; the exact-head suite records 1127 passes and two hosted-only skips, with protected hosted proof required before merge."
 
 [separation_of_concerns]
-before = "Canonical owner and applicability meaning were partly derived from the submitted inventory, and test linkage was accepted as a string without proving collection."
-after = "The inventory parser validates shape, the canonical digests authorize protected mappings, and collection validation proves that every retained node exists without claiming one independent behavior test per clause."
+before = "Review parsing mixed whole-document failure with a Gate 2 exception, result validation assumed nested types, and workflow failures lost their original stage diagnostics."
+after = "Review parsing normalizes each owned section, canonical validation enforces every lane's mandatory evidence, and a separate versioned diagnostic envelope carries bounded logs and exact identity."
 boundaries = [
-  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "ClauseInventoryError.__init__", before = "Inventory failures exposed only an error code.", after = "Inventory failures expose a deterministic BLOCK or TECHNICAL_FAILURE decision alongside the error code." },
-  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "_clause", before = "Clause parsing accepted nonblank applicability and owner fields as their own authority.", after = "Clause parsing requires the complete evidence and proof classifications before canonical digests authorize protected content." },
-  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "_digest", before = "No bounded helper produced canonical registry digests.", after = "One bounded helper serializes protected registry projections for exact digest comparison." },
-  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "_verify_coverage", before = "Coverage validated IDs and source lines but did not authorize every protected mapping dimension.", after = "Coverage validates IDs and lines, all four canonical projections, and actual collection of each referenced test node." },
-  { path = "src/supportability_gate/clause_inventory.py", kind = "function", symbol = "validate_inventory", before = "The public validator accepted the schema-1 registry and its self-described mappings.", after = "The public validator requires schema 2, the exact assurance contract, complete clause rows, and canonical coverage." },
-  { path = "src/supportability_gate/clause_inventory.py", kind = "module", symbol = "src/supportability_gate/clause_inventory.py", before = "Module-level constants and test-family references were partly self-authorized by the submitted registry.", after = "The module fixes canonical assurance and mapping digests, validates collected test families, and exposes bounded BLOCK versus TECHNICAL_FAILURE decisions." },
+  { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_read_review_evidence", before = "The pipeline called the deployed single-defect compatibility contract.", after = "The pipeline explicitly consumes the complete section-aware result." },
+  { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "_evidence_classes", before = "Evidence sources were not classified.", after = "Validated sources are classified without changing decisions." },
+  { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "_failure_explanation", before = "Stage failures had generic explanations.", after = "Original stage and code point to retained diagnostics." },
+  { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "standard_result_summary", before = "Summaries exposed one evidence list.", after = "Summaries expose truthful evidence classes." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_declared_fields", before = "No independent field collector existed.", after = "Valid declared fields survive sibling defects." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_handoff_claims", before = "Handoff checks stopped at the first claim.", after = "All present handoff claims are checked." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_list_field", before = "List failure aborted the document.", after = "Valid lists survive sibling defects." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_module_boundaries", before = "Boundary failure discarded other review evidence.", after = "Module boundaries are evaluated independently." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_section", before = "Section validation stopped at one defect.", after = "Each section reports all owned defects." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_separation_boundaries", before = "Gate 2 used a special partial fallback.", after = "Gate 2 uses the shared independent evidence path." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_special_fields", before = "Special fields were coupled to whole sections.", after = "Special fields cannot hide sibling defects." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_collect_text_field", before = "Text failure aborted the document.", after = "Valid text survives sibling defects." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_evaluate_document", before = "Evaluation parsed twice and kept one special partial record.", after = "One parse returns normalized evidence and every defect." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_exception_from_block", before = "Strict callers followed a separate validation path.", after = "Strict callers consume the normalized defect contract." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_record", before = "No bounded defect accumulator existed.", after = "Validation errors become stable collected codes." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_section", before = "This helper served fail-fast access.", after = "Its responsibility moved into independent collection." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_section_keys", before = "Expected fields were rebuilt during fail-fast validation.", after = "One helper defines complete section ownership." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_handoff", before = "This helper raised on one unsupported claim.", after = "Claim collection reports every present defect." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_root", before = "Root validation stopped at one member.", after = "All missing and unknown root members are recorded." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_section", before = "This helper required a complete section.", after = "Independent collectors retain valid fields." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "The deployed evaluator was also used as the internal aggregation path.", after = "The deployed single-defect contract remains stable as a compatibility boundary." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_sections", before = "No explicit complete section-aware entry point existed.", after = "The internal pipeline receives all defects and every independently valid section." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "parse_review_evidence", before = "Strict parsing duplicated fail-fast validation.", after = "Strict parsing reuses normalized evaluation." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "module", symbol = "src/supportability_gate/review_evidence.py", before = "The module combined fail-fast parsing with a lane exception.", after = "The module owns one normalized per-section result." },
+  { path = "src/supportability_gate/standard_block_ownership.py", kind = "function", symbol = "expected_technical_dependency", before = "Only fixed generic source errors were known.", after = "Strict typed stage codes map through existing owners." },
+  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "No stage-failure family existed.", after = "Recognized stages use existing lane ownership." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_changed", before = "Status reached membership before a type guard.", after = "Status type is checked before membership." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_errors", before = "Only static generic source codes were accepted.", after = "Only dependency-bound stage codes are added." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_handoff_claim_blocks", before = "Absence could also look unsupported.", after = "Only present unsupported claims are labeled." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_require_review_field", before = "Partial fields had no ownership guard.", after = "Missing fields require all exact owners blocked." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review", before = "One defect could excuse unrelated absent evidence.", after = "Every retained or absent field is owner-validated." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review_field_owners", before = "Field owners were not derived during result validation.", after = "Field omissions bind to the deterministic owner map." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_review_section", before = "Sections were complete or globally rejected.", after = "Only explicitly blocked fields may be absent." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_separation_boundaries", before = "Gate 2 alone supported partial review evidence.", after = "Gate 2 follows shared owner-bound validation." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_shared", before = "affected_standards was hashed before element checks.", after = "Elements are typed before set conversion." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_source_code", before = "Source codes used one static table.", after = "Static and strict stage codes share fail-closed validation." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_validate_review_sections", before = "No complete partial-section validator existed.", after = "All sections are checked against exact blocked owners." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "compose_results", before = "Install failure replaced its original cause.", after = "Validated install-stage cause is preserved." },
+  { path = "src/supportability_gate/standard_results_enforcer.py", kind = "function", symbol = "main", before = "Unexpected payload errors could traceback with exit 1.", after = "Unexpected boundary errors return a stable exit 2." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_compose", before = "Upstream failure became generic missing evidence.", after = "Exact outcomes and stage causes reach canonical lanes." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_diagnostic_identity", before = "Diagnostic identity was not validated.", after = "Run and job identity must match exactly." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_diagnostic_logs", before = "Only discarded-output hashes survived.", after = "Bounded logs must match declared digests and streams." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_failure_code", before = "Download and setup categories lacked a typed fallback.", after = "Strict explicit fallbacks preserve those causes." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_load_sources", before = "Missing files always became generic missing errors.", after = "Failed generation retains its stage cause." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_observed_code", before = "Raw output was not checked for typed causes.", after = "A stable cause is retained when present." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_parser", before = "Only result paths and coarse outcomes were accepted.", after = "Existing stages accept diagnostic and fallback inputs." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_raw_log", before = "No helper read retained stage output.", after = "Only explicit stage log paths are read." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_read_diagnostic", before = "No versioned stage envelope was validated.", after = "Schema, identity, stage, code, and log digests are exact." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_sanitize_diagnostic", before = "Failed output was discarded after hashing.", after = "Output is bounded and strips credentials, controls, and roots." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_stage_failure", before = "Failed generation and absence were indistinguishable.", after = "Diagnostics, raw logs, fallbacks, and absence have deterministic precedence." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_write_stage_diagnostic", before = "Shell-stage output had no structured artifact.", after = "Bounded logs become an identity-bound stage-diagnostic.v1 artifact." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "main", before = "Unexpected producer errors could traceback.", after = "Boundary failures return stable exit 2 codes." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "module", symbol = "src/supportability_gate/standard_results_producer.py", before = "The module used result files and coarse outcomes only.", after = "The module validates separate diagnostics without changing decision schema." },
 ]
 
 [architecture]
-dependency_direction = "The existing CLI consumes the clause-inventory validator; the validator depends only on standard-library parsing, hashing, data classes, and typing, and introduces no second policy engine or network dependency."
-reviewed_paths = ["src/supportability_gate/clause_inventory.py", "tests/test_clause_inventory.py", "docs/normative_clause_inventory.json"]
+dependency_direction = "Hosted adapters emit separate diagnostics; the producer validates them; canonical results map them through existing ownership; reporting presents only validated decisions. No reviewer or second policy engine is introduced."
+reviewed_paths = [".github/workflows/organization-required.yml", "src/supportability_gate/cli.py", "src/supportability_gate/reporting.py", "src/supportability_gate/review_evidence.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "src/supportability_gate/standard_results_enforcer.py", "src/supportability_gate/standard_results_producer.py", "tests/hosted_characterization.py", "tests/hosted_quality_profile.py", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/clause_inventory.py"
-owns = "Deterministic validation of the committed normative registry against immutable and canonical authority plus collection of its retained test references."
-does_not_own = "Semantic judgment of qualitative prose, target-repository execution, exhaustive runtime behavior, outside-profile code, or successor-slice runtime representation."
+path = "src/supportability_gate/standard_results.py"
+owns = "Validation and composition of eight independently owned deterministic lane results, including exact review-field and typed-stage ownership."
+does_not_own = "Target command execution, semantic judgment, owner authentication, protection administration, or successor-slice source integrity."
 
 [incremental_refactor]
-target = "Replace self-authorizing registry fields with one canonical deterministic-assurance boundary for S00 only."
-completed_step = "Protected all 218 mappings, classified evidence and test proof, validated collection, and documented the bounded assurance without implementing S01 or later slices."
+target = "Complete S01 evidence ownership and structured failure diagnostics without changing lane identities or adding another policy engine."
+completed_step = "Normalized review sections, type-guarded hostile payloads, retained versioned stage diagnostics, exposed evidence classes, and preserved summary isolation."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Assurance, applicability, mapping, proof, and decision names state the bounded deterministic responsibility without semantic-review language."
-cohesion = "Registry shape parsing, canonical authorization, coverage, and test collection remain in the existing clause-inventory module."
-intended_behavior = "Unsupported protected mapping changes BLOCK; malformed evidence is TECHNICAL_FAILURE; structurally valid qualitative declarations are not machine-judged for truth."
-reviewability = "The exact 218-row canonical projections are digest-protected, tests enumerate each mutation class, and documentation states both guarantees and non-guarantees."
+naming = "Stage, diagnostic, evidence-class, and ownership names identify existing responsibilities and distinguish policy blocks from technical failures."
+cohesion = "Review normalization remains in review_evidence; canonical validation remains in standard_results; stage transport remains in the producer and hosted adapters; reporting remains presentation-only."
+intended_behavior = "Absent or malformed evidence cannot become PASS, unaffected lanes remain independent, and failed-stage causes stay actionable without rerun."
+reviewability = "Scoped tests cover red reproductions, lane routing, subprocess exits, nested-type fuzzing, duplicate keys, replay identity, bounded logs, redaction, and decision-neutral summaries."

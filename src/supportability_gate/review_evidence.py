@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tomllib
-from contextlib import suppress
 from typing import Any
 
 REVIEW_EVIDENCE_PATH = ".supportability-review.toml"
@@ -25,12 +24,6 @@ _LIST_FIELDS = {
 _SECTION_EXTRA_FIELDS = {"separation_of_concerns": ("boundaries",)}
 _MODULE_BOUNDARY_FIELDS = {"basis", "justification", "owner_path", "path"}
 _SEPARATION_BOUNDARY_FIELDS = {"after", "before", "kind", "path", "symbol"}
-_GATE_TWO_INDEPENDENT_SECTIONS = {
-    *_TEXT_FIELDS,
-    *_LIST_FIELDS,
-    "module_boundaries",
-} - {"separation_of_concerns"}
-
 ReviewEvidence = dict[str, object]
 
 
@@ -57,13 +50,6 @@ def _require_keys(data: dict[str, Any], expected: set[str], location: str) -> No
     unknown = sorted(set(data) - expected)
     if unknown:
         raise ReviewEvidenceError("MALFORMED", f"{location}.{unknown[0]}")
-
-
-def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
-    value = data[name]
-    if not isinstance(value, dict):
-        raise ReviewEvidenceError("MALFORMED", name)
-    return value
 
 
 def _validate_text(value: object, location: str) -> None:
@@ -122,90 +108,198 @@ def _validate_separation_boundaries(
     return value
 
 
-def _validate_handoff(section: dict[str, Any]) -> None:
-    if section["summary"] != HANDOFF_SENTINEL:
-        raise ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", "review_handoff.summary")
-    if section["remaining_risks"] != [HANDOFF_SENTINEL]:
-        raise ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", "review_handoff.remaining_risks")
+def _record(blocks: list[str], error: ReviewEvidenceError) -> None:
+    blocks.append(_error_block(error))
 
 
-def _validate_section(
+def _validate_root(data: dict[str, Any], review: ReviewEvidence, blocks: list[str]) -> None:
+    expected = {"schema_version", *_TEXT_FIELDS, *_LIST_FIELDS, "module_boundaries"}
+    for name in sorted(set(data) - expected):
+        _record(blocks, ReviewEvidenceError("MALFORMED", f"review_evidence.{name}"))
+    if "schema_version" not in data:
+        _record(blocks, ReviewEvidenceError("MISSING", "review_evidence.schema_version"))
+    elif data["schema_version"] != "1.0":
+        _record(blocks, ReviewEvidenceError("MALFORMED", "schema_version"))
+    else:
+        review["schema_version"] = "1.0"
+
+
+def _section_keys(name: str) -> set[str]:
+    return {
+        *_TEXT_FIELDS.get(name, ()),
+        *_LIST_FIELDS.get(name, ()),
+        *_SECTION_EXTRA_FIELDS.get(name, ()),
+    }
+
+
+def _collect_text_field(
+    section: dict[str, Any], normalized: dict[str, object], name: str, field: str, blocks: list[str]
+) -> None:
+    try:
+        _validate_text(section[field], f"{name}.{field}")
+    except ReviewEvidenceError as error:
+        _record(blocks, error)
+    else:
+        normalized[field] = section[field]
+
+
+def _collect_list_field(
+    section: dict[str, Any], normalized: dict[str, object], name: str, field: str, blocks: list[str]
+) -> None:
+    try:
+        _validate_text_list(section[field], f"{name}.{field}")
+    except ReviewEvidenceError as error:
+        _record(blocks, error)
+    else:
+        normalized[field] = section[field]
+
+
+def _collect_handoff_claims(normalized: dict[str, object], blocks: list[str]) -> None:
+    expected = {
+        "summary": HANDOFF_SENTINEL,
+        "remaining_risks": [HANDOFF_SENTINEL],
+    }
+    for field, value in expected.items():
+        if field in normalized and normalized[field] != value:
+            _record(
+                blocks,
+                ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", f"review_handoff.{field}"),
+            )
+
+
+def _collect_separation_boundaries(
+    section: dict[str, Any],
+    normalized: dict[str, object],
+    expected: tuple[tuple[str, str, str], ...] | None,
+    blocks: list[str],
+) -> None:
+    try:
+        normalized["boundaries"] = _validate_separation_boundaries(section["boundaries"], expected)
+    except ReviewEvidenceError as error:
+        _record(blocks, error)
+
+
+def _collect_declared_fields(
+    section: dict[str, Any], name: str, normalized: dict[str, object], blocks: list[str]
+) -> None:
+    for field in _TEXT_FIELDS.get(name, ()):
+        if field in section:
+            _collect_text_field(section, normalized, name, field, blocks)
+    for field in _LIST_FIELDS.get(name, ()):
+        if field in section:
+            _collect_list_field(section, normalized, name, field, blocks)
+
+
+def _collect_special_fields(
+    section: dict[str, Any],
+    name: str,
+    normalized: dict[str, object],
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
+    blocks: list[str],
+) -> None:
+    if name == "separation_of_concerns" and "boundaries" in section:
+        _collect_separation_boundaries(section, normalized, expected_boundaries, blocks)
+    if name == "review_handoff":
+        _collect_handoff_claims(normalized, blocks)
+
+
+def _collect_section(
     data: dict[str, Any],
     name: str,
     expected_boundaries: tuple[tuple[str, str, str], ...] | None,
+    review: ReviewEvidence,
+    blocks: list[str],
 ) -> None:
-    section = _section(data, name)
-    text_fields = _TEXT_FIELDS.get(name, ())
-    list_fields = _LIST_FIELDS.get(name, ())
-    fields = {*text_fields, *list_fields, *_SECTION_EXTRA_FIELDS.get(name, ())}
-    _require_keys(section, fields, name)
-    for field in text_fields:
-        _validate_text(section[field], f"{name}.{field}")
-    for field in list_fields:
-        _validate_text_list(section[field], f"{name}.{field}")
-    if name == "review_handoff":
-        _validate_handoff(section)
-    if name == "separation_of_concerns":
-        _validate_separation_boundaries(section["boundaries"], expected_boundaries)
+    if name not in data:
+        _record(blocks, ReviewEvidenceError("MISSING", f"review_evidence.{name}"))
+        return
+    section = data[name]
+    if not isinstance(section, dict):
+        _record(blocks, ReviewEvidenceError("MALFORMED", name))
+        return
+    expected = _section_keys(name)
+    for field in sorted(expected - set(section)):
+        _record(blocks, ReviewEvidenceError("MISSING", f"{name}.{field}"))
+    for field in sorted(set(section) - expected):
+        _record(blocks, ReviewEvidenceError("MALFORMED", f"{name}.{field}"))
+    normalized: dict[str, object] = {}
+    _collect_declared_fields(section, name, normalized, blocks)
+    _collect_special_fields(section, name, normalized, expected_boundaries, blocks)
+    if normalized:
+        review[name] = normalized
+
+
+def _collect_module_boundaries(
+    data: dict[str, Any], review: ReviewEvidence, blocks: list[str]
+) -> None:
+    try:
+        review["module_boundaries"] = _validate_module_boundaries(data.get("module_boundaries", []))
+    except ReviewEvidenceError as error:
+        _record(blocks, error)
+
+
+def _evaluate_document(
+    content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...] | None
+) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
+    try:
+        data = tomllib.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return None, ("MALFORMED_REVIEW_EVIDENCE:document",)
+    review: ReviewEvidence = {}
+    blocks: list[str] = []
+    _validate_root(data, review, blocks)
+    for name in sorted(set(_TEXT_FIELDS) | set(_LIST_FIELDS)):
+        _collect_section(data, name, expected_boundaries, review, blocks)
+    _collect_module_boundaries(data, review, blocks)
+    return review, tuple(sorted(set(blocks)))
+
+
+def _exception_from_block(block: str) -> ReviewEvidenceError:
+    if block.startswith("UNSUPPORTED_HANDOFF_CLAIM:"):
+        return ReviewEvidenceError("UNSUPPORTED_HANDOFF_CLAIM", block.partition(":")[2])
+    kind, _, location = block.partition("_REVIEW_EVIDENCE:")
+    return ReviewEvidenceError(kind, location)
 
 
 def parse_review_evidence(
     content: bytes, expected_boundaries: tuple[tuple[str, str, str], ...] | None
 ) -> ReviewEvidence:
     """Parse the only supported structured-review evidence schema."""
-    try:
-        data = tomllib.loads(content.decode("utf-8"))
-    except (UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
-        raise ReviewEvidenceError("MALFORMED", "document") from error
-    expected_sections = set(_TEXT_FIELDS) | set(_LIST_FIELDS)
-    required = {"schema_version", *expected_sections}
-    missing = sorted(required - set(data))
-    unknown = sorted(set(data) - required - {"module_boundaries"})
-    if missing:
-        raise ReviewEvidenceError("MISSING", f"review_evidence.{missing[0]}")
-    if unknown:
-        raise ReviewEvidenceError("MALFORMED", f"review_evidence.{unknown[0]}")
-    if data["schema_version"] != "1.0":
-        raise ReviewEvidenceError("MALFORMED", "schema_version")
-    for name in sorted(expected_sections):
-        _validate_section(data, name, expected_boundaries)
-    data["module_boundaries"] = _validate_module_boundaries(data.get("module_boundaries", []))
-    return data
+    review, blocks = _evaluate_document(content, expected_boundaries)
+    if blocks:
+        raise _exception_from_block(blocks[0])
+    assert review is not None
+    return review
 
 
 def evaluate_review_evidence(
     content: bytes | None,
     expected_boundaries: tuple[tuple[str, str, str], ...] | None,
 ) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
-    """Return normalized evidence or deterministic blocking reasons."""
+    """Preserve the deployed single-defect compatibility contract."""
     if content is None:
         return None, ("MISSING_REVIEW_EVIDENCE:document",)
-    gate_two_block: str | None = None
-    gate_two_review: ReviewEvidence | None = None
-    try:
-        data = tomllib.loads(content.decode("utf-8"))
-        section = _section(data, "separation_of_concerns")
-        fields = {*_TEXT_FIELDS["separation_of_concerns"], "boundaries"}
-        _require_keys(section, fields, "separation_of_concerns")
-        for field in _TEXT_FIELDS["separation_of_concerns"]:
-            _validate_text(section[field], f"separation_of_concerns.{field}")
-        _validate_separation_boundaries(section["boundaries"], expected_boundaries)
-        gate_two_review = {"separation_of_concerns": section}
-        with suppress(ReviewEvidenceError):
-            gate_two_review["module_boundaries"] = _validate_module_boundaries(
-                data.get("module_boundaries", [])
-            )
-    except (KeyError, UnicodeDecodeError, tomllib.TOMLDecodeError):
-        pass
-    except ReviewEvidenceError as error:
-        gate_two_block = _error_block(error)
-    try:
-        return parse_review_evidence(content, expected_boundaries), ()
-    except ReviewEvidenceError as error:
-        block = _error_block(error)
-        location = error.location.removeprefix("review_evidence.")
-        root = location.partition(".")[0].partition("[")[0]
-        review = gate_two_review if root in _GATE_TWO_INDEPENDENT_SECTIONS else None
-        if gate_two_block is not None and gate_two_block != block:
-            return review, (block, gate_two_block)
-        return review, (block,)
+    review, blocks = _evaluate_document(content, expected_boundaries)
+    if not blocks:
+        return review, ()
+    gate_two = tuple(
+        block for block in blocks if block.partition(":")[2].startswith("separation_of_concerns")
+    )
+    compatible: ReviewEvidence | None = None
+    if review is not None and not gate_two and "separation_of_concerns" in review:
+        compatible = {"separation_of_concerns": review["separation_of_concerns"]}
+        if "module_boundaries" in review:
+            compatible["module_boundaries"] = review["module_boundaries"]
+    first = blocks[0]
+    retained = (first,) if not gate_two or first in gate_two else (first, gate_two[0])
+    return compatible, retained
+
+
+def evaluate_review_sections(
+    content: bytes | None,
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
+) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
+    """Return every valid owned section and every deterministic defect."""
+    if content is None:
+        return None, ("MISSING_REVIEW_EVIDENCE:document",)
+    return _evaluate_document(content, expected_boundaries)

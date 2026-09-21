@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib.util
 import json
+import os
 import pkgutil
 import re
 import subprocess
@@ -15,11 +17,15 @@ import pytest
 
 import supportability_gate
 from supportability_gate import (
+    characterization,
     clause_inventory,
     cli,
     contract,
     git_changes,
     quality_profile,
+    quality_runner,
+    reporting,
+    review_evidence,
     standard_block_ownership,
     standard_results,
     standard_results_enforcer,
@@ -852,9 +858,7 @@ def test_unbound_review_handoff_blocks_gate_eight_only() -> None:
 def test_missing_review_handoff_summary_blocks_gate_eight_only() -> None:
     inputs = _inputs()
     block = "MISSING_REVIEW_EVIDENCE:review_handoff.summary"
-    inputs[0]["review_evidence"] = {
-        "separation_of_concerns": inputs[0]["review_evidence"]["separation_of_concerns"]
-    }
+    inputs[0]["review_evidence"]["review_handoff"].pop("summary")
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -896,9 +900,7 @@ def test_schema_valid_ungrounded_handoff_claim_blocks_gate_eight_only(
 def test_declared_unsupported_handoff_claim_blocks_gate_eight_only() -> None:
     inputs = _inputs()
     block = "UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary"
-    inputs[0]["review_evidence"] = {
-        "separation_of_concerns": inputs[0]["review_evidence"]["separation_of_concerns"]
-    }
+    inputs[0]["review_evidence"]["review_handoff"]["summary"] = "Unsupported claim."
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -2053,8 +2055,7 @@ def test_gate_four_aggregate_requires_authentic_changed_path_coupling() -> None:
 def test_malformed_module_boundaries_evidence_blocks_only_gate_four() -> None:
     inputs = _inputs()
     block = "MALFORMED_REVIEW_EVIDENCE:module_boundaries"
-    separation = inputs[0]["review_evidence"]["separation_of_concerns"]
-    inputs[0]["review_evidence"] = {"separation_of_concerns": separation}
+    inputs[0]["review_evidence"].pop("module_boundaries")
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -2068,7 +2069,7 @@ def test_malformed_module_boundaries_evidence_blocks_only_gate_four() -> None:
 def test_boundary_evidence_poison_blocks_gate_two_only() -> None:
     inputs = _inputs()
     block = "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"
-    inputs[0]["review_evidence"] = None
+    inputs[0]["review_evidence"]["separation_of_concerns"].pop("boundaries")
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -2088,7 +2089,7 @@ def test_boundary_evidence_poison_blocks_gate_two_only() -> None:
 )
 def test_indexed_boundary_evidence_poison_blocks_gate_two_only(block: str) -> None:
     inputs = _inputs()
-    inputs[0]["review_evidence"] = None
+    inputs[0]["review_evidence"]["separation_of_concerns"].pop("boundaries")
     inputs[0]["policy_blocks"] = [block]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -2661,7 +2662,7 @@ def test_malformed_shared_review_document_names_only_affected_lanes() -> None:
     ]
 
     subset = _inputs()
-    subset[0]["review_evidence"] = None
+    subset[0]["review_evidence"]["separation_of_concerns"].pop("before")
     subset[0]["policy_blocks"] = ["INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.before"]
     subset[0]["overall_result"] = "BLOCK"
     subset_payload = _compose(subset)
@@ -2687,6 +2688,58 @@ def test_other_lane_poison_cannot_excuse_missing_gate_two_review_evidence() -> N
     )
 
 
+def test_sparse_review_toml_blocks_every_missing_lane_and_preserves_gate_two() -> None:
+    content = b"""schema_version = "1.0"
+
+[separation_of_concerns]
+before = "Mixed owners."
+after = "One owner."
+boundaries = []
+"""
+
+    review, blocks = review_evidence.evaluate_review_sections(content, ())
+
+    assert review == {
+        "module_boundaries": [],
+        "schema_version": "1.0",
+        "separation_of_concerns": {
+            "after": "One owner.",
+            "before": "Mixed owners.",
+            "boundaries": [],
+        },
+    }
+    assert set(blocks) == {
+        "MISSING_REVIEW_EVIDENCE:review_evidence.architecture",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.behavior",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.characterization",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.human_review",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.incremental_refactor",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.responsibility_boundary",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.review_handoff",
+    }
+    inputs = _inputs()
+    inputs[0]["review_evidence"] = review
+    inputs[0]["policy_blocks"] = list(blocks)
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == [
+        "BLOCK",
+        "PASS",
+        "BLOCK",
+        "BLOCK",
+        "BLOCK",
+        "BLOCK",
+        "PASS",
+        "BLOCK",
+    ]
+    for standard in (1, 3, 4, 5, 6, 8):
+        assert _entry(payload, standard)["policy_blocks"]
+    assert _entry(payload, 2)["policy_blocks"] == []
+    assert _entry(payload, 7)["policy_blocks"] == []
+
+
 def test_unknown_root_review_key_is_shared_document_defect() -> None:
     block = "MALFORMED_REVIEW_EVIDENCE:review_evidence.unexpected"
     expected = frozenset({1, 2, 3, 4, 5, 6, 8})
@@ -2696,6 +2749,15 @@ def test_unknown_root_review_key_is_shared_document_defect() -> None:
         "structured-review-document",
         expected,
     )
+
+
+def test_duplicate_review_toml_keys_are_one_typed_document_defect() -> None:
+    review, blocks = review_evidence.evaluate_review_sections(
+        b'schema_version = "1.0"\nschema_version = "1.0"\n', ()
+    )
+
+    assert review is None
+    assert blocks == ("MALFORMED_REVIEW_EVIDENCE:document",)
 
 
 @pytest.mark.parametrize(
@@ -2767,7 +2829,7 @@ def test_short_task_quality_failure_stays_in_the_only_applicable_lane() -> None:
 
 def test_short_task_ignores_review_blocks_owned_by_inapplicable_lanes() -> None:
     inputs = _inputs("docs/release-note.md", [1], status="ADDED")
-    inputs[0]["review_evidence"] = None
+    inputs[0]["review_evidence"]["separation_of_concerns"].pop("boundaries")
     inputs[0]["policy_blocks"] = ["INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries"]
     inputs[0]["overall_result"] = "BLOCK"
 
@@ -3445,6 +3507,31 @@ def test_malformed_result_artifacts_fail_closed(case: str) -> None:
         standard_results.validate_payload(payload, IDENTITY)
 
 
+@pytest.mark.parametrize(
+    ("field", "values"),
+    [
+        ("status", [None, True, 0, {}, [], ["MODIFIED"]]),
+        ("affected_standards", [None, True, 0, "1", {}, [{}], [1, "2"], [1, 1], [9]]),
+    ],
+)
+def test_nested_payload_type_fuzz_is_total(field: str, values: list[object]) -> None:
+    for value in values:
+        if field == "status":
+            payload = _compose(_inputs())
+            payload["applicability_evidence"]["changed_files"][0]["status"] = value
+            expected = "MALFORMED_STANDARD_RESULTS_APPLICABILITY"
+        else:
+            inputs = _inputs()
+            inputs[0]["review_evidence"] = None
+            inputs[0]["policy_blocks"] = ["MALFORMED_REVIEW_EVIDENCE:document"]
+            inputs[0]["overall_result"] = "BLOCK"
+            payload = _compose(inputs)
+            payload["shared_failures"][0]["affected_standards"] = value
+            expected = "MALFORMED_SHARED_FAILURE"
+        with pytest.raises(standard_results.StandardResultsError, match=expected):
+            standard_results.validate_payload(payload, IDENTITY)
+
+
 def test_malformed_shared_failure_set_fails_closed() -> None:
     inputs = _inputs()
     inputs[0]["review_evidence"] = None
@@ -3771,20 +3858,20 @@ def _producer_arguments(tmp_path: Path) -> tuple[list[str], dict[str, Path], Pat
         (
             "complexity",
             set(range(1, 9)),
-            "MISSING_COMPLEXITY_RESULT",
+            "STAGE_FAILURE:complexity:FAILURE",
             "complexity-result",
         ),
         (
             "characterization",
             {5, 6, 8},
-            "MISSING_CHARACTERIZATION_RESULT",
+            "STAGE_FAILURE:characterization:FAILURE",
             "characterization-result",
         ),
-        ("refactor", {6, 8}, "MISSING_REFACTOR_RESULT", "refactor-policy-result"),
+        ("refactor", {6, 8}, "STAGE_FAILURE:refactor:FAILURE", "refactor-policy-result"),
         (
             "quality",
             {7, 8},
-            "MISSING_QUALITY_PROVENANCE",
+            "STAGE_FAILURE:quality:FAILURE",
             "quality-profile:artifact-binding",
         ),
     ],
@@ -3843,13 +3930,14 @@ def test_missing_characterization_suppresses_derived_refactor_missing(
     assert payload["shared_failures"] == [
         {
             "affected_standards": [5, 6, 8],
-            "code": "MISSING_CHARACTERIZATION_RESULT",
+            "code": "STAGE_FAILURE:characterization:FAILURE",
             "dependency": "characterization-result",
             "kind": "TECHNICAL_ERROR",
         }
     ]
     assert all(
-        "MISSING_REFACTOR_RESULT" not in entry["technical_errors"] for entry in payload["entries"]
+        "STAGE_FAILURE:refactor:FAILURE" not in entry["technical_errors"]
+        for entry in payload["entries"]
     )
 
 
@@ -3871,14 +3959,14 @@ def test_install_failure_suppresses_all_derived_source_errors(
     assert payload["shared_failures"] == [
         {
             "affected_standards": list(range(1, 9)),
-            "code": "GATE_INSTALL_FAILURE",
+            "code": "STAGE_FAILURE:install:FAILURE",
             "dependency": "gate-install",
             "kind": "TECHNICAL_ERROR",
         }
     ]
     assert payload["quality_artifact"] is None
     assert {code for entry in payload["entries"] for code in entry["technical_errors"]} == {
-        "GATE_INSTALL_FAILURE"
+        "STAGE_FAILURE:install:FAILURE"
     }
 
 
@@ -3917,6 +4005,162 @@ def test_producer_rejects_duplicate_json_keys(
     )
 
 
+def _write_stage_diagnostic(
+    path: Path, *, stage: str, code: str, head_sha: str | None = None
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    logs = []
+    for stream, content in (("stdout", b""), ("stderr", b"actionable failure\n")):
+        log_path = path.with_name(f"{path.stem}.{stream}.log")
+        log_path.write_bytes(content)
+        logs.append(
+            {
+                "path": log_path.name,
+                "retained_bytes": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+                "stream": stream,
+                "truncated": False,
+            }
+        )
+    path.write_text(
+        json.dumps(
+            {
+                "adapter": None,
+                "code": code,
+                "identity": {
+                    "base_sha": IDENTITY.base_sha,
+                    "head_sha": head_sha or IDENTITY.head_sha,
+                    "job": stage,
+                    "repository": IDENTITY.repository,
+                    "repository_id": str(IDENTITY.repository_id),
+                    "run_attempt": str(IDENTITY.run_attempt),
+                    "run_id": str(IDENTITY.run_id),
+                    "workflow_sha": IDENTITY.workflow_sha,
+                },
+                "logs": logs,
+                "schema_version": "stage-diagnostic.v1",
+                "stage": stage,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.parametrize(
+    ("diagnostic_case", "expected_code"),
+    [
+        ("valid", "STAGE_FAILURE:characterization:CHARACTERIZATION_PREREQUISITE_FAILED"),
+        ("cross-run", "STAGE_FAILURE:characterization:DIAGNOSTIC_IDENTITY_MISMATCH"),
+        ("absent", "STAGE_FAILURE:characterization:FAILURE"),
+    ],
+)
+def test_failed_stage_preserves_validated_cause_through_producer_and_enforcer_subprocesses(
+    tmp_path: Path, diagnostic_case: str, expected_code: str
+) -> None:
+    arguments, paths, output = _producer_arguments(tmp_path)
+    paths["characterization"].unlink()
+    arguments[arguments.index("--characterization-outcome") + 1] = "failure"
+    if diagnostic_case != "absent":
+        diagnostic = tmp_path / "characterization-stage.json"
+        _write_stage_diagnostic(
+            diagnostic,
+            stage="characterization",
+            code="CHARACTERIZATION_PREREQUISITE_FAILED",
+            head_sha="e" * 40 if diagnostic_case == "cross-run" else None,
+        )
+        arguments.extend(["--characterization-diagnostic", str(diagnostic)])
+    environment = {**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")}
+
+    produced = subprocess.run(
+        [sys.executable, "-m", "supportability_gate.standard_results_producer", *arguments],
+        cwd=Path(__file__).parents[1],
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert produced.returncode == 0
+    assert produced.stdout == ""
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert _entry(payload, 5)["technical_errors"] == [expected_code]
+    enforced = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "supportability_gate.standard_results_enforcer",
+            *_enforcer_arguments(output, 5),
+        ],
+        cwd=Path(__file__).parents[1],
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert enforced.returncode == 2
+    assert json.loads(enforced.stdout)["technical_errors"] == [expected_code]
+    assert enforced.stderr == ""
+
+
+def test_failed_download_uses_explicit_original_cause_when_diagnostic_is_absent(
+    tmp_path: Path,
+) -> None:
+    arguments, paths, output = _producer_arguments(tmp_path)
+    paths["quality"].unlink()
+    arguments[arguments.index("--quality-outcome") + 1] = "failure"
+    arguments.extend(
+        [
+            "--quality-diagnostic",
+            str(tmp_path / "missing-diagnostic.json"),
+            "--quality-failure-code",
+            "QUALITY_ARTIFACT_DOWNLOAD_FAILED",
+        ]
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert _entry(payload, 7)["technical_errors"] == [
+        "STAGE_FAILURE:quality:QUALITY_ARTIFACT_DOWNLOAD_FAILED"
+    ]
+
+
+def test_failed_stage_raw_logs_are_bounded_sanitized_and_keep_typed_cause(
+    tmp_path: Path,
+) -> None:
+    arguments, paths, output = _producer_arguments(tmp_path)
+    paths["complexity"].unlink()
+    arguments[arguments.index("--complexity-outcome") + 1] = "failure"
+    stdout = tmp_path / "complexity.stdout.log"
+    stderr = tmp_path / "complexity.stderr.log"
+    stdout.write_text("COMPLEXITY_RUNTIME_FAILED\ntoken=secret-value\n", encoding="utf-8")
+    stderr.write_text("failure\n" + "x" * 9000, encoding="utf-8")
+    arguments.extend(
+        [
+            "--complexity-stdout-log",
+            str(stdout),
+            "--complexity-stderr-log",
+            str(stderr),
+        ]
+    )
+
+    assert standard_results_producer.main(arguments) == 0
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert _entry(payload, 1)["technical_errors"] == [
+        "STAGE_FAILURE:complexity:COMPLEXITY_RUNTIME_FAILED"
+    ]
+    diagnostic = _diagnostic_payload(output.parent)
+    retained = "".join(
+        path.read_text(encoding="utf-8") for path in (output.parent / "diagnostics").glob("*.log")
+    )
+    assert diagnostic["code"] == "COMPLEXITY_RUNTIME_FAILED"
+    assert "secret-value" not in retained
+    assert all(item["retained_bytes"] <= 8192 for item in diagnostic["logs"])
+
+
 def _cycle_payload() -> dict[str, Any]:
     inputs = _inputs()
     block = "IMPORT_CYCLE:src/a.py:1:src.b"
@@ -3952,6 +4196,78 @@ def test_enforcer_exit_codes(
     assert standard_results_enforcer.main(_enforcer_arguments(path, standard)) == expected
 
 
+def test_summary_names_truthful_s00_evidence_classes_without_owner_claim() -> None:
+    entry = _entry(_compose(_inputs()), 5)
+
+    summary = reporting.standard_result_summary(entry)
+
+    assert "deterministic_decision: this validated lane result" in summary
+    assert "measured_fact:" in summary
+    assert "author_declaration:" in summary
+    assert "authenticated_owner_attestation: none asserted" in summary
+    assert "review_evidence.behavior" in summary
+
+
+def test_summary_reuses_validated_owner_attestation_for_refactor_pass() -> None:
+    entry = _entry(_compose(_inputs()), 6)
+
+    summary = reporting.standard_result_summary(entry)
+
+    assert "authenticated_owner_attestation: refactor-policy-result.json:authorization" in summary
+
+
+def test_stage_failure_summary_retains_original_stage_and_code() -> None:
+    code = "STAGE_FAILURE:characterization:CHARACTERIZATION_PREREQUISITE_FAILED"
+    entry = copy.deepcopy(_entry(_compose(_inputs()), 5))
+    entry["result"] = "TECHNICAL_FAILURE"
+    entry["technical_errors"] = [code]
+
+    summary = reporting.standard_result_summary(entry)
+
+    assert "characterization" in summary
+    assert "CHARACTERIZATION_PREREQUISITE_FAILED" in summary
+    assert "retained diagnostic artifact" in summary
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "STAGE_FAILURE:quality:bad-code",
+        "STAGE_FAILURE:quality:CODE:EXTRA",
+        "STAGE_FAILURE:unknown:VALID_CODE",
+    ],
+)
+def test_malformed_stage_failure_codes_have_no_declared_dependency(code: str) -> None:
+    assert standard_block_ownership.expected_technical_dependency(code, "") is None
+
+
+def test_summary_enabled_disabled_and_render_failure_preserve_decision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    payload = _cycle_payload()
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    plain = standard_results_enforcer.main(_enforcer_arguments(path, 3))
+    plain_output = capsys.readouterr().out
+    rendered = standard_results_enforcer.main([*_enforcer_arguments(path, 3), "--github-summary"])
+    rendered_output = capsys.readouterr().out
+    monkeypatch.setattr(
+        reporting,
+        "standard_result_summary",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("summary unavailable")),
+    )
+    failed_render = standard_results_enforcer.main(
+        [*_enforcer_arguments(path, 3), "--github-summary"]
+    )
+
+    assert plain == rendered == failed_render == 1
+    assert plain_output == rendered_output
+    assert "Result: **BLOCK**" in summary.read_text(encoding="utf-8")
+
+
 def test_enforcer_malformed_artifact_exits_technical(tmp_path: Path) -> None:
     path = tmp_path / "standard-results.json"
     path.write_text("{}", encoding="utf-8")
@@ -3967,6 +4283,268 @@ def test_enforcer_duplicate_json_key_exits_technical(
 
     assert standard_results_enforcer.main(_enforcer_arguments(path, 1)) == 2
     assert capsys.readouterr().out.strip() == "MALFORMED_STANDARD_RESULTS"
+
+
+@pytest.mark.parametrize(
+    ("case", "value", "expected"),
+    [
+        ("affected_standards", [{}], "MALFORMED_SHARED_FAILURE"),
+        ("changed_status", {}, "MALFORMED_STANDARD_RESULTS_APPLICABILITY"),
+        ("changed_status", [], "MALFORMED_STANDARD_RESULTS_APPLICABILITY"),
+    ],
+)
+def test_enforcer_nested_payload_types_exit_two_without_traceback(
+    tmp_path: Path, case: str, value: object, expected: str
+) -> None:
+    if case == "affected_standards":
+        inputs = _inputs()
+        inputs[0]["review_evidence"] = None
+        inputs[0]["policy_blocks"] = ["MALFORMED_REVIEW_EVIDENCE:document"]
+        inputs[0]["overall_result"] = "BLOCK"
+        payload = _compose(inputs)
+        payload["shared_failures"][0]["affected_standards"] = value
+    else:
+        payload = _compose(_inputs())
+        payload["applicability_evidence"]["changed_files"][0]["status"] = value
+    path = tmp_path / "standard-results.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    command = [
+        sys.executable,
+        "-m",
+        "supportability_gate.standard_results_enforcer",
+        *_enforcer_arguments(path, 1),
+    ]
+
+    completed = subprocess.run(
+        command,
+        cwd=Path(__file__).parents[1],
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert completed.returncode == 2
+    assert completed.stdout.strip() == expected
+    assert completed.stderr == ""
+
+
+def _hosted_quality_profile_module() -> Any:
+    path = Path(__file__).with_name("hosted_quality_profile.py")
+    spec = importlib.util.spec_from_file_location("s01_hosted_quality_profile", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _hosted_characterization_module() -> Any:
+    path = Path(__file__).with_name("hosted_characterization.py")
+    spec = importlib.util.spec_from_file_location("s01_hosted_characterization", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _diagnostic_payload(output: Path) -> dict[str, Any]:
+    paths = list((output / "diagnostics").glob("*.json"))
+    assert len(paths) == 1
+    return json.loads(paths[0].read_text(encoding="utf-8"))
+
+
+def test_failing_quality_command_retains_bounded_sanitized_diagnostics(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    output = tmp_path / "capture"
+    command = (
+        sys.executable,
+        "-c",
+        "import sys; print('token=secret-value\\x1b[31m'); "
+        "print('fixture failure', file=sys.stderr); raise SystemExit(3)",
+    )
+    plan = quality_runner.CommandPlan("fixture.command.v1", command, command, "manifest", ())
+
+    result = hosted._run_command(plan, tmp_path, output)
+
+    assert result.exit_code == 3
+    diagnostic = _diagnostic_payload(output)
+    assert diagnostic["adapter"] == "fixture.command.v1"
+    assert diagnostic["code"] == "QUALITY_COMMAND_FAILED"
+    assert diagnostic["stage"] == "quality-command"
+    retained = "".join(
+        path.read_text(encoding="utf-8") for path in (output / "diagnostics").glob("*.log")
+    )
+    assert "secret-value" not in retained
+    assert "\x1b" not in retained
+    assert "fixture failure" in retained
+    assert all(item["retained_bytes"] <= hosted.MAX_DIAGNOSTIC_BYTES for item in diagnostic["logs"])
+
+
+def test_quality_command_timeout_retains_original_stage_and_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hosted = _hosted_quality_profile_module()
+    output = tmp_path / "capture"
+    plan = quality_runner.CommandPlan(
+        "fixture.timeout.v1", ("fixture",), ("fixture",), "manifest", ()
+    )
+
+    def timeout(*args: object, **kwargs: object) -> object:
+        raise subprocess.TimeoutExpired("fixture", 1, output=b"partial", stderr=b"timed out")
+
+    monkeypatch.setattr(hosted.subprocess, "run", timeout)
+
+    result = hosted._run_command(plan, tmp_path, output)
+
+    assert result.exit_code == -1
+    diagnostic = _diagnostic_payload(output)
+    assert diagnostic["adapter"] == "fixture.timeout.v1"
+    assert diagnostic["code"] == "QUALITY_COMMAND_TIMEOUT"
+    assert diagnostic["stage"] == "quality-command"
+    assert "partial" in (output / "diagnostics" / diagnostic["logs"][0]["path"]).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_quality_profile_setup_failure_emits_typed_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    hosted = _hosted_quality_profile_module()
+    output = (tmp_path / "capture" / "quality-gates.json").resolve()
+
+    def fail(_arguments: object) -> object:
+        raise quality_profile.QualityProfileError(
+            "FIXTURE_SETUP_FAILED", "password=secret-value setup unavailable"
+        )
+
+    monkeypatch.setattr(hosted, "run_profile", fail)
+    arguments = [
+        "--repository",
+        str(tmp_path),
+        "--repository-name",
+        "example/repository",
+        "--repository-id",
+        "123",
+        "--base-ref",
+        "b" * 40,
+        "--head-ref",
+        "a" * 40,
+        "--workflow-sha",
+        "f" * 40,
+        "--run-id",
+        "456",
+        "--run-attempt",
+        "1",
+        "--output",
+        str(output),
+    ]
+
+    assert hosted.main(arguments) == 2
+
+    assert capsys.readouterr().out.strip() == "FIXTURE_SETUP_FAILED"
+    diagnostic = _diagnostic_payload(output.parent)
+    assert diagnostic["adapter"] is None
+    assert diagnostic["code"] == "FIXTURE_SETUP_FAILED"
+    assert diagnostic["stage"] == "quality-profile"
+    retained = "".join(
+        path.read_text(encoding="utf-8") for path in (output.parent / "diagnostics").glob("*.log")
+    )
+    assert "secret-value" not in retained
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        ("timeout", "CHARACTERIZATION_TIMEOUT"),
+        ("setup", "CHARACTERIZATION_COMMAND_SETUP_FAILED"),
+    ],
+)
+def test_characterization_driver_failure_retains_original_cause_and_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str, expected: str
+) -> None:
+    hosted = _hosted_characterization_module()
+    target = tmp_path / "target"
+    definition = tmp_path / "definition"
+    diagnostics = tmp_path / "capture"
+    target.mkdir()
+    definition.mkdir()
+    scenario = characterization.Scenario("fixture", "golden", ("src/sample.py",))
+
+    def fail(*_args: object, **_kwargs: object) -> object:
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(
+                "fixture", 1, output=b"partial output", stderr=b"token=secret-value"
+            )
+        raise OSError("driver unavailable")
+
+    monkeypatch.setattr(hosted.subprocess, "run", fail)
+
+    result = hosted._run_driver(
+        target,
+        definition,
+        scenario,
+        "python",
+        b"print('fixture')\n",
+        diagnostics=diagnostics,
+        stage="characterization-head",
+        identity={"fixture": "identity"},
+    )
+
+    assert result["exit_code"] == (-1 if failure == "timeout" else -127)
+    diagnostic = _diagnostic_payload(diagnostics)
+    assert diagnostic["code"] == expected
+    retained = "".join(
+        path.read_text(encoding="utf-8") for path in (diagnostics / "diagnostics").glob("*.log")
+    )
+    assert "secret-value" not in retained
+    assert (
+        "partial output" in retained if failure == "timeout" else "driver unavailable" in retained
+    )
+
+
+def test_characterization_prerequisite_failure_keeps_subprocess_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hosted = _hosted_characterization_module()
+    target = tmp_path / "target"
+    destination = tmp_path / "dependencies"
+    diagnostics = tmp_path / "capture"
+    target.mkdir()
+    destination.mkdir()
+    monkeypatch.setattr(hosted, "_python_dependencies", lambda *_args: ("fixture==1.0",))
+
+    def fail(*args: object, **_kwargs: object) -> object:
+        raise subprocess.CalledProcessError(
+            1,
+            args[0],
+            output=b"resolver output",
+            stderr=b"password=secret-value dependency unavailable",
+        )
+
+    monkeypatch.setattr(hosted.subprocess, "run", fail)
+
+    with pytest.raises(
+        characterization.CharacterizationError,
+        match="CHARACTERIZATION_PREREQUISITE_FAILED",
+    ):
+        hosted._install_python_dependencies(
+            target,
+            "a" * 40,
+            destination,
+            [],
+            diagnostics,
+            "characterization-head",
+            {"fixture": "identity"},
+        )
+
+    diagnostic = _diagnostic_payload(diagnostics)
+    assert diagnostic["code"] == "CHARACTERIZATION_PREREQUISITE_FAILED"
+    retained = "".join(
+        path.read_text(encoding="utf-8") for path in (diagnostics / "diagnostics").glob("*.log")
+    )
+    assert "resolver output" in retained
+    assert "secret-value" not in retained
 
 
 def _job(name: str, next_name: str | None) -> str:
@@ -3995,6 +4573,12 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     assert 'exit "$status"' in quality
     assert "python -P -m supportability_gate.standard_results_producer" in evidence
     assert '--install-outcome "${{ steps.install.outcome }}"' in evidence
+    for source in ("install", "complexity", "characterization", "refactor"):
+        assert f'--{source}-stdout-log "$RUNNER_TEMP/raw/{source}.stdout.log"' in evidence
+        assert f'--{source}-stderr-log "$RUNNER_TEMP/raw/{source}.stderr.log"' in evidence
+    assert '--quality-failure-code "${{ ' in evidence
+    assert "QUALITY_ARTIFACT_DOWNLOAD_FAILED" in evidence
+    assert "BASE_CHARACTERIZATION_DOWNLOAD_FAILED" in evidence
     download_quality = evidence.split("- name: Download authenticated quality evidence", 1)[
         1
     ].split("- name: Read back GitHub artifact metadata", 1)[0]

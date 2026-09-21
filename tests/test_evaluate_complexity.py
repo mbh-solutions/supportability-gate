@@ -20,6 +20,7 @@ from supportability_gate import (
     git_changes,
     quality_profile,
     reporting,
+    review_evidence,
     standard_results,
 )
 
@@ -206,6 +207,17 @@ def _review_evidence_with_boundaries(
         for identity in identities
     )
     return _review_evidence_with_boundary_rows(f"[{rows}]", new_path=new_path)
+
+
+def test_deployed_review_evaluator_retains_single_defect_contract() -> None:
+    content = _review_evidence_with_boundaries(("src/sample.py", "function", "current"))
+
+    parsed, blocks = review_evidence.evaluate_review_evidence(
+        content.encode(), (("tests/characterization/forged.py", "function", "forged"),)
+    )
+
+    assert parsed is None
+    assert blocks == ("INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",)
 
 
 def _run_git(repository: Path, *arguments: str) -> str:
@@ -1654,6 +1666,44 @@ def test_missing_milestone_three_evidence_blocks(tmp_path: Path, section: str) -
 
     assert exit_code == 1
     assert result["policy_blocks"][0].startswith("MISSING_REVIEW_EVIDENCE:")
+
+
+def test_sparse_review_document_reports_all_missing_lanes_and_preserves_valid_gate_two(
+    tmp_path: Path,
+) -> None:
+    repository = _initialize_repository(tmp_path)
+    _write(repository / "src" / "sample.py", _function_source("existing", 1))
+    base_sha = _commit(repository, "base")
+    _write(repository / "src" / "sample.py", _function_source("existing", 1, 1))
+    _write(
+        repository / ".supportability-review.toml",
+        """schema_version = "1.0"
+
+[separation_of_concerns]
+before = "Mixed owners."
+after = "One owner."
+boundaries = [
+  { path = "src/sample.py", kind = "function", symbol = "existing", before = "Before.", after = "After." },
+]
+""",
+    )
+    head_sha = _commit(repository, "head")
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 1
+    assert set(result["policy_blocks"]) == {
+        "MISSING_REVIEW_EVIDENCE:review_evidence.architecture",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.behavior",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.characterization",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.human_review",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.incremental_refactor",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.responsibility_boundary",
+        "MISSING_REVIEW_EVIDENCE:review_evidence.review_handoff",
+    }
+    assert (
+        result["review_evidence"]["separation_of_concerns"]["boundaries"][0]["symbol"] == "existing"
+    )
 
 
 @pytest.mark.parametrize(

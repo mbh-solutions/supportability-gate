@@ -119,6 +119,11 @@ def main(argv: list[str] | None = None) -> int:
         print(error.code)
         _write_summary(arguments, error=error.code)
         return 2
+    except Exception:
+        code = "UNEXPECTED_STANDARD_RESULTS_FAILURE"
+        print(code)
+        _write_summary(arguments, error=code)
+        return 2
     print(json.dumps(entry, ensure_ascii=False, sort_keys=True))
     _write_summary(arguments, entry)
     result = entry["result"]

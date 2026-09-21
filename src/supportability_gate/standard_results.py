@@ -429,7 +429,8 @@ def _s02_changed(value: object, code: str, required: bool = False) -> tuple[dict
         lines = row.get("changed_head_lines")
         if (
             set(row) != _S02_CHANGED_KEYS
-            or row.get("status") not in {"ADDED", "DELETED", "MODIFIED", "RENAMED"}
+            or not isinstance(row.get("status"), str)
+            or row["status"] not in {"ADDED", "DELETED", "MODIFIED", "RENAMED"}
             or any(
                 path is not None and not isinstance(path, str)
                 for path in (row.get("old_path"), row.get("new_path"))
@@ -651,15 +652,39 @@ def _s02_profile(
 
 
 def _s02_review_section(
-    value: object, text_fields: set[str], list_fields: set[str], code: str
+    value: object,
+    name: str,
+    text_fields: set[str],
+    list_fields: set[str],
+    blocked: frozenset[int],
+    code: str,
 ) -> None:
-    row = _s02_exact(value, text_fields | list_fields, code)
-    if any(not isinstance(row[name], str) or not row[name].strip() for name in text_fields):
+    if not isinstance(value, dict) or set(value) - (text_fields | list_fields):
         raise StandardResultsError(code)
-    for name in list_fields:
-        values = _s02_strings(row[name], code, True)
+    row = value
+    for field in text_fields:
+        if field not in row:
+            _s02_require_review_field(name, field, blocked, code)
+        elif not isinstance(row[field], str) or not row[field].strip():
+            raise StandardResultsError(code)
+    for field in list_fields:
+        if field not in row:
+            _s02_require_review_field(name, field, blocked, code)
+            continue
+        values = _s02_strings(row[field], code, True)
         if any(not item.strip() for item in values):
             raise StandardResultsError(code)
+
+
+def _s02_review_field_owners(name: str, field: str) -> frozenset[int]:
+    block = f"MISSING_REVIEW_EVIDENCE:{name}.{field}"
+    return standard_block_ownership.review_owners(block)
+
+
+def _s02_require_review_field(name: str, field: str, blocked: frozenset[int], code: str) -> None:
+    owners = _s02_review_field_owners(name, field)
+    if not owners or not owners.issubset(blocked):
+        raise StandardResultsError(code)
 
 
 def _s02_review_boundaries(value: object, code: str) -> None:
@@ -676,13 +701,19 @@ def _s02_review_boundaries(value: object, code: str) -> None:
         raise StandardResultsError(code)
 
 
-def _s02_separation_boundaries(value: object, code: str) -> None:
-    section = _s02_exact(value, {"after", "before", "boundaries"}, code)
-    if any(
-        not isinstance(section[field], str) or not section[field].strip()
-        for field in ("after", "before")
-    ):
+def _s02_separation_boundaries(value: object, blocked: frozenset[int], code: str) -> None:
+    keys = {"after", "before", "boundaries"}
+    if not isinstance(value, dict) or set(value) - keys:
         raise StandardResultsError(code)
+    section = value
+    for field in ("after", "before"):
+        if field not in section:
+            _s02_require_review_field("separation_of_concerns", field, blocked, code)
+        elif not isinstance(section[field], str) or not section[field].strip():
+            raise StandardResultsError(code)
+    if "boundaries" not in section:
+        _s02_require_review_field("separation_of_concerns", "boundaries", blocked, code)
+        return
     rows = _s02_rows(section["boundaries"], {"after", "before", "kind", "path", "symbol"}, code)
     identities: set[tuple[str, str, str]] = set()
     for row in rows:
@@ -696,33 +727,41 @@ def _s02_separation_boundaries(value: object, code: str) -> None:
         identities.add(identity)
 
 
+def _s02_validate_review_sections(row: dict[str, Any], blocked: frozenset[int], code: str) -> None:
+    for name, (text_fields, list_fields) in _S02_REVIEW_SECTIONS.items():
+        value = row.get(name)
+        if value is None:
+            for field in text_fields | list_fields:
+                _s02_require_review_field(name, field, blocked, code)
+            if name == "separation_of_concerns":
+                _s02_require_review_field(name, "boundaries", blocked, code)
+        elif name == "separation_of_concerns":
+            _s02_separation_boundaries(value, blocked, code)
+        else:
+            _s02_review_section(value, name, text_fields, list_fields, blocked, code)
+
+
 def _s02_review(value: object, blocks: list[str], code: str) -> None:
     owners = frozenset().union(*(standard_block_ownership.review_owners(block) for block in blocks))
     if value is None:
-        if 2 in owners:
+        if standard_block_ownership.REVIEW_STANDARDS.issubset(owners):
             return
         raise StandardResultsError(code)
-    if owners:
-        if 2 in owners:
-            raise StandardResultsError(code)
-        keys = {"separation_of_concerns"}
-        if isinstance(value, dict) and "module_boundaries" in value:
-            keys.add("module_boundaries")
-        row = _s02_exact(value, keys, code)
-        _s02_separation_boundaries(row["separation_of_concerns"], code)
-        if "module_boundaries" in row:
-            _s02_review_boundaries(row["module_boundaries"], code)
-        return
     keys = {"module_boundaries", "schema_version", *_S02_REVIEW_SECTIONS}
-    row = _s02_exact(value, keys, code)
-    if row["schema_version"] != "1.0":
+    if not isinstance(value, dict) or set(value) - keys:
         raise StandardResultsError(code)
-    for name, (text_fields, list_fields) in _S02_REVIEW_SECTIONS.items():
-        if name == "separation_of_concerns":
-            _s02_separation_boundaries(row[name], code)
-        else:
-            _s02_review_section(row[name], text_fields, list_fields, code)
-    _s02_review_boundaries(row["module_boundaries"], code)
+    row = value
+    if "schema_version" not in row:
+        if not standard_block_ownership.REVIEW_STANDARDS.issubset(owners):
+            raise StandardResultsError(code)
+    elif row["schema_version"] != "1.0":
+        raise StandardResultsError(code)
+    _s02_validate_review_sections(row, owners, code)
+    if "module_boundaries" not in row:
+        if 4 not in owners:
+            raise StandardResultsError(code)
+    else:
+        _s02_review_boundaries(row["module_boundaries"], code)
 
 
 def _s02_handoff_claim_blocks(value: object) -> list[str]:
@@ -730,9 +769,11 @@ def _s02_handoff_claim_blocks(value: object) -> list[str]:
         return []
     handoff = value["review_handoff"]
     blocks = []
-    if handoff.get("summary") != review_evidence.HANDOFF_SENTINEL:
+    if "summary" in handoff and handoff["summary"] != review_evidence.HANDOFF_SENTINEL:
         blocks.append("UNSUPPORTED_HANDOFF_CLAIM:review_handoff.summary")
-    if handoff.get("remaining_risks") != [review_evidence.HANDOFF_SENTINEL]:
+    if "remaining_risks" in handoff and handoff["remaining_risks"] != [
+        review_evidence.HANDOFF_SENTINEL
+    ]:
         blocks.append("UNSUPPORTED_HANDOFF_CLAIM:review_handoff.remaining_risks")
     return blocks
 
@@ -2124,7 +2165,7 @@ def _s02_errors(value: object) -> dict[str, str]:
     errors = dict(value)
     if set(errors) - set(_S02_SOURCE_CODES):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_SOURCE_ERRORS")
-    if any(code not in _S02_SOURCE_CODES[source] for source, code in errors.items()):
+    if any(not _s02_source_code(source, code) for source, code in errors.items()):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_SOURCE_ERRORS")
     if "gate_install" in errors:
         return {"gate_install": errors["gate_install"]}
@@ -2133,6 +2174,22 @@ def _s02_errors(value: object) -> dict[str, str]:
     if "characterization" in errors:
         errors.pop("refactor", None)
     return errors
+
+
+def _s02_source_code(source: str, code: object) -> bool:
+    if not isinstance(code, str) or not code:
+        return False
+    if code in _S02_SOURCE_CODES[source]:
+        return True
+    expected = standard_block_ownership.expected_technical_dependency(code, "")
+    dependencies = {
+        "gate_install": "gate-install",
+        "complexity": "complexity-result",
+        "characterization": "characterization-result",
+        "refactor": "refactor-policy-result",
+        "quality_provenance": "quality-profile:artifact-binding",
+    }
+    return expected is not None and expected[0] == dependencies[source]
 
 
 def _s02_source_failure(state: _S02State, source: str, code: str) -> None:
@@ -2593,7 +2650,7 @@ def compose_results(
     _s02_identity(identity)
     outcomes = _s02_outcomes(source_outcomes)
     errors = _s02_errors(source_errors)
-    if outcomes["install"] != "success":
+    if outcomes["install"] != "success" and "gate_install" not in errors:
         errors = {"gate_install": "GATE_INSTALL_FAILURE"}
     data, complexity_error = _s02_load_complexity(complexity, identity, errors, outcomes)
     short = _s02_authenticated_short(data)
@@ -2795,9 +2852,9 @@ def _s02_shared(value: object) -> dict[tuple[str, str], tuple[str, frozenset[int
             or not isinstance(row["code"], str)
             or not isinstance(row["dependency"], str)
             or not isinstance(affected, list)
+            or any(type(item) is not int or item not in range(1, 9) for item in affected)
             or affected != sorted(set(affected))
             or len(affected) < 2
-            or any(type(item) is not int or item not in range(1, 9) for item in affected)
         ):
             raise StandardResultsError("MALFORMED_SHARED_FAILURE")
         owners = frozenset(affected)

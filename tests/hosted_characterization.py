@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -15,6 +17,87 @@ from packaging.requirements import Requirement
 from supportability_gate import characterization, contract, git_changes
 
 EXECUTION_TIMEOUT_SECONDS = 120
+MAX_DIAGNOSTIC_BYTES = 8192
+_ANSI_ESCAPE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-_])")
+_CREDENTIAL = re.compile(
+    r"(?i)\b(token|password|secret|authorization)\s*[:=]\s*(?:(?:bearer|basic)\s+)?[^\s]+"
+)
+
+
+def _sanitize_diagnostic(content: bytes, roots: tuple[Path, ...]) -> tuple[bytes, bool]:
+    text = content.decode("utf-8", errors="replace")
+    for root in roots:
+        rendered = str(root.resolve())
+        text = text.replace(rendered, "<workspace>").replace(
+            rendered.replace("\\", "/"), "<workspace>"
+        )
+    for name in ("GITHUB_WORKSPACE", "RUNNER_TEMP"):
+        if value := os.environ.get(name):
+            text = text.replace(value, f"<{name.lower()}>")
+    for name, value in os.environ.items():
+        if (
+            value
+            and len(value) >= 8
+            and re.search(r"TOKEN|PASSWORD|SECRET|AUTHORIZATION", name, re.I)
+        ):
+            text = text.replace(value, "[REDACTED]")
+    text = _ANSI_ESCAPE.sub("", text)
+    text = _CREDENTIAL.sub(lambda match: f"{match.group(1)}=[REDACTED]", text)
+    text = "".join(character for character in text if character in "\n\r\t" or ord(character) >= 32)
+    encoded = text.encode("utf-8")
+    truncated = len(encoded) > MAX_DIAGNOSTIC_BYTES
+    retained = encoded[:MAX_DIAGNOSTIC_BYTES].decode("utf-8", errors="ignore").encode("utf-8")
+    return retained, truncated
+
+
+def _retain_diagnostic(
+    output: Path,
+    *,
+    stage: str,
+    code: str,
+    adapter: str | None,
+    stdout: bytes,
+    stderr: bytes,
+    roots: tuple[Path, ...],
+    identity: dict[str, str],
+) -> None:
+    try:
+        directory = output / "diagnostics"
+        directory.mkdir(parents=True, exist_ok=True)
+        name = re.sub(r"[^a-zA-Z0-9_.-]+", "-", f"{stage}--{adapter or 'stage'}")
+        diagnostic_path = directory / f"{name}.json"
+        if diagnostic_path.is_file():
+            return
+        logs = []
+        for stream, content in (("stdout", stdout), ("stderr", stderr)):
+            retained, truncated = _sanitize_diagnostic(content, roots)
+            path = directory / f"{name}.{stream}.log"
+            path.write_bytes(retained)
+            logs.append(
+                {
+                    "path": path.name,
+                    "retained_bytes": len(retained),
+                    "sha256": characterization._sha256(retained),
+                    "stream": stream,
+                    "truncated": truncated,
+                }
+            )
+        payload = {
+            "adapter": adapter,
+            "code": code,
+            "identity": identity,
+            "logs": logs,
+            "schema_version": "stage-diagnostic.v1",
+            "stage": stage,
+        }
+        diagnostic_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    except Exception:
+        # Diagnostic rendering must never change the independently captured result.
+        pass
 
 
 def _require_hosted_runner() -> None:
@@ -77,6 +160,9 @@ def _install_python_dependencies(
     target_sha: str,
     destination: Path,
     records: list[git_changes.CommandRecord],
+    diagnostics: Path | None = None,
+    stage: str = "characterization",
+    identity: dict[str, str] | None = None,
 ) -> None:
     dependencies = _python_dependencies(target, target_sha, records)
     if not dependencies:
@@ -111,10 +197,29 @@ def _install_python_dependencies(
             capture_output=True,
             timeout=EXECUTION_TIMEOUT_SECONDS,
         )
-    except (OSError, subprocess.SubprocessError) as error:
-        raise characterization.CharacterizationError(
-            "CHARACTERIZATION_PREREQUISITE_FAILED"
-        ) from error
+    except subprocess.TimeoutExpired as error:
+        code = "CHARACTERIZATION_PREREQUISITE_TIMEOUT"
+        stdout, stderr = error.stdout or b"", error.stderr or b""
+    except subprocess.CalledProcessError as error:
+        code = "CHARACTERIZATION_PREREQUISITE_FAILED"
+        stdout, stderr = error.stdout or b"", error.stderr or b""
+    except OSError as error:
+        code = "CHARACTERIZATION_PREREQUISITE_SETUP_FAILED"
+        stdout, stderr = b"", str(error).encode(errors="replace")
+    else:
+        return
+    if diagnostics is not None and identity is not None:
+        _retain_diagnostic(
+            diagnostics,
+            stage=stage,
+            code=code,
+            adapter=None,
+            stdout=stdout,
+            stderr=stderr,
+            roots=(target, destination, diagnostics),
+            identity=identity,
+        )
+    raise characterization.CharacterizationError("CHARACTERIZATION_PREREQUISITE_FAILED")
 
 
 def _command(language: str, relative_driver: str, driver: Path) -> tuple[list[str], list[str]]:
@@ -144,6 +249,9 @@ def _run_driver(
     language: str,
     content: bytes,
     dependencies: Path | None = None,
+    diagnostics: Path | None = None,
+    stage: str = "characterization",
+    identity: dict[str, str] | None = None,
 ) -> dict[str, object]:
     relative_driver, _ = characterization._scenario_paths(scenario, language)
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
@@ -165,6 +273,23 @@ def _run_driver(
         except OSError as error:
             stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
     behavior, error_code = _behavior(stdout, scenario.id) if exit_code == 0 else (None, None)
+    failure_code = (
+        error_code
+        or ("CHARACTERIZATION_TIMEOUT" if exit_code == -1 else None)
+        or ("CHARACTERIZATION_COMMAND_SETUP_FAILED" if exit_code == -127 else None)
+        or ("CHARACTERIZATION_COMMAND_FAILED" if exit_code else None)
+    )
+    if diagnostics is not None and identity is not None and failure_code is not None:
+        _retain_diagnostic(
+            diagnostics,
+            stage=stage,
+            code=failure_code,
+            adapter=scenario.id,
+            stdout=stdout,
+            stderr=stderr,
+            roots=(target, definition, diagnostics),
+            identity=identity,
+        )
     return {
         "behavior": behavior,
         "behavior_sha256": (
@@ -188,14 +313,37 @@ def _scenario_capture(
     language: str,
     records: list[git_changes.CommandRecord],
     dependencies: Path | None = None,
+    diagnostics: Path | None = None,
+    stage: str = "characterization",
+    identity: dict[str, str] | None = None,
 ) -> dict[str, object]:
     profile = characterization.scenario_language(scenario, language)
     driver_path, golden_path = characterization._scenario_paths(scenario, language)
     driver = git_changes.read_regular_blob(definition, definition_sha, driver_path, records)
     golden = git_changes.read_regular_blob(definition, definition_sha, golden_path, records)
     golden_behavior = characterization._read_json_bytes(golden.content, "MALFORMED_GOLDEN_OUTPUT")
-    first = _run_driver(target, definition, scenario, profile, driver.content, dependencies)
-    second = _run_driver(target, definition, scenario, profile, driver.content, dependencies)
+    first = _run_driver(
+        target,
+        definition,
+        scenario,
+        profile,
+        driver.content,
+        dependencies,
+        diagnostics,
+        stage,
+        identity,
+    )
+    second = _run_driver(
+        target,
+        definition,
+        scenario,
+        profile,
+        driver.content,
+        dependencies,
+        diagnostics,
+        stage,
+        identity,
+    )
     return {
         "behavior": first["behavior"],
         "behavior_sha256": first["behavior_sha256"],
@@ -229,6 +377,7 @@ def capture_evidence(
     run_id: str,
     run_attempt: str,
     job: str,
+    diagnostics: Path | None = None,
 ) -> dict[str, object]:
     """Execute fixed-convention scenarios only on a GitHub-hosted runner."""
     _require_hosted_runner()
@@ -247,13 +396,40 @@ def capture_evidence(
     )
     policy = contract.parse_contract(policy_blob.content)
     manifest = characterization._manifest(definition, head_sha, records)
+    diagnostic_identity = {
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "job": job,
+        "repository": repository,
+        "repository_id": repository_id,
+        "run_attempt": run_attempt,
+        "run_id": run_id,
+        "workflow_sha": workflow_sha,
+    }
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
         dependencies = Path(temporary)
         if policy.language in {"python", "mixed"}:
-            _install_python_dependencies(target, target_sha, dependencies, records)
+            _install_python_dependencies(
+                target,
+                target_sha,
+                dependencies,
+                records,
+                diagnostics,
+                f"characterization-{side}",
+                diagnostic_identity,
+            )
         scenarios = [
             _scenario_capture(
-                target, definition, head_sha, item, policy.language, records, dependencies
+                target,
+                definition,
+                head_sha,
+                item,
+                policy.language,
+                records,
+                dependencies,
+                diagnostics,
+                f"characterization-{side}",
+                diagnostic_identity,
             )
             for item in manifest.scenarios
         ]
@@ -314,10 +490,32 @@ def main(argv: list[str] | None = None) -> int:
             run_id=arguments.run_id,
             run_attempt=arguments.run_attempt,
             job=arguments.job,
+            diagnostics=Path(arguments.output).parent,
         )
         characterization._write_json(Path(arguments.output), result)
     except Exception as error:
-        print(getattr(error, "code", "TECHNICAL_FAILURE"))
+        code = getattr(error, "code", "UNEXPECTED_CHARACTERIZATION_FAILURE")
+        output = Path(arguments.output)
+        _retain_diagnostic(
+            output.parent,
+            stage=f"characterization-{arguments.side}",
+            code=code,
+            adapter=None,
+            stdout=b"",
+            stderr=f"{type(error).__name__}: {error}".encode(errors="replace"),
+            roots=(Path(arguments.target_repository), Path(arguments.definition_repository)),
+            identity={
+                "base_sha": str(arguments.base_ref),
+                "head_sha": str(arguments.head_ref),
+                "job": str(arguments.job),
+                "repository": str(arguments.repository),
+                "repository_id": str(arguments.repository_id),
+                "run_attempt": str(arguments.run_attempt),
+                "run_id": str(arguments.run_id),
+                "workflow_sha": str(arguments.workflow_sha),
+            },
+        )
+        print(code)
         return 2
     print("PASS")
     return 0
