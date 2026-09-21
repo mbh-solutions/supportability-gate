@@ -13,6 +13,7 @@ proof = "Retained red-first nodes reproduced each failure before production edit
 before = "Review parsing mixed whole-document failure with a Gate 2 exception, result validation assumed nested types, and workflow failures lost their original stage diagnostics."
 after = "Review parsing normalizes each owned section, canonical validation enforces every lane's mandatory evidence, and a separate versioned diagnostic envelope carries bounded logs and exact identity."
 boundaries = [
+  { path = "src/supportability_gate/cli.py", kind = "function", symbol = "_read_review_evidence", before = "The pipeline called the deployed single-defect compatibility contract.", after = "The pipeline explicitly consumes the complete section-aware result." },
   { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "_evidence_classes", before = "Evidence sources were not classified.", after = "Validated sources are classified without changing decisions." },
   { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "_failure_explanation", before = "Stage failures had generic explanations.", after = "Original stage and code point to retained diagnostics." },
   { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "standard_result_summary", before = "Summaries exposed one evidence list.", after = "Summaries expose truthful evidence classes." },
@@ -32,7 +33,8 @@ boundaries = [
   { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_handoff", before = "This helper raised on one unsupported claim.", after = "Claim collection reports every present defect." },
   { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_root", before = "Root validation stopped at one member.", after = "All missing and unknown root members are recorded." },
   { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "_validate_section", before = "This helper required a complete section.", after = "Independent collectors retain valid fields." },
-  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "Only the first defect plus Gate 2 was returned.", after = "All defects and valid sections are returned." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_evidence", before = "The deployed evaluator was also used as the internal aggregation path.", after = "The deployed single-defect contract remains stable as a compatibility boundary." },
+  { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "evaluate_review_sections", before = "No explicit complete section-aware entry point existed.", after = "The internal pipeline receives all defects and every independently valid section." },
   { path = "src/supportability_gate/review_evidence.py", kind = "function", symbol = "parse_review_evidence", before = "Strict parsing duplicated fail-fast validation.", after = "Strict parsing reuses normalized evaluation." },
   { path = "src/supportability_gate/review_evidence.py", kind = "module", symbol = "src/supportability_gate/review_evidence.py", before = "The module combined fail-fast parsing with a lane exception.", after = "The module owns one normalized per-section result." },
   { path = "src/supportability_gate/standard_block_ownership.py", kind = "function", symbol = "expected_technical_dependency", before = "Only fixed generic source errors were known.", after = "Strict typed stage codes map through existing owners." },
@@ -68,7 +70,7 @@ boundaries = [
 
 [architecture]
 dependency_direction = "Hosted adapters emit separate diagnostics; the producer validates them; canonical results map them through existing ownership; reporting presents only validated decisions. No reviewer or second policy engine is introduced."
-reviewed_paths = [".github/workflows/organization-required.yml", "src/supportability_gate/reporting.py", "src/supportability_gate/review_evidence.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "src/supportability_gate/standard_results_enforcer.py", "src/supportability_gate/standard_results_producer.py", "tests/hosted_characterization.py", "tests/hosted_quality_profile.py", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
+reviewed_paths = [".github/workflows/organization-required.yml", "src/supportability_gate/cli.py", "src/supportability_gate/reporting.py", "src/supportability_gate/review_evidence.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "src/supportability_gate/standard_results_enforcer.py", "src/supportability_gate/standard_results_producer.py", "tests/hosted_characterization.py", "tests/hosted_quality_profile.py", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/standard_results.py"

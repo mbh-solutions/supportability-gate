@@ -2697,7 +2697,7 @@ after = "One owner."
 boundaries = []
 """
 
-    review, blocks = review_evidence.evaluate_review_evidence(content, ())
+    review, blocks = review_evidence.evaluate_review_sections(content, ())
 
     assert review == {
         "module_boundaries": [],
@@ -2752,7 +2752,7 @@ def test_unknown_root_review_key_is_shared_document_defect() -> None:
 
 
 def test_duplicate_review_toml_keys_are_one_typed_document_defect() -> None:
-    review, blocks = review_evidence.evaluate_review_evidence(
+    review, blocks = review_evidence.evaluate_review_sections(
         b'schema_version = "1.0"\nschema_version = "1.0"\n', ()
     )
 

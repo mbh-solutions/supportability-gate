@@ -673,7 +673,7 @@ def _read_review_evidence(
         )
     except git_changes.GitError as error:
         if error.code == "MISSING_BLOB":
-            review, blocks = review_evidence.evaluate_review_evidence(None, ())
+            review, blocks = review_evidence.evaluate_review_sections(None, ())
             return review, blocks, {"base": _review_binding(base_blob), "head": None}
         if error.code == "SYMLINK_OR_NONFILE":
             return (
@@ -686,7 +686,7 @@ def _read_review_evidence(
             )
         errors.append(function_changes.PythonSourceError("REVIEW_EVIDENCE_UNAVAILABLE", str(error)))
         return None, (), {"base": _review_binding(base_blob), "head": None}
-    review, blocks = review_evidence.evaluate_review_evidence(
+    review, blocks = review_evidence.evaluate_review_sections(
         head_blob.content, expected_boundaries
     )
     return (

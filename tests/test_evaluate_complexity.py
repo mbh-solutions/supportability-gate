@@ -20,6 +20,7 @@ from supportability_gate import (
     git_changes,
     quality_profile,
     reporting,
+    review_evidence,
     standard_results,
 )
 
@@ -206,6 +207,17 @@ def _review_evidence_with_boundaries(
         for identity in identities
     )
     return _review_evidence_with_boundary_rows(f"[{rows}]", new_path=new_path)
+
+
+def test_deployed_review_evaluator_retains_single_defect_contract() -> None:
+    content = _review_evidence_with_boundaries(("src/sample.py", "function", "current"))
+
+    parsed, blocks = review_evidence.evaluate_review_evidence(
+        content.encode(), (("tests/characterization/forged.py", "function", "forged"),)
+    )
+
+    assert parsed is None
+    assert blocks == ("INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",)
 
 
 def _run_git(repository: Path, *arguments: str) -> str:

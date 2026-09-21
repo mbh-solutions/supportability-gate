@@ -276,7 +276,30 @@ def evaluate_review_evidence(
     content: bytes | None,
     expected_boundaries: tuple[tuple[str, str, str], ...] | None,
 ) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
-    """Return normalized evidence or deterministic blocking reasons."""
+    """Preserve the deployed single-defect compatibility contract."""
+    if content is None:
+        return None, ("MISSING_REVIEW_EVIDENCE:document",)
+    review, blocks = _evaluate_document(content, expected_boundaries)
+    if not blocks:
+        return review, ()
+    gate_two = tuple(
+        block for block in blocks if block.partition(":")[2].startswith("separation_of_concerns")
+    )
+    compatible: ReviewEvidence | None = None
+    if review is not None and not gate_two and "separation_of_concerns" in review:
+        compatible = {"separation_of_concerns": review["separation_of_concerns"]}
+        if "module_boundaries" in review:
+            compatible["module_boundaries"] = review["module_boundaries"]
+    first = blocks[0]
+    retained = (first,) if not gate_two or first in gate_two else (first, gate_two[0])
+    return compatible, retained
+
+
+def evaluate_review_sections(
+    content: bytes | None,
+    expected_boundaries: tuple[tuple[str, str, str], ...] | None,
+) -> tuple[ReviewEvidence | None, tuple[str, ...]]:
+    """Return every valid owned section and every deterministic defect."""
     if content is None:
         return None, ("MISSING_REVIEW_EVIDENCE:document",)
     return _evaluate_document(content, expected_boundaries)
