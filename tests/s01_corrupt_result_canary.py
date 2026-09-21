@@ -27,6 +27,7 @@ def _fixtures(repository: Path) -> ModuleType:
 def main() -> int:
     repository = Path(os.environ["TARGET_REPOSITORY"])
     gate_source = Path(os.environ["DEPLOYED_GATE_SOURCE"])
+    sys.path.insert(0, str(gate_source))
     fixtures = _fixtures(repository)
     payload = fixtures._compose(fixtures._inputs())
     payload["applicability_evidence"]["changed_files"][0]["status"] = {}
