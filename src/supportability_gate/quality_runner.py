@@ -246,7 +246,7 @@ def _write_typescript_configs(
     tools.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)
     parser_url = "file:///work/quality-tools/node_modules/@typescript-eslint/parser/dist/index.js"
-    (output / "eslint.config.mjs").write_text(
+    (tools / "eslint.config.mjs").write_text(
         "import parser from " + json.dumps(parser_url) + ";\n"
         "export default [{ files: ['**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'], "
         "languageOptions: { parser, parserOptions: { ecmaVersion: 'latest', sourceType: 'module' } }, "
@@ -255,8 +255,8 @@ def _write_typescript_configs(
         encoding="utf-8",
         newline="\n",
     )
-    (output / "prettier.json").write_text("{}\n", encoding="utf-8", newline="\n")
-    (output / "prettier.ignore").write_text("\n", encoding="utf-8", newline="\n")
+    (tools / "prettier.json").write_text("{}\n", encoding="utf-8", newline="\n")
+    (tools / "prettier.ignore").write_text("\n", encoding="utf-8", newline="\n")
     cruiser = {
         "forbidden": [
             {"name": "no-circular", "severity": "error", "from": {}, "to": {"circular": True}},
@@ -275,7 +275,7 @@ def _write_typescript_configs(
         ],
         "options": {"doNotFollow": {"path": "node_modules"}},
     }
-    (output / "dependency-cruiser.json").write_text(
+    (tools / "dependency-cruiser.json").write_text(
         json.dumps(cruiser, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
     check = {
@@ -311,7 +311,7 @@ def _write_typescript_configs(
     )
 
 
-def _write_python_configs(output: Path, repository: Path, source_files: tuple[str, ...]) -> None:
+def _write_python_configs(output: Path, source_files: tuple[str, ...]) -> None:
     output.mkdir(parents=True, exist_ok=True)
     (output / "mypy.ini").write_text(
         "[mypy]\npython_version = 3.12\nstrict = True\nmypy_path = src\n",
@@ -319,8 +319,8 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         newline="\n",
     )
     (output / "pytest.ini").write_text(
-        f"[pytest]\ntestpaths = tests\npythonpath =\n    {repository / 'src'}\n"
-        f"    {repository}\n"
+        "[pytest]\ntestpaths = tests\npythonpath =\n    /target/src\n"
+        "    /target\n"
         "addopts = -p no:cacheprovider\n",
         encoding="utf-8",
         newline="\n",
@@ -392,12 +392,10 @@ def command_plans(
     if language in {"python", "mixed"}:
         _write_python_configs(
             output,
-            repository,
             tuple(path for path in source_files if path.endswith((".py", ".pyi"))),
         )
         _write_python_configs(
             trusted,
-            Path("/target"),
             tuple(path for path in source_files if path.endswith((".py", ".pyi"))),
         )
     lint_imports = shutil.which("lint-imports") or str(

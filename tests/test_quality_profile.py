@@ -629,9 +629,34 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert quality_runner._write_coverage_config(trusted) == trusted / "coverage.ini"
     assert (trusted / "coverage.ini").read_bytes() == b"[report]\nexclude_lines =\n"
     assert "testpaths = tests" in (trusted / "pytest.ini").read_text()
+    assert "pythonpath =\n    /target/src\n    /target" in (output / "pytest.ini").read_text()
     trusted_pytest = (trusted / "pytest.ini").read_text().replace("\\", "/")
     assert "pythonpath =\n    /target/src\n    /target" in trusted_pytest
     assert "mypy_path = src" in (output / "trusted" / "mypy.ini").read_text()
+
+
+def test_typescript_configs_share_the_read_only_tool_mount(tmp_path: Path) -> None:
+    repository = tmp_path / "target"
+    output = tmp_path / "output"
+    repository.mkdir()
+
+    plans = quality_runner.command_plans(
+        "typescript", repository, output, (), ("web/domain/model.ts",)
+    )
+
+    for tools in (output / "quality-tools", output / "trusted" / "quality-tools"):
+        assert (tools / "eslint.config.mjs").is_file()
+        assert (tools / "prettier.json").read_text() == "{}\n"
+        assert (tools / "prettier.ignore").is_file()
+        assert (tools / "dependency-cruiser.json").is_file()
+    eslint = next(plan for plan in plans if plan.adapter == "typescript.eslint.v1")
+    sandbox = quality_runner.sandbox_command(
+        eslint,
+        repository=repository,
+        output=output,
+        collector=Path(__file__).parent,
+    )
+    assert "/work/quality-tools/eslint.config.mjs" in sandbox
 
 
 def _run_git(repository: Path, *arguments: str) -> str:

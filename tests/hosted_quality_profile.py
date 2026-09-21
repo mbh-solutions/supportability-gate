@@ -72,8 +72,10 @@ def _prepare_container() -> str:
 
 def _distribution_receipts(paths: tuple[Path, ...] | None = None) -> tuple[str, ...]:
     receipts: list[str] = []
-    distributions = importlib.metadata.distributions(
-        path=[str(path) for path in paths] if paths else None
+    distributions = (
+        importlib.metadata.distributions(path=[str(path) for path in paths])
+        if paths
+        else importlib.metadata.distributions()
     )
     for distribution in distributions:
         name = distribution.metadata.get("Name")
