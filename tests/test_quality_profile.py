@@ -600,6 +600,38 @@ HOSTILE_CAPTURE_FIXTURES = (
     "evidence_overwrite",
 )
 
+HOSTILE_CAPTURE_TESTS = {
+    "source_blank": (
+        "from pathlib import Path\n\n\n"
+        "def test_source_blank() -> None:\n"
+        "    source = Path(__file__).parents[1] / 'src' / 'sample' / 'risk.py'\n"
+        "    source.write_text('', encoding='utf-8')\n"
+    ),
+    "source_restore": (
+        "from pathlib import Path\n\n\n"
+        "def test_source_restore() -> None:\n"
+        "    source = Path(__file__).parents[1] / 'src' / 'sample' / 'risk.py'\n"
+        "    original = source.read_bytes()\n"
+        "    source.write_bytes(b'')\n"
+        "    source.write_bytes(original)\n"
+    ),
+    "tool_overwrite": (
+        "from pathlib import Path\n\n\n"
+        "def test_tool_overwrite() -> None:\n"
+        "    Path('/trusted/coverage.ini').write_text('[report]\\nexclude_lines =\\n    .+\\n')\n"
+    ),
+    "collector_overwrite": (
+        "from pathlib import Path\n\n\n"
+        "def test_collector_overwrite() -> None:\n"
+        "    Path('/collector/hosted_quality_profile.py').write_text('raise SystemExit(0)\\n')\n"
+    ),
+    "evidence_overwrite": (
+        "from pathlib import Path\n\n\n"
+        "def test_evidence_overwrite() -> None:\n"
+        "    Path('/evidence/quality-gates.json').write_text('{}\\n')\n"
+    ),
+}
+
 
 def _source_blank_repository(tmp_path: Path) -> tuple[Path, str, str, Path, str]:
     repository = tmp_path / "source-blank-target"
@@ -633,10 +665,7 @@ def _source_blank_repository(tmp_path: Path) -> tuple[Path, str, str, Path, str]
     tests = repository / "tests"
     tests.mkdir()
     (tests / "test_source_blank.py").write_text(
-        "from pathlib import Path\n\n\n"
-        "def test_source_blank() -> None:\n"
-        "    source = Path(__file__).parents[1] / 'src' / 'sample' / 'risk.py'\n"
-        "    source.write_text('', encoding='utf-8')\n",
+        HOSTILE_CAPTURE_TESTS["source_blank"],
         encoding="utf-8",
         newline="\n",
     )
@@ -693,6 +722,12 @@ def test_source_blank_hostile_fixture_is_denied_without_source_mutation(tmp_path
     assert completed.stdout.decode().strip() == "TARGET_SANDBOX_WRITE_DENIED"
     assert hashlib.sha256(source.read_bytes()).hexdigest() == source_sha256
     assert not output.exists()
+
+
+def test_all_s02_hostile_capture_fixtures_are_retained() -> None:
+    assert tuple(HOSTILE_CAPTURE_TESTS) == HOSTILE_CAPTURE_FIXTURES
+    assert "Path(__file__).parents[1]" in HOSTILE_CAPTURE_TESTS["source_blank"]
+    assert "return 1 / 0" not in HOSTILE_CAPTURE_TESTS["source_blank"]
 
 
 def _png_with_ihdr(ihdr: bytes) -> bytes:
