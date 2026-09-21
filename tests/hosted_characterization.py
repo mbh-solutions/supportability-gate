@@ -413,6 +413,17 @@ def _run_driver(
                     "CHARACTERIZATION_SANDBOX_WRITE_DENIED"
                 )
             if exit_code == 125:
+                if diagnostics is not None and identity is not None:
+                    _retain_diagnostic(
+                        diagnostics,
+                        stage=stage,
+                        code="TARGET_SANDBOX_RUNTIME_FAILED",
+                        adapter=scenario.id,
+                        stdout=stdout,
+                        stderr=stderr,
+                        roots=(target, definition, diagnostics),
+                        identity=identity,
+                    )
                 raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
         except subprocess.TimeoutExpired as error:
             cidfile = output / "container-ids" / f"characterization-{scenario.id}.cid"
