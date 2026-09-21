@@ -60,16 +60,10 @@
     },
     {
       "covers": [
-        "src/supportability_gate/clause_inventory.py"
-      ],
-      "id": "clause-inventory-baseline",
-      "kind": "regression"
-    },
-    {
-      "covers": [
+        "src/supportability_gate/clause_inventory.py",
         "src/supportability_gate/source_integrity.py"
       ],
-      "id": "source-integrity-boundary",
+      "id": "clause-inventory-baseline",
       "kind": "regression"
     },
     {
