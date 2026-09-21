@@ -824,6 +824,10 @@ def test_hostile_fixture_is_denied_without_authoritative_mutation(
     )
     assert source_after == source_sha256
     assert not output.exists()
+    pytest.fail(
+        "NEVER_MERGE_HOSTILE_QUALIFICATION_CANARY:"
+        + json.dumps({"fixture": fixture, **reproduction}, sort_keys=True)
+    )
 
 
 def _retained_diagnostics(output: Path) -> dict[str, str]:
