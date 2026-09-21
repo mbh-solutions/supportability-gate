@@ -6,7 +6,7 @@ status, authorized work, and historical evidence are recorded in the
 
 | Current responsibility | Owner | Evidence boundary |
 |---|---|---|
-| Immutable Standard and canonical 218-clause registry | Source Validation | Schema/provenance validation; registry meaning is digest-protected |
+| Immutable Standard, roadmap, and canonical 218-clause registry | Source Integrity plus Source Validation | Independently pinned bytes, trusted schema/provenance validation, and sandboxed conformance |
 | Touched-function complexity and progressive tightening | Supportability 1 | Measured facts plus deterministic decisions |
 | Separation-of-concerns records | Supportability 2 | Author declarations; qualitative truth is not machine judged |
 | Static dependency direction and cycles | Supportability 3 | Deterministic decisions over the supported static graph |
@@ -39,4 +39,28 @@ status, authorized work, and historical evidence are recorded in the
 | Naming, cohesion, design quality, and exhaustive intended behavior | ACCEPTED_BOUNDARY | Not independently judged |
 | Outside-profile code and unclassified/dynamic architecture | ACCEPTED_BOUNDARY | Not certified |
 | Organization required-workflow enforcement proof | DETERMINISTIC | Protected workflow |
+| Source workflow, immutable inputs, tool/action pins, and validator conformance | DETERMINISTIC | Independently pinned Source Integrity workflow |
 | Protected clean, policy-BLOCK, and technical-failure canaries | DETERMINISTIC | Never merge |
+
+## Source Integrity promotion and rollback
+
+The source-only organization rule targets only `mbh-solutions/supportability-gate`. It pins
+`.github/workflows/source-integrity.yml` to an exact normally merged commit and requires the
+`Source Integrity` context from GitHub Actions App `15368`, in addition to Source Validation and
+all eight existing contexts. The pinned guard checks candidate bytes and runs its own conformance
+fixture against candidate validator code inside the S02 read-only, no-network container boundary.
+Candidate workflows and tests never supply that fixture.
+
+Guard changes use the normal protected path: qualify and merge the source PR under the current
+pin, run the newly merged guard against never-merge positive, BLOCK, and TECHNICAL_FAILURE
+canaries, then change only the source-integrity workflow SHA to that qualified merge. Rollback
+changes only that SHA to the previously qualified revision; it never removes a rule, context,
+strictness, review-thread requirement, or zero-bypass protection.
+
+| Candidate state | Source Integrity result |
+|---|---|
+| Current clean source upgrade retaining required controls | PASS |
+| Source Validation reduced or disabled | BLOCK (`SOURCE_VALIDATION_*`) |
+| Standard, roadmap, or canonical inventory tamper | BLOCK (`IMMUTABLE_SOURCE_MISMATCH` or `INVENTORY:*`) |
+| Candidate validator accepts a trusted negative case | BLOCK (`CONFORMANCE_CASE:*`) |
+| Missing runtime, result, identity, or artifact | TECHNICAL_FAILURE |

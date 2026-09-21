@@ -1,44 +1,42 @@
 schema_version = "1.0"
 module_boundaries = [
-  { path = "src/supportability_gate/quality_runner.py", owner_path = "src/supportability_gate/quality_runner.py", basis = "responsibility", justification = "Owns the fixed command plans and construction of the restricted target-execution boundary." },
-  { path = "src/supportability_gate/quality_profile.py", owner_path = "src/supportability_gate/quality_profile.py", basis = "responsibility", justification = "Owns validation of quality evidence derived from exact Git objects." },
-  { path = "src/supportability_gate/characterization.py", owner_path = "src/supportability_gate/characterization.py", basis = "responsibility", justification = "Owns authenticated characterization capture and environment-provenance verification." },
+  { path = "tests/source_integrity_check.py", owner_path = "tests/source_integrity_check.py", basis = "responsibility", justification = "Owns independently pinned static receipts, source-control validation, sandboxed conformance orchestration, and its authenticated result." },
+  { path = "tests/source_integrity_conformance.py", owner_path = "tests/source_integrity_conformance.py", basis = "responsibility", justification = "Owns the trusted positive, policy-negative, and malformed-input cases executed against candidate validator code." },
 ]
 
 [behavior]
-intended_behavior = "Target-controlled quality and characterization commands execute with authenticated source, a fixed read-only Git toolchain and other trusted tools, and the collector mounted read-only; only command scratch is writable; network, privilege escalation, excess processes, memory, and runtime are bounded, with an init process reaping orphaned children."
-proof = "Hosted tests exercise ordinary Python, TypeScript, and mixed targets plus source blank, source restore, tool overwrite, collector overwrite, and authoritative-evidence overwrite attempts; local tests validate the fixed Git mounts, init process, bounded full-suite timeout, retained runtime diagnostics, exact Git receipts, provenance, and fail-closed drift handling."
+intended_behavior = "A source-only pinned workflow independently authenticates immutable inputs and required controls, validates the canonical clause registry with trusted code, and executes trusted conformance against candidate validator code only inside the S02 sandbox."
+proof = "Local tests cover current source, workflow replacement, immutable tamper, clean trusted cases, and candidate-validator weakening; protected canaries exercise PASS, policy BLOCK, technical failure, and pinned-fixture independence."
 
 [characterization]
-captured_behavior = "Before S02, a target test could blank a committed source file and all seven Python quality commands still exited zero while later evidence observed the mutated bytes."
-proof = "The retained hosted baseline run records seven zero exits, runner exit zero, the committed pre-run source hash, and the empty-file post-run hash; the replacement fixtures require deterministic denial without authoritative mutation."
+captured_behavior = "Before S03, a coordinated candidate replaced Source Validation with success, removed the Standard negative test, weakened the inventory validator, and changed the Standard; the candidate-controlled check passed while pinned Gate lanes blocked."
+proof = "Never-merge baseline PR #230 retains exact head, candidate Source Validation run, pinned organization run, named policy blocks, and artifact digests."
 
 [separation_of_concerns]
-before = "Target commands, source inputs, trusted tools, collector code, and authoritative outputs shared writable checkout authority, while characterization did not bind exact runtime and dependency provenance."
-after = "The runner constructs the fixed restricted container boundary, hosted adapters supervise execution and retain sidecars, and validators independently authenticate exact Git receipts plus quality and characterization provenance."
+before = "Source Validation and its tests came from the candidate branch; coordinated edits could make its required context report success even though other Gate defenses might still block."
+after = "A source-only workflow comes from an exact protected pin, owns its manifest and conformance fixture, authenticates candidate bytes, and imports candidate validator code only in S02 isolation."
 boundaries = [
-  { path = "src/supportability_gate/quality_runner.py", kind = "function", symbol = "sandbox_command", before = "A fresh characterization supervisor constructed a read-only bind mount for its trusted directory before that host path existed, so Docker rejected the sandbox with exit 125.", after = "The runner creates every supervisor-owned bind source, including the trusted directory, before constructing the fixed sandbox command." },
 ]
 
 [architecture]
-dependency_direction = "Hosted adapters call the fixed runner boundary and emit public evidence plus separate provenance; pure validators authenticate those artifacts from exact Git data. Target code never owns the collector, trusted tools, or final evidence output."
-reviewed_paths = [".github/workflows/organization-required.yml", ".supportability-review.toml", "pyproject.toml", "requirements-dev.lock", "src/supportability_gate/characterization.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "tests/hosted_characterization.py", "tests/hosted_quality_profile.py", "tests/test_characterization.py", "tests/test_quality_profile.py"]
+dependency_direction = "The source-integrity orchestrator depends inward on the existing clause validator and S02 sandbox constructor; the trusted fixture is mounted read-only and candidate code cannot own the host collector or authoritative output."
+reviewed_paths = [".github/workflows/source-integrity.yml", ".supportability-review.toml", "docs/enforcement_matrix.md", "docs/source_integrity_manifest.json", "tests/source_integrity_check.py", "tests/source_integrity_conformance.py", "tests/test_source_integrity.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/quality_runner.py"
-owns = "Fixed target command plans and construction of the digest-pinned restricted execution boundary."
-does_not_own = "Repository policy decisions, semantic review, artifact transport, GitHub protection administration, or successor-slice source integrity."
+path = "tests/source_integrity_check.py"
+owns = "Pinned source-input authentication, trusted source-control checks, isolated conformance orchestration, and exact result identity."
+does_not_own = "The eight consumer policy lanes, semantic review, candidate workflow execution, ruleset administration, or successor remediation."
 
 [incremental_refactor]
-target = "Isolate target execution and bind exact source, runtime, executable, and dependency provenance without changing the public quality evidence schema or adding another policy engine."
-completed_step = "Made the fixed sandbox constructor create its trusted bind source before Docker invocation, with a focused regression for a fresh supervisor directory."
+target = "Protect essential Gate source qualification independently from candidate-controlled workflows and tests without adding another policy engine."
+completed_step = "Added one pinned source-only guard with immutable receipts, current-control validation, trusted clause conformance in the existing S02 sandbox, and authenticated evidence output."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Sandbox, provenance, receipt, execution, and provisioning names distinguish authority and observation source."
-cohesion = "Runner construction remains in quality_runner, quality evidence validation remains in quality_profile, characterization verification remains in characterization, and hosted adapters own runner-only orchestration."
-intended_behavior = "Target-controlled commands cannot modify authenticated inputs, trusted tools, collectors, or authoritative outputs, and missing or drifting provenance fails closed."
-reviewability = "Tests cover fixed Docker, init, timeout, and Git mount arguments; safe environment; retained runtime failure details; exact source receipts; provenance authentication; environment drift; ordinary language profiles; and five hostile write attempts."
+naming = "Trusted root, candidate repository, manifest, receipts, conformance, and source identity distinguish every authority boundary."
+cohesion = "The new production module owns source integrity only; the fixture owns cases; the workflow owns transport; the existing validator and S02 sandbox keep their original responsibilities."
+intended_behavior = "Candidate workflow/test coordination cannot supply the required Source Integrity result, alter immutable bytes, weaken canonical mapping, or execute candidate validator code outside isolation."
+reviewability = "The manifest names protected inputs and pins; result JSON binds exact identities and receipts; focused tests reproduce success, workflow replacement, tamper, and weakened-validator outcomes."
