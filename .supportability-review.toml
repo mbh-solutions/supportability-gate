@@ -68,10 +68,6 @@ boundaries = [
   { path = "src/supportability_gate/standard_results_producer.py", kind = "module", symbol = "src/supportability_gate/standard_results_producer.py", before = "The module used result files and coarse outcomes only.", after = "The module validates separate diagnostics without changing decision schema." },
 ]
 
-[architecture]
-dependency_direction = "Hosted adapters emit separate diagnostics; the producer validates them; canonical results map them through existing ownership; reporting presents only validated decisions. No reviewer or second policy engine is introduced."
-reviewed_paths = [".github/workflows/organization-required.yml", "src/supportability_gate/cli.py", "src/supportability_gate/reporting.py", "src/supportability_gate/review_evidence.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "src/supportability_gate/standard_results_enforcer.py", "src/supportability_gate/standard_results_producer.py", "tests/hosted_characterization.py", "tests/hosted_quality_profile.py", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
-
 [responsibility_boundary]
 path = "src/supportability_gate/standard_results.py"
 owns = "Validation and composition of eight independently owned deterministic lane results, including exact review-field and typed-stage ownership."
