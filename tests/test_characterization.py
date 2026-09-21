@@ -80,6 +80,50 @@ def test_runtime_probe_retains_sandbox_stderr(
     assert (retained / payload["logs"][1]["path"]).read_text() == "runtime stderr"
 
 
+def test_scenario_retains_sandbox_runtime_stderr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target"
+    definition = tmp_path / "definition"
+    diagnostics = tmp_path / "retained"
+    target.mkdir()
+    definition.mkdir()
+    monkeypatch.setattr(
+        hosted_characterization.quality_runner,
+        "sandbox_command",
+        lambda *args, **kwargs: ("docker", "run"),
+    )
+    monkeypatch.setattr(
+        hosted_characterization.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            ["docker", "run"], 125, b"scenario stdout", b"scenario stderr"
+        ),
+    )
+    scenario = characterization.Scenario("victim", "regression", ("src/sample.py",))
+
+    with pytest.raises(
+        characterization.CharacterizationError, match="TARGET_SANDBOX_RUNTIME_FAILED"
+    ):
+        hosted_characterization._run_driver(
+            target,
+            definition,
+            scenario,
+            "python",
+            b"print('driver')\n",
+            diagnostics=diagnostics,
+            stage="characterization-head",
+            identity={"workflow_sha": "f" * 40},
+        )
+
+    retained = diagnostics / "diagnostics"
+    payload = json.loads(
+        (retained / "characterization-head--victim.json").read_text(encoding="utf-8")
+    )
+    assert payload["code"] == "TARGET_SANDBOX_RUNTIME_FAILED"
+    assert (retained / payload["logs"][1]["path"]).read_text() == "scenario stderr"
+
+
 PYTHON_CONTRACT = """\
 schema_version = "1.0"
 language = "python"

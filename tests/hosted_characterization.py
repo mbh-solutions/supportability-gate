@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+import traceback
 from pathlib import Path
 
 from packaging.requirements import Requirement
@@ -413,6 +414,17 @@ def _run_driver(
                     "CHARACTERIZATION_SANDBOX_WRITE_DENIED"
                 )
             if exit_code == 125:
+                if diagnostics is not None and identity is not None:
+                    _retain_diagnostic(
+                        diagnostics,
+                        stage=stage,
+                        code="TARGET_SANDBOX_RUNTIME_FAILED",
+                        adapter=scenario.id,
+                        stdout=stdout,
+                        stderr=stderr,
+                        roots=(target, definition, diagnostics),
+                        identity=identity,
+                    )
                 raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
         except subprocess.TimeoutExpired as error:
             cidfile = output / "container-ids" / f"characterization-{scenario.id}.cid"
@@ -704,7 +716,7 @@ def main(argv: list[str] | None = None) -> int:
             code=code,
             adapter=None,
             stdout=b"",
-            stderr=f"{type(error).__name__}: {error}".encode(errors="replace"),
+            stderr=traceback.format_exc().encode(errors="replace"),
             roots=(Path(arguments.target_repository), Path(arguments.definition_repository)),
             identity={
                 "base_sha": str(arguments.base_ref),
