@@ -615,6 +615,8 @@ def _evaluate(
         ]
     )
     result = json.loads((output / "complexity-result.json").read_text(encoding="utf-8"))
+    if exit_code == 2:
+        print("NEVER_MERGE_TECHNICAL_RESULT:" + json.dumps(result, sort_keys=True))
     return exit_code, result
 
 
