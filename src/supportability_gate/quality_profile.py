@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from supportability_gate.function_changes import ChangedFileAssessment
 
 SCHEMA_VERSION = "quality-gates.v6"
-TIMEOUT_SECONDS = 180
+TIMEOUT_SECONDS = 600
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 SOURCE_SUFFIXES = {
     "python": (".py", ".pyi"),

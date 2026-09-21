@@ -6,8 +6,8 @@ module_boundaries = [
 ]
 
 [behavior]
-intended_behavior = "Target-controlled quality and characterization commands execute with authenticated source, a fixed read-only Git toolchain and other trusted tools, and the collector mounted read-only; only command scratch is writable; network, privilege escalation, excess processes, and excess memory are denied."
-proof = "Hosted tests exercise ordinary Python, TypeScript, and mixed targets plus source blank, source restore, tool overwrite, collector overwrite, and authoritative-evidence overwrite attempts; local tests validate the fixed Git mounts, command construction, exact Git receipts, provenance, and fail-closed drift handling."
+intended_behavior = "Target-controlled quality and characterization commands execute with authenticated source, a fixed read-only Git toolchain and other trusted tools, and the collector mounted read-only; only command scratch is writable; network, privilege escalation, excess processes, memory, and runtime are bounded, with an init process reaping orphaned children."
+proof = "Hosted tests exercise ordinary Python, TypeScript, and mixed targets plus source blank, source restore, tool overwrite, collector overwrite, and authoritative-evidence overwrite attempts; local tests validate the fixed Git mounts, init process, bounded full-suite timeout, retained runtime diagnostics, exact Git receipts, provenance, and fail-closed drift handling."
 
 [characterization]
 captured_behavior = "Before S02, a target test could blank a committed source file and all seven Python quality commands still exited zero while later evidence observed the mutated bytes."
@@ -17,8 +17,8 @@ proof = "The retained hosted baseline run records seven zero exits, runner exit 
 before = "Target commands, source inputs, trusted tools, collector code, and authoritative outputs shared writable checkout authority, while characterization did not bind exact runtime and dependency provenance."
 after = "The runner constructs the fixed restricted container boundary, hosted adapters supervise execution and retain sidecars, and validators independently authenticate exact Git receipts plus quality and characterization provenance."
 boundaries = [
-  { path = "src/supportability_gate/quality_runner.py", kind = "function", symbol = "_runtime_mounts", before = "The S02 boundary mounted hosted runtimes and shared libraries but omitted the Git executable and support directories required by target test suites.", after = "The supervisor binds only fixed read-only system libraries, the Git executable and support directories, and the exact Node entry point needed by the mounted hosted runtimes." },
-  { path = "src/supportability_gate/quality_runner.py", kind = "module", symbol = "src/supportability_gate/quality_runner.py", before = "The deployed S02 boundary did not declare the fixed Git support directories required inside the isolated container.", after = "The module fixes the image digest, platform, resource ceilings, safe environment, literal path handling, and read-only Git toolchain mounts." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "module", symbol = "src/supportability_gate/quality_profile.py", before = "The isolated command ceiling stopped the complete repository suite before it could produce coverage evidence.", after = "The complete suite remains time-bounded but has a measured ten-minute ceiling that covers execution under the fixed CPU and memory limits." },
+  { path = "src/supportability_gate/quality_runner.py", kind = "function", symbol = "sandbox_command", before = "The bounded container ran the target command as PID 1, so orphaned grandchildren could accumulate against the fixed process ceiling.", after = "Docker's fixed init process reaps orphaned grandchildren while the existing 256-process ceiling remains enforced." },
 ]
 
 [architecture]
@@ -32,7 +32,7 @@ does_not_own = "Repository policy decisions, semantic review, artifact transport
 
 [incremental_refactor]
 target = "Isolate target execution and bind exact source, runtime, executable, and dependency provenance without changing the public quality evidence schema or adding another policy engine."
-completed_step = "Corrected the hosted characterization call contract and supplied the fixed read-only Git toolchain required by isolated target tests without changing the public evidence schema."
+completed_step = "Added deterministic child-process reaping, a measured bounded full-suite timeout, and retained runtime-probe diagnostics without changing the public quality evidence schema."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
@@ -42,4 +42,4 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 naming = "Sandbox, provenance, receipt, execution, and provisioning names distinguish authority and observation source."
 cohesion = "Runner construction remains in quality_runner, quality evidence validation remains in quality_profile, characterization verification remains in characterization, and hosted adapters own runner-only orchestration."
 intended_behavior = "Target-controlled commands cannot modify authenticated inputs, trusted tools, collectors, or authoritative outputs, and missing or drifting provenance fails closed."
-reviewability = "Tests cover fixed Docker and Git mount arguments, safe environment, exact source receipts, provenance authentication, environment drift, runtime setup failures, ordinary language profiles, and five hostile write attempts."
+reviewability = "Tests cover fixed Docker, init, timeout, and Git mount arguments; safe environment; retained runtime failure details; exact source receipts; provenance authentication; environment drift; ordinary language profiles; and five hostile write attempts."

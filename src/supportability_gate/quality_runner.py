@@ -191,6 +191,7 @@ def sandbox_command(
     return (
         shutil.which("docker") or "docker",
         "run",
+        "--init",
         "--rm",
         "--cidfile",
         str(container_id_file(output, plan.adapter).resolve()),

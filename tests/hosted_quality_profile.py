@@ -781,6 +781,7 @@ def _write_capture_provenance(
             "collector_mount": "read-only",
             "cpus": quality_runner.CONTAINER_CPUS,
             "evidence_mount": "read-only",
+            "init_process": True,
             "memory": quality_runner.CONTAINER_MEMORY,
             "network": "none",
             "no_new_privileges": True,
