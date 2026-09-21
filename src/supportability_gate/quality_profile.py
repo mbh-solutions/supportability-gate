@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import re
@@ -321,6 +322,16 @@ class AssetReceipt:
 
 
 @dataclass(frozen=True)
+class SourceReceipt:
+    """One exact source blob and its trusted zero-statement eligibility."""
+
+    path: str
+    blob_sha: str
+    content_sha256: str
+    zero_statement_eligible: bool
+
+
+@dataclass(frozen=True)
 class QualityEvidence:
     """Exact immutable quality-profile attestation."""
 
@@ -484,6 +495,46 @@ def asset_receipts(
             else _asset_result(validator, blob.content)
         )
         receipts.append(AssetReceipt(path, kind, validator, _sha256(blob.content), result))
+    return tuple(receipts)
+
+
+def _python_zero_statement_eligible(content: bytes) -> bool:
+    try:
+        module = ast.parse(content)
+    except (SyntaxError, ValueError) as error:
+        raise QualityProfileError("MALFORMED_SOURCE_BLOB", str(error)) from error
+    body = list(module.body)
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+        if isinstance(body[0].value.value, str):
+            body.pop(0)
+    return not body
+
+
+def _typescript_zero_statement_eligible(content: bytes) -> bool:
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise QualityProfileError("MALFORMED_SOURCE_BLOB", str(error)) from error
+    without_comments = re.sub(r"/\*.*?\*/|//[^\r\n]*", "", text, flags=re.DOTALL)
+    return not without_comments.strip()
+
+
+def source_receipts(
+    repository: Path,
+    head_sha: str,
+    sources: tuple[str, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[SourceReceipt, ...]:
+    """Bind source identities and empty-code eligibility to immutable Git blobs."""
+    receipts: list[SourceReceipt] = []
+    for path in sources:
+        blob = git_changes.read_regular_blob(repository, head_sha, path, records)
+        zero = (
+            _python_zero_statement_eligible(blob.content)
+            if path.endswith((".py", ".pyi"))
+            else _typescript_zero_statement_eligible(blob.content)
+        )
+        receipts.append(SourceReceipt(path, blob.object_sha, _sha256(blob.content), zero))
     return tuple(receipts)
 
 

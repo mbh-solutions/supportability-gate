@@ -137,10 +137,12 @@ def test_mixed_contract_selects_and_partitions_both_fixed_profiles(tmp_path: Pat
     architecture_plan = next(
         item for item in plans if item.adapter == "typescript.import-boundaries.v1"
     )
-    build_config = json.loads((tmp_path / "evidence" / "tsconfig-build.json").read_text())
+    build_config = json.loads(
+        (tmp_path / "evidence" / "trusted" / "tsconfig-build.json").read_text()
+    )
     assert "--test-coverage-include=web/frontend.ts" in test_plan.actual
     assert architecture_plan.actual[-1] == "web/frontend.ts"
-    assert build_config["compilerOptions"]["rootDir"] == str(tmp_path)
+    assert build_config["compilerOptions"]["rootDir"] == "/target"
 
 
 def test_mixed_profile_can_retire_to_either_existing_fixed_profile() -> None:
@@ -551,6 +553,50 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
     )
 
 
+def test_sandbox_vector_has_fixed_read_only_and_resource_controls(tmp_path: Path) -> None:
+    repository = tmp_path / "target"
+    collector = tmp_path / "collector"
+    toolcache = tmp_path / "toolcache"
+    output = tmp_path / "supervisor"
+    for directory in (repository, collector, toolcache, quality_runner.trusted_directory(output)):
+        directory.mkdir(parents=True)
+    trusted = quality_runner.trusted_directory(output)
+    (trusted / "quality-tools").mkdir()
+    (trusted / "coverage.ini").write_text("[report]\n", encoding="utf-8")
+    plan = quality_runner.CommandPlan(
+        "python.pytest.v1",
+        ("/opt/hostedtoolcache/python", "-I", "-m", "pytest"),
+        (),
+        "runtime-lines",
+        (),
+    )
+
+    command = quality_runner.sandbox_command(
+        plan,
+        repository=repository,
+        output=output,
+        collector=collector,
+        toolcache=toolcache,
+    )
+
+    assert ("--read-only", "--network", "none", "--cap-drop", "ALL") == command[7:12]
+    assert "no-new-privileges" in command
+    assert quality_runner.CONTAINER_IMAGE in command
+    assert quality_runner.CONTAINER_PLATFORM in command
+    assert quality_runner.CONTAINER_MEMORY in command
+    assert quality_runner.CONTAINER_CPUS in command
+    assert quality_runner.CONTAINER_PIDS_LIMIT in command
+    mounts = [command[index + 1] for index, item in enumerate(command) if item == "--mount"]
+    assert any("dst=/target,readonly" in item for item in mounts)
+    assert any("dst=/trusted,readonly" in item for item in mounts)
+    assert any("dst=/collector,readonly" in item for item in mounts)
+    assert any("dst=/evidence,readonly" in item for item in mounts)
+    assert any("dst=/work" in item and not item.endswith(",readonly") for item in mounts)
+    assert any("dst=/work/coverage.ini,readonly" in item for item in mounts)
+    assert any("dst=/work/quality-tools,readonly" in item for item in mounts)
+    assert not any("TOKEN=" in item or "SECRET=" in item for item in command)
+
+
 def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: Path) -> None:
     repository = tmp_path / "target"
     output = tmp_path / "output"
@@ -567,17 +613,50 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
         for item in pytest_plan.actual
         if item.startswith("--rcfile=")
     )
+    trusted = output / "trusted"
     assert Path(rcfile) == output / "coverage.ini"
-    assert (output / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
-    (output / "coverage.ini").write_text("[report]\nexclude_lines =\n    .+\n")
-    assert quality_runner._write_coverage_config(output) == output / "coverage.ini"
-    assert (output / "coverage.ini").read_bytes() == b"[report]\nexclude_lines =\n"
-    assert "testpaths = tests" in (output / "pytest.ini").read_text()
-    assert (
-        f"pythonpath =\n    {repository / 'src'}\n    {repository}"
-        in (output / "pytest.ini").read_text()
+    sandbox = quality_runner.sandbox_command(
+        pytest_plan,
+        repository=repository,
+        output=output,
+        collector=Path(__file__).parent,
     )
-    assert "mypy_path = src" in (output / "mypy.ini").read_text()
+    assert sandbox[-2:] == ("--rootdir", "/target")
+    assert "--rcfile=/work/coverage.ini" in sandbox
+    assert (output / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
+    assert (trusted / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
+    (trusted / "coverage.ini").write_text("[report]\nexclude_lines =\n    .+\n")
+    assert quality_runner._write_coverage_config(trusted) == trusted / "coverage.ini"
+    assert (trusted / "coverage.ini").read_bytes() == b"[report]\nexclude_lines =\n"
+    assert "testpaths = tests" in (trusted / "pytest.ini").read_text()
+    assert "pythonpath =\n    /target/src\n    /target" in (output / "pytest.ini").read_text()
+    trusted_pytest = (trusted / "pytest.ini").read_text().replace("\\", "/")
+    assert "pythonpath =\n    /target/src\n    /target" in trusted_pytest
+    assert "mypy_path = src" in (output / "trusted" / "mypy.ini").read_text()
+
+
+def test_typescript_configs_share_the_read_only_tool_mount(tmp_path: Path) -> None:
+    repository = tmp_path / "target"
+    output = tmp_path / "output"
+    repository.mkdir()
+
+    plans = quality_runner.command_plans(
+        "typescript", repository, output, (), ("web/domain/model.ts",)
+    )
+
+    for tools in (output / "quality-tools", output / "trusted" / "quality-tools"):
+        assert (tools / "eslint.config.mjs").is_file()
+        assert (tools / "prettier.json").read_text() == "{}\n"
+        assert (tools / "prettier.ignore").is_file()
+        assert (tools / "dependency-cruiser.json").is_file()
+    eslint = next(plan for plan in plans if plan.adapter == "typescript.eslint.v1")
+    sandbox = quality_runner.sandbox_command(
+        eslint,
+        repository=repository,
+        output=output,
+        collector=Path(__file__).parent,
+    )
+    assert "/work/quality-tools/eslint.config.mjs" in sandbox
 
 
 def _run_git(repository: Path, *arguments: str) -> str:
@@ -590,6 +669,174 @@ def _run_git(repository: Path, *arguments: str) -> str:
         timeout=10,
     )
     return completed.stdout.strip()
+
+
+HOSTILE_CAPTURE_FIXTURES = (
+    "source_blank",
+    "source_restore",
+    "tool_overwrite",
+    "collector_overwrite",
+    "evidence_overwrite",
+)
+
+HOSTILE_CAPTURE_TESTS = {
+    "source_blank": (
+        "from pathlib import Path\n\n\n"
+        "def test_source_blank() -> None:\n"
+        '    source = Path(__file__).parents[1] / "src" / "sample" / "risk.py"\n'
+        '    source.write_text("", encoding="utf-8")\n'
+    ),
+    "source_restore": (
+        "from pathlib import Path\n\n\n"
+        "def test_source_restore() -> None:\n"
+        '    source = Path(__file__).parents[1] / "src" / "sample" / "risk.py"\n'
+        "    original = source.read_bytes()\n"
+        '    source.write_bytes(b"")\n'
+        "    source.write_bytes(original)\n"
+    ),
+    "tool_overwrite": (
+        "from pathlib import Path\n\n\n"
+        "def test_tool_overwrite() -> None:\n"
+        '    configuration = Path("/work/coverage.ini")\n'
+        '    configuration.write_text("[report]\\nexclude_lines =\\n    .+\\n")\n'
+    ),
+    "collector_overwrite": (
+        "from pathlib import Path\n\n\n"
+        "def test_collector_overwrite() -> None:\n"
+        '    collector = Path("/collector/hosted_quality_profile.py")\n'
+        '    collector.write_text("raise SystemExit(0)\\n")\n'
+    ),
+    "evidence_overwrite": (
+        "from pathlib import Path\n\n\n"
+        "def test_evidence_overwrite() -> None:\n"
+        '    evidence = Path("/evidence/quality-gates.json")\n'
+        '    evidence.write_text("{}\\n")\n'
+    ),
+}
+
+
+def _hostile_repository(tmp_path: Path, fixture: str) -> tuple[Path, str, str, Path, str]:
+    repository = tmp_path / f"{fixture.replace('_', '-')}-target"
+    repository.mkdir()
+    _run_git(repository, "init", "--initial-branch=main")
+    _run_git(repository, "config", "user.name", "Fixture")
+    _run_git(repository, "config", "user.email", "fixture@example.invalid")
+    _run_git(repository, "remote", "add", "origin", "https://github.com/example/source-blank.git")
+    (repository / ".supportability.toml").write_text(
+        POLICY_TEXT.replace("src/risk.py", "src/sample/risk.py"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (repository / "pyproject.toml").write_text(
+        "[build-system]\nrequires = ['setuptools==83.0.0']\n"
+        "build-backend = 'setuptools.build_meta'\n\n"
+        "[project]\nname = 'source-blank-fixture'\nversion = '1.0.0'\n"
+        "requires-python = '>=3.12'\n\n"
+        "[tool.setuptools]\npackage-dir = {'' = 'src'}\n\n"
+        "[tool.setuptools.packages.find]\nwhere = ['src']\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    package = repository / "src" / "sample"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8", newline="\n")
+    source = package / "risk.py"
+    source.write_text(
+        "def untested() -> float:\n    return 1 / 0\n", encoding="utf-8", newline="\n"
+    )
+    tests = repository / "tests"
+    tests.mkdir()
+    (tests / f"test_{fixture}.py").write_text(
+        HOSTILE_CAPTURE_TESTS[fixture],
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    (repository / "docs").mkdir()
+    (repository / "docs" / "change.md").write_text("head\n", encoding="utf-8", newline="\n")
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+    source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+    return repository, base_sha, head_sha, source, source_sha256
+
+
+@pytest.mark.skipif(
+    os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="hostile target execution is permitted only on the GitHub-hosted qualification surface",
+)
+@pytest.mark.parametrize("fixture", HOSTILE_CAPTURE_FIXTURES)
+def test_hostile_fixture_is_denied_without_authoritative_mutation(
+    tmp_path: Path, fixture: str
+) -> None:
+    repository, base_sha, head_sha, source, source_sha256 = _hostile_repository(tmp_path, fixture)
+    output = tmp_path / "evidence" / "quality-gates.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-P",
+            str(Path(__file__).with_name("hosted_quality_profile.py")),
+            "--repository",
+            str(repository.resolve()),
+            "--repository-name",
+            f"example/{fixture.replace('_', '-')}",
+            "--repository-id",
+            "123",
+            "--base-ref",
+            base_sha,
+            "--head-ref",
+            head_sha,
+            "--workflow-sha",
+            WORKFLOW_SHA,
+            "--run-id",
+            "456",
+            "--run-attempt",
+            "1",
+            "--output",
+            str(output.resolve()),
+        ],
+        check=False,
+        capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    evidence = quality_profile.load_evidence(output) if output.is_file() else None
+    source_after = hashlib.sha256(source.read_bytes()).hexdigest()
+    reproduction = {
+        "command_exit_codes": (
+            [[item.adapter, item.exit_code] for item in evidence.commands]
+            if evidence is not None
+            else None
+        ),
+        "runner_exit_code": completed.returncode,
+        "source_after_sha256": source_after,
+        "source_before_sha256": source_sha256,
+        "stderr": completed.stderr.decode(errors="replace"),
+        "stdout": completed.stdout.decode(errors="replace"),
+        "diagnostics": _retained_diagnostics(output),
+    }
+
+    assert completed.returncode == 2, json.dumps(reproduction, sort_keys=True)
+    assert completed.stdout.decode().strip() == "TARGET_SANDBOX_WRITE_DENIED", json.dumps(
+        reproduction, sort_keys=True
+    )
+    assert source_after == source_sha256
+    assert not output.exists()
+
+
+def _retained_diagnostics(output: Path) -> dict[str, str]:
+    return {
+        path.name: path.read_text(encoding="utf-8", errors="replace")
+        for path in sorted((output.parent / "diagnostics").glob("*"))
+    }
+
+
+def test_all_s02_hostile_capture_fixtures_are_retained() -> None:
+    assert tuple(HOSTILE_CAPTURE_TESTS) == HOSTILE_CAPTURE_FIXTURES
+    assert "Path(__file__).parents[1]" in HOSTILE_CAPTURE_TESTS["source_blank"]
+    assert "return 1 / 0" not in HOSTILE_CAPTURE_TESTS["source_blank"]
 
 
 def _png_with_ihdr(ihdr: bytes) -> bytes:
@@ -654,6 +901,26 @@ def test_mixed_production_assets_are_attested_without_entering_source_manifest(
     assert all(receipt.result == "PASS" for receipt in receipts)
     assert tuple(receipt.blob_sha256 for receipt in receipts) == tuple(
         hashlib.sha256((repository / receipt.path).read_bytes()).hexdigest() for receipt in receipts
+    )
+
+
+def test_source_receipts_and_zero_eligibility_come_from_exact_git_blobs(
+    tmp_path: Path,
+) -> None:
+    repository, _base_sha, head_sha, source, committed_sha256 = _hostile_repository(
+        tmp_path, "source_blank"
+    )
+    source.write_bytes(b"")
+
+    receipts = quality_profile.source_receipts(repository, head_sha, ("src/sample/risk.py",), [])
+
+    assert receipts == (
+        quality_profile.SourceReceipt(
+            "src/sample/risk.py",
+            _run_git(repository, "rev-parse", f"{head_sha}:src/sample/risk.py"),
+            committed_sha256,
+            False,
+        ),
     )
 
 
@@ -901,11 +1168,16 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
     tests.mkdir()
     (tests / "test_covered.py").write_text(
         "import os\n"
+        "import socket\n"
         "from pathlib import Path\n\n"
+        "import pytest\n\n"
         "from sample.covered import score\n\n\n"
         "def test_score() -> None:\n"
-        '    output = Path(os.environ["PYTHONPYCACHEPREFIX"]).parent\n'
-        '    (output / "coverage.ini").write_text("[report]\\nexclude_lines =\\n    .+\\n")\n'
+        '    assert not any("TOKEN" in name or "SECRET" in name for name in os.environ)\n'
+        "    with pytest.raises(OSError):\n"
+        '        socket.create_connection(("1.1.1.1", 53), timeout=0.2)\n'
+        '    assert Path("/sys/fs/cgroup/memory.max").read_text().strip() == "2147483648"\n'
+        '    assert Path("/sys/fs/cgroup/pids.max").read_text().strip() == "256"\n'
         "    assert score(1) == 2\n",
         encoding="utf-8",
     )
@@ -949,7 +1221,14 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode != 2, completed.stderr.decode(errors="replace")
+    assert completed.returncode != 2, json.dumps(
+        {
+            "diagnostics": _retained_diagnostics(output),
+            "stderr": completed.stderr.decode(errors="replace"),
+            "stdout": completed.stdout.decode(errors="replace"),
+        },
+        sort_keys=True,
+    )
     raw_evidence = quality_profile.load_evidence(output)
     assert completed.returncode == 0, [
         (item.adapter, item.exit_code) for item in raw_evidence.commands
@@ -1002,13 +1281,16 @@ def test_python_poison_file_passes_tests_but_blocks_as_unexecuted(tmp_path: Path
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="target quality commands are forbidden outside GitHub-hosted runners",
 )
-def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path: Path) -> None:
-    repository = tmp_path / "typescript-target"
+@pytest.mark.parametrize("profile", ["typescript", "mixed"])
+def test_typescript_and_mixed_profiles_execute_every_fixed_gate_on_hosted_runner(
+    tmp_path: Path, profile: str
+) -> None:
+    repository = tmp_path / f"{profile}-target"
     repository.mkdir()
     _run_git(repository, "init", "--initial-branch=main")
     _run_git(repository, "config", "user.name", "Fixture")
     _run_git(repository, "config", "user.email", "fixture@example.invalid")
-    _run_git(repository, "remote", "add", "origin", "https://github.com/example/typescript.git")
+    _run_git(repository, "remote", "add", "origin", f"https://github.com/example/{profile}.git")
     package = {
         "name": "typescript-target",
         "private": True,
@@ -1065,8 +1347,7 @@ def test_typescript_profile_executes_every_fixed_gate_on_hosted_runner(tmp_path:
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
     assert lock.returncode == 0, lock.stderr.decode(errors="replace")
-    (repository / ".supportability.toml").write_text(
-        """schema_version = "1.0"
+    typescript_policy = """schema_version = "1.0"
 language = "typescript"
 production_paths = ["web"]
 high_risk_paths = ["web/presentation/Card.tsx"]
@@ -1082,10 +1363,67 @@ paths = ["web"]
 [complexity]
 adapter = "typescript.c901-equivalent-touched.v1"
 maximum = 10
-""",
+"""
+    mixed_policy = """schema_version = "1.1"
+languages = ["python", "typescript"]
+production_paths = ["src", "web"]
+high_risk_paths = ["src/sample/math.py", "web/presentation/Card.tsx"]
+
+[[gates]]
+adapter = "python.c901-touched.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.import-linter.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.mypy-strict.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.pytest.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "python.ruff-lint.v1"
+paths = ["src"]
+
+[[gates]]
+adapter = "typescript.c901-equivalent-touched.v1"
+paths = ["web"]
+
+[[gates]]
+adapter = "typescript.import-boundaries.v1"
+paths = ["web"]
+
+[complexity]
+maximum = 10
+"""
+    (repository / ".supportability.toml").write_text(
+        mixed_policy if profile == "mixed" else typescript_policy,
         encoding="utf-8",
         newline="\n",
     )
+    if profile == "mixed":
+        (repository / "pyproject.toml").write_text(
+            "[build-system]\nrequires = ['setuptools==83.0.0']\n"
+            "build-backend = 'setuptools.build_meta'\n\n"
+            "[project]\nname = 'mixed-quality-fixture'\nversion = '1.0.0'\n"
+            "requires-python = '>=3.12'\n\n"
+            "[tool.setuptools]\npackage-dir = {'' = 'src'}\n\n"
+            "[tool.setuptools.packages.find]\nwhere = ['src']\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        python_package = repository / "src" / "sample"
+        python_package.mkdir(parents=True)
+        (python_package / "__init__.py").write_text("", encoding="utf-8", newline="\n")
+        (python_package / "math.py").write_text(
+            "def increment(value: int) -> int:\n    return value + 1\n",
+            encoding="utf-8",
+            newline="\n",
+        )
     source = repository / "web" / "domain" / "model.ts"
     source.parent.mkdir(parents=True)
     source.write_text(
@@ -1117,6 +1455,13 @@ maximum = 10
     )
     tests = repository / "tests"
     tests.mkdir()
+    if profile == "mixed":
+        (tests / "test_math.py").write_text(
+            "from sample.math import increment\n\n\n"
+            "def test_increment() -> None:\n    assert increment(1) == 2\n",
+            encoding="utf-8",
+            newline="\n",
+        )
     (tests / "quality.test.mjs").write_text(
         'import assert from "node:assert/strict";\n'
         'import { readFileSync } from "node:fs";\n'
@@ -1171,9 +1516,10 @@ maximum = 10
         component.read_text().replace("{label}", "{label.trim()}"), encoding="utf-8", newline="\n"
     )
     poison = "web/domain/unexecuted.ts"
-    (repository / poison).write_text(
-        'throw new Error("poison file executed");\n', encoding="utf-8", newline="\n"
-    )
+    if profile == "typescript":
+        (repository / poison).write_text(
+            'throw new Error("poison file executed");\n', encoding="utf-8", newline="\n"
+        )
     _run_git(repository, "add", "--all")
     _run_git(repository, "commit", "-m", "head")
     head_sha = _run_git(repository, "rev-parse", "HEAD")
@@ -1188,7 +1534,7 @@ maximum = 10
             "--repository",
             str(repository.resolve()),
             "--repository-name",
-            "example/typescript",
+            f"example/{profile}",
             "--repository-id",
             "123",
             "--base-ref",
@@ -1209,9 +1555,34 @@ maximum = 10
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
-    assert completed.returncode != 2, completed.stderr.decode(errors="replace")
+    assert completed.returncode != 2, json.dumps(
+        {
+            "diagnostics": _retained_diagnostics(output),
+            "stderr": completed.stderr.decode(errors="replace"),
+            "stdout": completed.stdout.decode(errors="replace"),
+        },
+        sort_keys=True,
+    )
     evidence = quality_profile.load_evidence(output)
     assert completed.returncode == 0, [(item.adapter, item.exit_code) for item in evidence.commands]
+    provenance = json.loads(
+        (output.parent / "isolation-provenance.json").read_text(encoding="utf-8")
+    )
+    assert provenance["schema_version"] == "isolated-target-provenance.v1"
+    assert provenance["quality_evidence_sha256"] == hashlib.sha256(output.read_bytes()).hexdigest()
+    assert provenance["container"]["image"] == quality_runner.CONTAINER_IMAGE
+    assert any(
+        item.startswith("npm-target:fixture-dependency@1.0.0:sha256:")
+        for item in provenance["resolved_dependencies"]
+    )
+    assert [item["path"] for item in provenance["source_receipts"]] == list(evidence.source_files)
+    assert all(
+        item["observation_provenance"]
+        in {"provisioning-supervisor", "supervisor-observed", "target-generated-untrusted"}
+        for item in provenance["commands"]
+    )
+    assert not (output.parent / "trusted").exists()
+    assert not (output.parent / "sandbox").exists()
 
     install_result = next(
         item for item in evidence.commands if item.adapter == "typescript.target-install.v1"
@@ -1224,12 +1595,12 @@ maximum = 10
         repository / "node_modules" / "fixture-dependency" / "dependency-script-ran"
     ).exists()
 
-    source_files = evidence.production_files
+    source_files = evidence.source_files
     plans = quality_runner.command_plans(
-        "typescript",
+        profile,
         repository,
         output.parent,
-        ("tests/quality.test.mjs",),
+        evidence.test_files,
         source_files,
     )
     assert tuple(item.arguments for item in evidence.commands) == tuple(
@@ -1239,32 +1610,36 @@ maximum = 10
         plan.actual for plan in plans
     )
     install_plan = next(plan for plan in plans if plan.adapter == "typescript.target-install.v1")
-    package_text = (repository / "package.json").read_text(encoding="utf-8")
-    lock_text = (repository / "package-lock.json").read_text(encoding="utf-8")
+    dependency_root = quality_runner.trusted_directory(output.parent) / "target-dependencies"
+    shutil.copytree(repository, dependency_root, ignore=shutil.ignore_patterns(".git"))
+    package_path = dependency_root / "package.json"
+    lock_path = dependency_root / "package-lock.json"
+    package_text = package_path.read_text(encoding="utf-8")
+    lock_text = lock_path.read_text(encoding="utf-8")
 
     def install_exit() -> int:
         return subprocess.run(
-            install_plan.actual,
-            cwd=repository,
+            quality_runner.provisioning_command(install_plan, output.parent),
+            cwd=dependency_root,
             env=quality_runner.fixed_environment(output.parent, repository),
             check=False,
             capture_output=True,
             timeout=quality_profile.TIMEOUT_SECONDS,
         ).returncode
 
-    (repository / "package-lock.json").unlink()
+    lock_path.unlink()
     assert install_exit() != 0
-    (repository / "package-lock.json").write_text("{", encoding="utf-8", newline="\n")
+    lock_path.write_text("{", encoding="utf-8", newline="\n")
     assert install_exit() != 0
-    (repository / "package-lock.json").write_text(lock_text, encoding="utf-8", newline="\n")
+    lock_path.write_text(lock_text, encoding="utf-8", newline="\n")
     out_of_sync = json.loads(package_text)
     out_of_sync["dependencies"]["missing-lock-entry"] = "1.0.0"
-    (repository / "package.json").write_text(
+    package_path.write_text(
         json.dumps(out_of_sync, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     assert install_exit() != 0
-    (repository / "package.json").write_text(package_text, encoding="utf-8", newline="\n")
-    (repository / "package-lock.json").write_text(lock_text, encoding="utf-8", newline="\n")
+    package_path.write_text(package_text, encoding="utf-8", newline="\n")
+    lock_path.write_text(lock_text, encoding="utf-8", newline="\n")
     authenticated = replace(
         evidence,
         artifact_id="789",
@@ -1282,9 +1657,6 @@ maximum = 10
             (2,),
         ),
         ChangedFileAssessment(
-            git_changes.ChangedPath("ADDED", None, poison), False, True, True, (1,)
-        ),
-        ChangedFileAssessment(
             git_changes.ChangedPath(
                 "MODIFIED", "web/presentation/Card.tsx", "web/presentation/Card.tsx"
             ),
@@ -1294,6 +1666,14 @@ maximum = 10
             (15,),
         ),
     )
+    if profile == "typescript":
+        assessments = (
+            assessments[0],
+            ChangedFileAssessment(
+                git_changes.ChangedPath("ADDED", None, poison), False, True, True, (1,)
+            ),
+            assessments[1],
+        )
     blocks = quality_profile.evidence_blocks(
         authenticated,
         policy,
@@ -1306,13 +1686,16 @@ maximum = 10
         WORKFLOW_SHA,
     )
 
-    assert poison not in test_result.observed_paths
     assert "web/presentation/Card.tsx" in test_result.observed_paths
     assert not any(
         block.endswith(":web/presentation/Card.tsx")
         and block.startswith("QUALITY_HIGH_RISK_FILE_COVERAGE:")
         for block in blocks
     )
-    assert f"UNTESTED_AREA:{poison}" in blocks
-    assert f"QUALITY_CHANGED_FILE_COVERAGE:typescript.test.v1:{poison}" in blocks
+    if profile == "typescript":
+        assert poison not in test_result.observed_paths
+        assert f"UNTESTED_AREA:{poison}" in blocks
+        assert f"QUALITY_CHANGED_FILE_COVERAGE:typescript.test.v1:{poison}" in blocks
+    else:
+        assert not blocks
     assert all(command.executed and command.exit_code == 0 for command in evidence.commands)
