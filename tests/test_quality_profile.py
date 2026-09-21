@@ -717,10 +717,24 @@ def test_source_blank_hostile_fixture_is_denied_without_source_mutation(tmp_path
         env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         timeout=quality_profile.TIMEOUT_SECONDS,
     )
+    evidence = quality_profile.load_evidence(output) if output.is_file() else None
+    source_after = hashlib.sha256(source.read_bytes()).hexdigest()
+    reproduction = {
+        "command_exit_codes": (
+            [[item.adapter, item.exit_code] for item in evidence.commands]
+            if evidence is not None
+            else None
+        ),
+        "runner_exit_code": completed.returncode,
+        "source_after_sha256": source_after,
+        "source_before_sha256": source_sha256,
+        "stderr": completed.stderr.decode(errors="replace"),
+        "stdout": completed.stdout.decode(errors="replace"),
+    }
 
-    assert completed.returncode == 2
+    assert completed.returncode == 2, json.dumps(reproduction, sort_keys=True)
     assert completed.stdout.decode().strip() == "TARGET_SANDBOX_WRITE_DENIED"
-    assert hashlib.sha256(source.read_bytes()).hexdigest() == source_sha256
+    assert source_after == source_sha256
     assert not output.exists()
 
 
