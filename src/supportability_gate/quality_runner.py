@@ -123,7 +123,7 @@ def sandbox_command(
     trusted = trusted_directory(output)
     work = command_work_directory(output, plan.adapter)
     evidence = output / "target-inaccessible-evidence"
-    for directory in (work, evidence):
+    for directory in (trusted, work, evidence):
         directory.mkdir(parents=True, exist_ok=True)
     mounts: tuple[str, ...] = (
         *_mount(repository, "/target"),
