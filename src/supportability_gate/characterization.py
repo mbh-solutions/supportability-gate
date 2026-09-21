@@ -14,7 +14,7 @@ from supportability_gate import contract, git_changes
 
 MANIFEST_PATH = ".supportability-characterization.json"
 SCENARIO_ROOT = "tests/characterization"
-CAPTURE_SCHEMA = "characterization-capture.v1"
+CAPTURE_SCHEMA = "characterization-capture.v2"
 RESULT_SCHEMA = "characterization-result.v1"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
@@ -186,6 +186,7 @@ def _authentication_blocks(
         "authentication",
         "behavior_fingerprint",
         "definition_sha",
+        "environment",
         "language",
         "manifest",
         "scenarios",
@@ -195,9 +196,45 @@ def _authentication_blocks(
     if set(artifact) != expected_keys or artifact.get("schema_version") != CAPTURE_SCHEMA:
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     authentication = artifact.get("authentication")
-    if not isinstance(authentication, dict) or authentication != expected:
+    if (
+        not isinstance(authentication, dict)
+        or authentication != expected
+        or not _valid_environment(artifact.get("environment"))
+    ):
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     return []
+
+
+def _valid_environment(value: object) -> bool:
+    keys = {
+        "container_digest",
+        "container_id",
+        "container_image",
+        "node_runtime",
+        "python_runtime",
+        "resolved_dependencies",
+    }
+    if not isinstance(value, dict) or set(value) != keys:
+        return False
+    dependencies = value["resolved_dependencies"]
+    return bool(
+        isinstance(value["container_image"], str)
+        and isinstance(value["container_digest"], str)
+        and value["container_image"].endswith("@" + value["container_digest"])
+        and re.fullmatch(r"sha256:[0-9a-f]{64}", value["container_digest"])
+        and isinstance(value["container_id"], str)
+        and re.fullmatch(r"sha256:[0-9a-f]{64}", value["container_id"])
+        and isinstance(value["python_runtime"], str)
+        and re.fullmatch(r".+:sha256:[0-9a-f]{64}", value["python_runtime"])
+        and isinstance(value["node_runtime"], str)
+        and (
+            not value["node_runtime"]
+            or re.fullmatch(r".+:sha256:[0-9a-f]{64}", value["node_runtime"])
+        )
+        and isinstance(dependencies, list)
+        and all(isinstance(item, str) and item for item in dependencies)
+        and dependencies == sorted(set(dependencies))
+    )
 
 
 def _definition_blocks(
@@ -845,6 +882,8 @@ def verify_evidence(
         head, "head", expected_common, head_sha, head_sha, repository, policy, manifest, records
     )
     blocks.extend((*base_blocks, *head_blocks))
+    if base is not None and head is not None and base.get("environment") != head.get("environment"):
+        blocks.append("CHARACTERIZATION_ENVIRONMENT_DRIFT")
     blocks.extend(
         _definition_blocks(
             repository,

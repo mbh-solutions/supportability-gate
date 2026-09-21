@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
 import re
 import subprocess
+import sys
+import tempfile
 import zipfile
+from dataclasses import asdict
 from pathlib import Path
 
 from supportability_gate import (
@@ -24,6 +28,204 @@ _ANSI_ESCAPE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-_])")
 _CREDENTIAL = re.compile(
     r"(?i)\b(token|password|secret|authorization)\s*[:=]\s*(?:(?:bearer|basic)\s+)?[^\s]+"
 )
+_SANDBOX_DENIALS = (b"Read-only file system", b"Errno 30", b"EROFS")
+_PROVENANCE_SCHEMA = "isolated-target-provenance.v1"
+
+
+def _container_failure(code: str, completed: subprocess.CompletedProcess[bytes]) -> None:
+    if completed.returncode:
+        raise quality_profile.QualityProfileError(
+            code,
+            (completed.stderr or completed.stdout).decode("utf-8", errors="replace")[:1000],
+        )
+
+
+def _prepare_container() -> str:
+    docker = subprocess.run(
+        [
+            "docker",
+            "pull",
+            "--platform",
+            quality_runner.CONTAINER_PLATFORM,
+            quality_runner.CONTAINER_IMAGE,
+        ],
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    _container_failure("TARGET_SANDBOX_IMAGE_FAILED", docker)
+    inspected = subprocess.run(
+        ["docker", "image", "inspect", "--format", "{{.Id}}", quality_runner.CONTAINER_IMAGE],
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    _container_failure("TARGET_SANDBOX_IMAGE_FAILED", inspected)
+    image_id = inspected.stdout.decode().strip()
+    if re.fullmatch(r"sha256:[0-9a-f]{64}", image_id) is None:
+        raise quality_profile.QualityProfileError(
+            "TARGET_SANDBOX_IMAGE_FAILED", "container image ID is not immutable"
+        )
+    return image_id
+
+
+def _distribution_receipts(paths: tuple[Path, ...] | None = None) -> tuple[str, ...]:
+    receipts: list[str] = []
+    distributions = importlib.metadata.distributions(
+        path=[str(path) for path in paths] if paths else None
+    )
+    for distribution in distributions:
+        name = distribution.metadata.get("Name")
+        if not name:
+            continue
+        record = distribution.read_text("RECORD") or distribution.read_text("METADATA")
+        if record is None:
+            raise quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", str(name))
+        receipts.append(
+            f"python:{name.lower()}=={distribution.version}:sha256:{quality_profile._sha256(record.encode())}"
+        )
+    return tuple(sorted(set(receipts)))
+
+
+def _node_lock_receipts(root: Path, kind: str) -> tuple[str, ...]:
+    path = root / "package-lock.json"
+    if not path.is_file():
+        return ()
+    raw = path.read_bytes()
+    data = json.loads(raw)
+    packages = data.get("packages")
+    if not isinstance(packages, dict):
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_DEPENDENCY_IDENTITY", f"{kind} package-lock"
+        )
+    receipts = [f"npm-{kind}-lock:sha256:{quality_profile._sha256(raw)}"]
+    for location, value in packages.items():
+        if not location or not isinstance(value, dict):
+            continue
+        name, version, integrity = value.get("name"), value.get("version"), value.get("integrity")
+        if not all(isinstance(item, str) and item for item in (name, version)):
+            continue
+        identity = (
+            integrity
+            if isinstance(integrity, str) and integrity
+            else _node_tree_hash(root, location)
+        )
+        receipts.append(f"npm-{kind}:{name}@{version}:{identity}")
+    return tuple(sorted(set(receipts)))
+
+
+def _node_tree_hash(root: Path, location: str) -> str:
+    try:
+        package = (root / location).resolve(strict=True)
+        package.relative_to(root.resolve(strict=True))
+    except (OSError, ValueError) as error:
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_DEPENDENCY_IDENTITY", location
+        ) from error
+    candidates = tuple(package.rglob("*"))
+    if any(path.is_symlink() for path in candidates):
+        raise quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", location)
+    files = tuple(sorted(path for path in candidates if path.is_file()))
+    if not files:
+        raise quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", location)
+    manifest = [
+        [path.relative_to(package).as_posix(), quality_profile._sha256(path.read_bytes())]
+        for path in files
+    ]
+    return f"sha256:{quality_profile._sha256((json.dumps(manifest, separators=(',', ':')) + chr(10)).encode())}"
+
+
+def _runtime_probe(
+    executable: str,
+    repository: Path,
+    output: Path,
+    adapter: str,
+) -> str:
+    plan = quality_runner.CommandPlan(adapter, (executable, "--version"), (), "provisioning", ())
+    command = quality_runner.sandbox_command(
+        plan,
+        repository=repository,
+        output=output,
+        collector=Path(__file__).resolve().parent,
+    )
+    completed = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    _container_failure("TARGET_SANDBOX_RUNTIME_FAILED", completed)
+    return (completed.stdout or completed.stderr).decode().strip()
+
+
+def _stage_node_target(
+    repository: Path,
+    head_sha: str,
+    output: Path,
+    records: list[git_changes.CommandRecord],
+) -> None:
+    destination = quality_runner.trusted_directory(output) / "target-dependencies"
+    destination.mkdir(parents=True, exist_ok=True)
+    paths = _materialize_git_tree(repository, head_sha, destination, records)
+    if not set(paths).issuperset({"package.json", "package-lock.json"}):
+        raise quality_profile.QualityProfileError(
+            "TARGET_DEPENDENCY_MANIFEST_MISSING", "package.json and package-lock.json are required"
+        )
+
+
+def _materialize_git_tree(
+    repository: Path,
+    head_sha: str,
+    destination: Path,
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    paths = git_changes.list_regular_blobs(repository, head_sha, (".",), records)
+    for item in paths:
+        blob = git_changes.read_regular_blob(repository, head_sha, item.path, records)
+        path = destination / item.path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(blob.content)
+    return tuple(item.path for item in paths)
+
+
+def _verify_materialized_source(
+    destination: Path, receipts: tuple[quality_profile.SourceReceipt, ...]
+) -> None:
+    if any(
+        not (destination / item.path).is_file()
+        or quality_profile._sha256((destination / item.path).read_bytes()) != item.content_sha256
+        for item in receipts
+    ):
+        raise quality_profile.QualityProfileError(
+            "SOURCE_MATERIALIZATION_MISMATCH", "materialized source differs from Git blobs"
+        )
+
+
+def _runtime_receipts(
+    language: str,
+    repository: Path,
+    output: Path,
+) -> tuple[str, str, tuple[str, ...]]:
+    python_version = _runtime_probe(sys.executable, repository, output, "python-runtime-probe")
+    python_runtime = (
+        f"{python_version}:sha256:{quality_profile._sha256(Path(sys.executable).read_bytes())}"
+    )
+    node_runtime = ""
+    if language in {"typescript", "mixed"}:
+        node_executable = Path(subprocess.check_output(["which", "node"], text=True).strip())
+        node_version = _runtime_probe(
+            str(node_executable), repository, output, "node-runtime-probe"
+        )
+        node_runtime = (
+            f"{node_version}:sha256:{quality_profile._sha256(node_executable.read_bytes())}"
+        )
+    trusted = quality_runner.trusted_directory(output)
+    dependencies = (
+        *_distribution_receipts(),
+        *_node_lock_receipts(trusted / "quality-tools", "tool"),
+        *_node_lock_receipts(trusted / "target-dependencies", "target"),
+    )
+    return python_runtime, node_runtime, tuple(sorted(set(dependencies)))
 
 
 def _sanitize_diagnostic(content: bytes, roots: tuple[Path, ...]) -> tuple[bytes, bool]:
@@ -131,11 +333,15 @@ def _manifest_proof(paths: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[str,
 
 
 def _python_coverage_proof(
-    plan: quality_runner.CommandPlan, repository: Path, output: Path
+    plan: quality_runner.CommandPlan,
+    repository: Path,
+    output: Path,
+    trusted_zero: tuple[str, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
     report = output / "coverage.json"
-    config = quality_runner._write_coverage_config(output)
-    completed = subprocess.run(
+    config = "/trusted/coverage.ini"
+    proof = quality_runner.CommandPlan(
+        plan.adapter,
         (
             plan.actual[0],
             "-I",
@@ -143,13 +349,22 @@ def _python_coverage_proof(
             "coverage",
             "json",
             f"--rcfile={config}",
-            f"--data-file={output / '.coverage'}",
+            "--data-file=/work/.coverage",
             "-o",
-            str(report),
+            "/work/coverage.json",
             "-q",
         ),
-        cwd=repository,
-        env=quality_runner.fixed_environment(output, repository),
+        (),
+        "runtime-lines",
+        plan.source_files,
+    )
+    completed = subprocess.run(
+        quality_runner.sandbox_command(
+            proof,
+            repository=repository,
+            output=output.parent.parent,
+            collector=Path(__file__).resolve().parent,
+        ),
         check=False,
         capture_output=True,
         timeout=quality_profile.TIMEOUT_SECONDS,
@@ -157,10 +372,10 @@ def _python_coverage_proof(
     if completed.returncode or not report.is_file():
         return (), (), quality_profile._sha256(b""), completed.returncode or -2
     raw = report.read_bytes()
-    observed, zero_statement = quality_profile.python_coverage_observation(
+    observed, _reported_zero = quality_profile.python_coverage_observation(
         json.loads(raw), plan.source_files
     )
-    return observed, zero_statement, quality_profile._sha256(raw), 0
+    return observed, trusted_zero, quality_profile._sha256(raw), 0
 
 
 def _wheel_proof(
@@ -177,16 +392,19 @@ def _wheel_proof(
 
 
 def _typescript_coverage_proof(
-    plan: quality_runner.CommandPlan, repository: Path, output: Path
+    plan: quality_runner.CommandPlan,
+    repository: Path,
+    output: Path,
+    trusted_zero: tuple[str, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
     report = output / "coverage.lcov"
     if not report.is_file():
         return (), (), quality_profile._sha256(b""), -2
     raw = report.read_bytes()
-    observed, zero_statement = quality_profile.typescript_lcov_observation(
-        raw.decode("utf-8"), plan.source_files, repository
+    observed, _reported_zero = quality_profile.typescript_lcov_observation(
+        raw.decode("utf-8"), plan.source_files, Path("/target")
     )
-    return observed, zero_statement, quality_profile._sha256(raw), 0
+    return observed, trusted_zero, quality_profile._sha256(raw), 0
 
 
 def _typescript_build_proof(
@@ -211,10 +429,15 @@ def _typescript_build_proof(
 
 
 def _parser_proof(
-    plan: quality_runner.CommandPlan, repository: Path
+    plan: quality_runner.CommandPlan,
+    repository: Path,
+    head_sha: str,
+    records: list[git_changes.CommandRecord],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str]:
     parsed = {
-        path: architecture_policy.source_imports(path, (repository / path).read_bytes())
+        path: architecture_policy.source_imports(
+            path, git_changes.read_regular_blob(repository, head_sha, path, records).content
+        )
         for path in plan.source_files
     }
     raw = (json.dumps(parsed, sort_keys=True) + "\n").encode()
@@ -222,18 +445,29 @@ def _parser_proof(
 
 
 def _proof(
-    plan: quality_runner.CommandPlan, repository: Path, output: Path
+    plan: quality_runner.CommandPlan,
+    repository: Path,
+    execution_target: Path,
+    output: Path,
+    source_receipts: tuple[quality_profile.SourceReceipt, ...],
+    head_sha: str,
+    records: list[git_changes.CommandRecord],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
+    trusted_zero = tuple(
+        item.path
+        for item in source_receipts
+        if item.path in plan.source_files and item.zero_statement_eligible
+    )
     if plan.adapter == "python.pytest.v1":
-        return _python_coverage_proof(plan, repository, output)
+        return _python_coverage_proof(plan, execution_target, output, trusted_zero)
     if plan.adapter == "typescript.test.v1":
-        return _typescript_coverage_proof(plan, repository, output)
+        return _typescript_coverage_proof(plan, repository, output, trusted_zero)
     if plan.adapter == "python.build-wheel.v1":
         observed, zero, digest = _wheel_proof(plan, output)
     elif plan.adapter == "typescript.build.v1":
         observed, zero, digest = _typescript_build_proof(plan, output)
     elif plan.adapter in {"python.import-linter.v1", "typescript.import-boundaries.v1"}:
-        observed, zero, digest = _parser_proof(plan, repository)
+        observed, zero, digest = _parser_proof(plan, repository, head_sha, records)
     elif plan.proof_kind == "provisioning":
         observed, zero, digest = (), (), quality_profile._sha256(b"")
     else:
@@ -241,35 +475,129 @@ def _proof(
     return observed, zero, digest, 0
 
 
+def _observation_provenance(plan: quality_runner.CommandPlan) -> str:
+    if plan.proof_kind == "provisioning":
+        return "provisioning-supervisor"
+    if plan.proof_kind in {"artifact-members", "compiler-output", "runtime-lines"}:
+        return "target-generated-untrusted"
+    return "supervisor-observed"
+
+
+def _record_command_provenance(
+    records: list[dict[str, object]] | None,
+    plan: quality_runner.CommandPlan,
+    invocation: tuple[str, ...],
+    result: quality_profile.GateResult,
+) -> None:
+    if records is None:
+        return
+    records.append(
+        {
+            "adapter": result.adapter,
+            "executed": result.executed,
+            "executed_arguments": list(result.executed_arguments),
+            "exit_code": result.exit_code,
+            "invocation_sha256": quality_profile._sha256(
+                (json.dumps(invocation, separators=(",", ":")) + "\n").encode()
+            ),
+            "observation_provenance": _observation_provenance(plan),
+            "proof_kind": result.proof_kind,
+            "raw_proof_sha256": result.raw_proof_sha256,
+            "stderr_sha256": result.stderr_sha256,
+            "stdout_sha256": result.stdout_sha256,
+        }
+    )
+
+
 def _run_command(
     plan: quality_runner.CommandPlan,
     repository: Path,
     output: Path,
+    source_receipts: tuple[quality_profile.SourceReceipt, ...] = (),
+    head_sha: str = "",
+    records: list[git_changes.CommandRecord] | None = None,
     identity: dict[str, str] | None = None,
+    provenance_records: list[dict[str, object]] | None = None,
+    diagnostic_output: Path | None = None,
+    execution_target: Path | None = None,
 ) -> quality_profile.GateResult:
+    records = records or []
+    work = quality_runner.command_work_directory(output, plan.adapter)
+    work.mkdir(parents=True, exist_ok=True)
+    provisioning = plan.proof_kind == "provisioning"
+    approved = plan.adapter in {
+        *quality_profile.required_adapters("python"),
+        *quality_profile.required_adapters("typescript"),
+    }
+    sandboxed = approved and not provisioning
+    mounted_target = execution_target or repository
+    sandbox_workdir = None
+    if plan.adapter == "python.build-wheel.v1":
+        build_source = work / "source"
+        build_source.mkdir(parents=True, exist_ok=True)
+        _materialize_git_tree(repository, head_sha, build_source, records)
+        sandbox_workdir = "/work/source"
+    actual = (
+        quality_runner.provisioning_command(plan, output)
+        if provisioning
+        else quality_runner.sandbox_command(
+            plan,
+            repository=mounted_target,
+            output=output,
+            collector=Path(__file__).resolve().parent,
+            workdir=sandbox_workdir,
+        )
+        if sandboxed
+        else plan.actual
+    )
     try:
         completed = subprocess.run(
-            plan.actual,
-            cwd=repository / "src" if plan.adapter == "python.import-linter.v1" else repository,
-            env=quality_runner.fixed_environment(output, repository),
+            actual,
+            cwd=(
+                quality_runner.trusted_directory(output) / "target-dependencies"
+                if plan.adapter == "typescript.target-install.v1"
+                else work
+                if provisioning
+                else repository
+                if not sandboxed
+                else None
+            ),
+            env=quality_runner.fixed_environment(output, mounted_target),
             check=False,
             capture_output=True,
             timeout=quality_profile.TIMEOUT_SECONDS,
         )
-        observed, zero_statement, raw_digest, proof_exit = _proof(plan, repository, output)
+        combined = completed.stdout + completed.stderr
+        if sandboxed and any(marker in combined for marker in _SANDBOX_DENIALS):
+            _retain_diagnostic(
+                diagnostic_output or output,
+                stage="quality-command",
+                code="TARGET_SANDBOX_WRITE_DENIED",
+                adapter=plan.adapter,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+                roots=(repository, mounted_target, output),
+                identity=identity,
+            )
+            raise quality_profile.QualityProfileError("TARGET_SANDBOX_WRITE_DENIED", plan.adapter)
+        if completed.returncode == 125 and sandboxed:
+            raise quality_profile.QualityProfileError("TARGET_SANDBOX_RUNTIME_FAILED", plan.adapter)
+        observed, zero_statement, raw_digest, proof_exit = _proof(
+            plan, repository, mounted_target, work, source_receipts, head_sha, records
+        )
         exit_code = completed.returncode or proof_exit
         if exit_code:
             _retain_diagnostic(
-                output,
+                diagnostic_output or output,
                 stage="quality-command",
                 code=("QUALITY_COMMAND_FAILED" if completed.returncode else "QUALITY_PROOF_FAILED"),
                 adapter=plan.adapter,
                 stdout=completed.stdout,
                 stderr=completed.stderr,
-                roots=(repository, output),
+                roots=(repository, mounted_target, output),
                 identity=identity,
             )
-        return quality_profile.GateResult(
+        result = quality_profile.GateResult(
             plan.adapter,
             plan.evidence,
             plan.proof_kind,
@@ -282,18 +610,28 @@ def _run_command(
             raw_digest,
             plan.actual,
         )
+        _record_command_provenance(provenance_records, plan, actual, result)
+        return result
     except subprocess.TimeoutExpired as error:
+        cidfile = output / "container-ids" / f"{plan.adapter}.cid"
+        if cidfile.is_file():
+            subprocess.run(
+                ["docker", "rm", "--force", cidfile.read_text().strip()],
+                check=False,
+                capture_output=True,
+                timeout=30,
+            )
         _retain_diagnostic(
-            output,
+            diagnostic_output or output,
             stage="quality-command",
             code="QUALITY_COMMAND_TIMEOUT",
             adapter=plan.adapter,
             stdout=error.stdout or b"",
             stderr=error.stderr or b"",
-            roots=(repository, output),
+            roots=(repository, mounted_target, output),
             identity=identity,
         )
-        return quality_profile.GateResult(
+        result = quality_profile.GateResult(
             plan.adapter,
             plan.evidence,
             plan.proof_kind,
@@ -306,18 +644,20 @@ def _run_command(
             quality_profile._sha256(b""),
             plan.actual,
         )
+        _record_command_provenance(provenance_records, plan, actual, result)
+        return result
     except OSError as error:
         rendered = str(error).encode(errors="replace")
         _retain_diagnostic(
-            output,
+            diagnostic_output or output,
             stage="quality-command",
             code="QUALITY_COMMAND_SETUP_FAILED",
             adapter=plan.adapter,
             stderr=rendered,
-            roots=(repository, output),
+            roots=(repository, mounted_target, output),
             identity=identity,
         )
-        return quality_profile.GateResult(
+        result = quality_profile.GateResult(
             plan.adapter,
             plan.evidence,
             plan.proof_kind,
@@ -330,6 +670,104 @@ def _run_command(
             quality_profile._sha256(b""),
             plan.actual,
         )
+        _record_command_provenance(provenance_records, plan, actual, result)
+        return result
+
+
+def _write_capture_provenance(
+    output: Path,
+    evidence: quality_profile.QualityEvidence,
+    source_receipts: tuple[quality_profile.SourceReceipt, ...],
+    container_id: str,
+    python_runtime: str,
+    node_runtime: str,
+    dependencies: tuple[str, ...],
+    commands: list[dict[str, object]],
+) -> None:
+    expected_commands = [
+        {
+            "adapter": result.adapter,
+            "executed": result.executed,
+            "executed_arguments": list(result.executed_arguments),
+            "exit_code": result.exit_code,
+            "proof_kind": result.proof_kind,
+            "raw_proof_sha256": result.raw_proof_sha256,
+            "stderr_sha256": result.stderr_sha256,
+            "stdout_sha256": result.stdout_sha256,
+        }
+        for result in evidence.commands
+    ]
+    observed_commands = [
+        {
+            key: value
+            for key, value in command.items()
+            if key not in {"invocation_sha256", "observation_provenance"}
+        }
+        for command in commands
+    ]
+    if (
+        re.fullmatch(r"sha256:[0-9a-f]{64}", container_id) is None
+        or re.fullmatch(r".+:sha256:[0-9a-f]{64}", python_runtime) is None
+        or (
+            evidence.language in {"typescript", "mixed"}
+            and re.fullmatch(r".+:sha256:[0-9a-f]{64}", node_runtime) is None
+        )
+        or not dependencies
+        or dependencies != tuple(sorted(set(dependencies)))
+        or tuple(item.path for item in source_receipts) != evidence.source_files
+        or observed_commands != expected_commands
+        or any(
+            command.get("observation_provenance")
+            not in {"provisioning-supervisor", "supervisor-observed", "target-generated-untrusted"}
+            or re.fullmatch(r"[0-9a-f]{64}", str(command.get("invocation_sha256"))) is None
+            for command in commands
+        )
+    ):
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_CAPTURE_PROVENANCE", "capture provenance is incomplete"
+        )
+    evidence_bytes = (json.dumps(asdict(evidence), indent=2, sort_keys=True) + "\n").encode()
+    digest = quality_runner.CONTAINER_IMAGE.split("@", 1)[1]
+    payload = {
+        "base_sha": evidence.base_sha,
+        "commands": commands,
+        "container": {
+            "digest": digest,
+            "id": container_id,
+            "image": quality_runner.CONTAINER_IMAGE,
+            "platform": quality_runner.CONTAINER_PLATFORM,
+        },
+        "head_sha": evidence.head_sha,
+        "job": evidence.job,
+        "quality_evidence_sha256": quality_profile._sha256(evidence_bytes),
+        "repository": evidence.repository,
+        "repository_id": evidence.repository_id,
+        "resolved_dependencies": list(dependencies),
+        "run_attempt": evidence.run_attempt,
+        "run_id": evidence.run_id,
+        "runtime": {"node": node_runtime, "python": python_runtime},
+        "schema_version": _PROVENANCE_SCHEMA,
+        "security_controls": {
+            "capabilities": "drop-all",
+            "collector_mount": "read-only",
+            "cpus": quality_runner.CONTAINER_CPUS,
+            "evidence_mount": "read-only",
+            "memory": quality_runner.CONTAINER_MEMORY,
+            "network": "none",
+            "no_new_privileges": True,
+            "pids_limit": quality_runner.CONTAINER_PIDS_LIMIT,
+            "root_filesystem": "read-only",
+            "source_mount": "read-only",
+            "tool_mounts": "read-only",
+            "writable_mount": "per-command /work only",
+        },
+        "source_receipts": [asdict(item) for item in source_receipts],
+        "workflow_sha": evidence.workflow_sha,
+    }
+    path = output.parent / "isolation-provenance.json"
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
 
 
 def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidence:
@@ -384,8 +822,8 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
     receipts = quality_profile.asset_receipts(
         target, identity.head_sha, production_files, source_files, records
     )
-    plans = quality_runner.command_plans(
-        policy.language, target, output.parent, test_files, source_files
+    source_receipts = quality_profile.source_receipts(
+        target, identity.head_sha, source_files, records
     )
     diagnostic_identity = {
         "base_sha": identity.base_sha,
@@ -397,10 +835,39 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         "run_id": str(arguments.run_id),
         "workflow_sha": workflow_sha,
     }
-    results = tuple(
-        _run_command(plan, target, output.parent, diagnostic_identity) for plan in plans
-    )
-    return quality_profile.QualityEvidence(
+    command_provenance: list[dict[str, object]] = []
+    with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
+        supervisor = Path(temporary) / "supervisor"
+        trusted = quality_runner.trusted_directory(supervisor)
+        execution_target = trusted / "target-source"
+        execution_target.mkdir(parents=True)
+        _materialize_git_tree(target, identity.head_sha, execution_target, records)
+        _verify_materialized_source(execution_target, source_receipts)
+        if policy.language in {"typescript", "mixed"}:
+            _stage_node_target(target, identity.head_sha, supervisor, records)
+        container_id = _prepare_container()
+        plans = quality_runner.command_plans(
+            policy.language, execution_target, supervisor, test_files, source_files
+        )
+        results = tuple(
+            _run_command(
+                plan,
+                target,
+                supervisor,
+                source_receipts,
+                identity.head_sha,
+                records,
+                diagnostic_identity,
+                command_provenance,
+                output.parent,
+                execution_target,
+            )
+            for plan in plans
+        )
+        python_runtime, node_runtime, dependencies = _runtime_receipts(
+            policy.language, execution_target, supervisor
+        )
+    evidence = quality_profile.QualityEvidence(
         base_sha=identity.base_sha,
         changed_paths=changed_paths,
         commands=results,
@@ -427,6 +894,17 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         artifact_digest="",
         capture_sha256="",
     )
+    _write_capture_provenance(
+        output,
+        evidence,
+        source_receipts,
+        container_id,
+        python_runtime,
+        node_runtime,
+        dependencies,
+        command_provenance,
+    )
+    return evidence
 
 
 def _parser() -> argparse.ArgumentParser:

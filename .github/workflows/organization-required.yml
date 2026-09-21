@@ -12,7 +12,7 @@ permissions:
 jobs:
   characterize-base:
     name: Characterize Base
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
@@ -97,7 +97,7 @@ jobs:
 
   characterize-head:
     name: Characterize Head
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
@@ -182,7 +182,7 @@ jobs:
 
   quality-profile:
     name: Quality Profile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
@@ -263,7 +263,7 @@ jobs:
     name: Deterministic Supportability Evidence
     needs: [characterize-base, characterize-head, quality-profile]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       artifact-digest: ${{ steps.upload_evidence.outputs.artifact-digest }}
@@ -570,7 +570,7 @@ jobs:
             context: Supportability 7 - Quality Gates
           - standard: 8
             context: Supportability 8 - Review Handoff
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out exact gate source
@@ -629,7 +629,7 @@ jobs:
     name: Supportability Gate
     needs: [deterministic-evidence, standard-results]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Enforce deterministic lanes

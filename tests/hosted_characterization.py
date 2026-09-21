@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,7 +16,7 @@ from pathlib import Path
 
 from packaging.requirements import Requirement
 
-from supportability_gate import characterization, contract, git_changes
+from supportability_gate import characterization, contract, git_changes, quality_runner
 
 EXECUTION_TIMEOUT_SECONDS = 120
 MAX_DIAGNOSTIC_BYTES = 8192
@@ -22,6 +24,86 @@ _ANSI_ESCAPE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-_])")
 _CREDENTIAL = re.compile(
     r"(?i)\b(token|password|secret|authorization)\s*[:=]\s*(?:(?:bearer|basic)\s+)?[^\s]+"
 )
+_SANDBOX_DENIALS = (b"Read-only file system", b"Errno 30", b"EROFS")
+
+
+def _prepare_container() -> str:
+    commands = (
+        (
+            "TARGET_SANDBOX_IMAGE_FAILED",
+            [
+                "docker",
+                "pull",
+                "--platform",
+                quality_runner.CONTAINER_PLATFORM,
+                quality_runner.CONTAINER_IMAGE,
+            ],
+        ),
+        (
+            "TARGET_SANDBOX_IMAGE_FAILED",
+            [
+                "docker",
+                "image",
+                "inspect",
+                "--format",
+                "{{.Id}}",
+                quality_runner.CONTAINER_IMAGE,
+            ],
+        ),
+    )
+    image_id = ""
+    for code, command in commands:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            timeout=EXECUTION_TIMEOUT_SECONDS,
+        )
+        if completed.returncode:
+            raise characterization.CharacterizationError(code)
+        image_id = completed.stdout.decode().strip()
+    if re.fullmatch(r"sha256:[0-9a-f]{64}", image_id) is None:
+        raise characterization.CharacterizationError("TARGET_SANDBOX_IMAGE_FAILED")
+    return image_id
+
+
+def _dependency_receipts(destination: Path) -> tuple[str, ...]:
+    receipts: list[str] = []
+    for distribution in importlib.metadata.distributions(path=[str(destination)]):
+        name = distribution.metadata.get("Name")
+        if not name:
+            continue
+        record = distribution.read_text("RECORD") or distribution.read_text("METADATA")
+        if record is None:
+            raise characterization.CharacterizationError("UNVERIFIABLE_DEPENDENCY_IDENTITY")
+        receipts.append(
+            f"python:{name.lower()}=={distribution.version}:sha256:{characterization._sha256(record.encode())}"
+        )
+    return tuple(sorted(set(receipts)))
+
+
+def _runtime_probe(target: Path, output: Path, executable: str, adapter: str) -> str:
+    resolved = (
+        Path(executable) if Path(executable).is_absolute() else Path(shutil.which(executable) or "")
+    )
+    if not resolved.is_file():
+        raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
+    plan = quality_runner.CommandPlan(adapter, (str(resolved), "--version"), (), "provisioning", ())
+    completed = subprocess.run(
+        quality_runner.sandbox_command(
+            plan,
+            repository=target,
+            output=output,
+            collector=Path(__file__).resolve().parent,
+        ),
+        check=False,
+        capture_output=True,
+        timeout=EXECUTION_TIMEOUT_SECONDS,
+    )
+    if completed.returncode:
+        raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
+    version = (completed.stdout or completed.stderr).decode().strip()
+    return f"{version}:sha256:{characterization._sha256(resolved.read_bytes())}"
 
 
 def _sanitize_diagnostic(content: bytes, roots: tuple[Path, ...]) -> tuple[bytes, bool]:
@@ -252,23 +334,61 @@ def _run_driver(
     diagnostics: Path | None = None,
     stage: str = "characterization",
     identity: dict[str, str] | None = None,
+    execution_output: Path | None = None,
 ) -> dict[str, object]:
     relative_driver, _ = characterization._scenario_paths(scenario, language)
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
         materialized = Path(temporary) / Path(relative_driver).name
         materialized.write_bytes(content)
         arguments, recorded = _command(language, relative_driver, materialized)
+        container_driver = f"/driver/{materialized.name}"
+        inner = (
+            (arguments[0], "-P", container_driver)
+            if language == "python"
+            else (arguments[0], container_driver)
+        )
+        output = execution_output or Path(temporary) / "supervisor"
+        plan = quality_runner.CommandPlan(
+            f"characterization-{scenario.id}", inner, (), "runtime-lines", scenario.covers
+        )
+        mounts = [(definition, "/definition"), (Path(temporary), "/driver")]
+        if dependencies is not None:
+            mounts.append((dependencies, "/dependencies"))
+        sandbox = quality_runner.sandbox_command(
+            plan,
+            repository=target,
+            output=output,
+            collector=Path(__file__).resolve().parent,
+            extra_mounts=tuple(mounts),
+            extra_environment={
+                "PYTHONPATH": "/target/src:/dependencies",
+                "SUPPORTABILITY_CHARACTERIZATION_DEFINITION": "/definition",
+                "SUPPORTABILITY_CHARACTERIZATION_TARGET": "/target",
+            },
+        )
         try:
             completed = subprocess.run(
-                arguments,
-                cwd=target,
-                env=_safe_environment(target, definition, dependencies),
+                sandbox,
                 check=False,
                 capture_output=True,
                 timeout=EXECUTION_TIMEOUT_SECONDS,
             )
             stdout, stderr, exit_code = completed.stdout, completed.stderr, completed.returncode
+            if any(marker in stdout + stderr for marker in _SANDBOX_DENIALS):
+                raise characterization.CharacterizationError(
+                    "CHARACTERIZATION_SANDBOX_WRITE_DENIED"
+                )
+            if exit_code == 125:
+                raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
         except subprocess.TimeoutExpired as error:
+            cidfile = output / "container-ids" / f"characterization-{scenario.id}.cid"
+            if cidfile.is_file():
+                subprocess.run(
+                    ["docker", "rm", "--force", cidfile.read_text().strip()],
+                    check=False,
+                    capture_output=True,
+                    timeout=30,
+                )
             stdout, stderr, exit_code = error.stdout or b"", error.stderr or b"", -1
         except OSError as error:
             stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
@@ -316,6 +436,7 @@ def _scenario_capture(
     diagnostics: Path | None = None,
     stage: str = "characterization",
     identity: dict[str, str] | None = None,
+    execution_output: Path | None = None,
 ) -> dict[str, object]:
     profile = characterization.scenario_language(scenario, language)
     driver_path, golden_path = characterization._scenario_paths(scenario, language)
@@ -332,6 +453,7 @@ def _scenario_capture(
         diagnostics,
         stage,
         identity,
+        execution_output,
     )
     second = _run_driver(
         target,
@@ -343,6 +465,7 @@ def _scenario_capture(
         diagnostics,
         stage,
         identity,
+        execution_output,
     )
     return {
         "behavior": first["behavior"],
@@ -396,6 +519,7 @@ def capture_evidence(
     )
     policy = contract.parse_contract(policy_blob.content)
     manifest = characterization._manifest(definition, head_sha, records)
+    container_id = _prepare_container()
     diagnostic_identity = {
         "base_sha": base_sha,
         "head_sha": head_sha,
@@ -407,17 +531,31 @@ def capture_evidence(
         "workflow_sha": workflow_sha,
     }
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
-        dependencies = Path(temporary)
+        supervisor_output = Path(temporary) / "supervisor"
+        dependencies = (
+            quality_runner.trusted_directory(supervisor_output) / "characterization-dependencies"
+        )
+        dependencies.mkdir(parents=True, exist_ok=True)
         if policy.language in {"python", "mixed"}:
             _install_python_dependencies(
-                target,
-                target_sha,
+                definition,
+                head_sha,
                 dependencies,
                 records,
                 diagnostics,
                 f"characterization-{side}",
                 diagnostic_identity,
+                supervisor_output,
             )
+        python_runtime = _runtime_probe(
+            target, supervisor_output, sys.executable, "characterization-python-runtime"
+        )
+        node_runtime = ""
+        if policy.language in {"typescript", "mixed"}:
+            node_runtime = _runtime_probe(
+                target, supervisor_output, "node", "characterization-node-runtime"
+            )
+        resolved_dependencies = _dependency_receipts(dependencies)
         scenarios = [
             _scenario_capture(
                 target,
@@ -450,6 +588,14 @@ def capture_evidence(
         },
         "behavior_fingerprint": fingerprint,
         "definition_sha": definition_sha,
+        "environment": {
+            "container_digest": quality_runner.CONTAINER_IMAGE.split("@", 1)[1],
+            "container_id": container_id,
+            "container_image": quality_runner.CONTAINER_IMAGE,
+            "node_runtime": node_runtime,
+            "python_runtime": python_runtime,
+            "resolved_dependencies": list(resolved_dependencies),
+        },
         "language": policy.language,
         "manifest": characterization._manifest_payload(manifest),
         "scenarios": scenarios,

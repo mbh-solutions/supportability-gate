@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 from dataclasses import dataclass
@@ -12,6 +13,12 @@ from pathlib import Path
 from supportability_gate import contract, git_changes, quality_profile
 
 _COVERAGE_CONFIGURATION = b"[report]\nexclude_lines =\n"
+CONTAINER_IMAGE = "ubuntu@sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+CONTAINER_PLATFORM = "linux/amd64"
+CONTAINER_MEMORY = "2g"
+CONTAINER_CPUS = "2"
+CONTAINER_PIDS_LIMIT = "256"
+_SAFE_ADAPTER = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,157 @@ def fixed_environment(output: Path, repository: Path) -> dict[str, str]:
     return allowed
 
 
+def command_work_directory(output: Path, adapter: str) -> Path:
+    """Return the sole host directory writable by one target command."""
+    return output / "sandbox" / _SAFE_ADAPTER.sub("-", adapter)
+
+
+def container_id_file(output: Path, adapter: str) -> Path:
+    """Return a supervisor-only cidfile for bounded timeout cleanup."""
+    path = output / "container-ids" / f"{_SAFE_ADAPTER.sub('-', adapter)}.cid"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    return path
+
+
+def trusted_directory(output: Path) -> Path:
+    """Return supervisor-owned configuration and dependency storage."""
+    return output / "trusted"
+
+
+def _mount(source: Path, target: str, *, readonly: bool = True) -> tuple[str, str]:
+    options = f"type=bind,src={source.resolve()},dst={target}"
+    if readonly:
+        options += ",readonly"
+    return "--mount", options
+
+
+def sandbox_command(
+    plan: CommandPlan,
+    *,
+    repository: Path,
+    output: Path,
+    collector: Path,
+    toolcache: Path = Path("/opt/hostedtoolcache"),
+    extra_mounts: tuple[tuple[Path, str], ...] = (),
+    extra_environment: dict[str, str] | None = None,
+    workdir: str | None = None,
+) -> tuple[str, ...]:
+    """Wrap one fixed command in the immutable no-network target boundary."""
+    trusted = trusted_directory(output)
+    work = command_work_directory(output, plan.adapter)
+    evidence = output / "target-inaccessible-evidence"
+    for directory in (work, evidence):
+        directory.mkdir(parents=True, exist_ok=True)
+    mounts: tuple[str, ...] = (
+        *_mount(repository, "/target"),
+        *_mount(trusted, "/trusted"),
+        *_mount(collector, "/collector"),
+        *_mount(evidence, "/evidence"),
+        *_mount(work, "/work", readonly=False),
+        *_mount(toolcache, "/opt/hostedtoolcache"),
+    )
+    tools = trusted / "quality-tools"
+    if tools.is_dir():
+        mounts = (*mounts, *_mount(tools, "/work/quality-tools"))
+    for name in (
+        "coverage.ini",
+        "dependency-cruiser.json",
+        "eslint.config.mjs",
+        "importlinter.ini",
+        "mypy.ini",
+        "prettier.ignore",
+        "prettier.json",
+        "pytest.ini",
+        "tsconfig-build.json",
+        "tsconfig-check.json",
+    ):
+        configuration = trusted / name
+        if configuration.is_file():
+            mounts = (*mounts, *_mount(configuration, f"/work/{name}"))
+    target_modules = trusted / "target-dependencies" / "node_modules"
+    if target_modules.is_dir():
+        mounts = (*mounts, *_mount(target_modules, "/target/node_modules"))
+    for source, target in extra_mounts:
+        mounts = (*mounts, *_mount(source, target))
+    executable_paths = {
+        str(Path(sys.executable).resolve().parent),
+        str(Path(shutil.which("node") or "/usr/bin/node").resolve().parent),
+        "/usr/local/sbin",
+        "/usr/local/bin",
+        "/usr/sbin",
+        "/usr/bin",
+        "/sbin",
+        "/bin",
+    }
+    environment: tuple[str, ...] = (
+        "--env",
+        "CI=true",
+        "--env",
+        "HOME=/work/home",
+        "--env",
+        "LANG=C.UTF-8",
+        "--env",
+        "NO_COLOR=1",
+        "--env",
+        "PYTHONHASHSEED=0",
+        "--env",
+        "PYTHONPYCACHEPREFIX=/work/pycache",
+        "--env",
+        f"PATH={':'.join(sorted(executable_paths))}",
+    )
+    for name, value in sorted((extra_environment or {}).items()):
+        environment = (*environment, "--env", f"{name}={value}")
+    container_workdir = workdir or (
+        "/target/src" if plan.adapter == "python.import-linter.v1" else "/target"
+    )
+    return (
+        shutil.which("docker") or "docker",
+        "run",
+        "--rm",
+        "--cidfile",
+        str(container_id_file(output, plan.adapter).resolve()),
+        "--platform",
+        CONTAINER_PLATFORM,
+        "--read-only",
+        "--network",
+        "none",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--pids-limit",
+        CONTAINER_PIDS_LIMIT,
+        "--memory",
+        CONTAINER_MEMORY,
+        "--cpus",
+        CONTAINER_CPUS,
+        "--stop-timeout",
+        "5",
+        "--user",
+        f"{getattr(os, 'getuid', lambda: 1000)()}:{getattr(os, 'getgid', lambda: 1000)()}",
+        "--tmpfs",
+        "/tmp:rw,nosuid,nodev,noexec,size=256m",
+        *mounts,
+        *environment,
+        "--workdir",
+        container_workdir,
+        CONTAINER_IMAGE,
+        *plan.actual,
+    )
+
+
+def provisioning_command(plan: CommandPlan, output: Path) -> tuple[str, ...]:
+    """Translate a fixed provisioning vector to supervisor-owned host paths."""
+    trusted = trusted_directory(output)
+    translated = tuple(
+        item.replace("/work/quality-tools", str((trusted / "quality-tools").resolve()))
+        for item in plan.actual
+    )
+    return translated
+
+
 def _replace_tokens(arguments: tuple[str, ...], values: dict[str, str]) -> tuple[str, ...]:
     replaced: list[str] = []
     for argument in arguments:
@@ -56,10 +214,8 @@ def _write_typescript_configs(
 ) -> None:
     tools.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)
-    parser_url = (
-        tools / "node_modules" / "@typescript-eslint" / "parser" / "dist" / "index.js"
-    ).as_uri()
-    (tools / "eslint.config.mjs").write_text(
+    parser_url = "file:///work/quality-tools/node_modules/@typescript-eslint/parser/dist/index.js"
+    (output / "eslint.config.mjs").write_text(
         "import parser from " + json.dumps(parser_url) + ";\n"
         "export default [{ files: ['**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'], "
         "languageOptions: { parser, parserOptions: { ecmaVersion: 'latest', sourceType: 'module' } }, "
@@ -68,8 +224,8 @@ def _write_typescript_configs(
         encoding="utf-8",
         newline="\n",
     )
-    (tools / "prettier.json").write_text("{}\n", encoding="utf-8", newline="\n")
-    (tools / "prettier.ignore").write_text("\n", encoding="utf-8", newline="\n")
+    (output / "prettier.json").write_text("{}\n", encoding="utf-8", newline="\n")
+    (output / "prettier.ignore").write_text("\n", encoding="utf-8", newline="\n")
     cruiser = {
         "forbidden": [
             {"name": "no-circular", "severity": "error", "from": {}, "to": {"circular": True}},
@@ -88,7 +244,7 @@ def _write_typescript_configs(
         ],
         "options": {"doNotFollow": {"path": "node_modules"}},
     }
-    (tools / "dependency-cruiser.json").write_text(
+    (output / "dependency-cruiser.json").write_text(
         json.dumps(cruiser, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
     check = {
@@ -112,8 +268,8 @@ def _write_typescript_configs(
             "allowImportingTsExtensions": False,
             "declaration": True,
             "noEmit": False,
-            "outDir": str(output / "build"),
-            "rootDir": str(repository),
+            "outDir": "/work/build",
+            "rootDir": "/target",
         }
     )
     (output / "tsconfig-check.json").write_text(
@@ -132,7 +288,8 @@ def _write_python_configs(output: Path, repository: Path, source_files: tuple[st
         newline="\n",
     )
     (output / "pytest.ini").write_text(
-        f"[pytest]\ntestpaths = tests\npythonpath =\n    {repository / 'src'}\n    {repository}\n"
+        f"[pytest]\ntestpaths = tests\npythonpath =\n    {(repository / 'src').as_posix()}\n"
+        f"    {repository.as_posix()}\n"
         "addopts = -p no:cacheprovider\n",
         encoding="utf-8",
         newline="\n",
@@ -178,22 +335,23 @@ def command_plans(
     source_files: tuple[str, ...],
 ) -> tuple[CommandPlan, ...]:
     """Build executable vectors from the immutable profile templates."""
-    tools = output / "quality-tools"
+    trusted = trusted_directory(output)
+    tools = trusted / "quality-tools"
     if language in {"typescript", "mixed"}:
         _write_typescript_configs(
             tools,
-            output,
-            repository,
+            trusted,
+            Path("/target"),
             tuple(
-                str((repository / path).resolve())
+                f"/target/{path}"
                 for path in source_files
                 if path.endswith(quality_profile.SOURCE_SUFFIXES["typescript"])
             ),
         )
     if language in {"python", "mixed"}:
         _write_python_configs(
-            output,
-            repository,
+            trusted,
+            Path("/target"),
             tuple(path for path in source_files if path.endswith((".py", ".pyi"))),
         )
     lint_imports = shutil.which("lint-imports") or str(
@@ -203,10 +361,10 @@ def command_plans(
         "$LINT_IMPORTS": lint_imports,
         "$NODE": shutil.which("node") or "node",
         "$NPM": shutil.which("npm") or "npm",
-        "$OUTPUT": str(output),
+        "$OUTPUT": "/work",
         "$PYTHON": sys.executable,
-        "$REPOSITORY": str(repository),
-        "$TOOLS": str(tools),
+        "$REPOSITORY": "/target",
+        "$TOOLS": "/work/quality-tools",
     }
     plans: list[CommandPlan] = []
     for adapter, arguments in quality_profile.command_templates(language):
@@ -222,11 +380,9 @@ def command_plans(
             "$COVERAGE_FILES": "\0".join(
                 f"--test-coverage-include={path}" for path in selected_sources
             ),
-            "$SOURCE_FILES": "\0".join(
-                str((repository / path).resolve()) for path in selected_sources
-            ),
+            "$SOURCE_FILES": "\0".join(f"/target/{path}" for path in selected_sources),
             "$SOURCE_PATHS": "\0".join(selected_sources),
-            "$TEST_FILES": "\0".join(str((repository / path).resolve()) for path in selected_tests),
+            "$TEST_FILES": "\0".join(f"/target/{path}" for path in selected_tests),
         }
         plans.append(
             CommandPlan(

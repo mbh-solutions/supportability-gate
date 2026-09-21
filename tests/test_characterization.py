@@ -3,14 +3,13 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from supportability_gate import characterization, git_changes, refactor_targets
+from supportability_gate import characterization, contract, git_changes, refactor_targets
 
 _SPEC = importlib.util.spec_from_file_location(
     "hosted_characterization", Path(__file__).with_name("hosted_characterization.py")
@@ -207,21 +206,96 @@ def _captures(
         "run_id": "456",
         "run_attempt": "1",
     }
-    base = hosted_characterization.capture_evidence(
-        base_checkout,
-        repository,
-        side="base",
-        job="characterize-base",
-        **common,
-    )
-    head = hosted_characterization.capture_evidence(
-        repository,
-        repository,
-        side="head",
-        job="characterize-head",
-        **common,
-    )
+    base = _synthetic_capture(base_checkout, repository, "base", common)
+    head = _synthetic_capture(repository, repository, "head", common)
     return base, head
+
+
+def _synthetic_capture(
+    target: Path,
+    definition: Path,
+    side: str,
+    common: dict[str, str],
+) -> dict[str, object]:
+    records: list[git_changes.CommandRecord] = []
+    target_sha = _git(target, "rev-parse", "HEAD")
+    head_sha = common["head_sha"]
+    policy = contract.parse_contract(
+        git_changes.read_regular_blob(definition, head_sha, ".supportability.toml", records).content
+    )
+    manifest = characterization._manifest(definition, head_sha, records)
+    scenarios: list[dict[str, object]] = []
+    for scenario in manifest.scenarios:
+        driver_path, golden_path = characterization._scenario_paths(scenario, policy.language)
+        driver = git_changes.read_regular_blob(definition, head_sha, driver_path, records)
+        golden = git_changes.read_regular_blob(definition, head_sha, golden_path, records)
+        source = (target / scenario.covers[0]).read_text(encoding="utf-8")
+        golden_behavior = characterization._read_json_bytes(
+            golden.content, "MALFORMED_GOLDEN_OUTPUT"
+        )
+        driver_text = driver.content.decode("utf-8")
+        if "read_text" in driver_text or "readFileSync" in driver_text:
+            behavior: object = {"source": source}
+        elif "s16_runtime_fixture" in source:
+            behavior = {"value": 5}
+        else:
+            behavior = golden_behavior
+        behavior_sha = characterization._sha256(characterization._canonical(behavior))
+        scenarios.append(
+            {
+                "behavior": behavior,
+                "behavior_sha256": behavior_sha,
+                "command": [
+                    "python3.12" if policy.language == "python" else "node",
+                    *(["-P"] if policy.language == "python" else []),
+                    driver_path,
+                ],
+                "covers": list(scenario.covers),
+                "deterministic": True,
+                "driver_blob_sha": driver.object_sha,
+                "error": None,
+                "exit_code": 0,
+                "golden_behavior_sha256": characterization._sha256(
+                    characterization._canonical(golden_behavior)
+                ),
+                "golden_blob_sha": golden.object_sha,
+                "id": scenario.id,
+                "kind": scenario.kind,
+                "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+                "stdout_sha256": behavior_sha,
+            }
+        )
+    environment = {
+        "container_digest": (
+            "sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+        ),
+        "container_id": "sha256:" + "1" * 64,
+        "container_image": (
+            "ubuntu@sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+        ),
+        "node_runtime": "v24.8.0:sha256:" + "4" * 64 if policy.language == "typescript" else "",
+        "python_runtime": "Python 3.12.14:sha256:" + "3" * 64,
+        "resolved_dependencies": ["python:fixture==1.0:sha256:" + "2" * 64],
+    }
+    return {
+        "authentication": {
+            **common,
+            "job": f"characterize-{side}",
+            "side": side,
+        },
+        "behavior_fingerprint": characterization._sha256(
+            characterization._canonical(
+                [[item["id"], item["behavior_sha256"]] for item in scenarios]
+            )
+        ),
+        "definition_sha": head_sha,
+        "environment": environment,
+        "language": policy.language,
+        "manifest": characterization._manifest_payload(manifest),
+        "scenarios": scenarios,
+        "schema_version": characterization.CAPTURE_SCHEMA,
+        "target_sha": target_sha,
+    }
 
 
 def test_driver_executes_authenticated_blob_from_fresh_paths(
@@ -249,6 +323,23 @@ def test_driver_executes_authenticated_blob_from_fresh_paths(
         return command(language, driver, materialized)
 
     monkeypatch.setattr(hosted_characterization, "_command", record)
+    monkeypatch.setattr(
+        hosted_characterization.quality_runner,
+        "sandbox_command",
+        lambda *args, **kwargs: ("docker", "run"),
+    )
+
+    def completed(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        del args, kwargs
+        assert b"authenticated" in seen[-1].read_bytes()
+        return subprocess.CompletedProcess(
+            ["docker", "run"],
+            0,
+            b'{"behavior":{"source":"authenticated"},"scenario":"victim","schema_version":"1.0"}\n',
+            b"",
+        )
+
+    monkeypatch.setattr(hosted_characterization.subprocess, "run", completed)
     scenario = characterization.Scenario("victim", "regression", ("src/sample.py",))
 
     first = hosted_characterization._run_driver(
@@ -287,67 +378,87 @@ def _dependency_repository(tmp_path: Path) -> tuple[Path, Path, str, str]:
     return repository, base_checkout, base_sha, head_sha
 
 
-def test_runtime_dependencies_execute_real_driver_from_each_exact_commit(
+def test_base_and_head_capture_use_the_same_exact_head_dependency_set(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repository, base_checkout, base_sha, head_sha = _dependency_repository(tmp_path)
-    # A dirty metadata file must not replace either authenticated dependency list.
     _write(repository / "pyproject.toml", '[project]\ndependencies = ["untrusted==9.0"]\n')
-    monkeypatch.setenv("GITHUB_TOKEN", "must-not-reach-pip")
-    monkeypatch.setenv("PIP_EXTRA_INDEX_URL", "https://example.invalid")
-    monkeypatch.setenv("PYTHONPATH", str(repository / "src"))
-    run = subprocess.run
-    installed: list[Path] = []
+    installed: list[tuple[Path, str]] = []
 
-    def provision(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
-        if arguments[:5] != [sys.executable, "-I", "-m", "pip", "install"]:
-            return run(arguments, **kwargs)
-        destination = Path(arguments[arguments.index("--target") + 1])
-        assert arguments[5:-1] == [
-            "--disable-pip-version-check",
-            "--no-input",
-            "--only-binary=:all:",
-            "--ignore-installed",
-            "--target",
-            str(destination),
-            "--index-url",
-            "https://pypi.org/simple",
-        ]
-        environment = kwargs["env"]
-        assert environment["PIP_CONFIG_FILE"] == os.devnull
-        assert not {"PYTHONPATH", "GITHUB_TOKEN", "PIP_EXTRA_INDEX_URL"} & environment.keys()
-        assert kwargs["capture_output"] is True and 0 < kwargs["timeout"] <= 180
-        increment = {
-            "s16-characterization-fixture==1.0": 1,
-            "s16-characterization-fixture>=2,<3": 2,
-        }[arguments[-1]]
-        _write(
-            destination / "s16_runtime_fixture.py",
-            f"def increment(value):\n    return value + {increment}\n",
-        )
-        installed.append(destination)
-        return subprocess.CompletedProcess(arguments, 0, b"", b"")
+    def provision(
+        source: Path,
+        source_sha: str,
+        destination: Path,
+        records: list[git_changes.CommandRecord],
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        del destination, records, args, kwargs
+        installed.append((source, source_sha))
 
-    monkeypatch.setattr(hosted_characterization.subprocess, "run", provision)
-    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    behavior_sha = characterization._sha256(characterization._canonical({"value": 5}))
+    monkeypatch.setattr(hosted_characterization, "_prepare_container", lambda: "sha256:" + "1" * 64)
+    monkeypatch.setattr(hosted_characterization, "_install_python_dependencies", provision)
+    monkeypatch.setattr(
+        hosted_characterization,
+        "_runtime_probe",
+        lambda *args, **kwargs: "Python 3.12.14:sha256:" + "3" * 64,
+    )
+    monkeypatch.setattr(
+        hosted_characterization,
+        "_dependency_receipts",
+        lambda destination: ("python:s16-characterization-fixture==2.0:sha256:" + "2" * 64,),
+    )
+    monkeypatch.setattr(
+        hosted_characterization,
+        "_scenario_capture",
+        lambda *args, **kwargs: {
+            "behavior": {"value": 5},
+            "behavior_sha256": behavior_sha,
+            "command": ["python3.12", "-P", "tests/characterization/existing.characterization.py"],
+            "covers": ["src/sample.py"],
+            "deterministic": True,
+            "driver_blob_sha": "1" * 40,
+            "error": None,
+            "exit_code": 0,
+            "golden_behavior_sha256": behavior_sha,
+            "golden_blob_sha": "2" * 40,
+            "id": "existing",
+            "kind": "golden",
+            "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+            "stdout_sha256": behavior_sha,
+        },
+    )
+    common = {
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "repository": "example/fixture",
+        "repository_id": "123",
+        "workflow_sha": "f" * 40,
+        "run_id": "456",
+        "run_attempt": "1",
+    }
+    base = hosted_characterization.capture_evidence(
+        base_checkout, repository, side="base", job="characterize-base", **common
+    )
+    head = hosted_characterization.capture_evidence(
+        repository, repository, side="head", job="characterize-head", **common
+    )
 
-    assert base["scenarios"][0]["behavior"] == {"value": 4}
-    assert head["scenarios"][0]["behavior"] == {"value": 5}
-    assert base["scenarios"][0]["deterministic"] is True
-    assert head["scenarios"][0]["deterministic"] is True
-    assert (base_checkout / "driver-ran").is_file() and (repository / "driver-ran").is_file()
-    assert len(set(installed)) == 2 and all(not path.exists() for path in installed)
-    assert importlib.util.find_spec("s16_runtime_fixture") is None
-    paths = _write_artifacts(tmp_path, base, head)
-    result = _verify(repository, base_sha, head_sha, *paths)
-    assert "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:existing" in result["policy_blocks"]
+    assert installed == [(repository, head_sha), (repository, head_sha)]
+    assert base["environment"] == head["environment"]
+    assert hosted_characterization._python_dependencies(repository, head_sha, []) == (
+        "s16-characterization-fixture>=2,<3",
+    )
+    assert not (base_checkout / "driver-ran").exists()
+    assert not (repository / "driver-ran").exists()
 
 
 @pytest.mark.parametrize("failure", ["exit", "timeout", "missing"])
 def test_runtime_dependency_setup_failure_prevents_driver_execution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
 ) -> None:
-    repository, base_checkout, base_sha, head_sha = _dependency_repository(tmp_path)
+    repository, base_checkout, _base_sha, head_sha = _dependency_repository(tmp_path)
     run = subprocess.run
 
     def provision(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
@@ -363,7 +474,9 @@ def test_runtime_dependency_setup_failure_prevents_driver_execution(
     with pytest.raises(
         characterization.CharacterizationError, match="CHARACTERIZATION_PREREQUISITE_FAILED"
     ):
-        _captures(repository, base_checkout, base_sha, head_sha)
+        hosted_characterization._install_python_dependencies(
+            repository, head_sha, tmp_path / "dependencies", []
+        )
     assert not (base_checkout / "driver-ran").exists()
     assert not (repository / "driver-ran").exists()
 
@@ -400,7 +513,9 @@ def test_runtime_dependency_metadata_fails_closed_before_pip(
         characterization.CharacterizationError,
         match="CHARACTERIZATION_PREREQUISITE_METADATA_INVALID",
     ):
-        _captures(repository, repository, head_sha, head_sha)
+        hosted_characterization._install_python_dependencies(
+            repository, head_sha, tmp_path / "dependencies", []
+        )
     assert not (repository / "driver-ran").exists()
 
 
@@ -835,6 +950,17 @@ def test_replay_drift_blocks(tmp_path: Path) -> None:
     result = _verify(repository, base_sha, head_sha, *paths)
 
     assert "CHARACTERIZATION_REPLAY_DRIFT:existing" in result["policy_blocks"]
+
+
+def test_environment_drift_is_explicitly_blocked(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    head["environment"]["resolved_dependencies"] = ["python:fixture==2.0:sha256:" + "3" * 64]
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "CHARACTERIZATION_ENVIRONMENT_DRIFT" in result["policy_blocks"]
 
 
 def test_uncovered_high_risk_path_blocks(tmp_path: Path) -> None:
