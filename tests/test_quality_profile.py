@@ -660,7 +660,7 @@ def _source_blank_repository(tmp_path: Path) -> tuple[Path, str, str, Path, str]
     (package / "__init__.py").write_text("", encoding="utf-8", newline="\n")
     source = package / "risk.py"
     source.write_text(
-        "def untested() -> float:\n    return 1 / 0\n", encoding="utf-8", newline="\n"
+        "def untested() -> float:\n    return 1 / 0\n\n", encoding="utf-8", newline="\n"
     )
     tests = repository / "tests"
     tests.mkdir()
