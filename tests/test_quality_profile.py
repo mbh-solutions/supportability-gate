@@ -604,8 +604,8 @@ HOSTILE_CAPTURE_TESTS = {
     "source_blank": (
         "from pathlib import Path\n\n\n"
         "def test_source_blank() -> None:\n"
-        "    source = Path(__file__).parents[1] / 'src' / 'sample' / 'risk.py'\n"
-        "    source.write_text('', encoding='utf-8')\n"
+        '    source = Path(__file__).parents[1] / "src" / "sample" / "risk.py"\n'
+        '    source.write_text("", encoding="utf-8")\n'
     ),
     "source_restore": (
         "from pathlib import Path\n\n\n"
