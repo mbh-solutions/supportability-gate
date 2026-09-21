@@ -7,6 +7,7 @@ import importlib.metadata
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -107,6 +108,10 @@ def _node_lock_receipts(root: Path, kind: str) -> tuple[str, ...]:
             continue
         name, version, integrity = value.get("name"), value.get("version"), value.get("integrity")
         if not all(isinstance(item, str) and item for item in (name, version)):
+            manifest_identity = _node_manifest_identity(root, location)
+            if manifest_identity is not None:
+                name, version = manifest_identity
+        if not all(isinstance(item, str) and item for item in (name, version)):
             continue
         identity = (
             integrity
@@ -115,6 +120,23 @@ def _node_lock_receipts(root: Path, kind: str) -> tuple[str, ...]:
         )
         receipts.append(f"npm-{kind}:{name}@{version}:{identity}")
     return tuple(sorted(set(receipts)))
+
+
+def _node_manifest_identity(root: Path, location: str) -> tuple[object, object] | None:
+    try:
+        package = (root / location).resolve(strict=True)
+        package.relative_to(root.resolve(strict=True))
+        manifest = package / "package.json"
+        if not manifest.is_file():
+            return None
+        payload = json.loads(manifest.read_bytes())
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_DEPENDENCY_IDENTITY", location
+        ) from error
+    if not isinstance(payload, dict):
+        raise quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", location)
+    return payload.get("name"), payload.get("version")
 
 
 def _node_tree_hash(root: Path, location: str) -> str:
@@ -523,6 +545,7 @@ def _run_command(
     provenance_records: list[dict[str, object]] | None = None,
     diagnostic_output: Path | None = None,
     execution_target: Path | None = None,
+    evidence_plan: quality_runner.CommandPlan | None = None,
 ) -> quality_profile.GateResult:
     records = records or []
     work = quality_runner.command_work_directory(output, plan.adapter)
@@ -600,10 +623,11 @@ def _run_command(
                 roots=(repository, mounted_target, output),
                 identity=identity,
             )
+        public = evidence_plan or plan
         result = quality_profile.GateResult(
-            plan.adapter,
-            plan.evidence,
-            plan.proof_kind,
+            public.adapter,
+            public.evidence,
+            public.proof_kind,
             observed,
             zero_statement,
             True,
@@ -611,9 +635,9 @@ def _run_command(
             quality_profile._sha256(completed.stderr),
             quality_profile._sha256(completed.stdout),
             raw_digest,
-            plan.actual,
+            public.actual,
         )
-        _record_command_provenance(provenance_records, plan, actual, result)
+        _record_command_provenance(provenance_records, public, actual, result)
         return result
     except subprocess.TimeoutExpired as error:
         cidfile = output / "container-ids" / f"{plan.adapter}.cid"
@@ -634,10 +658,11 @@ def _run_command(
             roots=(repository, mounted_target, output),
             identity=identity,
         )
+        public = evidence_plan or plan
         result = quality_profile.GateResult(
-            plan.adapter,
-            plan.evidence,
-            plan.proof_kind,
+            public.adapter,
+            public.evidence,
+            public.proof_kind,
             (),
             (),
             True,
@@ -645,9 +670,9 @@ def _run_command(
             quality_profile._sha256(error.stderr or b""),
             quality_profile._sha256(error.stdout or b""),
             quality_profile._sha256(b""),
-            plan.actual,
+            public.actual,
         )
-        _record_command_provenance(provenance_records, plan, actual, result)
+        _record_command_provenance(provenance_records, public, actual, result)
         return result
     except OSError as error:
         rendered = str(error).encode(errors="replace")
@@ -660,10 +685,11 @@ def _run_command(
             roots=(repository, mounted_target, output),
             identity=identity,
         )
+        public = evidence_plan or plan
         result = quality_profile.GateResult(
-            plan.adapter,
-            plan.evidence,
-            plan.proof_kind,
+            public.adapter,
+            public.evidence,
+            public.proof_kind,
             (),
             (),
             False,
@@ -671,9 +697,9 @@ def _run_command(
             quality_profile._sha256(rendered),
             quality_profile._sha256(b""),
             quality_profile._sha256(b""),
-            plan.actual,
+            public.actual,
         )
-        _record_command_provenance(provenance_records, plan, actual, result)
+        _record_command_provenance(provenance_records, public, actual, result)
         return result
 
 
@@ -840,6 +866,10 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         "workflow_sha": workflow_sha,
     }
     command_provenance: list[dict[str, object]] = []
+    public_plans = quality_runner.command_plans(
+        policy.language, target, output.parent, test_files, source_files
+    )
+    shutil.rmtree(quality_runner.trusted_directory(output.parent))
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
         supervisor = Path(temporary) / "supervisor"
         trusted = quality_runner.trusted_directory(supervisor)
@@ -866,8 +896,9 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
                 command_provenance,
                 output.parent,
                 execution_target,
+                public_plan,
             )
-            for plan in plans
+            for plan, public_plan in zip(plans, public_plans, strict=True)
         )
         python_runtime, node_runtime, dependencies = _runtime_receipts(
             policy.language, execution_target, supervisor
