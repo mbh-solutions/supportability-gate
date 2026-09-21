@@ -82,25 +82,59 @@ def _dependency_receipts(destination: Path) -> tuple[str, ...]:
     return tuple(sorted(set(receipts)))
 
 
-def _runtime_probe(target: Path, output: Path, executable: str, adapter: str) -> str:
+def _runtime_probe(
+    target: Path,
+    output: Path,
+    executable: str,
+    adapter: str,
+    diagnostics: Path | None = None,
+    stage: str = "characterization-runtime",
+    identity: dict[str, str] | None = None,
+) -> str:
     resolved = (
         Path(executable) if Path(executable).is_absolute() else Path(shutil.which(executable) or "")
     )
     if not resolved.is_file():
         raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
     plan = quality_runner.CommandPlan(adapter, (str(resolved), "--version"), (), "provisioning", ())
-    completed = subprocess.run(
-        quality_runner.sandbox_command(
-            plan,
-            repository=target,
-            output=output,
-            collector=Path(__file__).resolve().parent,
-        ),
-        check=False,
-        capture_output=True,
-        timeout=EXECUTION_TIMEOUT_SECONDS,
-    )
+    try:
+        completed = subprocess.run(
+            quality_runner.sandbox_command(
+                plan,
+                repository=target,
+                output=output,
+                collector=Path(__file__).resolve().parent,
+            ),
+            check=False,
+            capture_output=True,
+            timeout=EXECUTION_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        stdout, stderr = error.stdout or b"", error.stderr or b""
+        if diagnostics is not None and identity is not None:
+            _retain_diagnostic(
+                diagnostics,
+                stage=stage,
+                code="TARGET_SANDBOX_RUNTIME_FAILED",
+                adapter=adapter,
+                stdout=stdout,
+                stderr=stderr,
+                roots=(target, output, diagnostics),
+                identity=identity,
+            )
+        raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED") from error
     if completed.returncode:
+        if diagnostics is not None and identity is not None:
+            _retain_diagnostic(
+                diagnostics,
+                stage=stage,
+                code="TARGET_SANDBOX_RUNTIME_FAILED",
+                adapter=adapter,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+                roots=(target, output, diagnostics),
+                identity=identity,
+            )
         raise characterization.CharacterizationError("TARGET_SANDBOX_RUNTIME_FAILED")
     version = (completed.stdout or completed.stderr).decode().strip()
     return f"{version}:sha256:{characterization._sha256(resolved.read_bytes())}"
@@ -547,12 +581,24 @@ def capture_evidence(
                 diagnostic_identity,
             )
         python_runtime = _runtime_probe(
-            target, supervisor_output, sys.executable, "characterization-python-runtime"
+            target,
+            supervisor_output,
+            sys.executable,
+            "characterization-python-runtime",
+            diagnostics,
+            f"characterization-{side}-runtime",
+            diagnostic_identity,
         )
         node_runtime = ""
         if policy.language in {"typescript", "mixed"}:
             node_runtime = _runtime_probe(
-                target, supervisor_output, "node", "characterization-node-runtime"
+                target,
+                supervisor_output,
+                "node",
+                "characterization-node-runtime",
+                diagnostics,
+                f"characterization-{side}-runtime",
+                diagnostic_identity,
             )
         resolved_dependencies = _dependency_receipts(dependencies)
         scenarios = [

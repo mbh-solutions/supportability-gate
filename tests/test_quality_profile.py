@@ -553,6 +553,10 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
     )
 
 
+def test_isolated_profile_timeout_covers_the_full_bounded_suite() -> None:
+    assert quality_profile.TIMEOUT_SECONDS == 600
+
+
 def test_sandbox_vector_has_fixed_read_only_and_resource_controls(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -601,7 +605,8 @@ def test_sandbox_vector_has_fixed_read_only_and_resource_controls(
         toolcache=toolcache,
     )
 
-    assert ("--read-only", "--network", "none", "--cap-drop", "ALL") == command[7:12]
+    assert "--init" in command
+    assert ("--read-only", "--network", "none", "--cap-drop", "ALL") == command[8:13]
     assert "no-new-privileges" in command
     assert quality_runner.CONTAINER_IMAGE in command
     assert quality_runner.CONTAINER_PLATFORM in command
@@ -1596,6 +1601,7 @@ maximum = 10
     assert provenance["schema_version"] == "isolated-target-provenance.v1"
     assert provenance["quality_evidence_sha256"] == hashlib.sha256(output.read_bytes()).hexdigest()
     assert provenance["container"]["image"] == quality_runner.CONTAINER_IMAGE
+    assert provenance["security_controls"]["init_process"] is True
     assert any(
         item.startswith("npm-target:fixture-dependency@1.0.0:sha256:")
         for item in provenance["resolved_dependencies"]
