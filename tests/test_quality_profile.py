@@ -607,14 +607,23 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert "PYTHONPATH" not in environment
     assert all(plan.actual[1] == "-I" for plan in plans[:-1])
     assert Path(plans[-1].actual[0]).is_absolute()
-    assert pytest_plan.actual[-2:] == ("--rootdir", "/target")
+    assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
     rcfile = next(
         item.removeprefix("--rcfile=")
         for item in pytest_plan.actual
         if item.startswith("--rcfile=")
     )
     trusted = output / "trusted"
-    assert rcfile == "/work/coverage.ini"
+    assert Path(rcfile) == output / "coverage.ini"
+    sandbox = quality_runner.sandbox_command(
+        pytest_plan,
+        repository=repository,
+        output=output,
+        collector=Path(__file__).parent,
+    )
+    assert sandbox[-2:] == ("--rootdir", "/target")
+    assert "--rcfile=/work/coverage.ini" in sandbox
+    assert (output / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
     assert (trusted / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
     (trusted / "coverage.ini").write_text("[report]\nexclude_lines =\n    .+\n")
     assert quality_runner._write_coverage_config(trusted) == trusted / "coverage.ini"

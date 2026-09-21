@@ -19,6 +19,7 @@ CONTAINER_MEMORY = "2g"
 CONTAINER_CPUS = "2"
 CONTAINER_PIDS_LIMIT = "256"
 _SAFE_ADAPTER = re.compile(r"[^a-zA-Z0-9_.-]+")
+_SYSTEM_LIBRARY_DIRECTORIES = (Path("/lib/x86_64-linux-gnu"), Path("/usr/lib/x86_64-linux-gnu"))
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,21 @@ def _mount(source: Path, target: str, *, readonly: bool = True) -> tuple[str, st
     return "--mount", options
 
 
+def _sandbox_arguments(plan: CommandPlan, repository: Path, output: Path) -> tuple[str, ...]:
+    replacements = (
+        (str(repository.resolve()), "/target"),
+        (str((output / "quality-tools").resolve()), "/work/quality-tools"),
+        (str(output.resolve()), "/work"),
+    )
+    arguments: list[str] = []
+    for argument in plan.actual:
+        translated = argument
+        for source, target in replacements:
+            translated = translated.replace(source, target)
+        arguments.append(translated)
+    return tuple(arguments)
+
+
 def sandbox_command(
     plan: CommandPlan,
     *,
@@ -96,6 +112,9 @@ def sandbox_command(
         *_mount(work, "/work", readonly=False),
         *_mount(toolcache, "/opt/hostedtoolcache"),
     )
+    for directory in _SYSTEM_LIBRARY_DIRECTORIES:
+        if directory.is_dir():
+            mounts = (*mounts, *_mount(directory, directory.as_posix()))
     tools = trusted / "quality-tools"
     if tools.is_dir():
         mounts = (*mounts, *_mount(tools, "/work/quality-tools"))
@@ -182,7 +201,7 @@ def sandbox_command(
         "--workdir",
         container_workdir,
         CONTAINER_IMAGE,
-        *plan.actual,
+        *_sandbox_arguments(plan, repository, output),
     )
 
 
@@ -190,7 +209,10 @@ def provisioning_command(plan: CommandPlan, output: Path) -> tuple[str, ...]:
     """Translate a fixed provisioning vector to supervisor-owned host paths."""
     trusted = trusted_directory(output)
     translated = tuple(
-        item.replace("/work/quality-tools", str((trusted / "quality-tools").resolve()))
+        item.replace(
+            str((output / "quality-tools").resolve()),
+            str((trusted / "quality-tools").resolve()),
+        )
         for item in plan.actual
     )
     return translated
@@ -336,10 +358,20 @@ def command_plans(
 ) -> tuple[CommandPlan, ...]:
     """Build executable vectors from the immutable profile templates."""
     trusted = trusted_directory(output)
-    tools = trusted / "quality-tools"
+    tools = output / "quality-tools"
     if language in {"typescript", "mixed"}:
         _write_typescript_configs(
             tools,
+            output,
+            repository,
+            tuple(
+                str((repository / path).resolve())
+                for path in source_files
+                if path.endswith(quality_profile.SOURCE_SUFFIXES["typescript"])
+            ),
+        )
+        _write_typescript_configs(
+            trusted / "quality-tools",
             trusted,
             Path("/target"),
             tuple(
@@ -350,6 +382,11 @@ def command_plans(
         )
     if language in {"python", "mixed"}:
         _write_python_configs(
+            output,
+            repository,
+            tuple(path for path in source_files if path.endswith((".py", ".pyi"))),
+        )
+        _write_python_configs(
             trusted,
             Path("/target"),
             tuple(path for path in source_files if path.endswith((".py", ".pyi"))),
@@ -359,12 +396,12 @@ def command_plans(
     )
     values = {
         "$LINT_IMPORTS": lint_imports,
-        "$NODE": shutil.which("node") or "node",
-        "$NPM": shutil.which("npm") or "npm",
-        "$OUTPUT": "/work",
+        "$NODE": str(Path(shutil.which("node") or "node").resolve()),
+        "$NPM": str(Path(shutil.which("npm") or "npm").resolve()),
+        "$OUTPUT": str(output),
         "$PYTHON": sys.executable,
-        "$REPOSITORY": "/target",
-        "$TOOLS": "/work/quality-tools",
+        "$REPOSITORY": str(repository),
+        "$TOOLS": str(tools),
     }
     plans: list[CommandPlan] = []
     for adapter, arguments in quality_profile.command_templates(language):
@@ -380,9 +417,11 @@ def command_plans(
             "$COVERAGE_FILES": "\0".join(
                 f"--test-coverage-include={path}" for path in selected_sources
             ),
-            "$SOURCE_FILES": "\0".join(f"/target/{path}" for path in selected_sources),
+            "$SOURCE_FILES": "\0".join(
+                str((repository / path).resolve()) for path in selected_sources
+            ),
             "$SOURCE_PATHS": "\0".join(selected_sources),
-            "$TEST_FILES": "\0".join(f"/target/{path}" for path in selected_tests),
+            "$TEST_FILES": "\0".join(str((repository / path).resolve()) for path in selected_tests),
         }
         plans.append(
             CommandPlan(
