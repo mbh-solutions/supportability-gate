@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import zipfile
 from pathlib import Path
@@ -17,6 +18,111 @@ from supportability_gate import (
     quality_profile,
     quality_runner,
 )
+
+MAX_DIAGNOSTIC_BYTES = 8192
+_ANSI_ESCAPE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-_])")
+_CREDENTIAL = re.compile(
+    r"(?i)\b(token|password|secret|authorization)\s*[:=]\s*(?:(?:bearer|basic)\s+)?[^\s]+"
+)
+
+
+def _sanitize_diagnostic(content: bytes, roots: tuple[Path, ...]) -> tuple[bytes, bool]:
+    text = content.decode("utf-8", errors="replace")
+    for root in roots:
+        rendered = str(root.resolve())
+        text = text.replace(rendered, "<workspace>").replace(
+            rendered.replace("\\", "/"), "<workspace>"
+        )
+    for name in ("GITHUB_WORKSPACE", "RUNNER_TEMP"):
+        if value := os.environ.get(name):
+            text = text.replace(value, f"<{name.lower()}>")
+    for name, value in os.environ.items():
+        if (
+            value
+            and len(value) >= 8
+            and re.search(r"TOKEN|PASSWORD|SECRET|AUTHORIZATION", name, re.I)
+        ):
+            text = text.replace(value, "[REDACTED]")
+    text = _ANSI_ESCAPE.sub("", text)
+    text = _CREDENTIAL.sub(lambda match: f"{match.group(1)}=[REDACTED]", text)
+    text = "".join(character for character in text if character in "\n\r\t" or ord(character) >= 32)
+    encoded = text.encode("utf-8")
+    truncated = len(encoded) > MAX_DIAGNOSTIC_BYTES
+    retained = encoded[:MAX_DIAGNOSTIC_BYTES].decode("utf-8", errors="ignore").encode("utf-8")
+    return retained, truncated
+
+
+def _diagnostic_name(stage: str, adapter: str | None) -> str:
+    identity = f"{stage}--{adapter or 'stage'}"
+    return re.sub(r"[^a-zA-Z0-9_.-]+", "-", identity)
+
+
+def _write_diagnostic(
+    output: Path,
+    *,
+    stage: str,
+    code: str,
+    adapter: str | None,
+    stdout: bytes,
+    stderr: bytes,
+    roots: tuple[Path, ...],
+    identity: dict[str, str] | None,
+) -> None:
+    directory = output / "diagnostics"
+    directory.mkdir(parents=True, exist_ok=True)
+    name = _diagnostic_name(stage, adapter)
+    logs = []
+    for stream, content in (("stdout", stdout), ("stderr", stderr)):
+        retained, truncated = _sanitize_diagnostic(content, roots)
+        path = directory / f"{name}.{stream}.log"
+        path.write_bytes(retained)
+        logs.append(
+            {
+                "path": path.relative_to(directory).as_posix(),
+                "retained_bytes": len(retained),
+                "sha256": quality_profile._sha256(retained),
+                "stream": stream,
+                "truncated": truncated,
+            }
+        )
+    payload = {
+        "adapter": adapter,
+        "code": code,
+        "identity": identity,
+        "logs": logs,
+        "schema_version": "stage-diagnostic.v1",
+        "stage": stage,
+    }
+    (directory / f"{name}.json").write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
+
+
+def _retain_diagnostic(
+    output: Path,
+    *,
+    stage: str,
+    code: str,
+    adapter: str | None = None,
+    stdout: bytes = b"",
+    stderr: bytes = b"",
+    roots: tuple[Path, ...] = (),
+    identity: dict[str, str] | None = None,
+) -> None:
+    try:
+        _write_diagnostic(
+            output,
+            stage=stage,
+            code=code,
+            adapter=adapter,
+            stdout=stdout,
+            stderr=stderr,
+            roots=roots,
+            identity=identity,
+        )
+    except Exception:
+        # Diagnostic rendering must never change the independently captured result.
+        pass
 
 
 def _manifest_proof(paths: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[str, ...], str]:
@@ -136,7 +242,10 @@ def _proof(
 
 
 def _run_command(
-    plan: quality_runner.CommandPlan, repository: Path, output: Path
+    plan: quality_runner.CommandPlan,
+    repository: Path,
+    output: Path,
+    identity: dict[str, str] | None = None,
 ) -> quality_profile.GateResult:
     try:
         completed = subprocess.run(
@@ -148,6 +257,18 @@ def _run_command(
             timeout=quality_profile.TIMEOUT_SECONDS,
         )
         observed, zero_statement, raw_digest, proof_exit = _proof(plan, repository, output)
+        exit_code = completed.returncode or proof_exit
+        if exit_code:
+            _retain_diagnostic(
+                output,
+                stage="quality-command",
+                code=("QUALITY_COMMAND_FAILED" if completed.returncode else "QUALITY_PROOF_FAILED"),
+                adapter=plan.adapter,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+                roots=(repository, output),
+                identity=identity,
+            )
         return quality_profile.GateResult(
             plan.adapter,
             plan.evidence,
@@ -155,13 +276,23 @@ def _run_command(
             observed,
             zero_statement,
             True,
-            completed.returncode or proof_exit,
+            exit_code,
             quality_profile._sha256(completed.stderr),
             quality_profile._sha256(completed.stdout),
             raw_digest,
             plan.actual,
         )
     except subprocess.TimeoutExpired as error:
+        _retain_diagnostic(
+            output,
+            stage="quality-command",
+            code="QUALITY_COMMAND_TIMEOUT",
+            adapter=plan.adapter,
+            stdout=error.stdout or b"",
+            stderr=error.stderr or b"",
+            roots=(repository, output),
+            identity=identity,
+        )
         return quality_profile.GateResult(
             plan.adapter,
             plan.evidence,
@@ -176,6 +307,16 @@ def _run_command(
             plan.actual,
         )
     except OSError as error:
+        rendered = str(error).encode(errors="replace")
+        _retain_diagnostic(
+            output,
+            stage="quality-command",
+            code="QUALITY_COMMAND_SETUP_FAILED",
+            adapter=plan.adapter,
+            stderr=rendered,
+            roots=(repository, output),
+            identity=identity,
+        )
         return quality_profile.GateResult(
             plan.adapter,
             plan.evidence,
@@ -184,7 +325,7 @@ def _run_command(
             (),
             False,
             -127,
-            quality_profile._sha256(str(error).encode()),
+            quality_profile._sha256(rendered),
             quality_profile._sha256(b""),
             quality_profile._sha256(b""),
             plan.actual,
@@ -246,7 +387,19 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
     plans = quality_runner.command_plans(
         policy.language, target, output.parent, test_files, source_files
     )
-    results = tuple(_run_command(plan, target, output.parent) for plan in plans)
+    diagnostic_identity = {
+        "base_sha": identity.base_sha,
+        "head_sha": identity.head_sha,
+        "job": "quality-profile",
+        "repository": str(arguments.repository_name),
+        "repository_id": str(arguments.repository_id),
+        "run_attempt": str(arguments.run_attempt),
+        "run_id": str(arguments.run_id),
+        "workflow_sha": workflow_sha,
+    }
+    results = tuple(
+        _run_command(plan, target, output.parent, diagnostic_identity) for plan in plans
+    )
     return quality_profile.QualityEvidence(
         base_sha=identity.base_sha,
         changed_paths=changed_paths,
@@ -290,15 +443,36 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
-    arguments = _parser().parse_args()
+def main(argv: list[str] | None = None) -> int:
+    arguments = _parser().parse_args(argv)
     output = Path(arguments.output)
     if not output.is_absolute():
+        print("RELATIVE_QUALITY_OUTPUT")
         return 2
     try:
         evidence = run_profile(arguments)
         quality_profile.write_evidence(evidence, output)
-    except Exception:
+    except Exception as error:
+        code = getattr(error, "code", "UNEXPECTED_QUALITY_PROFILE_FAILURE")
+        if code != "NON_HOSTED_TARGET_EXECUTION":
+            _retain_diagnostic(
+                output.parent,
+                stage="quality-profile",
+                code=code,
+                stderr=f"{type(error).__name__}: {error}".encode(errors="replace"),
+                roots=(Path(arguments.repository), output.parent),
+                identity={
+                    "base_sha": str(arguments.base_ref),
+                    "head_sha": str(arguments.head_ref),
+                    "job": "quality-profile",
+                    "repository": str(arguments.repository_name),
+                    "repository_id": str(arguments.repository_id),
+                    "run_attempt": str(arguments.run_attempt),
+                    "run_id": str(arguments.run_id),
+                    "workflow_sha": str(arguments.workflow_sha),
+                },
+            )
+        print(code)
         return 2
     return int(
         any(

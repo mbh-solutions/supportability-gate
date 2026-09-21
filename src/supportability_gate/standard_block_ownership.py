@@ -225,6 +225,17 @@ _SOURCE_BLOCK_DEPENDENTS = {
     "complexity-result:policy-blocks": ALL_STANDARDS,
     "refactor-policy-result:policy-blocks": frozenset({6, 8}),
 }
+_STAGE_FAILURES = {
+    "install": ("gate-install", ALL_STANDARDS),
+    "complexity": ("complexity-result", ALL_STANDARDS),
+    "characterization": ("characterization-result", frozenset({5, 6, 8})),
+    "characterization-base": ("characterization-result", frozenset({5, 6, 8})),
+    "characterization-head": ("characterization-result", frozenset({5, 6, 8})),
+    "refactor": ("refactor-policy-result", frozenset({6, 8})),
+    "quality": ("quality-profile:artifact-binding", frozenset({7, 8})),
+    "quality-profile": ("quality-profile:artifact-binding", frozenset({7, 8})),
+}
+_STAGE_FAILURE = re.compile(r"STAGE_FAILURE:([a-z][a-z-]*):([A-Z][A-Z0-9_]*)\Z")
 
 
 def _matches(block: str, family: str) -> bool:
@@ -367,6 +378,8 @@ def expected_technical_dependency(code: str, dependency: str) -> tuple[str, froz
     """Derive the only valid dependency and affected lanes for one technical code."""
     if exact := _EXACT_TECHNICAL_DEPENDENCIES.get(code):
         return exact
+    if match := _STAGE_FAILURE.fullmatch(code):
+        return _STAGE_FAILURES.get(match.group(1))
     if code.startswith("COMPLEXITY_RESULT:"):
         return (
             "complexity-result:technical-errors",

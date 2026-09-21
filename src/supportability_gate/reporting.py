@@ -312,7 +312,34 @@ def _failure_explanation(code: str) -> str:
             "have the owner review the current scope and, if approved, supply authorization bound "
             "to this base/head. Other checks still apply."
         )
+    if code.startswith("STAGE_FAILURE:"):
+        _, _, remainder = code.partition(":")
+        stage, _, original = remainder.partition(":")
+        return (
+            f"The `{stage}` stage failed with the original code `{original}`. Diagnosis is "
+            "unavailable here; inspect the retained diagnostic artifact for its bounded, "
+            "sanitized stdout/stderr and exact run identity."
+        )
     return "Diagnosis unavailable. Inspect the original code and cited evidence."
+
+
+def _evidence_classes(entry: dict[str, object], sources: list[str]) -> dict[str, list[str]]:
+    declarations = [
+        source
+        for source in sources
+        if ":review_evidence." in source and "review_evidence_binding" not in source
+    ]
+    measured = [source for source in sources if source not in declarations]
+    owner_attestations = (
+        ["refactor-policy-result.json:authorization"]
+        if entry["result"] == "PASS" and entry["standard"] in {6, 8}
+        else []
+    )
+    return {
+        "authenticated_owner_attestation": owner_attestations,
+        "author_declaration": declarations,
+        "measured_fact": measured,
+    }
 
 
 def standard_result_summary(entry: dict[str, object] | None, error: str | None = None) -> str:
@@ -332,8 +359,22 @@ def standard_result_summary(entry: dict[str, object] | None, error: str | None =
     for field in ("policy_blocks", "technical_errors"):
         for code in cast(list[str], entry[field]):
             lines.extend(["", f"<pre>{escape(code)}</pre>", "", _failure_explanation(code)])
-    sources = "\n".join(cast(list[str], entry["evidence_sources"]))
+    source_rows = cast(list[str], entry["evidence_sources"])
+    sources = "\n".join(source_rows)
     lines.extend(["", "Evidence:", "", f"<pre>{escape(sources)}</pre>", ""])
+    classes = _evidence_classes(entry, source_rows)
+    lines.extend(
+        [
+            "Evidence classes:",
+            "",
+            "- deterministic_decision: this validated lane result",
+            "- measured_fact: " + (", ".join(classes["measured_fact"]) or "none"),
+            "- author_declaration: " + (", ".join(classes["author_declaration"]) or "none"),
+            "- authenticated_owner_attestation: "
+            + (", ".join(classes["authenticated_owner_attestation"]) or "none asserted"),
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
