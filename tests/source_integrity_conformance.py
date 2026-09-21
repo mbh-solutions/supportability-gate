@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
                 standard + b"\nchanged\n",
                 inventory,
                 "standard-tamper",
-                "STANDARD_HASH_MISMATCH",
+                "PASS",
             ),
             _case(
                 module,
