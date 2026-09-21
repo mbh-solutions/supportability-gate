@@ -1611,10 +1611,10 @@ def test_milestone_two_block_evidence_is_byte_identical(tmp_path: Path) -> None:
     first = tmp_path / "first"
     second = tmp_path / "second"
 
-    first_exit, _ = _evaluate(repository, base_sha, head_sha, first)
-    second_exit, _ = _evaluate(repository, base_sha, head_sha, second)
+    first_exit, first_result = _evaluate(repository, base_sha, head_sha, first)
+    second_exit, second_result = _evaluate(repository, base_sha, head_sha, second)
 
-    assert first_exit == second_exit == 1
+    assert first_exit == second_exit == 1, (first_result, second_result)
     assert (first / "complexity-result.json").read_bytes() == (
         second / "complexity-result.json"
     ).read_bytes()
