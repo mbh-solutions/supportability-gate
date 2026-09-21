@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+import traceback
 from pathlib import Path
 
 from packaging.requirements import Requirement
@@ -715,7 +716,7 @@ def main(argv: list[str] | None = None) -> int:
             code=code,
             adapter=None,
             stdout=b"",
-            stderr=f"{type(error).__name__}: {error}".encode(errors="replace"),
+            stderr=traceback.format_exc().encode(errors="replace"),
             roots=(Path(arguments.target_repository), Path(arguments.definition_repository)),
             identity={
                 "base_sha": str(arguments.base_ref),
