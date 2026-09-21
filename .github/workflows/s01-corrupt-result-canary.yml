@@ -1,0 +1,46 @@
+name: S01 Corrupt Result Canary
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/s01-corrupt-result-canary.yml"
+      - "tests/s01_corrupt_result_canary.py"
+
+permissions:
+  contents: read
+
+jobs:
+  corrupt-standard-results:
+    name: S01 Corrupt Canonical Result
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact canary head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: target
+
+      - name: Check out deployed gate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: a43d7dfc59c776d5f081842ebbbcc432eda9ca4b
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install exact deployed dependencies
+        run: python -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
+
+      - name: Enforce corrupt canonical result
+        env:
+          DEPLOYED_GATE_SOURCE: ${{ github.workspace }}/gate/src
+          TARGET_REPOSITORY: ${{ github.workspace }}/target
+        run: python -P target/tests/s01_corrupt_result_canary.py
