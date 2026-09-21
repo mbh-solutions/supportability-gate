@@ -592,6 +592,109 @@ def _run_git(repository: Path, *arguments: str) -> str:
     return completed.stdout.strip()
 
 
+HOSTILE_CAPTURE_FIXTURES = (
+    "source_blank",
+    "source_restore",
+    "tool_overwrite",
+    "collector_overwrite",
+    "evidence_overwrite",
+)
+
+
+def _source_blank_repository(tmp_path: Path) -> tuple[Path, str, str, Path, str]:
+    repository = tmp_path / "source-blank-target"
+    repository.mkdir()
+    _run_git(repository, "init", "--initial-branch=main")
+    _run_git(repository, "config", "user.name", "Fixture")
+    _run_git(repository, "config", "user.email", "fixture@example.invalid")
+    _run_git(repository, "remote", "add", "origin", "https://github.com/example/source-blank.git")
+    (repository / ".supportability.toml").write_text(
+        POLICY_TEXT.replace("src/risk.py", "src/sample/risk.py"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (repository / "pyproject.toml").write_text(
+        "[build-system]\nrequires = ['setuptools==83.0.0']\n"
+        "build-backend = 'setuptools.build_meta'\n\n"
+        "[project]\nname = 'source-blank-fixture'\nversion = '1.0.0'\n"
+        "requires-python = '>=3.12'\n\n"
+        "[tool.setuptools]\npackage-dir = {'' = 'src'}\n\n"
+        "[tool.setuptools.packages.find]\nwhere = ['src']\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    package = repository / "src" / "sample"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8", newline="\n")
+    source = package / "risk.py"
+    source.write_text(
+        "def untested() -> float:\n    return 1 / 0\n", encoding="utf-8", newline="\n"
+    )
+    tests = repository / "tests"
+    tests.mkdir()
+    (tests / "test_source_blank.py").write_text(
+        "from pathlib import Path\n\n\n"
+        "def test_source_blank() -> None:\n"
+        "    source = Path(__file__).parents[1] / 'src' / 'sample' / 'risk.py'\n"
+        "    source.write_text('', encoding='utf-8')\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "base")
+    base_sha = _run_git(repository, "rev-parse", "HEAD")
+    (repository / "docs").mkdir()
+    (repository / "docs" / "change.md").write_text("head\n", encoding="utf-8", newline="\n")
+    _run_git(repository, "add", "--all")
+    _run_git(repository, "commit", "-m", "head")
+    head_sha = _run_git(repository, "rev-parse", "HEAD")
+    source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+    return repository, base_sha, head_sha, source, source_sha256
+
+
+@pytest.mark.skipif(
+    os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="hostile target execution is permitted only on the GitHub-hosted qualification surface",
+)
+def test_source_blank_hostile_fixture_is_denied_without_source_mutation(tmp_path: Path) -> None:
+    repository, base_sha, head_sha, source, source_sha256 = _source_blank_repository(tmp_path)
+    output = tmp_path / "evidence" / "quality-gates.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-P",
+            str(Path(__file__).with_name("hosted_quality_profile.py")),
+            "--repository",
+            str(repository.resolve()),
+            "--repository-name",
+            "example/source-blank",
+            "--repository-id",
+            "123",
+            "--base-ref",
+            base_sha,
+            "--head-ref",
+            head_sha,
+            "--workflow-sha",
+            WORKFLOW_SHA,
+            "--run-id",
+            "456",
+            "--run-attempt",
+            "1",
+            "--output",
+            str(output.resolve()),
+        ],
+        check=False,
+        capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+
+    assert completed.returncode == 2
+    assert completed.stdout.decode().strip() == "TARGET_SANDBOX_WRITE_DENIED"
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == source_sha256
+    assert not output.exists()
+
+
 def _png_with_ihdr(ihdr: bytes) -> bytes:
     def chunk(kind: bytes, data: bytes) -> bytes:
         return (
