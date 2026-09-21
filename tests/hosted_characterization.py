@@ -545,7 +545,6 @@ def capture_evidence(
                 diagnostics,
                 f"characterization-{side}",
                 diagnostic_identity,
-                supervisor_output,
             )
         python_runtime = _runtime_probe(
             target, supervisor_output, sys.executable, "characterization-python-runtime"

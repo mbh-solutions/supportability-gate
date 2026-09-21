@@ -390,10 +390,11 @@ def test_base_and_head_capture_use_the_same_exact_head_dependency_set(
         source_sha: str,
         destination: Path,
         records: list[git_changes.CommandRecord],
-        *args: object,
-        **kwargs: object,
+        diagnostics: Path | None = None,
+        stage: str = "characterization",
+        identity: dict[str, str] | None = None,
     ) -> None:
-        del destination, records, args, kwargs
+        del destination, records, diagnostics, stage, identity
         installed.append((source, source_sha))
 
     behavior_sha = characterization._sha256(characterization._canonical({"value": 5}))

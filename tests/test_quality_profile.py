@@ -553,13 +553,35 @@ def test_fixed_vectors_never_invoke_a_shell() -> None:
     )
 
 
-def test_sandbox_vector_has_fixed_read_only_and_resource_controls(tmp_path: Path) -> None:
+def test_sandbox_vector_has_fixed_read_only_and_resource_controls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     repository = tmp_path / "target"
     collector = tmp_path / "collector"
     toolcache = tmp_path / "toolcache"
     output = tmp_path / "supervisor"
     for directory in (repository, collector, toolcache, quality_runner.trusted_directory(output)):
         directory.mkdir(parents=True)
+    fixed_tools = tmp_path / "fixed-tools"
+    fixed_tools.mkdir()
+    git = fixed_tools / "git"
+    node = fixed_tools / "node"
+    git.write_bytes(b"git")
+    node.write_bytes(b"node")
+    git_core = tmp_path / "git-core"
+    git_share = tmp_path / "git-share"
+    git_core.mkdir()
+    git_share.mkdir()
+    monkeypatch.setattr(
+        quality_runner.shutil,
+        "which",
+        lambda name: str(git if name == "git" else node if name == "node" else name),
+    )
+    monkeypatch.setattr(
+        quality_runner,
+        "_GIT_SUPPORT_DIRECTORIES",
+        ((git_core, "/usr/lib/git-core"), (git_share, "/usr/share/git-core")),
+    )
     trusted = quality_runner.trusted_directory(output)
     (trusted / "quality-tools").mkdir()
     (trusted / "coverage.ini").write_text("[report]\n", encoding="utf-8")
@@ -594,6 +616,9 @@ def test_sandbox_vector_has_fixed_read_only_and_resource_controls(tmp_path: Path
     assert any("dst=/work" in item and not item.endswith(",readonly") for item in mounts)
     assert any("dst=/work/coverage.ini,readonly" in item for item in mounts)
     assert any("dst=/work/quality-tools,readonly" in item for item in mounts)
+    assert any("dst=/usr/bin/git,readonly" in item for item in mounts)
+    assert any("dst=/usr/lib/git-core,readonly" in item for item in mounts)
+    assert any("dst=/usr/share/git-core,readonly" in item for item in mounts)
     assert not any("TOKEN=" in item or "SECRET=" in item for item in command)
 
 
