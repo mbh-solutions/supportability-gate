@@ -850,6 +850,31 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
     production_files, source_files, test_files = quality_runner.profile_files(
         target, identity.head_sha, policy, records
     )
+    _, base_source_files, base_test_files = quality_runner.profile_files(
+        target, identity.base_sha, policy, records
+    )
+    suppressions = tuple(
+        sorted(
+            (
+                *quality_profile.collect_suppression_records(
+                    target,
+                    identity.base_sha,
+                    "base",
+                    base_source_files,
+                    base_test_files,
+                    records,
+                ),
+                *quality_profile.collect_suppression_records(
+                    target,
+                    identity.head_sha,
+                    "head",
+                    source_files,
+                    test_files,
+                    records,
+                ),
+            )
+        )
+    )
     receipts = quality_profile.asset_receipts(
         target, identity.head_sha, production_files, source_files, records
     )
@@ -908,7 +933,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         base_sha=identity.base_sha,
         changed_paths=changed_paths,
         commands=results,
-        exclusions=(),
+        exclusions=suppressions,
         head_sha=identity.head_sha,
         high_risk_paths=policy.high_risk_paths,
         language=policy.language,

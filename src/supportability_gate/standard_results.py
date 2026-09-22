@@ -546,6 +546,7 @@ def _s02_profile(
     tuple[str, ...],
     tuple[str, ...],
     frozenset[str],
+    frozenset[str],
 ]:
     row = _s02_exact(value, _S02_PROFILE_KEYS, code)
     actual = tuple(
@@ -648,7 +649,21 @@ def _s02_profile(
         == 3
     )
     missing = tuple(adapter for adapter in required_adapters if adapter not in adapters)
-    return adapters, result, failed, architecture_failed, missing, _s02_asset_blocks(receipts)
+    try:
+        suppression_blocks = frozenset(
+            quality_profile.suppression_policy_blocks(tuple(row["exclusions"]))
+        )
+    except quality_profile.QualityProfileError as error:
+        raise StandardResultsError(code) from error
+    return (
+        adapters,
+        result,
+        failed,
+        architecture_failed,
+        missing,
+        _s02_asset_blocks(receipts),
+        suppression_blocks,
+    )
 
 
 def _s02_review_section(
@@ -1232,11 +1247,11 @@ def _s02_complexity_components(
         profile = (
             _s02_profile(row["quality_profile"], identity, row["language"], code)
             if row["quality_profile"] is not None
-            else ((), None, (), (), (), frozenset())
+            else ((), None, (), (), (), frozenset(), frozenset())
         )
     except StandardResultsError:
         technical[:] = list(dict.fromkeys((*technical, "MALFORMED_QUALITY_EVIDENCE")))
-        profile = ((), None, (), (), (), frozenset())
+        profile = ((), None, (), (), (), frozenset(), frozenset())
     if profile[1] is None:
         return (), None
     if row["modularity"] is not None:
@@ -1253,8 +1268,15 @@ def _s02_complexity_components(
     }
     asset_prefixes = ("MALFORMED_PRODUCTION_ASSET:", "UNSUPPORTED_PRODUCTION_ASSET:")
     asset_blocks = frozenset(block for block in blocks if block.startswith(asset_prefixes))
+    suppression_prefixes = ("QUALITY_BLANKET_SUPPRESSION:", "QUALITY_EXCLUSION_ADDED:")
+    suppression_blocks = frozenset(
+        block for block in blocks if block.startswith(suppression_prefixes)
+    )
     quality_invalid = (
-        failed != set(profile[2]) or missing != set(profile[4]) or asset_blocks != profile[5]
+        failed != set(profile[2])
+        or missing != set(profile[4])
+        or asset_blocks != profile[5]
+        or suppression_blocks != profile[6]
     )
     architecture_failed = {
         block.removeprefix("ARCHITECTURE_GATE_FAILED:")

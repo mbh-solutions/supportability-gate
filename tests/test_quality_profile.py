@@ -399,6 +399,149 @@ def test_anti_weakening_blocks(changes: dict[str, object], code: str) -> None:
     assert code in _blocks(_evidence(**changes))
 
 
+@pytest.mark.parametrize(
+    ("path", "content", "adapters", "expected"),
+    [
+        (
+            "src/sample.py",
+            b"# ruff: noqa\n# mypy: ignore-errors\ndef broken() -> int:\n    return missing\n",
+            ("python.ruff-lint.v1", "python.mypy-strict.v1"),
+            {
+                ("python.ruff-lint.v1", 1, "blanket", "ruff-file-noqa"),
+                ("python.mypy-strict.v1", 2, "blanket", "mypy-ignore-errors"),
+            },
+        ),
+        (
+            "src/sample.py",
+            b"# ruff: noqa: F821\ndef broken() -> int:\n    return missing  # type: ignore[name-defined]\n",
+            ("python.ruff-lint.v1", "python.mypy-strict.v1"),
+            {
+                ("python.ruff-lint.v1", 1, "region", "ruff-file-noqa-codes"),
+                ("python.mypy-strict.v1", 3, "narrow", "mypy-line-ignore"),
+            },
+        ),
+        (
+            "src/sample.ts",
+            b"// @TS-NOCHECK\n/* eslint-disable no-debugger */\n"
+            b"debugger;\n/* eslint-enable no-debugger */\n",
+            ("typescript.eslint.v1", "typescript.typecheck.v1"),
+            {
+                ("typescript.typecheck.v1", 1, "blanket", "typescript-ts-nocheck"),
+                ("typescript.eslint.v1", 2, "region", "eslint-disable-region"),
+            },
+        ),
+        (
+            "src/sample.ts",
+            b"// @ts-ignore\nconst broken: string = 1;\n"
+            b"// eslint-disable-next-line no-debugger\ndebugger;\n",
+            ("typescript.eslint.v1", "typescript.typecheck.v1"),
+            {
+                ("typescript.typecheck.v1", 1, "narrow", "typescript-ts-ignore"),
+                ("typescript.eslint.v1", 3, "narrow", "eslint-disable-next-line"),
+            },
+        ),
+        (
+            "src/variants.py",
+            b"#ruff:noqa\n# RUFF: NOQA\n#mypy: ignore-errors\n"
+            b"# MYPY: IGNORE-ERRORS\n# mypy: disable-error-code = name-defined\n"
+            b"value = missing\n",
+            ("python.ruff-lint.v1", "python.mypy-strict.v1"),
+            {
+                ("python.ruff-lint.v1", 1, "blanket", "ruff-file-noqa"),
+                ("python.mypy-strict.v1", 5, "region", "mypy-file-control"),
+            },
+        ),
+        (
+            "src/variants.ts",
+            b"//    @TS-NOCHECK\n/* eslint-disable no-debugger */\n"
+            b"/* eslint-enable no-debugger */\nconst broken: string = 1;\n",
+            ("typescript.eslint.v1", "typescript.typecheck.v1"),
+            {
+                ("typescript.typecheck.v1", 1, "blanket", "typescript-ts-nocheck"),
+                ("typescript.eslint.v1", 2, "region", "eslint-disable-region"),
+            },
+        ),
+        (
+            "src/placement.ts",
+            b"const text = '/* eslint-disable */';\n// @ts-nocheck\n"
+            b"/* ESLINT-DISABLE */\nconst broken: string = 1;\n",
+            ("typescript.eslint.v1", "typescript.typecheck.v1"),
+            set(),
+        ),
+    ],
+)
+def test_pinned_suppression_grammar_is_classified(
+    path: str,
+    content: bytes,
+    adapters: tuple[str, ...],
+    expected: set[tuple[str, int, str, str]],
+) -> None:
+    records = quality_profile.suppression_records(path, content, "head", adapters)
+
+    assert {
+        (record.adapter, record.line, record.scope, record.reason)
+        for record in map(quality_profile.parse_suppression_record, records)
+    } == expected
+
+
+def test_blanket_and_region_suppressions_block_but_narrow_annotations_remain_visible() -> None:
+    digest = "1" * 64
+    records = tuple(
+        quality_profile.encode_suppression_record(record)
+        for record in (
+            quality_profile.SuppressionRecord(
+                "python.ruff-lint.v1",
+                1,
+                "src/risk.py",
+                "ruff-file-noqa",
+                "blanket",
+                "base",
+                digest,
+            ),
+            quality_profile.SuppressionRecord(
+                "python.ruff-lint.v1",
+                1,
+                "src/risk.py",
+                "ruff-file-noqa",
+                "blanket",
+                "head",
+                digest,
+            ),
+            quality_profile.SuppressionRecord(
+                "python.mypy-strict.v1",
+                3,
+                "src/risk.py",
+                "mypy-line-ignore",
+                "narrow",
+                "head",
+                digest,
+            ),
+        )
+    )
+
+    assert _blocks(_evidence(exclusions=records)) == (
+        "QUALITY_BLANKET_SUPPRESSION:python.ruff-lint.v1:src/risk.py:1:ruff-file-noqa",
+    )
+    assert quality_profile.suppression_policy_blocks(records[:1]) == ()
+
+
+def test_malformed_suppression_analysis_fails_closed() -> None:
+    with pytest.raises(quality_profile.QualityProfileError) as caught:
+        _blocks(_evidence(exclusions=('suppression:{"side":"head"}',)))
+
+    assert caught.value.code == "MALFORMED_SUPPRESSION_ANALYSIS"
+
+
+@pytest.mark.parametrize(
+    ("path", "content"), [("src/bad.py", b"# coding: unknown\n"), ("src/bad.ts", b"\xff")]
+)
+def test_unreadable_suppression_source_fails_closed(path: str, content: bytes) -> None:
+    with pytest.raises(quality_profile.QualityProfileError) as caught:
+        quality_profile.suppression_records(path, content, "head", ())
+
+    assert caught.value.code == "MALFORMED_SUPPRESSION_ANALYSIS"
+
+
 def test_production_move_outside_scope_blocks() -> None:
     assessment = _assessment("src/risk.py", "legacy/risk.py", True, False)
     evidence = _evidence(changed_paths=("src/risk.py",))

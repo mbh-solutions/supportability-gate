@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import io
 import json
 import re
+import tokenize
 import zlib
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
@@ -14,11 +16,38 @@ from typing import TYPE_CHECKING
 from supportability_gate import contract, git_changes
 
 if TYPE_CHECKING:
+    from tree_sitter import Node
+
     from supportability_gate.function_changes import ChangedFileAssessment
 
 SCHEMA_VERSION = "quality-gates.v6"
 TIMEOUT_SECONDS = 600
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+_SUPPRESSION_PREFIX = "suppression:"
+_SUPPRESSION_SCOPES = frozenset({"blanket", "narrow", "region"})
+_SUPPRESSION_SIDES = frozenset({"base", "head"})
+_SUPPRESSION_RULES = {
+    "ruff-file-noqa": ("python.ruff-lint.v1", "blanket"),
+    "ruff-file-noqa-codes": ("python.ruff-lint.v1", "region"),
+    "ruff-line-noqa": ("python.ruff-lint.v1", "narrow"),
+    "mypy-ignore-errors": ("python.mypy-strict.v1", "blanket"),
+    "mypy-file-control": ("python.mypy-strict.v1", "region"),
+    "mypy-line-ignore": ("python.mypy-strict.v1", "narrow"),
+    "mypy-module-ignore": ("python.mypy-strict.v1", "blanket"),
+    "typescript-ts-nocheck": ("typescript.typecheck.v1", "blanket"),
+    "typescript-ts-ignore": ("typescript.typecheck.v1", "narrow"),
+    "eslint-disable-next-line": ("typescript.eslint.v1", "narrow"),
+    "eslint-disable-region": ("typescript.eslint.v1", "region"),
+}
+_RUFF_FILE_NOQA = re.compile(r"^#\s*(?:ruff|flake8)\s*:\s*noqa(?:\s*:\s*(.+))?\s*$")
+_RUFF_LINE_NOQA = re.compile(r"^#\s*noqa(?:\s*:\s*(.+))?\s*$")
+_MYPY_IGNORE_ERRORS = re.compile(r"^#\s+mypy\s*:\s*ignore-errors\s*$")
+_MYPY_FILE_CONTROL = re.compile(r"^#\s+mypy\s*:")
+_MYPY_LINE_IGNORE = re.compile(r"^#\s*type\s*:\s*ignore(?:\[[^\]]+\])?\s*$")
+_TYPESCRIPT_NO_CHECK = re.compile(r"(?i)^//\s*@ts-nocheck\s*$")
+_TYPESCRIPT_LINE_IGNORE = re.compile(r"(?i)^//\s*@ts-(?:ignore|expect-error)(?:\s.*)?$")
+_ESLINT_DISABLE_NEXT = re.compile(r"eslint-disable-(?:next-)?line\b")
+_ESLINT_DISABLE_REGION = re.compile(r"eslint-disable(?!-(?:next-)?line)\b")
 SOURCE_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx"),
@@ -332,6 +361,19 @@ class SourceReceipt:
 
 
 @dataclass(frozen=True)
+class SuppressionRecord:
+    """One source-authenticated suppression directive classification."""
+
+    adapter: str
+    line: int
+    path: str
+    reason: str
+    scope: str
+    side: str
+    source_sha256: str
+
+
+@dataclass(frozen=True)
 class QualityEvidence:
     """Exact immutable quality-profile attestation."""
 
@@ -360,6 +402,275 @@ class QualityEvidence:
     artifact_id: str
     artifact_digest: str
     capture_sha256: str
+
+
+def encode_suppression_record(record: SuppressionRecord) -> str:
+    """Encode one suppression record as a canonical evidence string."""
+    _validate_suppression_record(record)
+    return _SUPPRESSION_PREFIX + json.dumps(
+        asdict(record), ensure_ascii=False, separators=(",", ":"), sort_keys=True
+    )
+
+
+def parse_suppression_record(value: str) -> SuppressionRecord:
+    """Decode one strict canonical suppression record or fail closed."""
+    try:
+        payload = json.loads(value.removeprefix(_SUPPRESSION_PREFIX))
+        if not value.startswith(_SUPPRESSION_PREFIX) or not isinstance(payload, dict):
+            raise ValueError
+        record = SuppressionRecord(**payload)
+        _validate_suppression_record(record)
+        if encode_suppression_record(record) != value:
+            raise ValueError
+    except (TypeError, ValueError, json.JSONDecodeError) as error:
+        raise QualityProfileError(
+            "MALFORMED_SUPPRESSION_ANALYSIS", "invalid suppression evidence"
+        ) from error
+    return record
+
+
+def _validate_suppression_record(record: SuppressionRecord) -> None:
+    if (
+        not isinstance(record.adapter, str)
+        or not isinstance(record.path, str)
+        or not record.path
+        or not isinstance(record.reason, str)
+        or _SUPPRESSION_RULES.get(record.reason) != (record.adapter, record.scope)
+        or not isinstance(record.line, int)
+        or isinstance(record.line, bool)
+        or record.line < 1
+        or record.scope not in _SUPPRESSION_SCOPES
+        or record.side not in _SUPPRESSION_SIDES
+        or not isinstance(record.source_sha256, str)
+        or re.fullmatch(r"[0-9a-f]{64}", record.source_sha256) is None
+    ):
+        raise ValueError("invalid suppression record")
+
+
+def suppression_policy_blocks(exclusions: tuple[str, ...]) -> tuple[str, ...]:
+    """Return Gate 7 blocks while retaining narrow and base-only records."""
+    blocks: list[str] = []
+    for value in exclusions:
+        if not value.startswith(_SUPPRESSION_PREFIX):
+            blocks.append(f"QUALITY_EXCLUSION_ADDED:{value}")
+            continue
+        record = parse_suppression_record(value)
+        if record.side == "head" and record.scope in {"blanket", "region"}:
+            blocks.append(
+                "QUALITY_BLANKET_SUPPRESSION:"
+                f"{record.adapter}:{record.path}:{record.line}:{record.reason}"
+            )
+    return tuple(sorted(set(blocks)))
+
+
+def _record(
+    adapter: str,
+    line: int,
+    path: str,
+    reason: str,
+    scope: str,
+    side: str,
+    digest: str,
+) -> str:
+    return encode_suppression_record(
+        SuppressionRecord(adapter, line, path, reason, scope, side, digest)
+    )
+
+
+def _python_comments(content: bytes) -> tuple[tuple[int, int, str], ...]:
+    try:
+        return tuple(
+            (token.start[0], token.start[1], token.string)
+            for token in tokenize.tokenize(io.BytesIO(content).readline)
+            if token.type == tokenize.COMMENT
+        )
+    except (IndentationError, SyntaxError, UnicodeDecodeError, tokenize.TokenError) as error:
+        raise QualityProfileError(
+            "MALFORMED_SUPPRESSION_ANALYSIS", "unable to tokenize Python source"
+        ) from error
+
+
+def _python_suppressions(
+    path: str, content: bytes, side: str, adapters: tuple[str, ...]
+) -> tuple[str, ...]:
+    digest = _sha256(content)
+    records: list[str] = []
+    for line, column, comment in _python_comments(content):
+        if "python.ruff-lint.v1" in adapters and (match := _RUFF_FILE_NOQA.fullmatch(comment)):
+            scope = "region" if match.group(1) else "blanket"
+            reason = "ruff-file-noqa-codes" if match.group(1) else "ruff-file-noqa"
+            records.append(_record("python.ruff-lint.v1", line, path, reason, scope, side, digest))
+        elif "python.ruff-lint.v1" in adapters and _RUFF_LINE_NOQA.fullmatch(comment):
+            records.append(
+                _record("python.ruff-lint.v1", line, path, "ruff-line-noqa", "narrow", side, digest)
+            )
+        if "python.mypy-strict.v1" not in adapters:
+            continue
+        if _MYPY_IGNORE_ERRORS.fullmatch(comment):
+            records.append(
+                _record(
+                    "python.mypy-strict.v1",
+                    line,
+                    path,
+                    "mypy-ignore-errors",
+                    "blanket",
+                    side,
+                    digest,
+                )
+            )
+        elif _MYPY_FILE_CONTROL.match(comment):
+            records.append(
+                _record(
+                    "python.mypy-strict.v1",
+                    line,
+                    path,
+                    "mypy-file-control",
+                    "region",
+                    side,
+                    digest,
+                )
+            )
+        elif _MYPY_LINE_IGNORE.fullmatch(comment):
+            scope = "blanket" if column == 0 and line <= 2 and "[" not in comment else "narrow"
+            reason = "mypy-module-ignore" if scope == "blanket" else "mypy-line-ignore"
+            records.append(
+                _record("python.mypy-strict.v1", line, path, reason, scope, side, digest)
+            )
+    return tuple(records)
+
+
+def _typescript_tree(path: str, content: bytes) -> Node:
+    import tree_sitter_typescript
+    from tree_sitter import Language, Parser
+
+    try:
+        content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise QualityProfileError(
+            "MALFORMED_SUPPRESSION_ANALYSIS", "TypeScript source is not UTF-8"
+        ) from error
+    language = (
+        tree_sitter_typescript.language_tsx()
+        if path.endswith((".jsx", ".tsx"))
+        else tree_sitter_typescript.language_typescript()
+    )
+    return Parser(Language(language)).parse(content).root_node
+
+
+def _typescript_comments(root: Node, content: bytes) -> tuple[tuple[Node, str], ...]:
+    comments: list[tuple[Node, str]] = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if node.type == "comment":
+            comments.append((node, content[node.start_byte : node.end_byte].decode("utf-8")))
+        else:
+            stack.extend(reversed(node.children))
+    return tuple(sorted(comments, key=lambda item: item[0].start_byte))
+
+
+def _typescript_suppressions(
+    path: str, content: bytes, side: str, adapters: tuple[str, ...]
+) -> tuple[str, ...]:
+    digest = _sha256(content)
+    root = _typescript_tree(path, content)
+    comments = _typescript_comments(root, content)
+    first_code = min(
+        (child.start_byte for child in root.named_children if child.type != "comment"),
+        default=len(content) + 1,
+    )
+    records: list[str] = []
+    for node, comment in comments:
+        line = node.start_point.row + 1
+        if (
+            "typescript.typecheck.v1" in adapters
+            and node.start_byte < first_code
+            and _TYPESCRIPT_NO_CHECK.fullmatch(comment)
+        ):
+            records.append(
+                _record(
+                    "typescript.typecheck.v1",
+                    line,
+                    path,
+                    "typescript-ts-nocheck",
+                    "blanket",
+                    side,
+                    digest,
+                )
+            )
+        elif "typescript.typecheck.v1" in adapters and _TYPESCRIPT_LINE_IGNORE.fullmatch(comment):
+            records.append(
+                _record(
+                    "typescript.typecheck.v1",
+                    line,
+                    path,
+                    "typescript-ts-ignore",
+                    "narrow",
+                    side,
+                    digest,
+                )
+            )
+        if "typescript.eslint.v1" in adapters and _ESLINT_DISABLE_NEXT.search(comment):
+            records.append(
+                _record(
+                    "typescript.eslint.v1",
+                    line,
+                    path,
+                    "eslint-disable-next-line",
+                    "narrow",
+                    side,
+                    digest,
+                )
+            )
+        elif "typescript.eslint.v1" in adapters and _ESLINT_DISABLE_REGION.search(comment):
+            records.append(
+                _record(
+                    "typescript.eslint.v1",
+                    line,
+                    path,
+                    "eslint-disable-region",
+                    "region",
+                    side,
+                    digest,
+                )
+            )
+    return tuple(records)
+
+
+def suppression_records(
+    path: str, content: bytes, side: str, adapters: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Classify pinned suppression grammar without executing candidate code."""
+    if side not in _SUPPRESSION_SIDES:
+        raise QualityProfileError("MALFORMED_SUPPRESSION_ANALYSIS", "invalid source side")
+    if path.endswith((".py", ".pyi")):
+        records = _python_suppressions(path, content, side, adapters)
+    else:
+        records = _typescript_suppressions(path, content, side, adapters)
+    return tuple(sorted(set(records)))
+
+
+def collect_suppression_records(
+    repository: Path,
+    sha: str,
+    side: str,
+    source_files: tuple[str, ...],
+    test_files: tuple[str, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    """Scan immutable source and test blobs with their applicable fixed adapters."""
+    collected: list[str] = []
+    for path in sorted(set((*source_files, *test_files))):
+        is_source = path in source_files
+        if path.endswith((".py", ".pyi")):
+            adapters = ("python.ruff-lint.v1",) + (("python.mypy-strict.v1",) if is_source else ())
+        else:
+            adapters = ("typescript.eslint.v1",) + (
+                ("typescript.typecheck.v1",) if is_source else ()
+            )
+        blob = git_changes.read_regular_blob(repository, sha, path, records)
+        collected.extend(suppression_records(path, blob.content, side, adapters))
+    return tuple(sorted(set(collected)))
 
 
 def command_templates(language: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
@@ -1133,7 +1444,7 @@ def _policy_blocks(
         blocks.append("QUALITY_THRESHOLD_WEAKENING")
     elif evidence.maximum_complexity != policy.maximum:
         blocks.append("QUALITY_THRESHOLD_MISMATCH")
-    blocks.extend(f"QUALITY_EXCLUSION_ADDED:{path}" for path in evidence.exclusions)
+    blocks.extend(suppression_policy_blocks(evidence.exclusions))
     blocks.extend(
         f"PRODUCTION_PATH_MOVED_OUTSIDE_SCOPE:{path}" for path in _moved_outside_scope(assessments)
     )

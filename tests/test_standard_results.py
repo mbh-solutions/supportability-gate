@@ -2451,6 +2451,53 @@ def test_asset_policy_blocks_are_owned_only_by_gate_seven(block: str) -> None:
     assert standard_block_ownership.owners(block) == frozenset({7})
 
 
+def test_blanket_suppression_is_authenticated_and_owned_only_by_gate_seven() -> None:
+    inputs = _inputs()
+    record = quality_profile.encode_suppression_record(
+        quality_profile.SuppressionRecord(
+            "python.ruff-lint.v1",
+            1,
+            "src/sample.py",
+            "ruff-file-noqa",
+            "blanket",
+            "head",
+            "1" * 64,
+        )
+    )
+    block = "QUALITY_BLANKET_SUPPRESSION:python.ruff-lint.v1:src/sample.py:1:ruff-file-noqa"
+    inputs[0]["quality_profile"]["exclusions"] = [record]
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert standard_block_ownership.owners(block) == frozenset({7})
+    assert _entry(payload, 7)["result"] == "BLOCK"
+    assert _entry(payload, 7)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+
+
+def test_blanket_suppression_without_matching_gate_seven_block_is_malformed() -> None:
+    inputs = _inputs()
+    inputs[0]["quality_profile"]["exclusions"] = [
+        quality_profile.encode_suppression_record(
+            quality_profile.SuppressionRecord(
+                "python.ruff-lint.v1",
+                1,
+                "src/sample.py",
+                "ruff-file-noqa",
+                "blanket",
+                "head",
+                "1" * 64,
+            )
+        )
+    ]
+
+    payload = _compose(inputs)
+
+    assert "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE" in _entry(payload, 7)["technical_errors"]
+
+
 def test_missing_executed_argv_is_gate_seven_technical_only() -> None:
     inputs = _inputs()
     del inputs[3]["commands"][0]["executed_arguments"]
