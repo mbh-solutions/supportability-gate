@@ -76,7 +76,7 @@ summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Bundle, manifest, context, evidence, decision, profile, and delivery names match their recorded deterministic roles."
+naming = ""
 cohesion = "The production module owns only archive construction and restoration; existing validators continue to own evidence meaning."
 intended_behavior = "Every uploaded authoritative evidence artifact contains a compact bundle that has already restored successfully with network disabled."
 reviewability = "The change is bounded to one production module, focused tests and characterization, one dependency-layer entry, and two steps in the existing evidence job."
