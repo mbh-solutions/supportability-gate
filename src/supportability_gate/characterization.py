@@ -16,6 +16,7 @@ MANIFEST_PATH = ".supportability-characterization.json"
 SCENARIO_ROOT = "tests/characterization"
 CAPTURE_SCHEMA = "characterization-capture.v2"
 PROVENANCE_SCHEMA = "characterization-provenance.v1"
+LEGACY_RESULT_SCHEMA = "characterization-result.v1"
 RESULT_SCHEMA = "characterization-result.v2"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
@@ -1101,6 +1102,28 @@ def _result_coverage(
     ]
 
 
+def _legacy_result_coverage(
+    value: object,
+    scenarios: list[dict[str, Any]],
+    required_paths: tuple[str, ...] | None,
+) -> list[str]:
+    row = _exact_keys(
+        value, {"covered_paths", "required_paths"}, "MALFORMED_CHARACTERIZATION_RESULT"
+    )
+    covered = _result_paths(row["covered_paths"], "coverage.covered_paths")
+    required = _result_paths(row["required_paths"], "coverage.required_paths")
+    expected_covered = tuple(
+        sorted({path for scenario in scenarios for path in scenario["covers"]})
+    )
+    if (
+        covered != expected_covered
+        or required != tuple(sorted(required))
+        or (required_paths is not None and required != required_paths)
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return [f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered]
+
+
 def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> list[str]:
     derived: list[str] = []
     incomplete = any(
@@ -1147,7 +1170,7 @@ def validate_result(
     expected_artifacts: object = None,
 ) -> list[str]:
     """Validate serialized Gate 5 facts without repository or target execution."""
-    keys = {
+    common_keys = {
         "artifacts",
         "base_sha",
         "behavior_fingerprint",
@@ -1155,7 +1178,6 @@ def validate_result(
         "head_sha",
         "manifest_blob_sha",
         "manifest_sha256",
-        "obligations",
         "overall_result",
         "policy_blocks",
         "repository",
@@ -1163,7 +1185,14 @@ def validate_result(
         "schema_version",
         "workflow_sha",
     }
-    if not isinstance(value, dict) or set(value) not in (keys, {*keys, "refactor_runnability"}):
+    if not isinstance(value, dict):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    schema_version = value.get("schema_version")
+    keys = {*common_keys, "obligations"} if schema_version == RESULT_SCHEMA else common_keys
+    if schema_version not in {LEGACY_RESULT_SCHEMA, RESULT_SCHEMA} or set(value) not in (
+        keys,
+        {*keys, "refactor_runnability"},
+    ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     row = value
     if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
@@ -1174,8 +1203,7 @@ def validate_result(
     ):
         raise CharacterizationError("CHARACTERIZATION_RESULT_BINDING_MISMATCH")
     if (
-        row["schema_version"] != RESULT_SCHEMA
-        or not isinstance(row["manifest_blob_sha"], str)
+        not isinstance(row["manifest_blob_sha"], str)
         or SHA.fullmatch(row["manifest_blob_sha"]) is None
         or not isinstance(row["manifest_sha256"], str)
         or SHA256.fullmatch(row["manifest_sha256"]) is None
@@ -1198,17 +1226,20 @@ def validate_result(
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     scenarios = _result_scenarios(row["scenarios"])
-    obligations = _result_obligations(row["obligations"], scenarios)
-    fingerprint = _sha256(
-        _canonical(
-            {
-                "obligations": [
-                    [item["id"], item["head_assertion_sha256"]] for item in obligations
-                ],
-                "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
-            }
-        )
+    obligations = (
+        _result_obligations(row["obligations"], scenarios)
+        if schema_version == RESULT_SCHEMA
+        else []
     )
+    fingerprint_payload: object = (
+        {
+            "obligations": [[item["id"], item["head_assertion_sha256"]] for item in obligations],
+            "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
+        }
+        if schema_version == RESULT_SCHEMA
+        else [[item["id"], item["head_behavior_sha256"]] for item in scenarios]
+    )
+    fingerprint = _sha256(_canonical(fingerprint_payload))
     if row["behavior_fingerprint"] != fingerprint:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     derived.extend(_result_scenario_blocks(scenarios, blocks))
@@ -1224,9 +1255,14 @@ def validate_result(
         for item in obligations
         if item["meaningful"] is False
     )
-    derived.extend(
-        _result_coverage(row["coverage"], scenarios, obligations, required_paths, required_targets)
-    )
+    if schema_version == RESULT_SCHEMA:
+        derived.extend(
+            _result_coverage(
+                row["coverage"], scenarios, obligations, required_paths, required_targets
+            )
+        )
+    else:
+        derived.extend(_legacy_result_coverage(row["coverage"], scenarios, required_paths))
     exact_families = (
         "BASE_CAPTURE_DIGEST_MISMATCH",
         "HEAD_CAPTURE_DIGEST_MISMATCH",

@@ -2010,6 +2010,23 @@ def test_characterization_aggregate_rejects_semantic_forgery(case: str) -> None:
     )
 
 
+def test_characterization_aggregate_accepts_legacy_result_during_transition() -> None:
+    inputs = _inputs()
+    legacy = inputs[1]
+    legacy["schema_version"] = characterization.LEGACY_RESULT_SCHEMA
+    legacy["behavior_fingerprint"] = hashlib.sha256(
+        _canonical([[item["id"], item["head_behavior_sha256"]] for item in legacy["scenarios"]])
+    ).hexdigest()
+    legacy.pop("obligations")
+    legacy["coverage"].pop("covered_obligations")
+    legacy["coverage"].pop("required_obligations")
+    _bind_characterization(inputs)
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 8
+
+
 @pytest.mark.parametrize("side", ["base", "head"])
 @pytest.mark.parametrize("field", ["id", "digest"])
 def test_characterization_artifacts_require_external_binding(side: str, field: str) -> None:
