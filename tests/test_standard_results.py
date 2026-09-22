@@ -356,9 +356,14 @@ def _refactor(characterization: dict[str, Any], path: str) -> dict[str, Any]:
                 "base_sha": IDENTITY.base_sha,
                 "broad": False,
                 "head_sha": IDENTITY.head_sha,
+                "related_tests": [],
                 "repository": IDENTITY.repository,
                 "scope": [path],
-                "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+                "sequence": {
+                    "predecessor_sha": IDENTITY.base_sha,
+                    "series_id": "fixture-series",
+                    "step": 1,
+                },
                 "targets": targets,
             }
             if applicable
@@ -460,9 +465,14 @@ def _step_two_refactor(inputs: tuple[dict[str, Any], ...]) -> dict[str, Any]:
             "base_sha": "c" * 40,
             "broad": current["broad"],
             "head_sha": "d" * 40,
+            "related_tests": list(current["related_tests"]),
             "repository": IDENTITY.repository,
             "scope": list(current["scope"]),
-            "sequence": {"predecessor_sha": "c" * 40, "step": 1},
+            "sequence": {
+                "predecessor_sha": "c" * 40,
+                "series_id": current["sequence"]["series_id"],
+                "step": 1,
+            },
             "targets": list(current["targets"]),
         },
         "authorization_comment_id": 10,
@@ -976,9 +986,14 @@ def test_refactor_result_cross_binds_authenticated_change_evidence(defect: str) 
         "base_sha": IDENTITY.base_sha,
         "broad": False,
         "head_sha": IDENTITY.head_sha,
+        "related_tests": [],
         "repository": IDENTITY.repository,
         "scope": ["src/sample.py"],
-        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "sequence": {
+            "predecessor_sha": IDENTITY.base_sha,
+            "series_id": "fixture-series",
+            "step": 1,
+        },
         "targets": [target],
     }
     inputs[2].update(
@@ -1064,9 +1079,14 @@ def test_refactor_binding_preserves_deleted_old_path_identity_on_rename() -> Non
         "base_sha": IDENTITY.base_sha,
         "broad": True,
         "head_sha": IDENTITY.head_sha,
+        "related_tests": [],
         "repository": IDENTITY.repository,
         "scope": ["src/renamed.py", "src/sample.py"],
-        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "sequence": {
+            "predecessor_sha": IDENTITY.base_sha,
+            "series_id": "fixture-series",
+            "step": 1,
+        },
         "targets": list(targets),
     }
     row = {
@@ -1117,9 +1137,14 @@ def test_refactor_binding_leaves_mixed_asset_to_quality_gate() -> None:
         "base_sha": IDENTITY.base_sha,
         "broad": True,
         "head_sha": IDENTITY.head_sha,
+        "related_tests": [],
         "repository": IDENTITY.repository,
         "scope": scope,
-        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "sequence": {
+            "predecessor_sha": IDENTITY.base_sha,
+            "series_id": "fixture-series",
+            "step": 1,
+        },
         "targets": [target],
     }
     row = {
@@ -1166,9 +1191,14 @@ def test_refactor_binding_source_to_asset_keeps_source_requirement(
         "base_sha": IDENTITY.base_sha,
         "broad": True,
         "head_sha": IDENTITY.head_sha,
+        "related_tests": [],
         "repository": IDENTITY.repository,
         "scope": scope,
-        "sequence": {"predecessor_sha": IDENTITY.base_sha, "step": 1},
+        "sequence": {
+            "predecessor_sha": IDENTITY.base_sha,
+            "series_id": "fixture-series",
+            "step": 1,
+        },
         "targets": [target],
     }
     row = {
@@ -1251,6 +1281,92 @@ def test_exact_authenticated_step_two_predecessor_passes() -> None:
 
     assert _results(payload) == ["PASS"] * 8
     assert payload["shared_failures"] == []
+
+
+@pytest.mark.parametrize(
+    ("test_path", "declared_path", "expected"),
+    [
+        ("tests/test_sample.py", "tests/test_sample.py", set()),
+        ("tests/test_other.py", "tests/test_other.py", {"BROAD_AUTHORIZATION_REQUIRED"}),
+        ("tests/hidden.py", "tests/hidden.py", {"BROAD_AUTHORIZATION_REQUIRED"}),
+        ("tests/test_sample.py", "tests/test_stale.py", {"BROAD_AUTHORIZATION_REQUIRED"}),
+    ],
+)
+def test_related_test_association_is_independently_cross_bound(
+    test_path: str, declared_path: str, expected: set[str]
+) -> None:
+    inputs = _inputs()
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    target = authorization["targets"][0]
+    authorization["scope"] = sorted(["src/sample.py", test_path])
+    authorization["related_tests"] = [{"path": declared_path, "targets": [target]}]
+    row = {"targets": [target], "unbounded_paths": []}
+
+    blocks = standard_results._s02_refactor_focus_blocks(
+        row,
+        authorization,
+        authorization["scope"],
+        ["src/sample.py"],
+        ["src/sample.py"],
+        "python",
+    )
+
+    assert blocks == expected
+
+
+def test_duplicate_related_test_declaration_is_malformed() -> None:
+    inputs = _inputs()
+    authorization = inputs[2]["authorization"]
+    assert isinstance(authorization, dict)
+    target = authorization["targets"][0]
+    related = {"path": "tests/test_sample.py", "targets": [target]}
+    authorization["related_tests"] = [related, related]
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == {6, 8}
+    assert all(
+        _entry(payload, standard)["technical_errors"] == ["MALFORMED_REFACTOR_RESULT"]
+        for standard in (6, 8)
+    )
+
+
+def test_series_identity_and_target_identity_bind_continuation() -> None:
+    inputs = _inputs()
+    predecessor = copy.deepcopy(inputs[2]["authorization"])
+    authorization = copy.deepcopy(predecessor)
+    assert isinstance(predecessor, dict) and isinstance(authorization, dict)
+    authorization["sequence"]["step"] = 2
+
+    assert (
+        standard_results._s02_refactor_sequence_blocks(authorization, predecessor, None, IDENTITY)
+        == set()
+    )
+
+    authorization["sequence"]["series_id"] = "other-series"
+    assert standard_results._s02_refactor_sequence_blocks(
+        authorization, predecessor, None, IDENTITY
+    ) == {"INVALID_STRANGLER_SEQUENCE"}
+
+    authorization = copy.deepcopy(predecessor)
+    authorization["sequence"]["series_id"] = "independent-series"
+    assert (
+        standard_results._s02_refactor_sequence_blocks(authorization, predecessor, None, IDENTITY)
+        == set()
+    )
+
+    authorization["sequence"]["series_id"] = predecessor["sequence"]["series_id"]
+    assert standard_results._s02_refactor_sequence_blocks(
+        authorization, predecessor, None, IDENTITY
+    ) == {"INVALID_STRANGLER_SEQUENCE"}
+
+    authorization["sequence"]["step"] = 2
+    authorization["sequence"]["series_id"] = predecessor["sequence"]["series_id"]
+    authorization["targets"] = ["src/other.py::function:normalize:1-2"]
+    assert standard_results._s02_refactor_sequence_blocks(
+        authorization, predecessor, None, IDENTITY
+    ) == {"INVALID_STRANGLER_SEQUENCE"}
 
 
 @pytest.mark.parametrize(

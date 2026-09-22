@@ -141,10 +141,15 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
             "base_sha": base_sha,
             "broad": False,
             "head_sha": head_sha,
+            "related_tests": [],
             "repository": "acme/repo",
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "scope": [path],
-            "sequence": {"predecessor_sha": base_sha, "step": 1},
+            "sequence": {
+                "predecessor_sha": base_sha,
+                "series_id": "fixture-series",
+                "step": 1,
+            },
             "targets": [target],
         }
         characterization = {
@@ -531,9 +536,14 @@ def main() -> None:
                         "base_sha": identity.base_sha,
                         "broad": False,
                         "head_sha": identity.head_sha,
+                        "related_tests": [],
                         "repository": identity.repository,
                         "scope": [path],
-                        "sequence": {"predecessor_sha": identity.base_sha, "step": 1},
+                        "sequence": {
+                            "predecessor_sha": identity.base_sha,
+                            "series_id": "fixture-series",
+                            "step": 1,
+                        },
                         "targets": [target_identity],
                     },
                     "authorization_comment_id": 11,
