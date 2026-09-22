@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 from supportability_gate import characterization, quality_profile, standard_block_ownership
 from supportability_gate.standard_results import RunIdentity
@@ -60,6 +61,7 @@ def main() -> None:
             ),
         ],
     }
+    behavior["nondeterministic-canary"] = time.time_ns()
     print(
         json.dumps(
             {
