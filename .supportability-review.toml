@@ -7,7 +7,7 @@ proof = "The S06 language corpus covers ordinary and nested names, async/decorat
 
 [characterization]
 captured_behavior = "Before S06, valid accessor and overload definitions collapsed to duplicate qualified names, and Python match cases measured differently in McCabe and Ruff."
-proof = "The s06-language-features driver and golden retain construct identities across line movement and retain low/high match metrics; evaluator tests retain PASS, BLOCK, TECHNICAL_FAILURE, replay, and handoff outcomes."
+proof = "The s06-language-features driver and golden retain ordinary, nested, decorated, method, and callback identities across line movement; evaluator tests retain the corrected accessor, overload, match, PASS, BLOCK, TECHNICAL_FAILURE, replay, and handoff outcomes."
 
 [separation_of_concerns]
 before = "Canonical identity used only a qualified name, and the pinned McCabe visitor had no Python match branch model."

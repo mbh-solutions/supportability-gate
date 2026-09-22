@@ -85,13 +85,6 @@
       "target": "src/supportability_gate/git_changes.py"
     },
     {
-      "category": "behavior",
-      "id": "language-construct-identities",
-      "scenario": "s06-language-features",
-      "selector": "language-construct-identities",
-      "target": "src/supportability_gate/function_changes.py"
-    },
-    {
       "category": "static",
       "id": "m9-quality-profile",
       "scenario": "m9-quality-profile",
@@ -100,10 +93,10 @@
     },
     {
       "category": "behavior",
-      "id": "modern-match-complexity",
+      "id": "ordinary-function-identities",
       "scenario": "s06-language-features",
-      "selector": "modern-match-complexity",
-      "target": "src/supportability_gate/complexity_metrics.py"
+      "selector": "ordinary-function-identities",
+      "target": "src/supportability_gate/function_changes.py"
     },
     {
       "category": "static",
@@ -231,7 +224,6 @@
     },
     {
       "covers": [
-        "src/supportability_gate/complexity_metrics.py",
         "src/supportability_gate/function_changes.py"
       ],
       "id": "s06-language-features",

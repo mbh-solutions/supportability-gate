@@ -1,43 +1,28 @@
 {
-  "language-construct-identities": [
+  "ordinary-function-identities": [
     {
-      "input": "python-property",
+      "input": "python",
       "output": [
-        "Reading.value|kind=python-property|role=getter",
-        "Reading.value|kind=python-property|role=setter"
+        "trace",
+        "fetch",
+        "fetch.normalize",
+        "Reading.value"
       ]
     },
     {
-      "input": "python-property-after-line-movement",
+      "input": "python-after-line-movement",
       "output": [
-        "Reading.value|kind=python-property|role=getter",
-        "Reading.value|kind=python-property|role=setter"
+        "trace",
+        "fetch",
+        "fetch.normalize",
+        "Reading.value"
       ]
     },
     {
-      "input": "python-overloads",
+      "input": "typescript-callback",
       "output": [
-        "normalize|kind=python-overload|role=declaration-1",
-        "normalize|kind=python-overload|role=declaration-2",
-        "normalize"
+        "callback"
       ]
-    },
-    {
-      "input": "typescript-accessors",
-      "output": [
-        "Reading.value|kind=typescript-accessor|role=getter",
-        "Reading.value|kind=typescript-accessor|role=setter"
-      ]
-    }
-  ],
-  "modern-match-complexity": [
-    {
-      "input": "guarded-low-complexity",
-      "output": 3
-    },
-    {
-      "input": "twelve-cases",
-      "output": 13
     }
   ]
 }
