@@ -1,0 +1,28 @@
+{
+  "ordinary-function-identities": [
+    {
+      "input": "python",
+      "output": [
+        "trace",
+        "fetch",
+        "fetch.normalize",
+        "Reading.value"
+      ]
+    },
+    {
+      "input": "python-after-line-movement",
+      "output": [
+        "trace",
+        "fetch",
+        "fetch.normalize",
+        "Reading.value"
+      ]
+    },
+    {
+      "input": "typescript-callback",
+      "output": [
+        "callback"
+      ]
+    }
+  ]
+}

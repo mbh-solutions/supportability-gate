@@ -2,37 +2,50 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Stable behavior obligations retain meaningful multi-input and multi-output evidence across scenario renames; exact digest-bound migrations are explicit, and malformed or nondeterministic evidence fails closed."
-proof = "The activated S05 driver covers meaningful retained output, boundary ownership, result identity, quality suppression behavior, exact migration, additive obligations, obligation removal, scenario rename, constant output, nondeterminism, and malformed capture handling."
+intended_behavior = "Ordinary function identities remain unchanged; valid Python properties, overload declarations, implementations, and TypeScript accessors receive stable construct-aware identities, while Python match complexity agrees with the pinned Ruff metric."
+proof = "The S06 language corpus covers ordinary and nested names, async/decorated functions, callbacks, accessors, overloads, line movement, low and over-limit match bodies, progressive legacy debt, exact downstream authorization/composition/handoff binding, and fail-closed malformed or truly ambiguous source."
 
 [characterization]
-captured_behavior = "The protected v1 manifest could bind behavior to scenario names and matching goldens without independently preserving a stable responsibility obligation or proving nonconstant input-to-output behavior."
-proof = "The schema-v2 manifest activates stable obligation IDs, exact selectors, authenticated targets, one digest-bound v3-to-v4 migration, and a dedicated S05 behavior scenario with retained positive and adversarial cases."
+captured_behavior = "Before S06, valid accessor and overload definitions collapsed to duplicate qualified names, and Python match cases measured differently in McCabe and Ruff."
+proof = "The s06-language-features driver and golden retain ordinary, nested, decorated, method, and callback identities across line movement; evaluator tests retain the corrected accessor, overload, match, PASS, BLOCK, TECHNICAL_FAILURE, replay, and handoff outcomes."
 
 [separation_of_concerns]
-before = "The live characterization inventory remained on schema v1 while the protected bootstrap deployed strict v1 and v2 consumers."
-after = "The live manifest now declares obligations and transitions; existing Gate modules consume the activated evidence through the already protected bootstrap interfaces."
-boundaries = []
+before = "Canonical identity used only a qualified name, and the pinned McCabe visitor had no Python match branch model."
+after = "The source parser alone assigns construct roles, while the metrics adapter alone models match branches; existing policy, target, authorization, composition, and handoff consumers keep using the same canonical identity field."
+boundaries = [
+  { path = "src/supportability_gate/complexity_metrics.py", kind = "function", symbol = "_RuffCompatiblePathGraphingAstVisitor.visitMatch", before = "Pinned McCabe did not model Python match branches.", after = "The narrow visitor models case paths with Ruff-compatible irrefutable-default handling." },
+  { path = "src/supportability_gate/complexity_metrics.py", kind = "function", symbol = "_irrefutable_match_pattern", before = "No match-pattern default classification existed.", after = "Irrefutable capture and OR patterns are classified without executing target source." },
+  { path = "src/supportability_gate/complexity_metrics.py", kind = "function", symbol = "_match_has_default", before = "Match graphs could not distinguish a final default case.", after = "Only an unguarded irrefutable case removes the fallthrough path." },
+  { path = "src/supportability_gate/complexity_metrics.py", kind = "function", symbol = "measure_definitions", before = "Python definitions used the unextended pinned McCabe visitor.", after = "Python definitions use the focused Ruff-compatible visitor; TypeScript and policy interfaces are unchanged." },
+  { path = "src/supportability_gate/complexity_metrics.py", kind = "module", symbol = "src/supportability_gate/complexity_metrics.py", before = "The module imported only the base McCabe visitor.", after = "The module also imports the existing McCabe graph node needed for match branch joins." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_FunctionCollector.__init__", before = "The Python collector had no overload-role ordinal state.", after = "The collector tracks overload declaration order per stable qualified base name." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_FunctionCollector._visit_function", before = "Every Python definition used only its ordinary qualified name.", after = "Only properties and overload declarations add construct roles; ordinary identities remain byte-compatible." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_TypeScriptFunctionCollector._visit_function", before = "TypeScript getters and setters shared one method identity.", after = "Accessors add getter or setter roles while ordinary TypeScript functions keep their names." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_construct_identity", before = "No canonical construct-role suffix existed.", after = "One deterministic suffix represents construct kind and role without absolute line numbers." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_decorator_name", before = "Python decorator ownership was not normalized for identity classification.", after = "Name and attribute decorators are read structurally without importing target code." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_python_construct", before = "Properties and overloads were indistinguishable duplicate functions.", after = "Recognized property and overload decorators receive roles, while conflicting roles fail closed." },
+  { path = "src/supportability_gate/function_changes.py", kind = "function", symbol = "_typescript_accessor_role", before = "TypeScript accessor tokens were ignored by canonical identity.", after = "Tree-sitter getter and setter tokens provide deterministic accessor roles." },
+]
 
 [architecture]
-dependency_direction = "The manifest declares evidence obligations, fixed characterization drivers produce behavior, goldens authenticate expected output, and the pinned Gate independently validates all results without importing target repository code."
-reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "docs/product_completion_contract.md", "tests/characterization/gate8-standard-results-boundary-v3.characterization.py", "tests/characterization/gate8-standard-results-boundary-v3.golden.json", "tests/characterization/s05-meaningful-behavior.characterization.py", "tests/characterization/s05-meaningful-behavior.golden.json", "tests/test_characterization.py"]
+dependency_direction = "Parsing owns syntax-derived identity, complexity measurement owns metric compatibility, existing policy and evidence layers consume their outputs, and protected characterization authenticates behavior without a second engine."
+reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "src/supportability_gate/complexity_metrics.py", "src/supportability_gate/function_changes.py", "tests/characterization/s06-language-features.characterization.py", "tests/characterization/s06-language-features.golden.json", "tests/test_evaluate_complexity.py"]
 
 [responsibility_boundary]
-path = ".supportability-characterization.json"
-owns = "The active scenario, stable obligation, selector, target, and exact transition inventory consumed by protected characterization."
-does_not_own = "Gate implementation, target execution, semantic review, commands, thresholds, waivers, ruleset administration, or successor remediation."
+path = "src/supportability_gate/function_changes.py"
+owns = "Parser-derived stable function identities for supported Python and TypeScript constructs."
+does_not_own = "Complexity thresholds, owner authorization, characterization policy, result composition, workflow commands, waivers, semantic review, or successor remediation."
 
 [incremental_refactor]
-target = "Activate the protected meaningful-behavior contract without changing Gate commands, thresholds, or policy architecture."
-completed_step = "Migrated the live characterization inventory to schema v2, added stable obligations and an exact retained migration, and activated the dedicated S05 proof driver and golden."
+target = "Correct the demonstrated accessor, overload, and Python match compatibility defects without changing ordinary identities or policy thresholds."
+completed_step = "Added construct-aware identity roles and a narrow match graph adapter, then bound both through the existing deterministic proof pipeline."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Scenario, obligation, selector, target, transition, baseline digest, and meaningful case names expose every deterministic input."
-cohesion = "The manifest owns declarations, drivers own bounded evidence generation, goldens own expected output, and the already protected Gate owns validation."
-intended_behavior = "A stable responsibility cannot disappear behind a renamed scenario, constant output, missing runtime execution, unbound capture, or nondeterministic evidence."
-reviewability = "The activated manifest and two focused driver/golden pairs expose exact obligations, migration identity, positive behavior, policy blocks, and technical-failure cases."
+naming = "Construct kind and role are explicit in exceptional identities; ordinary function names remain unchanged."
+cohesion = "Syntax classification remains in the parser, metric compatibility remains in the metrics adapter, and policy consumers are unchanged."
+intended_behavior = "Valid supported constructs pass when within policy, over-limit or nonimproving bodies block, and malformed or truly ambiguous source fails technically."
+reviewability = "The focused production diff, compact corpus, exact golden outputs, and downstream composition assertions expose the complete S06 change."
