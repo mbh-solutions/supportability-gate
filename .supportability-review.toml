@@ -16,7 +16,7 @@ boundaries = []
 
 [architecture]
 dependency_direction = "The manifest declares evidence obligations, fixed characterization drivers produce behavior, goldens authenticate expected output, and the pinned Gate independently validates all results without importing target repository code."
-reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "docs/product_completion_contract.md", "tests/characterization/gate8-standard-results-boundary-v3.characterization.py", "tests/characterization/gate8-standard-results-boundary-v3.golden.json", "tests/characterization/s05-meaningful-behavior.characterization.py", "tests/characterization/s05-meaningful-behavior.golden.json"]
+reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "docs/product_completion_contract.md", "tests/characterization/gate8-standard-results-boundary-v3.characterization.py", "tests/characterization/gate8-standard-results-boundary-v3.golden.json", "tests/characterization/s05-meaningful-behavior.characterization.py", "tests/characterization/s05-meaningful-behavior.golden.json", "tests/test_characterization.py"]
 
 [responsibility_boundary]
 path = ".supportability-characterization.json"
