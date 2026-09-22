@@ -759,23 +759,23 @@ def _compatibility_evidence(
     scenarios: list[dict[str, object]] = []
     for item in manifest.scenarios:
         base_row, head_row = base_rows.get(item.id), head_rows.get(item.id)
+        base_behavior = base_row.get("behavior_sha256") if base_row else None
+        head_behavior = head_row.get("behavior_sha256") if head_row else None
         compatible = bool(
-            base_row
-            and head_row
-            and base_row.get("behavior_sha256") == head_row.get("behavior_sha256")
+            base_row and head_row and base_behavior is not None and base_behavior == head_behavior
         )
-        if base_row and head_row and not compatible:
+        if base_behavior is not None and head_behavior is not None and not compatible:
             blocks.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:{item.id}")
         scenarios.append(
             {
-                "base_behavior_sha256": base_row.get("behavior_sha256") if base_row else None,
+                "base_behavior_sha256": base_behavior,
                 "command": head_row.get("command") if head_row else None,
                 "compatibility": "PASS" if compatible else "BLOCK",
                 "covers": list(item.covers),
                 "golden_behavior_sha256": (
                     head_row.get("golden_behavior_sha256") if head_row else None
                 ),
-                "head_behavior_sha256": head_row.get("behavior_sha256") if head_row else None,
+                "head_behavior_sha256": head_behavior,
                 "id": item.id,
                 "kind": item.kind,
             }

@@ -43,15 +43,15 @@ jobs:
           persist-credentials: false
           path: gate
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12.14
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
 
-      - name: Set up Node.js 24
+      - name: Set up Node.js 24.20.0
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: "24"
+          node-version: "24.20.0"
           package-manager-cache: false
 
       - name: Install exact characterization dependencies
@@ -128,15 +128,15 @@ jobs:
           persist-credentials: false
           path: gate
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12.14
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
 
-      - name: Set up Node.js 24
+      - name: Set up Node.js 24.20.0
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: "24"
+          node-version: "24.20.0"
           package-manager-cache: false
 
       - name: Install exact characterization dependencies
@@ -206,15 +206,15 @@ jobs:
           persist-credentials: false
           path: gate
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12.14
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
 
-      - name: Set up Node.js 24
+      - name: Set up Node.js 24.20.0
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: "24"
+          node-version: "24.20.0"
           package-manager-cache: false
 
       - name: Install exact quality runner dependencies
@@ -285,10 +285,10 @@ jobs:
           persist-credentials: false
           path: gate
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12.14
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
 
       - name: Install exact gate
         id: install
@@ -613,10 +613,10 @@ jobs:
           persist-credentials: false
           path: gate
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12.14
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
 
       - name: Download exact authoritative evidence artifact
         id: download

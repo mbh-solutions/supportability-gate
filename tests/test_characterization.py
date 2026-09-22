@@ -9,7 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from supportability_gate import characterization, contract, git_changes, refactor_targets
+from supportability_gate import (
+    characterization,
+    contract,
+    git_changes,
+    refactor_targets,
+)
 
 _SPEC = importlib.util.spec_from_file_location(
     "hosted_characterization", Path(__file__).with_name("hosted_characterization.py")
@@ -750,6 +755,29 @@ def _verify(
     )
 
 
+def _validate_round_trip(result: dict[str, object]) -> None:
+    coverage = result["coverage"]
+    assert isinstance(coverage, dict)
+    required_paths = coverage["required_paths"]
+    assert isinstance(required_paths, list)
+    expected_artifacts = json.loads(json.dumps(result["artifacts"]))
+    for side in ("base", "head"):
+        if expected_artifacts[side]["capture_sha256"] is None:
+            expected_artifacts[side]["capture_sha256"] = "0" * 64
+    assert (
+        characterization.validate_result(
+            result,
+            repository=str(result["repository"]),
+            base_sha=str(result["base_sha"]),
+            head_sha=str(result["head_sha"]),
+            workflow_sha=str(result["workflow_sha"]),
+            required_paths=tuple(required_paths),
+            expected_artifacts=expected_artifacts,
+        )
+        == result["policy_blocks"]
+    )
+
+
 @pytest.mark.parametrize("language", ["python", "typescript"])
 def test_existing_characterization_passes_with_exact_identity(
     tmp_path: Path, language: str
@@ -767,6 +795,7 @@ def test_existing_characterization_passes_with_exact_identity(
     assert result["coverage"]["required_paths"] == [
         "src/sample.py" if language == "python" else "src/sample.ts"
     ]
+    _validate_round_trip(result)
     assert result["refactor_runnability"] == {
         "base_sha": base_sha,
         "head_sha": head_sha,
@@ -1001,6 +1030,71 @@ def test_missing_head_is_incomplete_not_head_only(tmp_path: Path) -> None:
 
     assert "INCOMPLETE_CHARACTERIZATION_EVIDENCE" in result["policy_blocks"]
     assert "HEAD_ONLY_CHARACTERIZATION_CLAIM" not in result["policy_blocks"]
+
+
+def test_result_round_trip_distinguishes_success_failure_incomplete_and_malformed(
+    tmp_path: Path,
+) -> None:
+    repository, base_checkout, base_sha, head_sha = _repository(tmp_path)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    success_paths = _write_artifacts(tmp_path / "success", base, head)
+
+    success = _verify(repository, base_sha, head_sha, *success_paths)
+    assert success["scenarios"][0]["compatibility"] == "PASS"
+    _validate_round_trip(success)
+    successful_base = json.loads(json.dumps(base))
+    successful_head = json.loads(json.dumps(head))
+
+    for capture in (base, head):
+        scenario = capture["scenarios"][0]
+        scenario.update(behavior=None, behavior_sha256=None, error="fixture failure", exit_code=1)
+        capture["behavior_fingerprint"] = characterization._sha256(
+            characterization._canonical([["existing", None]])
+        )
+    failed_paths = _write_artifacts(tmp_path / "failed", base, head)
+
+    failed = _verify(repository, base_sha, head_sha, *failed_paths)
+    assert failed["scenarios"][0]["compatibility"] == "BLOCK"
+    assert "CHARACTERIZATION_EXECUTION_FAILED:existing" in failed["policy_blocks"]
+    _validate_round_trip(failed)
+
+    incomplete_paths = _write_artifacts(tmp_path / "incomplete", successful_base, {})
+    incomplete = _verify(
+        repository,
+        base_sha,
+        head_sha,
+        incomplete_paths[0],
+        tmp_path / "incomplete" / "missing-head.json",
+    )
+    assert incomplete["scenarios"][0]["compatibility"] == "BLOCK"
+    assert "INCOMPLETE_CHARACTERIZATION_EVIDENCE" in incomplete["policy_blocks"]
+    _validate_round_trip(incomplete)
+
+    malformed_capture_paths = _write_artifacts(
+        tmp_path / "malformed-capture", successful_base, successful_head
+    )
+    _write(malformed_capture_paths[1], "{")
+    characterization._provenance_path(malformed_capture_paths[1]).unlink()
+    malformed_capture = _verify(repository, base_sha, head_sha, *malformed_capture_paths)
+    assert malformed_capture["scenarios"][0]["compatibility"] == "BLOCK"
+    assert "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE" in malformed_capture["policy_blocks"]
+    _validate_round_trip(malformed_capture)
+
+    malformed = json.loads(json.dumps(failed))
+    malformed["scenarios"][0]["compatibility"] = "PASS"
+    with pytest.raises(
+        characterization.CharacterizationError, match="MALFORMED_CHARACTERIZATION_RESULT"
+    ):
+        characterization.validate_result(
+            malformed,
+            repository=malformed["repository"],
+            base_sha=base_sha,
+            head_sha=head_sha,
+            workflow_sha="f" * 40,
+            required_paths=tuple(malformed["coverage"]["required_paths"]),
+            required_targets=tuple(malformed["refactor_runnability"]["targets"]),
+            expected_artifacts=malformed["artifacts"],
+        )
 
 
 def test_changed_characterization_definition_blocks(tmp_path: Path) -> None:
