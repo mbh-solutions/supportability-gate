@@ -2,40 +2,40 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The consumed S07 characterization transition is absent after its protected replacement merge."
-proof = "The protected Gate verifies the unchanged v5 obligation without reporting a stale transition."
+intended_behavior = "The completion ledger records S07 delivery evidence without changing Gate behavior."
+proof = "Protected checks validate the documentation-only ledger transaction."
 
 [characterization]
-captured_behavior = "The retained v5 obligation and golden output remain unchanged."
-proof = "Base and head characterization captures remain valid while the consumed transition row is removed."
+captured_behavior = "No production or characterization definition changes."
+proof = "The deployed v5 obligation and executable Gate source remain unchanged."
 
 [separation_of_concerns]
-before = "The one-use transition remained present after its source obligation had already been replaced."
-after = "The manifest retains the v5 obligation with an empty transition list."
+before = "The persistent ledger ended with the independently verified S06 handoff."
+after = "A separate S07 section records delivery, canary, deployment, and remaining-controller evidence."
 boundaries = []
 
 [architecture]
 dependency_direction = "No production dependency or module boundary changes."
 reviewed_paths = [
-  ".supportability-characterization.json",
   ".supportability-review.toml",
+  "docs/product_completion_contract.md",
 ]
 
 [responsibility_boundary]
-path = ".supportability-characterization.json"
-owns = "Current protected characterization scenarios, obligations, and unconsumed transitions."
-does_not_own = "Production behavior, authorization policy, or quality thresholds."
+path = "docs/product_completion_contract.md"
+owns = "Persistent Project 25 delivery status, direct evidence, remaining work, and next authorization state."
+does_not_own = "Independent controller approval, S08 activation, or production enforcement behavior."
 
 [incremental_refactor]
-target = "S07 post-merge characterization transition retirement."
-completed_step = "Removed the consumed v4-to-v5 transition while retaining the v5 obligation."
+target = "Project 25 S07 completion ledger transaction."
+completed_step = "Recorded the delivered S07 handoff as In Review, Partial, On scope, and No."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The retained obligation and empty transition list state the current manifest directly."
-cohesion = "Only characterization metadata and its exact review evidence change."
-intended_behavior = "Later pull requests no longer inherit a stale transition policy block."
-reviewability = "The diff removes one consumed transition and updates its bounded evidence."
+naming = "The ledger names exact PRs, runs, artifacts, pins, result codes, and remaining authority."
+cohesion = "Only the S07 ledger record and its exact review evidence change."
+intended_behavior = "S07 remains awaiting independent controller verification and S08 remains unauthorized."
+reviewability = "The transaction is documentation-only and bounded to two evidence files."
