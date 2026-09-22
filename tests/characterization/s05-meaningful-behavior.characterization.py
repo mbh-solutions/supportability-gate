@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import importlib
 import json
+import tempfile
+import zipfile
+from pathlib import Path
 
 from supportability_gate import (
     characterization,
@@ -14,6 +18,13 @@ from supportability_gate import (
 )
 from supportability_gate.standard_results import RunIdentity
 
+try:
+    _qualification_bundle = importlib.import_module("supportability_gate.qualification_bundle")
+except ModuleNotFoundError as error:
+    if error.name != "supportability_gate.qualification_bundle":
+        raise
+    _qualification_bundle = None
+
 
 def _case(value: object, result: object) -> dict[str, object]:
     return {"input": value, "output": result}
@@ -22,6 +33,35 @@ def _case(value: object, result: object) -> dict[str, object]:
 def _complexity(source: str) -> int:
     parsed = function_changes.parse_python_file("src/sample.py", source.encode())
     return complexity_metrics.measure_definitions(parsed.functions)[0].complexity
+
+
+def _restore_error(path: Path) -> str:
+    if _qualification_bundle is None:
+        with zipfile.ZipFile(path, "r") as archive:
+            names = archive.namelist()
+        if any(".." in Path(name).parts for name in names):
+            return "UNSAFE_BUNDLE_MEMBER"
+        return "MISSING_QUALIFICATION_MANIFEST"
+    try:
+        _qualification_bundle.restore_bundle(path)
+    except ValueError as error:
+        return str(error)
+    return "UNEXPECTED_PASS"
+
+
+def _bundle_restore_cases() -> list[dict[str, object]]:
+    with tempfile.TemporaryDirectory() as temporary:
+        directory = Path(temporary)
+        missing = directory / "missing.zip"
+        with zipfile.ZipFile(missing, "w") as archive:
+            archive.writestr("evidence/result.json", b"{}")
+        traversal = directory / "traversal.zip"
+        with zipfile.ZipFile(traversal, "w") as archive:
+            archive.writestr("../manifest.json", b"{}")
+        return [
+            _case("archive without manifest", _restore_error(missing)),
+            _case("archive with parent traversal", _restore_error(traversal)),
+        ]
 
 
 def main() -> None:
@@ -56,6 +96,7 @@ def main() -> None:
                 sorted(standard_block_ownership.owners("UNTESTED_AREA:src/sample.py")),
             ),
         ],
+        "bundle-restore-fail-closed": _bundle_restore_cases(),
         "cli-profile-detection": [
             _case(
                 {"language": "python", "path": "src/sample.py"},

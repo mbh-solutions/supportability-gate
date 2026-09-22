@@ -61,7 +61,7 @@ root_package = "supportability_gate"
 name = "Supportability gate dependency direction"
 type = "layers"
 layers = [
-    "supportability_gate.standard_results_producer | supportability_gate.standard_results_enforcer",
+    "supportability_gate.qualification_bundle | supportability_gate.standard_results_producer | supportability_gate.standard_results_enforcer",
     "supportability_gate.standard_results",
     "supportability_gate.__main__",
     "supportability_gate.cli",
