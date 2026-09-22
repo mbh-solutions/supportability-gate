@@ -69,7 +69,7 @@ def main() -> None:
             },
             separators=(",", ":"),
             sort_keys=True,
-        )
+        )[:-1]
     )
 
 
