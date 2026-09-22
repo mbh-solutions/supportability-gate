@@ -2,6 +2,7 @@ schema_version = "1.0"
 module_boundaries = [
   { path = "src/supportability_gate/characterization.py", owner_path = "src/supportability_gate/characterization.py", basis = "responsibility", justification = "Owns stable behavioral obligations, explicit baseline migrations, capture comparison, and authenticated characterization coverage." },
   { path = "src/supportability_gate/quality_profile.py", owner_path = "src/supportability_gate/quality_profile.py", basis = "responsibility", justification = "Owns fixed quality evidence parsing and proof that required responsibility bodies executed." },
+  { path = "src/supportability_gate/refactor_policy.py", owner_path = "src/supportability_gate/refactor_policy.py", basis = "responsibility", justification = "Owns strict runnability consumption of authenticated characterization results across the v1-to-v2 transition." },
   { path = "src/supportability_gate/standard_results.py", owner_path = "src/supportability_gate/standard_results.py", basis = "responsibility", justification = "Owns independent reconstruction of characterization evidence against authenticated responsibility targets." },
 ]
 
@@ -58,13 +59,15 @@ boundaries = [
   { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_target_span", before = "Quality proof did not bind refactor target syntax.", after = "Exact target identity is parsed only for its authenticated path." },
   { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "python_coverage_observation", before = "Import-only module activity could qualify as observed runtime coverage.", after = "Python coverage requires executed lines in every required responsibility body." },
   { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "typescript_lcov_observation", before = "TypeScript LCOV accepted aggregate path totals without responsibility execution.", after = "TypeScript LCOV validates records and requires executed lines in every required component body." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "module", symbol = "src/supportability_gate/refactor_policy.py", before = "Gate 6 accepted only the characterization result schema currently emitted by Gate 5.", after = "Gate 6 accepts authenticated v1 and v2 characterization results during the protected schema transition." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_characterization_blocks", before = "A legitimate retained v1 characterization result became unauthenticated when the current producer advanced to v2.", after = "The runnability boundary accepts only the explicit v1 and v2 schema set while retaining identity and structure checks." },
   { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_characterization", before = "Result composition did not supply authenticated responsibility targets.", after = "Result composition passes exact targets into characterization validation." },
   { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_characterization", before = "Characterization result validation was path-only.", after = "Characterization result validation independently binds required stable obligations to exact targets." },
 ]
 
 [architecture]
 dependency_direction = "The hosted adapter derives targets from immutable Git source, characterization owns obligation evidence, quality_profile proves required-body execution from fixed command artifacts, and standard_results independently recomposes the decision without executing target code."
-reviewed_paths = [".supportability-review.toml", "src/supportability_gate/characterization.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/standard_results.py", "tests/hosted_quality_profile.py", "tests/test_characterization.py", "tests/test_evaluate_complexity.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
+reviewed_paths = [".supportability-review.toml", "src/supportability_gate/characterization.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/refactor_policy.py", "src/supportability_gate/standard_results.py", "tests/hosted_quality_profile.py", "tests/test_characterization.py", "tests/test_evaluate_complexity.py", "tests/test_quality_profile.py", "tests/test_refactor_policy.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/characterization.py"

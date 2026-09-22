@@ -21,6 +21,9 @@ AUTHORIZATION_PREFIX = "Supportability-Refactor-Authorization: "
 AUTHORIZATION_SCHEMA = "1.0"
 RESULT_SCHEMA = "refactor-policy-result.v1"
 CHARACTERIZATION_SCHEMA = characterization_evidence.RESULT_SCHEMA
+COMPATIBLE_CHARACTERIZATION_SCHEMAS = frozenset(
+    {"characterization-result.v1", CHARACTERIZATION_SCHEMA}
+)
 RUNNABILITY_SCHEMA = characterization_evidence.RUNNABILITY_SCHEMA
 TRUSTED_OWNER_ID = 229662739
 SHA = re.compile(r"[0-9a-f]{40}\Z")
@@ -578,7 +581,7 @@ def _characterization_blocks(
     unbounded_paths: tuple[str, ...],
 ) -> list[str]:
     blocks: list[str] = []
-    if value.get("schema_version") != CHARACTERIZATION_SCHEMA:
+    if value.get("schema_version") not in COMPATIBLE_CHARACTERIZATION_SCHEMAS:
         return ["UNAUTHENTICATED_RUNNABILITY_EVIDENCE"]
     if (
         value.get("repository") != f"github.com/{repository}"
