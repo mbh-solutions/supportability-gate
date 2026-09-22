@@ -4708,6 +4708,61 @@ def test_node_receipts_preserve_alias_location_and_manifest_identity(tmp_path: P
     )
 
 
+def test_node_receipts_join_file_link_lock_source_and_installed_tree(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    location = "node_modules/fixture-dependency"
+    source = "vendor/fixture-dependency"
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"fixture-dependency": "file:vendor/fixture-dependency"}},
+            location: {"link": True, "resolved": source},
+            source: {"version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, source, "fixture-dependency", "1.0.0")
+    _installed_node_package(root, location, "fixture-dependency", "1.0.0")
+
+    receipts = hosted._node_lock_receipts(root, "target")
+
+    assert any(
+        item.startswith(f"npm-target-locked:{location}:fixture-dependency@1.0.0:sha256:")
+        for item in receipts
+    )
+    assert any(
+        item.startswith(f"npm-target-locked-source:{source}:fixture-dependency@1.0.0:sha256:")
+        for item in receipts
+    )
+    assert any(
+        item.startswith(f"npm-target-installed:{location}:fixture-dependency@1.0.0:sha256:")
+        for item in receipts
+    )
+
+
+def test_node_receipts_reject_file_link_with_different_installed_tree(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    location = "node_modules/fixture-dependency"
+    source = "vendor/fixture-dependency"
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"fixture-dependency": "file:vendor/fixture-dependency"}},
+            location: {"link": True, "resolved": source},
+            source: {"version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, source, "fixture-dependency", "1.0.0")
+    _installed_node_package(root, location, "fixture-dependency", "1.0.0")
+    (root / location / "index.js").write_text("export default 2;\n", encoding="utf-8", newline="\n")
+
+    with pytest.raises(quality_profile.QualityProfileError) as raised:
+        hosted._node_lock_receipts(root, "target")
+
+    assert raised.value.code == "UNVERIFIABLE_DEPENDENCY_IDENTITY"
+
+
 def test_node_receipts_reject_lock_location_outside_dependency_root(tmp_path: Path) -> None:
     hosted = _hosted_quality_profile_module()
     root = tmp_path / "target"

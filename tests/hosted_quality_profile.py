@@ -97,11 +97,22 @@ def _node_identity_error(detail: str) -> quality_profile.QualityProfileError:
     return quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", detail)
 
 
-def _node_location_name(location: str) -> str:
+def _node_safe_location(location: str) -> PurePosixPath:
     path = PurePosixPath(location)
     parts = path.parts
-    if path.is_absolute() or "\\" in location or any(part in {"", ".", ".."} for part in parts):
+    if (
+        not parts
+        or path.is_absolute()
+        or "\\" in location
+        or any(part in {"", ".", ".."} for part in parts)
+    ):
         raise _node_identity_error(location)
+    return path
+
+
+def _node_location_name(location: str) -> str:
+    path = _node_safe_location(location)
+    parts = path.parts
     markers = [index for index, part in enumerate(parts) if part == "node_modules"]
     tail = parts[markers[-1] + 1 :] if markers else ()
     valid = len(tail) == 1 or (len(tail) == 2 and tail[0].startswith("@"))
@@ -149,6 +160,7 @@ def _node_dependency_candidates(parent: str, name: str) -> tuple[str, ...]:
     for index in reversed([i for i, part in enumerate(parts) if part == "node_modules"]):
         prefix = "/".join(parts[:index])
         candidates.append(f"{prefix + '/' if prefix else ''}node_modules/{name}")
+    candidates.append(f"node_modules/{name}")
     return tuple(dict.fromkeys(candidates))
 
 
@@ -168,6 +180,20 @@ def _resolved_node_dependency(
     return resolved
 
 
+def _node_link_source(packages: dict[str, dict[str, object]], location: str) -> str | None:
+    value = packages[location]
+    if "link" not in value:
+        return None
+    if value["link"] is not True or not isinstance(value.get("resolved"), str):
+        raise _node_identity_error(location)
+    resolved = value["resolved"]
+    assert isinstance(resolved, str)
+    source = _node_safe_location(resolved).as_posix()
+    if source not in packages or source == "" or "node_modules" in PurePosixPath(source).parts:
+        raise _node_identity_error(location)
+    return source
+
+
 def _optional_locked_locations(packages: dict[str, dict[str, object]]) -> set[str]:
     pending = [("", False)]
     visited: set[tuple[str, bool]] = set()
@@ -178,6 +204,9 @@ def _optional_locked_locations(packages: dict[str, dict[str, object]]) -> set[st
         if (location, optional_path) in visited:
             continue
         visited.add((location, optional_path))
+        if linked := _node_link_source(packages, location):
+            (optional if optional_path else required).add(linked)
+            pending.append((linked, optional_path))
         for name, optional_edge in _node_dependency_edges(packages[location], root=location == ""):
             next_optional = optional_path or optional_edge
             resolved = _resolved_node_dependency(packages, location, name, optional=next_optional)
@@ -188,10 +217,25 @@ def _optional_locked_locations(packages: dict[str, dict[str, object]]) -> set[st
     return optional - required
 
 
-def _node_lock_entry(location: str, value: dict[str, object]) -> tuple[str, str, str, str]:
+def _node_lock_entry(
+    root: Path,
+    packages: dict[str, dict[str, object]],
+    location: str,
+    value: dict[str, object],
+) -> tuple[str, str, str, str]:
     installed_name = _node_location_name(location)
-    declared_name = value.get("name", installed_name)
-    version = value.get("version")
+    source = _node_link_source(packages, location)
+    if source is None:
+        declared_name = value.get("name", installed_name)
+        version = value.get("version")
+        identity_value: object = value
+    else:
+        manifest_identity = _node_manifest_identity(root, source, installed=False)
+        source_version = packages[source].get("version")
+        if manifest_identity is None or manifest_identity[1] != source_version:
+            raise _node_identity_error(location)
+        declared_name, version = manifest_identity
+        identity_value = {"link": value, "source": packages[source]}
     if not isinstance(declared_name, str) or not isinstance(version, str) or not version:
         raise _node_identity_error(location)
     _node_location_name(f"node_modules/{declared_name}")
@@ -200,7 +244,9 @@ def _node_lock_entry(location: str, value: dict[str, object]) -> tuple[str, str,
         integrity
         if isinstance(integrity, str) and integrity
         else "sha256:"
-        + quality_profile._sha256(json.dumps(value, separators=(",", ":"), sort_keys=True).encode())
+        + quality_profile._sha256(
+            json.dumps(identity_value, separators=(",", ":"), sort_keys=True).encode()
+        )
     )
     receipt_name = (
         installed_name if installed_name == declared_name else f"{installed_name}->{declared_name}"
@@ -208,8 +254,11 @@ def _node_lock_entry(location: str, value: dict[str, object]) -> tuple[str, str,
     return receipt_name, declared_name, version, lock_identity
 
 
-def _node_package_path(root: Path, location: str, *, strict: bool) -> Path:
-    _node_location_name(location)
+def _node_package_path(root: Path, location: str, *, installed: bool = True, strict: bool) -> Path:
+    if installed:
+        _node_location_name(location)
+    else:
+        _node_safe_location(location)
     try:
         package = (root / PurePosixPath(location)).resolve(strict=strict)
         package.relative_to(root.resolve(strict=True))
@@ -218,12 +267,14 @@ def _node_package_path(root: Path, location: str, *, strict: bool) -> Path:
     return package
 
 
-def _node_manifest_identity(root: Path, location: str) -> tuple[str, str] | None:
-    package = _node_package_path(root, location, strict=False)
+def _node_manifest_identity(
+    root: Path, location: str, *, installed: bool = True
+) -> tuple[str, str] | None:
+    package = _node_package_path(root, location, installed=installed, strict=False)
     if not package.exists():
         return None
     try:
-        package = _node_package_path(root, location, strict=True)
+        package = _node_package_path(root, location, installed=installed, strict=True)
         manifest = package / "package.json"
         if not manifest.is_file():
             return None
@@ -256,9 +307,26 @@ def _node_package_receipts(
     optional = _optional_locked_locations(packages)
     receipts: list[str] = []
     locked_locations = set(packages) - {""}
+    link_sources = {
+        source
+        for location in locked_locations
+        if "node_modules" in PurePosixPath(location).parts
+        if (source := _node_link_source(packages, location)) is not None
+    }
     for location in sorted(locked_locations):
+        if "node_modules" not in PurePosixPath(location).parts:
+            if location not in link_sources:
+                raise _node_identity_error(location)
+            installed = _node_manifest_identity(root, location, installed=False)
+            version = packages[location].get("version")
+            if installed is None or installed[1] != version:
+                raise _node_identity_error(location)
+            name, version = installed
+            identity = _node_tree_hash(root, location, installed=False)
+            receipts.append(f"npm-{kind}-locked-source:{location}:{name}@{version}:{identity}")
+            continue
         receipt_name, declared_name, version, lock_identity = _node_lock_entry(
-            location, packages[location]
+            root, packages, location, packages[location]
         )
         receipts.append(f"npm-{kind}-locked:{location}:{receipt_name}@{version}:{lock_identity}")
         installed = _node_manifest_identity(root, location)
@@ -268,9 +336,12 @@ def _node_package_receipts(
             continue
         if installed != (declared_name, version):
             raise _node_identity_error(f"installed identity mismatch {location}")
+        source = _node_link_source(packages, location)
+        installed_hash = _node_tree_hash(root, location)
+        if source is not None and installed_hash != _node_tree_hash(root, source, installed=False):
+            raise _node_identity_error(f"installed link mismatch {location}")
         receipts.append(
-            f"npm-{kind}-installed:{location}:{receipt_name}@{version}:"
-            f"{_node_tree_hash(root, location)}"
+            f"npm-{kind}-installed:{location}:{receipt_name}@{version}:{installed_hash}"
         )
     extra = sorted(_installed_node_locations(root) - locked_locations)
     if extra:
@@ -301,8 +372,8 @@ def _node_lock_receipts(root: Path, kind: str) -> tuple[str, ...]:
     return tuple(sorted(set(receipts)))
 
 
-def _node_tree_hash(root: Path, location: str) -> str:
-    package = _node_package_path(root, location, strict=True)
+def _node_tree_hash(root: Path, location: str, *, installed: bool = True) -> str:
+    package = _node_package_path(root, location, installed=installed, strict=True)
     candidates = tuple(package.rglob("*"))
     if any(path.is_symlink() for path in candidates):
         raise quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", location)
