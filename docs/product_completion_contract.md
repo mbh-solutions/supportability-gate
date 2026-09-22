@@ -2486,9 +2486,9 @@ Do not create a new terminal label not authorized by an active milestone directi
 
 ## Project #25 deterministic assurance remediation
 
-Project #25 is the only current remediation authority. S00–S06 are independently verified complete.
-S07 issue #208 is the sole delivered slice awaiting independent controller review; S08 remains
-Backlog and requires serial predecessor verification plus separate owner execution authorization.
+Project #25 is the only current remediation authority. S00-S07 are independently verified complete.
+S08 issue #209 is delivered for independent controller review with Partial evidence. There is no
+successor, and Project #25 remains open pending that review.
 Semantic Review remains retired; no AI reviewer, probabilistic grader, model-backed required check,
 semantic approval, replacement service, or second policy engine is permitted.
 
@@ -2739,3 +2739,88 @@ limits, not hidden PASS conversions.
   source remains `58ee6f0a4c2cde88640779635a43e1c6217f71b5`, post the durable issue evidence index, set only
   S07 to `In Review / Partial / On scope / No`, clean owned temporary outputs, and stop. Independent
   controller review owns any terminal Project transition; S08 is not activated.
+
+### S08 integrated qualification, durable evidence, and lifecycle handoff
+
+- Executor handoff recorded by this protected ledger transaction: Status `In Review`; Evidence
+  `Partial`; Scope `On scope`; Stop confirmed `No`. Independent controller verification is required
+  before S08 may become `Done / Proven / On scope / Yes`. Project #25 remains open; no successor
+  exists or is authorized.
+- Authority: Project #25 item `PVTI_lADOEmzFKc4BkDY3zg7yEUg`, repository issue #209, exact
+  activation base `1fe7dc70718481d2eb7510da2cac0ebfa4fa91d2`, implementation PR #258, and
+  bounded directory-correction PR #261. PR #258 retained the exact `Closes #209` footer; issue
+  closure is delivery linkage, not independent completion approval.
+- Capability boundary: `supportability-qualification-bundle.v1` packages canonical decision
+  evidence, retained raw proof and diagnostics, exact file digests, immutable run identity, and
+  restore instructions. Optional `supportability-qualification-context.v1` binds runtime/lock,
+  source-test, delivery, complete relevant ruleset snapshot, Actions expiry, and limitation data.
+  Build and restore reuse the existing `standard-results` validators; unsafe, duplicate, traversal,
+  oversized, missing, malformed, digest-mismatched, or context-mismatched content fails closed.
+- Protected delivery: implementation head `40885975298264b8667e43bf81331ea2d7a34805` passed Source
+  Integrity, Source Validation, CodeQL, all eight deterministic contexts, and aggregate Gate run
+  `35729508341` attempt 3. It normally merged without bypass as
+  `be56b67bd3b05ea40d67cc5f3153a720c1fdfb34`. Fresh canaries then exposed
+  `UNSAFE_EVIDENCE_PATH` for ordinary retained `diagnostics/` directories. The Gate pin was rolled
+  back to the previously qualified S07 source before any consumer merge. PR #261 corrected only
+  regular-file discovery, and exact head `a9a1b1d18f909fe643a6d93fdb70983286435c58` passed every
+  required context in run `35731537978` attempt 2 before normal merge as
+  `2c461f5f8554e1092fe9a6706904578dcbe2fc37`.
+- Deployment readback: organization ruleset `21664395` is active and pins the executable workflow
+  exactly to `2c461f5f8554e1092fe9a6706904578dcbe2fc37`, with zero bypass actors, strict current-head
+  enforcement, five repository IDs, required review-thread resolution, and all eight App `15368`
+  contexts. Source Integrity ruleset `23795033` remains active, strict, zero-bypass, and pinned to
+  `a645c1d3c6fd7f9d9c804b173c5b2ac0a420d786`. Repository source-protection ruleset `19767613`
+  remains active, strict, zero-bypass, requires Source Validation plus all eight contexts, and reports
+  `current_user_can_bypass: never`.
+- Durable PASS proof: PR #261 supplies the normal protected Python PASS and merge. Its repository
+  bundle `docs/qualification/s08-python-protected-pass.zip` is 28,868 bytes with SHA-256
+  `5ff7dea2a0153ceef85fee4dd4b11c8adafcd960a36f93d46b2e929b5c5899e7`; offline restore binds
+  case `S08-PYTHON-PROTECTED-PASS`, head `a9a1b1d18f909fe643a6d93fdb70983286435c58`, run
+  `35731537978`, profile `python`, and decision `PASS`. Its release context records evidence artifact
+  `10695444829`, digest
+  `sha256:7592a384ffa165361650357864e92ebc4008c60c4ec8954449c983b2288f049a`, expiry,
+  Python `3.12.14`, exact lock digest, immutable restore image, complete ruleset snapshots, and known
+  moving-runtime limits.
+- Fresh protected consumer proof under the corrected pin: Python PR #222/run `35732891266`,
+  TypeScript PR #77/run `35732900588`, and mixed PR #686/run `35732909506` each completed the
+  deterministic evidence job, uploaded a bundle, and restored successfully. Their evidence artifacts
+  are `10696421529` / `sha256:57ae4649f73060457cb3f4fc5fb58b716d1a265f39ccba969c7ca6b621cee43f`,
+  `10696621255` / `sha256:86c27ee0110e471eff201fe7308fa64d02834553f2e51467d66a3225b26056f4`,
+  and `10696262190` / `sha256:dbcd86562b21186a97cc42fb71c0d57605d78d5e9d3d6790118d77d6fb1eed7f`.
+  They correctly retained TECHNICAL_FAILURE rather than PASS: the Python target has an existing
+  `TARGET_SANDBOX_WRITE_DENIED` quality failure, while current TypeScript and mixed locks have an
+  existing `UNVERIFIABLE_DEPENDENCY_IDENTITY` for a platform-optional dependency. Product-specific
+  target repairs are excluded from S08.
+- Fresh negative proof under the corrected pin: policy-poison PR #262/run `35732920559` retained
+  `INSUFFICIENT_REVIEW_EVIDENCE:human_review.naming`; provenance/characterization PR #263/run
+  `35732929387` retained technical diagnostics. Their artifacts `10696811169` and `10696511712`
+  have digests `sha256:22293c5921ba69885c4037a17acee4d9885e4893e6e4154d233679d119138352`
+  and `sha256:e5bcc92d6794a3e82ff5444a8931c0ed3924a3eaf6b48980e0a02104b0273cf4`.
+  An independent malformed-characterization technical error controlled #262's overall decision, so
+  it is not claimed as a qualifying pure policy BLOCK. All five fresh canary PRs are closed unmerged,
+  their merge identities are null, and their owned remote branches are deleted.
+- Retention and performance: six repository-retained bundles restore without an Actions download.
+  The S07 baseline, S08 implementation, and S08 directory-fix runs measured 142/150/149 wall seconds,
+  259/258/260 summed job seconds, 32/29/30 evidence-job seconds, and 22,320/37,543/25,726 artifact
+  bytes. Fresh consumer observations are indexed in `docs/qualification/README.md`. These are
+  measurements, not an SLO. Exact Node patch and hosted runner-image revisions were not retained by
+  the platform; moving runtime remains explicit. No retained concurrent-head reproduction showed
+  obsolete-head waste, so cancellation is deferred without changing required checks.
+- Audit disposition: `docs/deterministic_assurance_disposition.md` records every Project slice and
+  every F1-F12/A01-A05 finding or subfinding as corrected/proven, accepted boundary, or explicit
+  unresolved risk. Current docs no longer present historical status as live state. Semantic Review
+  remains retired; no model-backed check, second engine, bypass, threshold, waiver, arbitrary command,
+  or consumer repair was added.
+- Local source proof: Python `3.12.10`, exact lock SHA-256
+  `fa152bc59237a214f1f4057bd00d2da37eea21dafa44a1cfa96d39959ca61a60`; Ruff lint and format,
+  C901 maximum 10, strict mypy, Import Linter, 1209 passed and 8 skipped tests, compileall, immutable
+  Standard tamper test, exact diff check, wheel build, fresh exact-lock installation, and installed
+  CLI help passed. Wheel SHA-256 is
+  `0671eb34e6840e73331d556d7657d0a7a4f3b947804191d669f6357f5d182068`. The immutable Standard
+  SHA-256 remains
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`; the frozen roadmap is
+  unchanged.
+- Remaining product work: independent controller review must verify the exact merged documentation
+  head, durable bundle hashes/restoration, final ruleset/pin/check identities, issue/PR linkage,
+  canary disposition, cleanup, and Project readback. The executor then stops with S08 at
+  `In Review / Partial / On scope / No`; no later work is activated.
