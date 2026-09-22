@@ -38,11 +38,13 @@ boundaries = [
 [architecture]
 dependency_direction = "refactor_policy depends on refactor_targets for target association; standard_results independently validates evidence without importing analysis dependencies."
 reviewed_paths = [
+  ".supportability-characterization.json",
   "src/supportability_gate/refactor_policy.py",
   "src/supportability_gate/refactor_targets.py",
   "src/supportability_gate/standard_results.py",
   "tests/characterization/gate8-standard-results-boundary-v2.characterization.py",
   "tests/characterization/gate8-standard-results-boundary-v3.characterization.py",
+  "tests/characterization/gate8-standard-results-boundary-v3.golden.json",
   "tests/test_evaluate_complexity.py",
   "tests/test_refactor_policy.py",
   "tests/test_standard_results.py",
