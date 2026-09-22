@@ -2669,7 +2669,7 @@ limits, not hidden PASS conversions.
   baselines. The immutable Standard SHA-256 remains
   `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`; the frozen roadmap,
   commands, thresholds, scopes, exclusions, waivers, and eight check identities are unchanged.
-- Remaining transaction: merge this ledger-only PR normally, prove Gate/workflow executable blobs
+- Remaining transaction: merge this ledger-and-evidence-only PR normally, prove Gate/workflow executable blobs
   still match deployed merge `a84965c21e8300a09a017c6554fe1254f245b849`, post the durable issue
   evidence index, set only S06 to `In Review / Partial / On scope / No`, clean owned temporary
   outputs, and stop. Independent controller review owns any terminal Project transition; S07 is not
