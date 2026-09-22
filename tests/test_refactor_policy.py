@@ -296,6 +296,25 @@ def test_gate_five_policy_block_does_not_manufacture_gate_six_block(tmp_path: Pa
 
 
 @pytest.mark.parametrize(
+    "schema_version", ["characterization-result.v1", refactor_policy.CHARACTERIZATION_SCHEMA]
+)
+def test_characterization_schema_transition_remains_runnable(
+    tmp_path: Path, schema_version: str
+) -> None:
+    repository, base_sha, head_sha = _repository(tmp_path)
+    path = "src/sample.py"
+    target = f"{path}::function:calculate:1-2"
+    event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, [path], [target]))
+    characterization = _characterization(base_sha, head_sha, [path])
+    characterization["schema_version"] = schema_version
+
+    result = _verify(repository, event, characterization)
+
+    assert result["overall_result"] == "PASS"
+    assert result["policy_blocks"] == []
+
+
+@pytest.mark.parametrize(
     ("defect", "expected"),
     [
         ("authorization", "STALE_OWNER_AUTHORIZATION"),

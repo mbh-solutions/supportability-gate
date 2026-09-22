@@ -1443,6 +1443,7 @@ def _s02_characterization(
     value: object,
     identity: RunIdentity,
     required_paths: tuple[str, ...] | None,
+    required_targets: tuple[str, ...] | None,
     expected_artifacts: object,
 ) -> list[str]:
     try:
@@ -1453,6 +1454,7 @@ def _s02_characterization(
             head_sha=identity.head_sha,
             workflow_sha=identity.workflow_sha,
             required_paths=required_paths,
+            required_targets=required_targets,
             expected_artifacts=expected_artifacts,
         )
     except characterization.CharacterizationError as error:
@@ -2346,6 +2348,7 @@ def _s02_add_characterization(
             characterization,
             identity,
             data.characterization_paths if data is not None else None,
+            data.responsibility_targets if data is not None else None,
             expected_artifacts,
         )
     except StandardResultsError as error:

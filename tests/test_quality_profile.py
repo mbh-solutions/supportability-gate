@@ -362,6 +362,103 @@ def test_python_coverage_observation_excludes_unexecuted_statements() -> None:
     assert zero_statement == ("src/sample/empty.py",)
 
 
+def test_python_import_only_coverage_is_not_meaningful_behavior_proof() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": [1],
+                "summary": {"num_statements": 2, "covered_lines": 1},
+            }
+        }
+    }
+
+    observed, zero_statement = quality_profile.python_coverage_observation(
+        report,
+        ("src/sample.py",),
+        ("src/sample.py::function:explode:1-2",),
+    )
+
+    assert observed == ()
+    assert zero_statement == ()
+
+
+def test_python_targeted_body_execution_is_meaningful_runtime_proof() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": [1, 2],
+                "summary": {"num_statements": 2, "covered_lines": 2},
+            }
+        }
+    }
+
+    observed, zero_statement = quality_profile.python_coverage_observation(
+        report,
+        ("src/sample.py",),
+        ("src/sample.py::function:calculate:1-2",),
+    )
+
+    assert observed == ("src/sample.py",)
+    assert zero_statement == ()
+
+
+def test_python_malformed_runtime_trace_fails_closed() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": ["2"],
+                "summary": {"num_statements": 2, "covered_lines": 1},
+            }
+        }
+    }
+
+    with pytest.raises(quality_profile.QualityProfileError, match="src/sample.py"):
+        quality_profile.python_coverage_observation(
+            report,
+            ("src/sample.py",),
+            ("src/sample.py::function:calculate:1-2",),
+        )
+
+
+def test_python_missing_required_runtime_trace_fails_closed() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "summary": {"num_statements": 2, "covered_lines": 2},
+            }
+        }
+    }
+
+    with pytest.raises(quality_profile.QualityProfileError, match="src/sample.py"):
+        quality_profile.python_coverage_observation(
+            report,
+            ("src/sample.py",),
+            ("src/sample.py::function:calculate:1-2",),
+        )
+
+
+def test_python_module_and_one_line_function_targets_can_be_observed() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": [1, 3],
+                "summary": {"num_statements": 2, "covered_lines": 2},
+            }
+        }
+    }
+
+    observed, _ = quality_profile.python_coverage_observation(
+        report,
+        ("src/sample.py",),
+        (
+            "src/sample.py::module:src/sample.py:1-1",
+            "src/sample.py::function:ready:3-3",
+        ),
+    )
+
+    assert observed == ("src/sample.py",)
+
+
 def test_typescript_lcov_observation_excludes_unexecuted_statements(tmp_path: Path) -> None:
     report = """TN:
 SF:src/sample/covered.ts
@@ -385,6 +482,25 @@ end_of_record
 
     assert observed == ("src/sample/covered.ts",)
     assert zero_statement == ()
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        "SF:src/sample.ts\nDA:1,1\nLF:not-a-number\nLH:1\nend_of_record\n",
+        "SF:src/sample.ts\nDA:1,1\nLF:1\nLH:1\n",
+        "SF:src/sample.ts\nDA:1,1\nLF:2\nLH:2\nend_of_record\n",
+    ],
+)
+def test_typescript_malformed_runtime_trace_fails_closed(tmp_path: Path, report: str) -> None:
+    with pytest.raises(quality_profile.QualityProfileError) as captured:
+        quality_profile.typescript_lcov_observation(
+            report,
+            ("src/sample.ts",),
+            tmp_path,
+            ("src/sample.ts::function:calculate:1-2",),
+        )
+    assert captured.value.code == "MALFORMED_QUALITY_PROOF"
 
 
 @pytest.mark.parametrize(

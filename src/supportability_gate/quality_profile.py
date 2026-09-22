@@ -872,9 +872,11 @@ def expected_proof_kind(adapter: str) -> str:
 
 
 def python_coverage_observation(
-    report: object, source_files: tuple[str, ...]
+    report: object,
+    source_files: tuple[str, ...],
+    required_targets: tuple[str, ...] = (),
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return files with executed statements and files with no statements."""
+    """Return files whose required responsibility bodies executed."""
     if not isinstance(report, dict) or not isinstance(report.get("files"), dict):
         raise QualityProfileError("MALFORMED_QUALITY_PROOF", "coverage files missing")
     files = report["files"]
@@ -893,9 +895,62 @@ def python_coverage_observation(
             raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
         if statements == 0:
             zero_statement.append(path)
-        elif covered > 0:
+        elif covered > 0 and _python_runtime_observed(item, path, statements, required_targets):
             observed.append(path)
     return tuple(observed), tuple(zero_statement)
+
+
+def _target_span(target: str, path: str) -> tuple[str, int, int] | None:
+    if not target.startswith(f"{path}::"):
+        return None
+    match = re.search(r":([1-9][0-9]*)-([1-9][0-9]*)\Z", target)
+    if match is None:
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", target)
+    start, end = int(match.group(1)), int(match.group(2))
+    if end < start:
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", target)
+    kind = target.split("::", 1)[1].split(":", 1)[0]
+    if kind not in {"component", "function", "module"}:
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", target)
+    return kind, start, end
+
+
+def _required_spans(
+    required_targets: tuple[str, ...], path: str
+) -> tuple[tuple[str, int, int], ...]:
+    return tuple(
+        span for target in required_targets if (span := _target_span(target, path)) is not None
+    )
+
+
+def _python_runtime_observed(
+    item: dict[str, object],
+    path: str,
+    statements: int,
+    required_targets: tuple[str, ...],
+) -> bool:
+    spans = _required_spans(required_targets, path)
+    executed = item.get("executed_lines")
+    if executed is None:
+        if spans:
+            raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+        return True
+    if not isinstance(executed, list) or any(
+        type(line) is not int or line < 1 for line in executed
+    ):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+    if executed != sorted(set(executed)):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+    lines = set(executed)
+    if spans:
+        return all(_span_observed(span, lines) for span in spans)
+    return not (statements > 1 and lines == {1})
+
+
+def _span_observed(span: tuple[str, int, int], lines: set[int] | frozenset[int]) -> bool:
+    kind, start, end = span
+    first = start if kind == "module" or start == end else start + 1
+    return any(first <= line <= end for line in lines)
 
 
 def _lcov_path(value: str, repository: Path) -> str:
@@ -908,28 +963,77 @@ def _lcov_path(value: str, repository: Path) -> str:
     return path.as_posix()
 
 
-def typescript_lcov_observation(
-    report: str, source_files: tuple[str, ...], repository: Path
-) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return TypeScript files with executed lines and files with no executable lines."""
-    records: dict[str, tuple[int, int]] = {}
+def _lcov_executed_line(line: str) -> int | None:
+    fields = line[3:].split(",", 2)
+    if len(fields) < 2 or not all(item.isdigit() for item in fields[:2]):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV line")
+    return int(fields[0]) if int(fields[1]) > 0 else None
+
+
+def _lcov_total(line: str) -> int:
+    value = line[3:]
+    if not value.isdigit():
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV total")
+    return int(value)
+
+
+def _store_lcov_record(
+    records: dict[str, tuple[int, int, frozenset[int]]],
+    current: str | None,
+    found: int | None,
+    hits: int | None,
+    executed: set[int],
+) -> None:
+    if current is None or found is None or hits is None or current in records:
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV record")
+    if found < hits or hits != len(executed):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV totals")
+    records[current] = (found, hits, frozenset(executed))
+
+
+def _lcov_records(report: str, repository: Path) -> dict[str, tuple[int, int, frozenset[int]]]:
+    records: dict[str, tuple[int, int, frozenset[int]]] = {}
     current: str | None = None
     found = hits = None
+    executed: set[int] = set()
     for line in report.splitlines():
         if line.startswith("SF:"):
             current = _lcov_path(line[3:], repository)
             found = hits = None
+            executed = set()
+        elif line.startswith("DA:"):
+            if (executed_line := _lcov_executed_line(line)) is not None:
+                executed.add(executed_line)
         elif line.startswith("LF:"):
-            found = int(line[3:])
+            found = _lcov_total(line)
         elif line.startswith("LH:"):
-            hits = int(line[3:])
+            hits = _lcov_total(line)
         elif line == "end_of_record":
-            if current is None or found is None or hits is None or current in records:
-                raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV record")
-            records[current] = (found, hits)
+            _store_lcov_record(records, current, found, hits, executed)
             current = None
-    observed = tuple(path for path in source_files if records.get(path, (0, 0))[1] > 0)
-    zero_statement = tuple(path for path in source_files if records.get(path) == (0, 0))
+    if current is not None:
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "incomplete LCOV record")
+    return records
+
+
+def typescript_lcov_observation(
+    report: str,
+    source_files: tuple[str, ...],
+    repository: Path,
+    required_targets: tuple[str, ...] = (),
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return TypeScript files whose required responsibility bodies executed."""
+    records = _lcov_records(report, repository)
+    observed = tuple(
+        path
+        for path in source_files
+        if (record := records.get(path)) is not None
+        and record[1] > 0
+        and all(_span_observed(span, record[2]) for span in _required_spans(required_targets, path))
+    )
+    zero_statement = tuple(
+        path for path in source_files if records.get(path, (1, 1, frozenset()))[:2] == (0, 0)
+    )
     return observed, zero_statement
 
 
