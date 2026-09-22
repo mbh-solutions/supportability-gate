@@ -99,7 +99,7 @@
               "id": "702"
             }
           },
-          "characterization_result_sha256": "normalized",
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
           "complexity_result_sha256": "normalized",
           "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "quality_artifact": {
@@ -108,7 +108,7 @@
             "id": 789
           },
           "quality_provenance_sha256": "normalized",
-          "refactor_result_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
           "repository": "example/repository",
           "repository_id": 123,
           "review_evidence": {
@@ -715,7 +715,7 @@
               "id": "702"
             }
           },
-          "characterization_result_sha256": "normalized",
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
           "complexity_result_sha256": "normalized",
           "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "quality_artifact": {
@@ -724,7 +724,7 @@
             "id": 789
           },
           "quality_provenance_sha256": "normalized",
-          "refactor_result_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
           "repository": "example/repository",
           "repository_id": 123,
           "review_evidence": {
@@ -1346,12 +1346,12 @@
               "id": "702"
             }
           },
-          "characterization_result_sha256": "normalized",
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
           "complexity_result_sha256": "normalized",
           "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "quality_artifact": null,
           "quality_provenance_sha256": null,
-          "refactor_result_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
           "repository": "example/repository",
           "repository_id": 123,
           "review_evidence": {
@@ -1926,7 +1926,7 @@
               "id": "702"
             }
           },
-          "characterization_result_sha256": "normalized",
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
           "complexity_result_sha256": "normalized",
           "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "quality_artifact": {
@@ -1935,7 +1935,7 @@
             "id": 789
           },
           "quality_provenance_sha256": "normalized",
-          "refactor_result_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
           "repository": "example/repository",
           "repository_id": 123,
           "review_evidence": {
@@ -2599,7 +2599,7 @@
               "id": "702"
             }
           },
-          "characterization_result_sha256": "normalized",
+          "characterization_result_sha256": "1b735aea6dba71da3e7cc6ac384541cec02649206bf7c7bde7f8b9f3cb4eb6e9",
           "complexity_result_sha256": "normalized",
           "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "quality_artifact": {
@@ -2608,7 +2608,7 @@
             "id": 789
           },
           "quality_provenance_sha256": "normalized",
-          "refactor_result_sha256": "normalized",
+          "refactor_result_sha256": "9b5f82241f9488c3958b8270786ba898df82cd0d9e7c236ceec2edaf6982b752",
           "repository": "example/repository",
           "repository_id": 123,
           "review_evidence": {
@@ -3227,12 +3227,12 @@
               "id": "702"
             }
           },
-          "characterization_result_sha256": "normalized",
+          "characterization_result_sha256": "9d71ce8dcf4913389dc4201a81d88cda251648cb308a0e9727078ae8dfccdeb4",
           "complexity_result_sha256": "normalized",
           "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "quality_artifact": null,
           "quality_provenance_sha256": null,
-          "refactor_result_sha256": "normalized",
+          "refactor_result_sha256": "1cee2b2cee2c6a7672446ded9057bbbb570da7ad70c8f75d04317df5a55a3507",
           "repository": "example/repository",
           "repository_id": 123,
           "review_evidence": {

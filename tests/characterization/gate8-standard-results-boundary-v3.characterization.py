@@ -165,7 +165,7 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
             },
             "repository": "github.com/acme/repo",
             "scenarios": [{"compatibility": "PASS", "covers": [path]}],
-            "schema_version": module.CHARACTERIZATION_SCHEMA,
+            "schema_version": "characterization-result.v1",
             "workflow_sha": workflow_sha,
         }
         result = module.verify_refactor(
@@ -455,41 +455,6 @@ def main() -> None:
             "unbounded_paths": [],
             "workflow_sha": identity.workflow_sha,
         }
-        if refactor_policy.CHARACTERIZATION_SCHEMA == "characterization-result.v2":
-            required = sorted(
-                {
-                    target.rsplit(":", 1)[0]
-                    for target in targets
-                    if target.split("::", 1)[1].split(":", 1)[0] != "module"
-                }
-            )
-            value["coverage"].update(
-                covered_obligations=required,
-                required_obligations=required,
-            )
-            value["obligations"] = [
-                {
-                    "base_assertion_sha256": "f" * 64,
-                    "category": "behavior",
-                    "compatibility": "PASS",
-                    "head_assertion_sha256": "f" * 64,
-                    "id": "sample-behavior",
-                    "meaningful": True,
-                    "scenario": "sample",
-                    "target": path,
-                }
-            ]
-            value["behavior_fingerprint"] = hashlib.sha256(
-                json.dumps(
-                    {
-                        "obligations": [["sample-behavior", "f" * 64]],
-                        "scenarios": [["sample", "e" * 64]],
-                    },
-                    separators=(",", ":"),
-                    sort_keys=True,
-                ).encode()
-            ).hexdigest()
-            value["schema_version"] = refactor_policy.CHARACTERIZATION_SCHEMA
         return value
 
     def review_fixture() -> dict[str, object]:
@@ -600,11 +565,7 @@ def main() -> None:
             coverage["asset_receipts"] = []
             coverage["source_files"] = coverage["production_files"]
             identity = handoff["identity"]
-            if identity["characterization_result_sha256"] is not None:
-                identity["characterization_result_sha256"] = "normalized"
             identity["complexity_result_sha256"] = "normalized"
-            if identity["refactor_result_sha256"] is not None:
-                identity["refactor_result_sha256"] = "normalized"
             quality_artifact = identity["quality_artifact"]
             if quality_artifact is not None:
                 quality_artifact["capture_sha256"] = "normalized"

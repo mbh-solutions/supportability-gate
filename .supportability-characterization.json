@@ -1,108 +1,13 @@
 {
-  "obligations": [
-    {
-      "category": "static",
-      "id": "architecture-modularity-baseline",
-      "scenario": "architecture-modularity-baseline",
-      "selector": "$",
-      "target": "scenario:architecture-modularity-baseline"
-    },
-    {
-      "category": "behavior",
-      "id": "behavioral-return-value",
-      "scenario": "s05-meaningful-behavior",
-      "selector": "behavioral-return-value",
-      "target": "src/supportability_gate/characterization.py"
-    },
-    {
-      "category": "behavior",
-      "id": "boundary-ownership",
-      "scenario": "s05-meaningful-behavior",
-      "selector": "boundary-ownership",
-      "target": "src/supportability_gate/standard_results.py"
-    },
-    {
-      "category": "static",
-      "id": "clause-inventory-baseline",
-      "scenario": "clause-inventory-baseline",
-      "selector": "$",
-      "target": "scenario:clause-inventory-baseline"
-    },
-    {
-      "category": "static",
-      "id": "gate-cli",
-      "scenario": "gate-cli",
-      "selector": "$",
-      "target": "scenario:gate-cli"
-    },
-    {
-      "category": "cli_help",
-      "id": "gate-cli-help",
-      "scenario": "gate-cli",
-      "selector": "$",
-      "target": "src/supportability_gate/cli.py"
-    },
-    {
-      "category": "static",
-      "id": "gate-policy-mixed-compatibility",
-      "scenario": "gate-policy-mixed-compatibility",
-      "selector": "$",
-      "target": "scenario:gate-policy-mixed-compatibility"
-    },
-    {
-      "category": "static",
-      "id": "gate8-standard-results-boundary-v4",
-      "scenario": "gate8-standard-results-boundary-v3",
-      "selector": "$",
-      "target": "scenario:gate8-standard-results-boundary-v3"
-    },
-    {
-      "category": "static",
-      "id": "m9-quality-profile",
-      "scenario": "m9-quality-profile",
-      "selector": "$",
-      "target": "scenario:m9-quality-profile"
-    },
-    {
-      "category": "static",
-      "id": "package-version",
-      "scenario": "package-version",
-      "selector": "$",
-      "target": "scenario:package-version"
-    },
-    {
-      "category": "static",
-      "id": "quality-runner-boundary",
-      "scenario": "quality-runner-boundary",
-      "selector": "$",
-      "target": "scenario:quality-runner-boundary"
-    },
-    {
-      "category": "behavior",
-      "id": "quality-suppression",
-      "scenario": "s05-meaningful-behavior",
-      "selector": "quality-suppression",
-      "target": "src/supportability_gate/quality_profile.py"
-    },
-    {
-      "category": "static",
-      "id": "refactor-assets",
-      "scenario": "refactor-assets",
-      "selector": "$",
-      "target": "scenario:refactor-assets"
-    },
-    {
-      "category": "behavior",
-      "id": "result-identity",
-      "scenario": "s05-meaningful-behavior",
-      "selector": "result-identity",
-      "target": "src/supportability_gate/standard_results.py"
-    }
-  ],
   "scenarios": [
     {
       "covers": [
-        "src/supportability_gate/cli.py"
+        "src/supportability_gate/characterization.py",
+        "src/supportability_gate/cli.py",
+        "src/supportability_gate/complexity_metrics.py",
+        "src/supportability_gate/contract.py",
+        "src/supportability_gate/function_changes.py",
+        "src/supportability_gate/git_changes.py"
       ],
       "id": "gate-cli",
       "kind": "cli"
@@ -140,7 +45,8 @@
     },
     {
       "covers": [
-        "src/supportability_gate/cli.py"
+        "src/supportability_gate/quality_profile.py",
+        "src/supportability_gate/reporting.py"
       ],
       "id": "m9-quality-profile",
       "kind": "cli"
@@ -173,25 +79,7 @@
       ],
       "id": "package-version",
       "kind": "regression"
-    },
-    {
-      "covers": [
-        "src/supportability_gate/characterization.py",
-        "src/supportability_gate/quality_profile.py",
-        "src/supportability_gate/standard_results.py"
-      ],
-      "id": "s05-meaningful-behavior",
-      "kind": "regression"
     }
   ],
-  "schema_version": "2.0",
-  "transitions": [
-    {
-      "baseline_sha256": "55f7137f13900e8cd30872930e1f53ff749cc0e292a77be353a4affb2bb149e2",
-      "from": "gate8-standard-results-boundary-v3",
-      "to": [
-        "gate8-standard-results-boundary-v4"
-      ]
-    }
-  ]
+  "schema_version": "1.0"
 }

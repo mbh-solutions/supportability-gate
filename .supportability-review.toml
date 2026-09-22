@@ -11,7 +11,7 @@ proof = "Retained RED regressions cover constant-output substitution, obligation
 
 [characterization]
 captured_behavior = "Before S05, a scenario could retain a matching golden while no longer proving meaningful input-to-output behavior, and importing a file could count as runtime proof even when its changed responsibility body never executed."
-proof = "The new s05-meaningful-behavior driver records multiple distinct inputs and outputs for characterization, quality suppression, block ownership, and result identity; the retained Gate 8 driver uses an explicit digest-bound v3-to-v4 obligation migration."
+proof = "Focused repository fixtures record multiple distinct inputs and outputs, stable scenario-independent obligation IDs, exact transition digests, constant-output rejection, and body-level runtime proof; live manifest activation follows only after this compatibility layer is protected and deployed."
 
 [separation_of_concerns]
 before = "Scenario identity, golden equality, coarse file coverage, and module-import execution were treated as sufficient proxies for retained behavior."
@@ -64,7 +64,7 @@ boundaries = [
 
 [architecture]
 dependency_direction = "The hosted adapter derives targets from immutable Git source, characterization owns obligation evidence, quality_profile proves required-body execution from fixed command artifacts, and standard_results independently recomposes the decision without executing target code."
-reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "src/supportability_gate/characterization.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/standard_results.py", "tests/characterization/gate8-standard-results-boundary-v3.characterization.py", "tests/characterization/gate8-standard-results-boundary-v3.golden.json", "tests/characterization/s05-meaningful-behavior.characterization.py", "tests/characterization/s05-meaningful-behavior.golden.json", "tests/hosted_quality_profile.py", "tests/test_characterization.py", "tests/test_evaluate_complexity.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
+reviewed_paths = [".supportability-review.toml", "src/supportability_gate/characterization.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/standard_results.py", "tests/hosted_quality_profile.py", "tests/test_characterization.py", "tests/test_evaluate_complexity.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/characterization.py"
