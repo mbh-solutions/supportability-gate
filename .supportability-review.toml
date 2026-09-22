@@ -2,40 +2,39 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The consumed S07 characterization transition is absent after its protected replacement merge."
-proof = "The protected Gate verifies the unchanged v5 obligation without reporting a stale transition."
+intended_behavior = "The fixed related-test mapping remains behaviorally identical in a protected S07 canary."
+proof = "Protected characterization compares base and head behavior."
 
 [characterization]
-captured_behavior = "The retained v5 obligation and golden output remain unchanged."
-proof = "Base and head characterization captures remain valid while the consumed transition row is removed."
+captured_behavior = "The retained v5 obligation covers related_test_matches."
+proof = "Base and head captures must remain byte-identical."
 
 [separation_of_concerns]
-before = "The one-use transition remained present after its source obligation had already been replaced."
-after = "The manifest retains the v5 obligation with an empty transition list."
-boundaries = []
-
-[architecture]
-dependency_direction = "No production dependency or module boundary changes."
-reviewed_paths = [
-  ".supportability-characterization.json",
-  ".supportability-review.toml",
+before = "Fixed-profile matching owned test-to-source association."
+after = "Fixed-profile matching continues to own the same association without behavior change."
+boundaries = [
+  { path = "src/supportability_gate/refactor_targets.py", kind = "function", symbol = "related_test_matches", before = "The function had no canary marker.", after = "The function has a non-behavioral protected canary marker." },
 ]
 
+[architecture]
+dependency_direction = "Production dependencies are unchanged."
+reviewed_paths = [".supportability-review.toml", "src/supportability_gate/refactor_targets.py"]
+
 [responsibility_boundary]
-path = ".supportability-characterization.json"
-owns = "Current protected characterization scenarios, obligations, and unconsumed transitions."
-does_not_own = "Production behavior, authorization policy, or quality thresholds."
+path = "src/supportability_gate/refactor_targets.py"
+owns = "Deterministic fixed-profile related-test path matching."
+does_not_own = "Authorization, predecessor lookup, characterization execution, or quality thresholds."
 
 [incremental_refactor]
-target = "S07 post-merge characterization transition retirement."
-completed_step = "Removed the consumed v4-to-v5 transition while retaining the v5 obligation."
+target = "S07 protected authorization canary."
+completed_step = "Added a non-behavioral marker to one existing responsibility."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The retained obligation and empty transition list state the current manifest directly."
-cohesion = "Only characterization metadata and its exact review evidence change."
-intended_behavior = "Later pull requests no longer inherit a stale transition policy block."
-reviewability = "The diff removes one consumed transition and updates its bounded evidence."
+naming = "The marker states its protected canary purpose."
+cohesion = "One source responsibility and its exact evidence are changed."
+intended_behavior = "The fixed-profile match remains unchanged."
+reviewability = "The code diff is one comment plus bounded review evidence."

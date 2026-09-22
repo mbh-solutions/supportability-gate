@@ -13,6 +13,7 @@ def related_test_matches(path: str, target_path: str, language: str) -> bool:
     """Return whether one fixed-profile test path names one exact source path."""
     if not path.startswith("tests/") or path.startswith("tests/characterization/"):
         return False
+    # S07 protected canary: fixed-profile behavior remains unchanged.
     test_name = PurePosixPath(path).name
     source_stem = PurePosixPath(target_path).stem
     python_match = test_name == f"test_{source_stem}.py"
