@@ -125,7 +125,7 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
         SimpleNamespace(old_path=None, new_path=path),
     )
     module.contract.parse_contract = lambda content: SimpleNamespace(
-        is_production_path=lambda candidate: candidate.startswith("src/")
+        language="python", is_production_path=lambda candidate: candidate.startswith("src/")
     )
     setattr(target_owner, target_name, lambda *args: ((target,), ()))
     try:
@@ -141,17 +141,15 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
             "base_sha": base_sha,
             "broad": False,
             "head_sha": head_sha,
-            "related_tests": [],
             "repository": "acme/repo",
-            "schema_version": "2.0",
+            "schema_version": module.AUTHORIZATION_SCHEMA,
             "scope": [path],
-            "sequence": {
-                "predecessor_sha": base_sha,
-                "series_id": "fixture-series",
-                "step": 1,
-            },
+            "sequence": {"predecessor_sha": base_sha, "step": 1},
             "targets": [target],
         }
+        if module.AUTHORIZATION_SCHEMA == "2.0":
+            authorization["related_tests"] = []
+            authorization["sequence"]["series_id"] = "fixture-series"
         characterization = {
             "base_sha": base_sha,
             "coverage": {"covered_paths": [path], "required_paths": [path]},
@@ -529,23 +527,22 @@ def main() -> None:
             }
         if gate_six_binding and path.startswith("src/"):
             target_identity = derived_targets[path]
+            authorization = {
+                "base_sha": identity.base_sha,
+                "broad": False,
+                "head_sha": identity.head_sha,
+                "repository": identity.repository,
+                "scope": [path],
+                "sequence": {"predecessor_sha": identity.base_sha, "step": 1},
+                "targets": [target_identity],
+            }
+            if refactor_policy.AUTHORIZATION_SCHEMA == "2.0":
+                authorization["related_tests"] = []
+                authorization["sequence"]["series_id"] = "fixture-series"
             value.update(
                 {
                     "applicable": True,
-                    "authorization": {
-                        "base_sha": identity.base_sha,
-                        "broad": False,
-                        "head_sha": identity.head_sha,
-                        "related_tests": [],
-                        "repository": identity.repository,
-                        "scope": [path],
-                        "sequence": {
-                            "predecessor_sha": identity.base_sha,
-                            "series_id": "fixture-series",
-                            "step": 1,
-                        },
-                        "targets": [target_identity],
-                    },
+                    "authorization": authorization,
                     "authorization_comment_id": 11,
                     "targets": [target_identity],
                 }
