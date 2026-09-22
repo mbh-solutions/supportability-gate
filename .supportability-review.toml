@@ -38,7 +38,7 @@ summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "_regular_files names the exact filesystem classification it owns."
+naming = ""
 cohesion = "Directory traversal stays in the existing qualification-bundle collector and archive validation remains unchanged."
 intended_behavior = "Technical-failure artifacts with a diagnostics directory now produce and restore a durable bundle."
 reviewability = "The fix changes one production branch and extends one direct regression test."
