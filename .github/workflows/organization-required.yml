@@ -520,6 +520,36 @@ jobs:
           if [ "$status" -ne 0 ]; then exit "$status"; fi
           cat "$RUNNER_TEMP/evidence/standard-results.json"
 
+      - name: Build compact qualification bundle
+        id: qualification_bundle
+        if: ${{ always() && steps.standard_results.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          "$RUNNER_TEMP/gate-venv/bin/python" -P -m supportability_gate.qualification_bundle build \
+            --evidence-directory "$RUNNER_TEMP/evidence" \
+            --output "$RUNNER_TEMP/evidence/qualification-bundle.zip"
+
+      - name: Restore qualification bundle without network access
+        id: restore_bundle
+        if: ${{ always() && steps.qualification_bundle.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --pids-limit 256 \
+            --memory 2g \
+            --cpus 2 \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
+            --volume "$RUNNER_TEMP/gate-venv:/gate-venv:ro" \
+            --volume "/opt/hostedtoolcache:/opt/hostedtoolcache:ro" \
+            --volume "$RUNNER_TEMP/evidence:/bundle:ro" \
+            ubuntu@sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4 \
+            /gate-venv/bin/python -P -m supportability_gate.qualification_bundle restore \
+            --bundle /bundle/qualification-bundle.zip
+
       - name: Upload authoritative supportability evidence
         id: upload_evidence
         if: always()
@@ -535,11 +565,13 @@ jobs:
         env:
           ARTIFACT_DIGEST: ${{ steps.upload_evidence.outputs.artifact-digest }}
           ARTIFACT_ID: ${{ steps.upload_evidence.outputs.artifact-id }}
+          QUALIFICATION_BUNDLE_OUTCOME: ${{ steps.qualification_bundle.outcome }}
+          RESTORE_BUNDLE_OUTCOME: ${{ steps.restore_bundle.outcome }}
           STANDARD_RESULTS_OUTCOME: ${{ steps.standard_results.outcome }}
           UPLOAD_OUTCOME: ${{ steps.upload_evidence.outcome }}
         run: |
           status=0
-          for result in "$STANDARD_RESULTS_OUTCOME" "$UPLOAD_OUTCOME"; do
+          for result in "$STANDARD_RESULTS_OUTCOME" "$QUALIFICATION_BUNDLE_OUTCOME" "$RESTORE_BUNDLE_OUTCOME" "$UPLOAD_OUTCOME"; do
             if [ "$result" != "success" ]; then status=1; fi
           done
           if ! [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then status=1; fi

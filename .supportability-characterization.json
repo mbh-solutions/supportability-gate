@@ -106,6 +106,13 @@
       "target": "scenario:package-version"
     },
     {
+      "category": "behavior",
+      "id": "qualification-bundle-restore",
+      "scenario": "s05-meaningful-behavior",
+      "selector": "bundle-restore-fail-closed",
+      "target": "src/supportability_gate/qualification_bundle.py"
+    },
+    {
       "category": "static",
       "id": "quality-runner-boundary",
       "scenario": "quality-runner-boundary",
@@ -272,6 +279,7 @@
         "src/supportability_gate/complexity_metrics.py",
         "src/supportability_gate/contract.py",
         "src/supportability_gate/git_changes.py",
+        "src/supportability_gate/qualification_bundle.py",
         "src/supportability_gate/quality_profile.py",
         "src/supportability_gate/standard_results.py"
       ],
@@ -286,6 +294,6 @@
       "kind": "regression"
     }
   ],
-    "schema_version": "2.0",
-    "transitions": []
-  }
+  "schema_version": "2.0",
+  "transitions": []
+}
