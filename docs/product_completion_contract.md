@@ -2486,10 +2486,11 @@ Do not create a new terminal label not authorized by an active milestone directi
 
 ## Project #25 deterministic assurance remediation
 
-Project #25 is the only current remediation authority. S00 issue #201 is the sole active slice.
-S01–S08 remain Backlog and require serial predecessor verification plus separate owner execution
-authorization. Semantic Review remains retired; no AI reviewer, probabilistic grader, model-backed
-required check, semantic approval, replacement service, or second policy engine is permitted.
+Project #25 is the only current remediation authority. S00–S04 are independently verified complete.
+S05 issue #206 is the sole delivered slice awaiting independent controller review; S06–S08 remain
+Backlog and require serial predecessor verification plus separate owner execution authorization.
+Semantic Review remains retired; no AI reviewer, probabilistic grader, model-backed required check,
+semantic approval, replacement service, or second policy engine is permitted.
 
 ### Durable audit disposition
 
@@ -2549,3 +2550,64 @@ limits, not hidden PASS conversions.
   owns the unused cryptography review/cleanup; S08 owns remaining runtime, retention, and CI risks.
 - Terminal protected PR, run, canary, merge, deployment-pin, issue, and Project evidence is recorded
   in issue #201 after those identities exist. S01 remains untouched.
+
+### S05 meaningful behavior coverage and preserved scenario obligations
+
+- Executor handoff recorded by this protected ledger transaction: Status `In Review`; Evidence
+  `Partial`; Scope `On scope`; Stop confirmed `No`. Independent controller verification is still
+  required before S05 may become `Done / Proven / On scope / Yes`. S06 remains untouched and is not
+  authorized.
+- Authority: Project #25 item `PVTI_lADOEmzFKc4BkDY3zg7yETo`, repository issue #206, protected
+  activation PR #240, and exact activation base `5532666bf43620f30ed5a7ca89b33142decf5f69`.
+  The final PR retains the exact footer `Closes #206`; issue closure is not treated as independent
+  completion approval.
+- Capability boundary: schema-two characterization separates stable obligations from scenario
+  packaging, binds exact selectors and responsibility targets, requires meaningful multi-input and
+  multi-output behavior for behavioral obligations, preserves surviving assertions across renames,
+  and permits only explicit digest-bound migrations. Quality evidence requires runtime execution
+  inside every coverage-recognized executable responsibility span; compiler directives that
+  coverage does not classify as statements are not fabricated runtime duties. Import-only,
+  constant-output, removed-obligation, wrong-digest, malformed-trace, and nondeterministic evidence
+  remain fail-closed.
+- Protected deployment sequence: compatibility PR #239 normally merged as
+  `eb1992e3db7d22fd960cfc13cc8680aaa1f0beaa`. Activation then exposed the exact compiler-directive
+  observation defect. Ruleset `21664395` was restored to previously qualified pin
+  `8ce20768d8a1bdf7e586fb8821c2ba6e3dffe918`; compatibility PR #245 head
+  `042c7ea9fc1dc6d09befe412a4fd3d0c506dc896` passed protected run `35690925585` and normally
+  merged as `5532666bf43620f30ed5a7ca89b33142decf5f69`. The ruleset now pins that merge and retains
+  active enforcement, zero bypass actors, strict current-head policy, all five repository IDs, and
+  all eight required contexts from App `15368`. Source Integrity ruleset `19767613` remains
+  independently active and strict.
+- Positive protected proof: activation head `70491751d59f6d6bca5de9fb5827b170446655fd`
+  passed Source Validation run `35691557261`, Source Integrity run `35691557401`, CodeQL, all eight
+  deterministic contexts, and aggregate Gate run `35691557330` attempt 1. Authoritative evidence
+  artifact `10679011110` has digest
+  `sha256:5088decf0c5aff61f3ed301da11f54a96766fdb49bfdedd364696e4dea3516f7`; head capture
+  `10679550188` has digest
+  `sha256:1843fd0e60a90f15f39f86bd742002a0d137e36376da1e24c65f83bc152803d0`.
+- Protected negative proof: PR #241 head `54c0cb7a8051de3ef96c573a60b001b00058ffe7`
+  blocked missed behavior as `GOLDEN_BEHAVIOR_MISMATCH`; PR #242 head
+  `da8e0217f2faf46135584a84f3224743f6bc681e` blocked removed stable obligation
+  `gate-cli`; PR #243 head `2b27d055f1a1b987926e8771a4bd1e70a2436437` blocked nondeterministic replay drift;
+  and PR #244 head `fd4f1650509fbce68c0a521e071124ed31b53409` returned
+  `TECHNICAL_FAILURE` / `STAGE_FAILURE:characterization:MALFORMED_CHARACTERIZATION_RESULT` with exit
+  2. Runs `35691608389`, `35691665155`, `35691686913`, and `35691702384` bind the exact evidence.
+  Normal merge attempts were refused; all four PRs are closed unmerged and their remote branches are
+  deleted. Issue comment `5771787323` is the durable exact artifact and digest index.
+- Local source proof: Python `3.12.10`, exact lock SHA-256
+  `fa152bc59237a214f1f4057bd00d2da37eea21dafa44a1cfa96d39959ca61a60`; Ruff lint and format,
+  C901 maximum 10, strict mypy, Import Linter, 1176 passed and 8 skipped tests, compileall, immutable
+  Standard tamper test, both activated driver/golden comparisons, wheel build, fresh-environment
+  installation, and installed CLI help all passed. Wheel SHA-256 is
+  `0a153713ca1bfc18f3801936aef4f9b5c357057f1029eae55b644831cdeed8bc`.
+- Guarantee boundary: this proves bounded deterministic obligations and executable responsibility
+  coverage, not exhaustive intended behavior, semantic truth, naming quality, or probabilistic
+  review. The immutable Standard SHA-256 remains
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`; the frozen roadmap,
+  commands, thresholds, adapters, scopes, exclusions, waivers, and eight check identities are
+  unchanged.
+- Remaining transaction: merge PR #240 normally after its final exact-head protected rerun, verify
+  main and issue closure, preserve the deployed executable workflow pin because the final ledger and
+  activation files do not change Gate/workflow executable blobs, set only S05 to
+  `In Review / Partial / On scope / No`, post final issue evidence, clean owned temporary outputs,
+  and stop. Independent controller review owns any terminal Project transition; S06 is not activated.
