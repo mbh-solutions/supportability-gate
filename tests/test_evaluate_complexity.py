@@ -23,6 +23,7 @@ from supportability_gate import (
     review_evidence,
     standard_results,
 )
+from supportability_gate import characterization as characterization_evidence
 
 
 def test_reported_package_version_matches_distribution_version() -> None:
@@ -623,14 +624,40 @@ def _compose_cli_result(
     identity = standard_results.RunIdentity(
         "example/fixture", 123, base_sha, head_sha, WORKFLOW_SHA, 456, 1
     )
-    behavior = hashlib.sha256(
-        json.dumps([["sample", "e" * 64]], separators=(",", ":"), sort_keys=True).encode()
-    ).hexdigest()
     targets = result["responsibility_targets"]
     unbounded = result["unbounded_production_paths"]
     changed = result["changed_files"]
     assert isinstance(targets, list) and isinstance(unbounded, list)
     assert isinstance(changed, list)
+    required_obligations = sorted(
+        {
+            target.rsplit(":", 1)[0]
+            for target in targets
+            if "::" in target and target.split("::", 1)[1].split(":", 1)[0] != "module"
+        }
+    )
+    obligations = [
+        {
+            "base_assertion_sha256": "f" * 64,
+            "category": "behavior",
+            "compatibility": "PASS",
+            "head_assertion_sha256": "f" * 64,
+            "id": "sample-behavior",
+            "meaningful": True,
+            "scenario": "sample",
+            "target": path,
+        }
+    ]
+    behavior = hashlib.sha256(
+        json.dumps(
+            {
+                "obligations": [["sample-behavior", "f" * 64]],
+                "scenarios": [["sample", "e" * 64]],
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
     scope = sorted(
         {
             changed_path
@@ -647,12 +674,15 @@ def _compose_cli_result(
         "base_sha": base_sha,
         "behavior_fingerprint": behavior,
         "coverage": {
+            "covered_obligations": required_obligations,
             "covered_paths": [path],
+            "required_obligations": required_obligations,
             "required_paths": [path],
         },
         "head_sha": head_sha,
         "manifest_blob_sha": "8" * 40,
         "manifest_sha256": "9" * 64,
+        "obligations": obligations,
         "overall_result": "PASS",
         "policy_blocks": [],
         "repository": "github.com/example/fixture",
@@ -678,7 +708,7 @@ def _compose_cli_result(
                 "kind": "golden",
             }
         ],
-        "schema_version": "characterization-result.v1",
+        "schema_version": characterization_evidence.RESULT_SCHEMA,
         "workflow_sha": WORKFLOW_SHA,
     }
     characterization_sha = hashlib.sha256(

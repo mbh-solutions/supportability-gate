@@ -19,10 +19,12 @@ from pathlib import Path
 from supportability_gate import (
     architecture_policy,
     contract,
+    function_changes,
     gate_policy,
     git_changes,
     quality_profile,
     quality_runner,
+    refactor_targets,
 )
 
 MAX_DIAGNOSTIC_BYTES = 8192
@@ -362,6 +364,7 @@ def _python_coverage_proof(
     repository: Path,
     output: Path,
     trusted_zero: tuple[str, ...],
+    required_targets: tuple[str, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
     report = output / "coverage.json"
     config = "/trusted/coverage.ini"
@@ -398,7 +401,7 @@ def _python_coverage_proof(
         return (), (), quality_profile._sha256(b""), completed.returncode or -2
     raw = report.read_bytes()
     observed, _reported_zero = quality_profile.python_coverage_observation(
-        json.loads(raw), plan.source_files
+        json.loads(raw), plan.source_files, required_targets
     )
     return observed, trusted_zero, quality_profile._sha256(raw), 0
 
@@ -421,13 +424,14 @@ def _typescript_coverage_proof(
     repository: Path,
     output: Path,
     trusted_zero: tuple[str, ...],
+    required_targets: tuple[str, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
     report = output / "coverage.lcov"
     if not report.is_file():
         return (), (), quality_profile._sha256(b""), -2
     raw = report.read_bytes()
     observed, _reported_zero = quality_profile.typescript_lcov_observation(
-        raw.decode("utf-8"), plan.source_files, Path("/target")
+        raw.decode("utf-8"), plan.source_files, Path("/target"), required_targets
     )
     return observed, trusted_zero, quality_profile._sha256(raw), 0
 
@@ -477,6 +481,7 @@ def _proof(
     source_receipts: tuple[quality_profile.SourceReceipt, ...],
     head_sha: str,
     records: list[git_changes.CommandRecord],
+    required_targets: tuple[str, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...], str, int]:
     trusted_zero = tuple(
         item.path
@@ -484,9 +489,11 @@ def _proof(
         if item.path in plan.source_files and item.zero_statement_eligible
     )
     if plan.adapter == "python.pytest.v1":
-        return _python_coverage_proof(plan, execution_target, output, trusted_zero)
+        return _python_coverage_proof(
+            plan, execution_target, output, trusted_zero, required_targets
+        )
     if plan.adapter == "typescript.test.v1":
-        return _typescript_coverage_proof(plan, repository, output, trusted_zero)
+        return _typescript_coverage_proof(plan, repository, output, trusted_zero, required_targets)
     if plan.adapter == "python.build-wheel.v1":
         observed, zero, digest = _wheel_proof(plan, output)
     elif plan.adapter == "typescript.build.v1":
@@ -546,6 +553,7 @@ def _run_command(
     diagnostic_output: Path | None = None,
     execution_target: Path | None = None,
     evidence_plan: quality_runner.CommandPlan | None = None,
+    required_targets: tuple[str, ...] = (),
 ) -> quality_profile.GateResult:
     records = records or []
     work = quality_runner.command_work_directory(output, plan.adapter)
@@ -609,7 +617,14 @@ def _run_command(
         if completed.returncode == 125 and sandboxed:
             raise quality_profile.QualityProfileError("TARGET_SANDBOX_RUNTIME_FAILED", plan.adapter)
         observed, zero_statement, raw_digest, proof_exit = _proof(
-            plan, repository, mounted_target, work, source_receipts, head_sha, records
+            plan,
+            repository,
+            mounted_target,
+            work,
+            source_receipts,
+            head_sha,
+            records,
+            required_targets,
         )
         exit_code = completed.returncode or proof_exit
         if exit_code:
@@ -800,6 +815,61 @@ def _write_capture_provenance(
     )
 
 
+def _span_target(path: str, span: function_changes.ResponsibilitySpan) -> str:
+    return f"{path}::{span.kind}:{span.name}:{span.start_line}-{span.end_line}"
+
+
+def _high_risk_targets(
+    repository: Path,
+    head_sha: str,
+    paths: tuple[str, ...],
+    source_files: tuple[str, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    targets: list[str] = []
+    for path in paths:
+        if path not in source_files:
+            continue
+        content = git_changes.read_regular_blob(repository, head_sha, path, records).content
+        try:
+            spans = function_changes.responsibility_spans(
+                path, content, set(range(1, len(content.splitlines()) + 1))
+            )
+        except function_changes.PythonSourceError as error:
+            raise quality_profile.QualityProfileError(
+                "UNVERIFIABLE_TEST_OBLIGATIONS", path
+            ) from error
+        targets.extend(_span_target(path, span) for span in spans)
+    return tuple(targets)
+
+
+def _runtime_test_targets(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    changes: tuple[git_changes.ChangedPath, ...],
+    source_files: tuple[str, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    changed, unbounded = refactor_targets.derive(repository, identity, policy, changes, records)
+    if any(path in source_files for path in unbounded):
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_TEST_OBLIGATIONS", ",".join(unbounded)
+        )
+    high_risk = _high_risk_targets(
+        repository, identity.head_sha, policy.high_risk_paths, source_files, records
+    )
+    return tuple(
+        sorted(
+            {
+                target
+                for target in (*changed, *high_risk)
+                if target.split("::", 1)[0] in source_files
+            }
+        )
+    )
+
+
 def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidence:
     """Execute fixed commands in the disposable quality job and return its capture."""
     if os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
@@ -881,6 +951,9 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
     source_receipts = quality_profile.source_receipts(
         target, identity.head_sha, source_files, records
     )
+    runtime_targets = _runtime_test_targets(
+        target, identity, policy, changes, source_files, records
+    )
     diagnostic_identity = {
         "base_sha": identity.base_sha,
         "head_sha": identity.head_sha,
@@ -923,6 +996,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
                 output.parent,
                 execution_target,
                 public_plan,
+                runtime_targets,
             )
             for plan, public_plan in zip(plans, public_plans, strict=True)
         )

@@ -168,6 +168,57 @@ def _manifest(scenarios: list[dict[str, object]]) -> str:
     return json.dumps({"schema_version": "1.0", "scenarios": scenarios}, indent=2) + "\n"
 
 
+def _manifest_v2(
+    scenarios: list[dict[str, object]],
+    obligations: list[dict[str, object]],
+    transitions: list[dict[str, object]] | None = None,
+) -> str:
+    return (
+        json.dumps(
+            {
+                "obligations": sorted(obligations, key=lambda item: str(item["id"])),
+                "scenarios": scenarios,
+                "schema_version": "2.0",
+                "transitions": sorted(transitions or [], key=lambda item: str(item["from"])),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+def _obligation(identifier: str, scenario: str, target: str) -> dict[str, object]:
+    return {
+        "category": "behavior",
+        "id": identifier,
+        "scenario": scenario,
+        "selector": identifier,
+        "target": target,
+    }
+
+
+def _behavior(identifier: str, offset: int = 1) -> dict[str, object]:
+    return {
+        identifier: [
+            {"input": 0, "output": offset},
+            {"input": 2, "output": 2 + offset},
+        ]
+    }
+
+
+def _add_behavior_scenario(repository: Path, identifier: str, behavior: dict[str, object]) -> None:
+    _write(
+        repository / f"tests/characterization/{identifier}.characterization.py",
+        "import json\n"
+        f"print(json.dumps({{'schema_version': '1.0', 'scenario': '{identifier}', "
+        f"'behavior': {behavior!r}}}, sort_keys=True))\n",
+    )
+    _write(
+        repository / f"tests/characterization/{identifier}.golden.json",
+        json.dumps(behavior) + "\n",
+    )
+
+
 def _scenario(identifier: str, path: str) -> dict[str, object]:
     return {"id": identifier, "kind": "golden", "covers": [path]}
 
@@ -744,7 +795,7 @@ def test_logical_step_runnability_requires_same_recorded_command() -> None:
     )
 
 
-def test_characterization_produces_source_derived_runnability(tmp_path: Path) -> None:
+def test_constant_output_cannot_hide_changed_responsibility_behavior(tmp_path: Path) -> None:
     repository, base_checkout, original_base, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", original_base)
     _write(
@@ -773,7 +824,11 @@ def test_characterization_produces_source_derived_runnability(tmp_path: Path) ->
 
     result = _verify(repository, base_sha, head_sha, *paths)
 
-    assert result["overall_result"] == "PASS"
+    assert result["overall_result"] == "BLOCK"
+    assert (
+        "MISSING_CHARACTERIZATION_COVERAGE:obligation:src/sample.py::function:calculate"
+        in result["policy_blocks"]
+    )
     assert result["refactor_runnability"] == {
         "base_sha": base_sha,
         "head_sha": head_sha,
@@ -830,7 +885,9 @@ def test_target_derivation_failure_preserves_characterization(
     assert result["refactor_runnability"]["unbounded_paths"] == ["src/sample.py"]
 
 
-def test_separate_scenarios_cover_one_runnable_logical_step(tmp_path: Path) -> None:
+def test_separate_constant_scenarios_do_not_cover_changed_responsibilities(
+    tmp_path: Path,
+) -> None:
     repository, base_checkout, original_base, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", original_base)
     sources = {
@@ -869,7 +926,11 @@ def test_separate_scenarios_cover_one_runnable_logical_step(tmp_path: Path) -> N
 
     result = _verify(repository, base_sha, head_sha, *paths)
 
-    assert result["overall_result"] == "PASS"
+    assert result["overall_result"] == "BLOCK"
+    assert {
+        "MISSING_CHARACTERIZATION_COVERAGE:obligation:src/other.py::function:normalize",
+        "MISSING_CHARACTERIZATION_COVERAGE:obligation:src/sample.py::function:calculate",
+    }.issubset(result["policy_blocks"])
     assert result["refactor_runnability"]["targets"] == [
         "src/other.py::function:normalize:1-2",
         "src/sample.py::function:calculate:1-2",
@@ -955,6 +1016,201 @@ def test_removed_characterization_scenario_blocks(tmp_path: Path) -> None:
     result = _verify(repository, base_sha, head_sha, *paths)
 
     assert "REMOVED_CHARACTERIZATION_SCENARIO:existing" in result["policy_blocks"]
+
+
+def test_same_coverage_replacement_cannot_drop_retained_obligation(tmp_path: Path) -> None:
+    repository, base_checkout, base_sha, _ = _repository(tmp_path)
+    replacement = _scenario("replacement", "src/sample.py")
+    _write(repository / characterization.MANIFEST_PATH, _manifest([replacement]))
+    _add_scenario_files(repository, "replacement", "src/sample.py", "python", "base\n")
+    extension = "py"
+    (repository / f"tests/characterization/existing.characterization.{extension}").unlink()
+    (repository / "tests/characterization/existing.golden.json").unlink()
+    head_sha = _commit(repository, "replace scenario without retaining obligation")
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "REMOVED_CHARACTERIZATION_SCENARIO:existing" in result["policy_blocks"]
+
+
+def test_stable_obligation_survives_scenario_rename(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    target = "src/sample.py"
+    behavior = _behavior("calculate-contract")
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("old-package", target)],
+            [_obligation("calculate-contract", "old-package", target)],
+        ),
+    )
+    _add_behavior_scenario(repository, "old-package", behavior)
+    base_sha = _commit(repository, "stable obligation base")
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("new-package", target)],
+            [_obligation("calculate-contract", "new-package", target)],
+        ),
+    )
+    _add_behavior_scenario(repository, "new-package", behavior)
+    (repository / "tests/characterization/old-package.characterization.py").unlink()
+    (repository / "tests/characterization/old-package.golden.json").unlink()
+    head_sha = _commit(repository, "rename scenario packaging")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert [item["id"] for item in result["obligations"]] == ["calculate-contract"]
+
+
+def test_obligation_version_requires_exact_baseline_transition(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    target = "src/sample.py"
+    old_behavior = _behavior("calculate-v1")
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("old-package", target)],
+            [_obligation("calculate-v1", "old-package", target)],
+        ),
+    )
+    _add_behavior_scenario(repository, "old-package", old_behavior)
+    base_sha = _commit(repository, "versioned obligation base")
+    new_behavior = _behavior("calculate-v2")
+    transition = {
+        "baseline_sha256": characterization._sha256(
+            characterization._canonical(old_behavior["calculate-v1"])
+        ),
+        "from": "calculate-v1",
+        "to": ["calculate-v2"],
+    }
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("new-package", target)],
+            [_obligation("calculate-v2", "new-package", target)],
+            [transition],
+        ),
+    )
+    _add_behavior_scenario(repository, "new-package", new_behavior)
+    (repository / "tests/characterization/old-package.characterization.py").unlink()
+    (repository / "tests/characterization/old-package.golden.json").unlink()
+    head_sha = _commit(repository, "explicit obligation transition")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert [item["id"] for item in result["obligations"]] == ["calculate-v2"]
+
+
+def test_obligation_version_with_wrong_baseline_digest_blocks(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    target = "src/sample.py"
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("old-package", target)],
+            [_obligation("calculate-v1", "old-package", target)],
+        ),
+    )
+    _add_behavior_scenario(repository, "old-package", _behavior("calculate-v1"))
+    base_sha = _commit(repository, "versioned obligation base")
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("new-package", target)],
+            [_obligation("calculate-v2", "new-package", target)],
+            [{"baseline_sha256": "0" * 64, "from": "calculate-v1", "to": ["calculate-v2"]}],
+        ),
+    )
+    _add_behavior_scenario(repository, "new-package", _behavior("calculate-v2"))
+    (repository / "tests/characterization/old-package.characterization.py").unlink()
+    (repository / "tests/characterization/old-package.golden.json").unlink()
+    head_sha = _commit(repository, "forged obligation transition")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert "REMOVED_CHARACTERIZATION_SCENARIO:obligation:calculate-v1" in result["policy_blocks"]
+
+
+def test_stronger_additive_obligation_preserves_baseline(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    target = "src/sample.py"
+    base_behavior = _behavior("calculate-v1")
+    scenario = _scenario("behavior-package", target)
+    retained = _obligation("calculate-v1", "behavior-package", target)
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2([scenario], [retained]),
+    )
+    _add_behavior_scenario(repository, "behavior-package", base_behavior)
+    base_sha = _commit(repository, "additive obligation base")
+    added = _obligation("calculate-negative-v1", "behavior-package", target)
+    head_behavior = {**base_behavior, **_behavior("calculate-negative-v1", -1)}
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2([scenario], [retained, added]),
+    )
+    _add_behavior_scenario(repository, "behavior-package", head_behavior)
+    head_sha = _commit(repository, "add stronger behavior obligation")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "PASS"
+    assert [item["id"] for item in result["obligations"]] == [
+        "calculate-negative-v1",
+        "calculate-v1",
+    ]
+
+
+def test_constant_behavior_cases_block_as_nonmeaningful_obligation(tmp_path: Path) -> None:
+    repository, base_checkout, original_base, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", original_base)
+    target = "src/sample.py"
+    behavior = {
+        "calculate-contract": [
+            {"input": 0, "output": 1},
+            {"input": 2, "output": 1},
+        ]
+    }
+    _write(
+        repository / characterization.MANIFEST_PATH,
+        _manifest_v2(
+            [_scenario("behavior-package", target)],
+            [_obligation("calculate-contract", "behavior-package", target)],
+        ),
+    )
+    _add_behavior_scenario(repository, "behavior-package", behavior)
+    base_sha = _commit(repository, "constant behavior obligation")
+    _write(repository / "docs/note.md", "unchanged behavior\n")
+    head_sha = _commit(repository, "candidate")
+    _git(base_checkout, "reset", "--hard", base_sha)
+    base, head = _captures(repository, base_checkout, base_sha, head_sha)
+    paths = _write_artifacts(tmp_path, base, head)
+
+    result = _verify(repository, base_sha, head_sha, *paths)
+
+    assert result["overall_result"] == "BLOCK"
+    assert "GOLDEN_BEHAVIOR_MISMATCH:obligation:calculate-contract" in result["policy_blocks"]
 
 
 def test_changed_golden_output_blocks(tmp_path: Path) -> None:

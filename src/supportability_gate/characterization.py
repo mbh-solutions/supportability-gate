@@ -14,11 +14,12 @@ from supportability_gate import contract, git_changes
 
 MANIFEST_PATH = ".supportability-characterization.json"
 SCENARIO_ROOT = "tests/characterization"
-CAPTURE_SCHEMA = "characterization-capture.v1"
+CAPTURE_SCHEMA = "characterization-capture.v2"
 PROVENANCE_SCHEMA = "characterization-provenance.v1"
-RESULT_SCHEMA = "characterization-result.v1"
+RESULT_SCHEMA = "characterization-result.v2"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
+OBLIGATION_CATEGORIES = frozenset({"behavior", "cli_help", "static"})
 SCENARIO_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 ARTIFACT_ID = re.compile(r"[1-9][0-9]*")
 SHA = re.compile(r"[0-9a-f]{40}")
@@ -44,16 +45,39 @@ class Scenario:
 
 
 @dataclass(frozen=True)
+class Obligation:
+    """One stable assertion identity independent of scenario packaging."""
+
+    id: str
+    category: str
+    scenario: str
+    selector: str
+    target: str
+
+
+@dataclass(frozen=True)
+class Transition:
+    """One explicit baseline-obligation migration."""
+
+    source: str
+    targets: tuple[str, ...]
+    baseline_sha256: str
+
+
+@dataclass(frozen=True)
 class Manifest:
     """Validated scenario manifest at one immutable commit."""
 
     scenarios: tuple[Scenario, ...]
     blob_sha: str
     sha256: str
+    obligations: tuple[Obligation, ...] = ()
+    transitions: tuple[Transition, ...] = ()
+    schema_version: str = "1.0"
 
 
 def _manifest_payload(manifest: Manifest) -> dict[str, object]:
-    return {
+    payload: dict[str, object] = {
         "blob_sha": manifest.blob_sha,
         "scenarios": [
             {"covers": list(item.covers), "id": item.id, "kind": item.kind}
@@ -61,6 +85,31 @@ def _manifest_payload(manifest: Manifest) -> dict[str, object]:
         ],
         "sha256": manifest.sha256,
     }
+    if manifest.schema_version == "2.0":
+        payload.update(
+            {
+                "obligations": [
+                    {
+                        "category": item.category,
+                        "id": item.id,
+                        "scenario": item.scenario,
+                        "selector": item.selector,
+                        "target": item.target,
+                    }
+                    for item in manifest.obligations
+                ],
+                "schema_version": manifest.schema_version,
+                "transitions": [
+                    {
+                        "baseline_sha256": item.baseline_sha256,
+                        "from": item.source,
+                        "to": list(item.targets),
+                    }
+                    for item in manifest.transitions
+                ],
+            }
+        )
+    return payload
 
 
 def _canonical(value: object) -> bytes:
@@ -95,18 +144,11 @@ def _path_list(value: object, field: str) -> tuple[str, ...]:
     return paths
 
 
-def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
-    """Parse the single fixed characterization manifest schema."""
-    data = _exact_keys(
-        _read_json_bytes(content, "MALFORMED_CHARACTERIZATION_MANIFEST"),
-        {"schema_version", "scenarios"},
-        "MALFORMED_CHARACTERIZATION_MANIFEST",
-    )
-    scenarios = data["scenarios"]
-    if data["schema_version"] != "1.0" or not isinstance(scenarios, list) or not scenarios:
+def _scenario_rows(value: object) -> tuple[Scenario, ...]:
+    if not isinstance(value, list) or not value:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     parsed: list[Scenario] = []
-    for item in scenarios:
+    for item in value:
         row = _exact_keys(item, {"covers", "id", "kind"}, "MALFORMED_CHARACTERIZATION_MANIFEST")
         identifier, kind = row["id"], row["kind"]
         if (
@@ -118,7 +160,100 @@ def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
         parsed.append(Scenario(identifier, str(kind), _path_list(row["covers"], "covers")))
     if len(parsed) != len({item.id for item in parsed}) or len(parsed) > 50:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
-    return Manifest(tuple(sorted(parsed, key=lambda item: item.id)), blob_sha, _sha256(content))
+    return tuple(sorted(parsed, key=lambda item: item.id))
+
+
+def _obligation_rows(value: object, scenarios: tuple[Scenario, ...]) -> tuple[Obligation, ...]:
+    if not isinstance(value, list) or not value:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    scenario_ids = {item.id for item in scenarios}
+    parsed: list[Obligation] = []
+    for item in value:
+        row = _exact_keys(
+            item,
+            {"category", "id", "scenario", "selector", "target"},
+            "MALFORMED_CHARACTERIZATION_MANIFEST",
+        )
+        if (
+            not all(isinstance(row[field], str) and row[field] for field in row)
+            or SCENARIO_ID.fullmatch(row["id"]) is None
+            or row["category"] not in OBLIGATION_CATEGORIES
+            or row["scenario"] not in scenario_ids
+            or (row["selector"] != "$" and SCENARIO_ID.fullmatch(row["selector"]) is None)
+            or not _valid_obligation_target(row, scenarios)
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+        parsed.append(Obligation(**row))
+    identifiers = [item.id for item in parsed]
+    if len(parsed) > 200 or identifiers != sorted(set(identifiers)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    if scenario_ids != {item.scenario for item in parsed}:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    return tuple(parsed)
+
+
+def _valid_obligation_target(row: dict[str, Any], scenarios: tuple[Scenario, ...]) -> bool:
+    scenario = next(item for item in scenarios if item.id == row["scenario"])
+    target = str(row["target"])
+    if row["category"] == "static":
+        return target == f"scenario:{scenario.id}"
+    path = target.split("::", 1)[0]
+    try:
+        normalized = contract.normalize_repository_path(path, "obligations.target")
+    except contract.ContractError:
+        return False
+    return bool(
+        normalized in scenario.covers and (row["category"] != "cli_help" or scenario.kind == "cli")
+    )
+
+
+def _transition_rows(value: object) -> tuple[Transition, ...]:
+    if not isinstance(value, list):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    parsed: list[Transition] = []
+    for item in value:
+        row = _exact_keys(
+            item, {"baseline_sha256", "from", "to"}, "MALFORMED_CHARACTERIZATION_MANIFEST"
+        )
+        targets = row["to"]
+        if (
+            not isinstance(row["from"], str)
+            or SCENARIO_ID.fullmatch(row["from"]) is None
+            or not isinstance(row["baseline_sha256"], str)
+            or SHA256.fullmatch(row["baseline_sha256"]) is None
+            or not isinstance(targets, list)
+            or any(
+                not isinstance(item, str) or SCENARIO_ID.fullmatch(item) is None for item in targets
+            )
+            or targets != sorted(set(targets))
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+        parsed.append(Transition(row["from"], tuple(targets), row["baseline_sha256"]))
+    sources = [item.source for item in parsed]
+    if sources != sorted(set(sources)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    return tuple(parsed)
+
+
+def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
+    """Parse a legacy scenario manifest or stable-obligation manifest."""
+    raw = _read_json_bytes(content, "MALFORMED_CHARACTERIZATION_MANIFEST")
+    if not isinstance(raw, dict):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    version = raw.get("schema_version")
+    expected = (
+        {"schema_version", "scenarios"}
+        if version == "1.0"
+        else {"schema_version", "scenarios", "obligations", "transitions"}
+    )
+    data = _exact_keys(raw, expected, "MALFORMED_CHARACTERIZATION_MANIFEST")
+    scenarios = data["scenarios"]
+    if version not in {"1.0", "2.0"}:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    parsed = _scenario_rows(scenarios)
+    obligations = _obligation_rows(data["obligations"], parsed) if version == "2.0" else ()
+    transitions = _transition_rows(data["transitions"]) if version == "2.0" else ()
+    return Manifest(parsed, blob_sha, _sha256(content), obligations, transitions, version)
 
 
 def _manifest(
@@ -274,6 +409,146 @@ def _stable_environment(value: dict[str, Any]) -> dict[str, Any]:
     return {key: item for key, item in value.items() if key != "container_id"}
 
 
+def _effective_obligations(manifest: Manifest) -> tuple[Obligation, ...]:
+    if manifest.schema_version == "2.0":
+        return manifest.obligations
+    return tuple(
+        Obligation(item.id, "static", item.id, "$", f"scenario:{item.id}")
+        for item in manifest.scenarios
+    )
+
+
+def _selected_assertion(behavior: object, selector: str) -> object:
+    if selector == "$":
+        return behavior
+    if not isinstance(behavior, dict) or selector not in behavior:
+        raise CharacterizationError("MISSING_CHARACTERIZATION_ASSERTION", selector)
+    return behavior[selector]
+
+
+def _golden_assertions(
+    repository: Path,
+    commit_sha: str,
+    language: str,
+    manifest: Manifest,
+    records: list[git_changes.CommandRecord],
+) -> dict[str, tuple[Obligation, str]]:
+    scenarios = {item.id: item for item in manifest.scenarios}
+    values: dict[str, tuple[Obligation, str]] = {}
+    for obligation in _effective_obligations(manifest):
+        _, path = _scenario_paths(scenarios[obligation.scenario], language)
+        blob = git_changes.read_regular_blob(repository, commit_sha, path, records)
+        behavior = _read_json_bytes(blob.content, "MALFORMED_GOLDEN_OUTPUT")
+        selected = _selected_assertion(behavior, obligation.selector)
+        values[obligation.id] = (obligation, _sha256(_canonical(selected)))
+    return values
+
+
+def _transition_allows(
+    transition: Transition | None,
+    obligation: Obligation,
+    baseline_sha256: str,
+    head_assertions: dict[str, tuple[Obligation, str]],
+) -> bool:
+    if transition is None or transition.baseline_sha256 != baseline_sha256:
+        return False
+    if transition.targets:
+        return all(
+            target in head_assertions
+            and head_assertions[target][0].category == obligation.category
+            and head_assertions[target][0].target == obligation.target
+            for target in transition.targets
+        )
+    return False
+
+
+def _removed_obligation_blocks(
+    base: Manifest,
+    head: Manifest,
+    base_assertions: dict[str, tuple[Obligation, str]],
+    head_assertions: dict[str, tuple[Obligation, str]],
+    deleted_paths: set[str],
+) -> list[str]:
+    base_scenarios = {item.id: item for item in base.scenarios}
+    head_covered = {path for item in head.scenarios for path in item.covers}
+    transitions = {item.source: item for item in head.transitions}
+    blocks: list[str] = []
+    for identifier in sorted(set(base_assertions) - set(head_assertions)):
+        obligation, digest = base_assertions[identifier]
+        scenario = base_scenarios[obligation.scenario]
+        source_deleted = bool(set(scenario.covers) & deleted_paths) and all(
+            path in deleted_paths or path in head_covered for path in scenario.covers
+        )
+        allowed = _transition_allows(
+            transitions.get(identifier), obligation, digest, head_assertions
+        )
+        if source_deleted or allowed:
+            continue
+        suffix = identifier if head.schema_version == "1.0" else f"obligation:{identifier}"
+        blocks.append(f"REMOVED_CHARACTERIZATION_SCENARIO:{suffix}")
+    return blocks
+
+
+def _common_obligation_blocks(
+    base: Manifest,
+    head: Manifest,
+    base_assertions: dict[str, tuple[Obligation, str]],
+    head_assertions: dict[str, tuple[Obligation, str]],
+) -> list[str]:
+    blocks: list[str] = []
+    for identifier in sorted(set(base_assertions) & set(head_assertions)):
+        base_obligation, base_digest = base_assertions[identifier]
+        head_obligation, head_digest = head_assertions[identifier]
+        if (base_obligation.category, base_obligation.target) != (
+            head_obligation.category,
+            head_obligation.target,
+        ):
+            blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:obligation:{identifier}")
+        if base_digest != head_digest:
+            suffix = identifier if head.schema_version == "1.0" else f"obligation:{identifier}"
+            blocks.append(f"CHANGED_GOLDEN_OUTPUT:{suffix}")
+    return blocks
+
+
+def _transition_blocks(
+    base_assertions: dict[str, tuple[Obligation, str]],
+    head_assertions: dict[str, tuple[Obligation, str]],
+    transitions: tuple[Transition, ...],
+) -> list[str]:
+    removed = set(base_assertions) - set(head_assertions)
+    return [
+        f"CHANGED_CHARACTERIZATION_DEFINITION:transition:{item.source}"
+        for item in transitions
+        if item.source not in removed
+    ]
+
+
+def _legacy_driver_blocks(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    language: str,
+    base: Manifest,
+    head: Manifest,
+    records: list[git_changes.CommandRecord],
+) -> list[str]:
+    if base.schema_version != "1.0" or head.schema_version != "1.0":
+        return []
+    base_by_id = {item.id: item for item in base.scenarios}
+    head_by_id = {item.id: item for item in head.scenarios}
+    blocks: list[str] = []
+    for identifier in sorted(set(base_by_id) & set(head_by_id)):
+        if base_by_id[identifier] != head_by_id[identifier]:
+            blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{identifier}")
+            continue
+        driver_path, _ = _scenario_paths(head_by_id[identifier], language)
+        base_driver = git_changes.read_regular_blob(repository, base_sha, driver_path, records)
+        head_driver = git_changes.read_regular_blob(repository, head_sha, driver_path, records)
+        if base_driver.object_sha != head_driver.object_sha:
+            blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{identifier}")
+    return blocks
+
+
 def _definition_blocks(
     repository: Path,
     base_sha: str,
@@ -289,30 +564,14 @@ def _definition_blocks(
         if error.code == "MISSING_BLOB":
             return []
         raise
-    blocks: list[str] = []
-    base_by_id = {item.id: item for item in base.scenarios}
-    head_by_id = {item.id: item for item in head.scenarios}
-    head_covered = {path for item in head.scenarios for path in item.covers}
-    for identifier in sorted(set(base_by_id) - set(head_by_id)):
-        if any(
-            path not in deleted_paths and path not in head_covered
-            for path in base_by_id[identifier].covers
-        ):
-            blocks.append(f"REMOVED_CHARACTERIZATION_SCENARIO:{identifier}")
-    for identifier in sorted(set(base_by_id) & set(head_by_id)):
-        if base_by_id[identifier] != head_by_id[identifier]:
-            blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{identifier}")
-            continue
-        driver_path, golden_path = _scenario_paths(head_by_id[identifier], language)
-        base_driver = git_changes.read_regular_blob(repository, base_sha, driver_path, records)
-        head_driver = git_changes.read_regular_blob(repository, head_sha, driver_path, records)
-        base_golden = git_changes.read_regular_blob(repository, base_sha, golden_path, records)
-        head_golden = git_changes.read_regular_blob(repository, head_sha, golden_path, records)
-        if base_driver.object_sha != head_driver.object_sha:
-            blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{identifier}")
-        if base_golden.object_sha != head_golden.object_sha:
-            blocks.append(f"CHANGED_GOLDEN_OUTPUT:{identifier}")
-    return blocks
+    base_assertions = _golden_assertions(repository, base_sha, language, base, records)
+    head_assertions = _golden_assertions(repository, head_sha, language, head, records)
+    return [
+        *_removed_obligation_blocks(base, head, base_assertions, head_assertions, deleted_paths),
+        *_common_obligation_blocks(base, head, base_assertions, head_assertions),
+        *_transition_blocks(base_assertions, head_assertions, head.transitions),
+        *_legacy_driver_blocks(repository, base_sha, head_sha, language, base, head, records),
+    ]
 
 
 def _capture_blocks(
@@ -337,6 +596,7 @@ def _capture_blocks(
     for scenario in manifest.scenarios:
         row = by_id[scenario.id]
         blocks.extend(_scenario_row_blocks(scenario, row))
+    blocks.extend(_obligation_capture_blocks(manifest, by_id))
     expected_fingerprint = _sha256(
         _canonical(
             [[item.id, by_id[item.id].get("behavior_sha256")] for item in manifest.scenarios]
@@ -357,6 +617,42 @@ def _scenario_row_blocks(scenario: Scenario, row: dict[str, Any]) -> list[str]:
         blocks.append(f"CHARACTERIZATION_REPLAY_DRIFT:{scenario.id}")
     if row.get("behavior_sha256") != row.get("golden_behavior_sha256"):
         blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:{scenario.id}")
+    return blocks
+
+
+def _meaningful_cases(value: object) -> bool:
+    if not isinstance(value, list) or len(value) < 2:
+        return False
+    if any(not isinstance(item, dict) or set(item) != {"input", "output"} for item in value):
+        return False
+    inputs = [_canonical(item["input"]) for item in value]
+    outputs = [_canonical(item["output"]) for item in value]
+    return len(inputs) == len(set(inputs)) and len(set(outputs)) > 1
+
+
+def _valid_obligation_assertion(category: str, value: object) -> bool:
+    if category == "behavior":
+        return _meaningful_cases(value)
+    if category == "cli_help":
+        return isinstance(value, dict) and set(value) == {
+            "exit_code",
+            "stderr_sha256",
+            "stdout_sha256",
+        }
+    return value is not None
+
+
+def _obligation_capture_blocks(manifest: Manifest, rows: dict[str, dict[str, Any]]) -> list[str]:
+    blocks: list[str] = []
+    for obligation in manifest.obligations:
+        row = rows.get(obligation.scenario, {})
+        try:
+            selected = _selected_assertion(row.get("behavior"), obligation.selector)
+        except CharacterizationError:
+            blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{obligation.id}")
+            continue
+        if not _valid_obligation_assertion(obligation.category, selected):
+            blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{obligation.id}")
     return blocks
 
 
@@ -388,7 +684,8 @@ def _coverage_blocks(
     manifest: Manifest,
     changes: tuple[git_changes.ChangedPath, ...],
     deleted_paths: set[str],
-) -> tuple[list[str], list[str], list[str]]:
+    responsibility_targets: tuple[str, ...],
+) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
     changed = {
         item.new_path
         for item in changes
@@ -399,7 +696,25 @@ def _coverage_blocks(
     blocks = [
         f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered
     ]
-    return blocks, required, covered
+    required_obligations = sorted(
+        {
+            target.rsplit(":", 1)[0]
+            for target in responsibility_targets
+            if "::" in target and target.split("::", 1)[1].split(":", 1)[0] != "module"
+        }
+    )
+    behavior_targets = {item.target for item in manifest.obligations if item.category == "behavior"}
+    covered_obligations = sorted(
+        target
+        for target in required_obligations
+        if target in behavior_targets or target.split("::", 1)[0] in behavior_targets
+    )
+    blocks.extend(
+        f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"
+        for target in required_obligations
+        if target not in covered_obligations
+    )
+    return blocks, required, covered, required_obligations, covered_obligations
 
 
 def derive_required_paths(
@@ -467,6 +782,54 @@ def _compatibility_evidence(
     return blocks, scenarios
 
 
+def _assertion_sha(row: dict[str, Any] | None, obligation: Obligation) -> str | None:
+    if row is None:
+        return None
+    try:
+        selected = _selected_assertion(row.get("behavior"), obligation.selector)
+    except CharacterizationError:
+        return None
+    return _sha256(_canonical(selected))
+
+
+def _obligation_evidence(
+    manifest: Manifest,
+    base_rows: dict[str, dict[str, Any]],
+    head_rows: dict[str, dict[str, Any]],
+) -> tuple[list[str], list[dict[str, object]]]:
+    blocks: list[str] = []
+    rows: list[dict[str, object]] = []
+    for item in manifest.obligations:
+        base = _assertion_sha(base_rows.get(item.scenario), item)
+        head = _assertion_sha(head_rows.get(item.scenario), item)
+        compatible = base is not None and base == head
+        if base is not None and head is not None and not compatible:
+            blocks.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item.id}")
+        rows.append(
+            {
+                "base_assertion_sha256": base,
+                "category": item.category,
+                "compatibility": "PASS" if compatible else "BLOCK",
+                "head_assertion_sha256": head,
+                "id": item.id,
+                "meaningful": _obligation_meaningful(head_rows.get(item.scenario), item),
+                "scenario": item.scenario,
+                "target": item.target,
+            }
+        )
+    return blocks, rows
+
+
+def _obligation_meaningful(row: dict[str, Any] | None, obligation: Obligation) -> bool:
+    if row is None:
+        return False
+    try:
+        selected = _selected_assertion(row.get("behavior"), obligation.selector)
+    except CharacterizationError:
+        return False
+    return _valid_obligation_assertion(obligation.category, selected)
+
+
 def _logical_step_runnable(
     manifest: Manifest,
     base_rows: dict[str, dict[str, Any]],
@@ -502,6 +865,12 @@ def _result_paths(value: object, field: str) -> tuple[str, ...]:
     if len(paths) != len(set(paths)):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return paths
+
+
+def _result_strings(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return tuple(value)
 
 
 def _result_scenario(value: object) -> dict[str, Any]:
@@ -558,6 +927,49 @@ def _result_scenarios(value: object) -> list[dict[str, Any]]:
         )
         if row["compatibility"] != ("PASS" if compatible else "BLOCK"):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return rows
+
+
+def _result_obligation(value: object, scenario_ids: set[str]) -> dict[str, Any]:
+    keys = {
+        "base_assertion_sha256",
+        "category",
+        "compatibility",
+        "head_assertion_sha256",
+        "id",
+        "meaningful",
+        "scenario",
+        "target",
+    }
+    row = _exact_keys(value, keys, "MALFORMED_CHARACTERIZATION_RESULT")
+    hashes = (row["base_assertion_sha256"], row["head_assertion_sha256"])
+    compatible = hashes[0] is not None and hashes[0] == hashes[1]
+    if (
+        not isinstance(row["id"], str)
+        or SCENARIO_ID.fullmatch(row["id"]) is None
+        or row["category"] not in OBLIGATION_CATEGORIES
+        or row["scenario"] not in scenario_ids
+        or type(row["meaningful"]) is not bool
+        or not isinstance(row["target"], str)
+        or not row["target"]
+        or any(
+            item is not None and (not isinstance(item, str) or SHA256.fullmatch(item) is None)
+            for item in hashes
+        )
+        or row["compatibility"] != ("PASS" if compatible else "BLOCK")
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return row
+
+
+def _result_obligations(value: object, scenarios: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    scenario_ids = {str(item["id"]) for item in scenarios}
+    rows = [_result_obligation(item, scenario_ids) for item in value]
+    identifiers = [str(item["id"]) for item in rows]
+    if identifiers != sorted(set(identifiers)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return rows
 
 
@@ -631,23 +1043,62 @@ def _result_policy_blocks(row: dict[str, Any]) -> list[str]:
 def _result_coverage(
     value: object,
     scenarios: list[dict[str, Any]],
+    obligations: list[dict[str, Any]],
     required_paths: tuple[str, ...] | None,
+    required_targets: tuple[str, ...] | None,
 ) -> list[str]:
     row = _exact_keys(
-        value, {"covered_paths", "required_paths"}, "MALFORMED_CHARACTERIZATION_RESULT"
+        value,
+        {"covered_obligations", "covered_paths", "required_obligations", "required_paths"},
+        "MALFORMED_CHARACTERIZATION_RESULT",
     )
     covered = _result_paths(row["covered_paths"], "coverage.covered_paths")
     required = _result_paths(row["required_paths"], "coverage.required_paths")
+    covered_obligations = _result_strings(row["covered_obligations"])
+    required_obligations = _result_strings(row["required_obligations"])
+    expected_obligations = (
+        tuple(
+            sorted(
+                {
+                    target.rsplit(":", 1)[0]
+                    for target in required_targets
+                    if "::" in target and target.split("::", 1)[1].split(":", 1)[0] != "module"
+                }
+            )
+        )
+        if required_targets is not None
+        else required_obligations
+    )
     expected_covered = tuple(
         sorted({path for scenario in scenarios for path in scenario["covers"]})
+    )
+    behavior_targets = {
+        str(item["target"])
+        for item in obligations
+        if item["category"] == "behavior" and item["compatibility"] == "PASS"
+    }
+    expected_covered_obligations = tuple(
+        target
+        for target in required_obligations
+        if target in behavior_targets or target.split("::", 1)[0] in behavior_targets
     )
     if (
         covered != expected_covered
         or required != tuple(sorted(required))
         or (required_paths is not None and required != required_paths)
+        or required_obligations != expected_obligations
+        or covered_obligations != tuple(sorted(set(covered_obligations)))
+        or covered_obligations != expected_covered_obligations
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-    return [f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered]
+    return [
+        *(f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered),
+        *(
+            f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"
+            for target in required_obligations
+            if target not in covered_obligations
+        ),
+    ]
 
 
 def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> list[str]:
@@ -692,6 +1143,7 @@ def validate_result(
     head_sha: str,
     workflow_sha: str,
     required_paths: tuple[str, ...] | None,
+    required_targets: tuple[str, ...] | None = None,
     expected_artifacts: object = None,
 ) -> list[str]:
     """Validate serialized Gate 5 facts without repository or target execution."""
@@ -703,6 +1155,7 @@ def validate_result(
         "head_sha",
         "manifest_blob_sha",
         "manifest_sha256",
+        "obligations",
         "overall_result",
         "policy_blocks",
         "repository",
@@ -745,13 +1198,35 @@ def validate_result(
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     scenarios = _result_scenarios(row["scenarios"])
+    obligations = _result_obligations(row["obligations"], scenarios)
     fingerprint = _sha256(
-        _canonical([[item["id"], item["head_behavior_sha256"]] for item in scenarios])
+        _canonical(
+            {
+                "obligations": [
+                    [item["id"], item["head_assertion_sha256"]] for item in obligations
+                ],
+                "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
+            }
+        )
     )
     if row["behavior_fingerprint"] != fingerprint:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     derived.extend(_result_scenario_blocks(scenarios, blocks))
-    derived.extend(_result_coverage(row["coverage"], scenarios, required_paths))
+    derived.extend(
+        f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item['id']}"
+        for item in obligations
+        if item["base_assertion_sha256"] is not None
+        and item["head_assertion_sha256"] is not None
+        and item["compatibility"] == "BLOCK"
+    )
+    derived.extend(
+        f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{item['id']}"
+        for item in obligations
+        if item["meaningful"] is False
+    )
+    derived.extend(
+        _result_coverage(row["coverage"], scenarios, obligations, required_paths, required_targets)
+    )
     exact_families = (
         "BASE_CAPTURE_DIGEST_MISMATCH",
         "HEAD_CAPTURE_DIGEST_MISMATCH",
@@ -775,9 +1250,12 @@ def _verification_result(
     base: dict[str, Any] | None,
     head: dict[str, Any] | None,
     scenarios: list[dict[str, object]],
+    obligations: list[dict[str, object]],
     blocks: list[str],
     required: list[str],
     covered: list[str],
+    required_obligations: list[str],
+    covered_obligations: list[str],
     responsibility_targets: tuple[str, ...],
     unbounded_paths: tuple[str, ...],
     runnable: bool,
@@ -803,12 +1281,25 @@ def _verification_result(
         },
         "base_sha": identity.base_sha,
         "behavior_fingerprint": _sha256(
-            _canonical([[item["id"], item["head_behavior_sha256"]] for item in scenarios])
+            _canonical(
+                {
+                    "obligations": [
+                        [item["id"], item["head_assertion_sha256"]] for item in obligations
+                    ],
+                    "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
+                }
+            )
         ),
-        "coverage": {"covered_paths": covered, "required_paths": required},
+        "coverage": {
+            "covered_obligations": covered_obligations,
+            "covered_paths": covered,
+            "required_obligations": required_obligations,
+            "required_paths": required,
+        },
         "head_sha": identity.head_sha,
         "manifest_blob_sha": manifest.blob_sha,
         "manifest_sha256": manifest.sha256,
+        "obligations": obligations,
         "overall_result": "BLOCK" if unique_blocks else "PASS",
         "policy_blocks": unique_blocks,
         "repository": identity.remote,
@@ -943,7 +1434,13 @@ def verify_evidence(
             records,
         )
     )
-    coverage_blocks, required, covered = _coverage_blocks(policy, manifest, changes, deleted_paths)
+    (
+        coverage_blocks,
+        required,
+        covered,
+        required_obligations,
+        covered_obligations,
+    ) = _coverage_blocks(policy, manifest, changes, deleted_paths, responsibility_targets)
     blocks.extend(coverage_blocks)
     if (
         ARTIFACT_ID.fullmatch(base_artifact_id) is None
@@ -956,6 +1453,8 @@ def verify_evidence(
         blocks.append("INVALID_ARTIFACT_IDENTITY")
     compatibility_blocks, scenarios = _compatibility_evidence(manifest, base_rows, head_rows)
     blocks.extend(compatibility_blocks)
+    obligation_blocks, obligations = _obligation_evidence(manifest, base_rows, head_rows)
+    blocks.extend(obligation_blocks)
     runnable = not target_derivation_failed and _logical_step_runnable(
         manifest, base_rows, head_rows, responsibility_targets, policy.language
     )
@@ -965,9 +1464,12 @@ def verify_evidence(
         base,
         head,
         scenarios,
+        obligations,
         blocks,
         required,
         covered,
+        required_obligations,
+        covered_obligations,
         responsibility_targets,
         unbounded_paths,
         runnable,
@@ -984,6 +1486,7 @@ def verify_evidence(
         head_sha=identity.head_sha,
         workflow_sha=workflow_sha,
         required_paths=tuple(required),
+        required_targets=responsibility_targets,
         expected_artifacts={
             "base": {
                 "capture_sha256": base_capture_sha256,

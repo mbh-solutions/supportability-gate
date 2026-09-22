@@ -295,20 +295,27 @@ def _complexity(
 
 def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
     targets = [f"{path}::module:{path}:1-1"] if path.startswith("src/") else []
+    fingerprint = {
+        "obligations": [],
+        "scenarios": [["sample", "e" * 64]],
+    }
     return {
         "artifacts": {
             "base": {"capture_sha256": "3" * 64, "digest": "4" * 64, "id": "701"},
             "head": {"capture_sha256": "5" * 64, "digest": "6" * 64, "id": "702"},
         },
         "base_sha": IDENTITY.base_sha,
-        "behavior_fingerprint": hashlib.sha256(_canonical([["sample", "e" * 64]])).hexdigest(),
+        "behavior_fingerprint": hashlib.sha256(_canonical(fingerprint)).hexdigest(),
         "coverage": {
+            "covered_obligations": [],
             "covered_paths": [path],
+            "required_obligations": [],
             "required_paths": [path] if path.startswith("src/") else [],
         },
         "head_sha": IDENTITY.head_sha,
         "manifest_blob_sha": "8" * 40,
         "manifest_sha256": "9" * 64,
+        "obligations": [],
         "overall_result": "PASS",
         "policy_blocks": [],
         "repository": f"github.com/{IDENTITY.repository}",
@@ -334,7 +341,7 @@ def _characterization(path: str = "src/sample.py") -> dict[str, Any]:
                 "kind": "golden",
             }
         ],
-        "schema_version": "characterization-result.v1",
+        "schema_version": characterization.RESULT_SCHEMA,
         "workflow_sha": IDENTITY.workflow_sha,
     }
 
@@ -1579,7 +1586,9 @@ def test_refactor_runnability_blocks_remain_gate_six_blocks(block: str) -> None:
         )
         inputs[0]["modularity"]["changed_paths"] = []
         inputs[1]["coverage"] = {
+            "covered_obligations": [],
             "covered_paths": ["tests/characterization/sample.py"],
+            "required_obligations": [],
             "required_paths": [],
         }
         inputs[1]["scenarios"][0]["covers"] = ["tests/characterization/sample.py"]
@@ -1858,7 +1867,12 @@ def _gate_five_poison(
         scenario["golden_behavior_sha256"] = "d" * 64
         scenario["compatibility"] = "BLOCK"
         characterization["behavior_fingerprint"] = hashlib.sha256(
-            _canonical([["sample", "d" * 64]])
+            _canonical(
+                {
+                    "obligations": [],
+                    "scenarios": [["sample", "d" * 64]],
+                }
+            )
         ).hexdigest()
     elif block == "INVALID_ARTIFACT_IDENTITY":
         characterization["artifacts"]["base"]["id"] = "0"
@@ -1884,7 +1898,7 @@ def _gate_five_poison(
             head_behavior_sha256=None,
         )
         characterization["behavior_fingerprint"] = hashlib.sha256(
-            _canonical([["sample", None]])
+            _canonical({"obligations": [], "scenarios": [["sample", None]]})
         ).hexdigest()
     characterization["policy_blocks"] = blocks
     characterization["overall_result"] = "BLOCK"
