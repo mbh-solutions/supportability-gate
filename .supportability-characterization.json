@@ -72,7 +72,7 @@
     },
     {
       "category": "static",
-      "id": "gate8-standard-results-boundary-v4",
+      "id": "gate8-standard-results-boundary-v5",
       "scenario": "gate8-standard-results-boundary-v3",
       "selector": "$",
       "target": "scenario:gate8-standard-results-boundary-v3"
@@ -287,5 +287,13 @@
     }
   ],
   "schema_version": "2.0",
-  "transitions": []
+  "transitions": [
+    {
+      "baseline_sha256": "94db1d80b98a97923d88b5730b0d54f9bf119b14d4227eabf47aac940a53024f",
+      "from": "gate8-standard-results-boundary-v4",
+      "to": [
+        "gate8-standard-results-boundary-v5"
+      ]
+    }
+  ]
 }
