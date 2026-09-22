@@ -119,6 +119,9 @@ def test_technical_failure_bundle_restores_without_missing_raw_source(tmp_path: 
     evidence = tmp_path / "evidence"
     evidence.mkdir()
     (evidence / "standard-results.json").write_bytes(output.read_bytes())
+    diagnostics = evidence / "diagnostics"
+    diagnostics.mkdir()
+    (diagnostics / "complexity--stage.log").write_bytes(b"MISSING_COMPLEXITY_RESULT\n")
     bundle = tmp_path / "technical.zip"
 
     qualification_bundle.build_bundle(evidence, bundle)
@@ -126,6 +129,10 @@ def test_technical_failure_bundle_restores_without_missing_raw_source(tmp_path: 
 
     assert restored.decision == "TECHNICAL_FAILURE"
     assert restored.profile is None
+    with zipfile.ZipFile(bundle, "r") as archive:
+        assert archive.read("evidence/diagnostics/complexity--stage.log") == (
+            b"MISSING_COMPLEXITY_RESULT\n"
+        )
 
 
 def test_restore_rejects_changed_evidence_bytes(tmp_path: Path) -> None:
