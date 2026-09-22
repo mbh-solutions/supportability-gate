@@ -29,6 +29,27 @@
       "target": "scenario:clause-inventory-baseline"
     },
     {
+      "category": "behavior",
+      "id": "cli-profile-detection",
+      "scenario": "s05-meaningful-behavior",
+      "selector": "cli-profile-detection",
+      "target": "src/supportability_gate/cli.py"
+    },
+    {
+      "category": "behavior",
+      "id": "complexity-measurement",
+      "scenario": "s05-meaningful-behavior",
+      "selector": "complexity-measurement",
+      "target": "src/supportability_gate/complexity_metrics.py"
+    },
+    {
+      "category": "behavior",
+      "id": "contract-command-policy",
+      "scenario": "s05-meaningful-behavior",
+      "selector": "contract-command-policy",
+      "target": "src/supportability_gate/contract.py"
+    },
+    {
       "category": "cli_help",
       "id": "gate-cli-help",
       "scenario": "gate-cli",
@@ -48,6 +69,13 @@
       "scenario": "gate8-standard-results-boundary-v3",
       "selector": "$",
       "target": "scenario:gate8-standard-results-boundary-v3"
+    },
+    {
+      "category": "behavior",
+      "id": "git-remote-identity",
+      "scenario": "s05-meaningful-behavior",
+      "selector": "git-remote-identity",
+      "target": "src/supportability_gate/git_changes.py"
     },
     {
       "category": "static",
@@ -170,6 +198,10 @@
     {
       "covers": [
         "src/supportability_gate/characterization.py",
+        "src/supportability_gate/cli.py",
+        "src/supportability_gate/complexity_metrics.py",
+        "src/supportability_gate/contract.py",
+        "src/supportability_gate/git_changes.py",
         "src/supportability_gate/quality_profile.py",
         "src/supportability_gate/standard_results.py"
       ],

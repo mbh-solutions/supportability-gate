@@ -42,6 +42,58 @@
       ]
     }
   ],
+  "cli-profile-detection": [
+    {
+      "input": {
+        "language": "python",
+        "path": "src/sample.py"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "language": "python",
+        "path": "src/sample.ts"
+      },
+      "output": false
+    }
+  ],
+  "complexity-measurement": [
+    {
+      "input": "straight-line",
+      "output": 1
+    },
+    {
+      "input": "branch",
+      "output": 2
+    }
+  ],
+  "contract-command-policy": [
+    {
+      "input": {
+        "adapter": "python.c901-touched.v1",
+        "exit_code": 1
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "adapter": "python.mypy-strict.v1",
+        "exit_code": 1
+      },
+      "output": true
+    }
+  ],
+  "git-remote-identity": [
+    {
+      "input": "git@GitHub.com:acme/one.git",
+      "output": "github.com/acme/one"
+    },
+    {
+      "input": "https://example.com/acme/two.git",
+      "output": "example.com/acme/two"
+    }
+  ],
   "quality-suppression": [
     {
       "input": [],

@@ -459,6 +459,71 @@ def test_python_module_and_one_line_function_targets_can_be_observed() -> None:
     assert observed == ("src/sample.py",)
 
 
+def test_python_nonstatement_module_target_does_not_block_executed_function() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": [3, 4],
+                "missing_lines": [],
+                "summary": {"num_statements": 2, "covered_lines": 2},
+            }
+        }
+    }
+
+    observed, _ = quality_profile.python_coverage_observation(
+        report,
+        ("src/sample.py",),
+        (
+            "src/sample.py::module:src/sample.py:1-1",
+            "src/sample.py::function:ready:3-4",
+        ),
+    )
+
+    assert observed == ("src/sample.py",)
+
+
+def test_python_unexecuted_module_statement_remains_unobserved() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": [3, 4],
+                "missing_lines": [1],
+                "summary": {"num_statements": 3, "covered_lines": 2},
+            }
+        }
+    }
+
+    observed, _ = quality_profile.python_coverage_observation(
+        report,
+        ("src/sample.py",),
+        (
+            "src/sample.py::module:src/sample.py:1-1",
+            "src/sample.py::function:ready:3-4",
+        ),
+    )
+
+    assert observed == ()
+
+
+def test_python_malformed_missing_runtime_trace_fails_closed() -> None:
+    report = {
+        "files": {
+            "src/sample.py": {
+                "executed_lines": [2],
+                "missing_lines": ["1"],
+                "summary": {"num_statements": 2, "covered_lines": 1},
+            }
+        }
+    }
+
+    with pytest.raises(quality_profile.QualityProfileError, match="src/sample.py"):
+        quality_profile.python_coverage_observation(
+            report,
+            ("src/sample.py",),
+            ("src/sample.py::function:calculate:1-2",),
+        )
+
+
 def test_typescript_lcov_observation_excludes_unexecuted_statements(tmp_path: Path) -> None:
     report = """TN:
 SF:src/sample/covered.ts
