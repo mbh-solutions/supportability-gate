@@ -29,13 +29,6 @@
       "target": "scenario:clause-inventory-baseline"
     },
     {
-      "category": "static",
-      "id": "gate-cli",
-      "scenario": "gate-cli",
-      "selector": "$",
-      "target": "scenario:gate-cli"
-    },
-    {
       "category": "cli_help",
       "id": "gate-cli-help",
       "scenario": "gate-cli",
