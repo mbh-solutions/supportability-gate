@@ -930,21 +930,33 @@ def _python_runtime_observed(
     required_targets: tuple[str, ...],
 ) -> bool:
     spans = _required_spans(required_targets, path)
-    executed = item.get("executed_lines")
-    if executed is None:
-        if spans:
-            raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+    lines = _runtime_lines(item, "executed_lines", path, required=bool(spans))
+    if lines is None:
         return True
-    if not isinstance(executed, list) or any(
-        type(line) is not int or line < 1 for line in executed
-    ):
-        raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
-    if executed != sorted(set(executed)):
-        raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
-    lines = set(executed)
+    missing = _runtime_lines(item, "missing_lines", path, required=False)
+    if spans and missing is not None:
+        executable = lines | missing
+        return all(
+            not _span_observed(span, executable) or _span_observed(span, lines) for span in spans
+        )
     if spans:
         return all(_span_observed(span, lines) for span in spans)
     return not (statements > 1 and lines == {1})
+
+
+def _runtime_lines(
+    item: dict[str, object], key: str, path: str, *, required: bool
+) -> set[int] | None:
+    value = item.get(key)
+    if value is None:
+        if required:
+            raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+        return None
+    if not isinstance(value, list) or any(type(line) is not int or line < 1 for line in value):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+    if value != sorted(set(value)):
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", path)
+    return set(value)
 
 
 def _span_observed(span: tuple[str, int, int], lines: set[int] | frozenset[int]) -> bool:
