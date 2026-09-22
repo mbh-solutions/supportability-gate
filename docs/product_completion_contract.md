@@ -1291,8 +1291,8 @@ Deterministic protected merge for committed Python/TypeScript/mixed profiles: YE
 Independent semantic or qualitative judgment: NO; not a product capability
 Outside-profile or exhaustive runtime certification: NO
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #25 S06 issue #207, delivered for independent controller review
-Next slice authorized: NONE; S07 remains Backlog pending independent verification and owner Execute
+Current authorized work: Project #25 S07 issue #208, delivered for independent controller review
+Next slice authorized: NONE; S08 remains Backlog pending independent verification and owner Execute
 ```
 
 ## Milestone transition rules
@@ -2486,9 +2486,9 @@ Do not create a new terminal label not authorized by an active milestone directi
 
 ## Project #25 deterministic assurance remediation
 
-Project #25 is the only current remediation authority. S00–S05 are independently verified complete.
-S06 issue #207 is the sole delivered slice awaiting independent controller review; S07–S08 remain
-Backlog and require serial predecessor verification plus separate owner execution authorization.
+Project #25 is the only current remediation authority. S00–S06 are independently verified complete.
+S07 issue #208 is the sole delivered slice awaiting independent controller review; S08 remains
+Backlog and requires serial predecessor verification plus separate owner execution authorization.
 Semantic Review remains retired; no AI reviewer, probabilistic grader, model-backed required check,
 semantic approval, replacement service, or second policy engine is permitted.
 
@@ -2674,3 +2674,68 @@ limits, not hidden PASS conversions.
   evidence index, set only S06 to `In Review / Partial / On scope / No`, clean owned temporary
   outputs, and stop. Independent controller review owns any terminal Project transition; S07 is not
   activated.
+
+### S07 focused regression authorization and series-safe incremental refactors
+
+- Executor handoff recorded by this protected ledger transaction: Status `In Review`; Evidence
+  `Partial`; Scope `On scope`; Stop confirmed `No`. Independent controller verification is still
+  required before S07 may become `Done / Proven / On scope / Yes`. S08 remains untouched and is not
+  authorized.
+- Authority: Project #25 item `PVTI_lADOEmzFKc4BkDY3zg7yEUY`, repository issue #208, exact
+  activation base `efb6fcd96802d9711f10bb8984511ab107c1da5a`, implementation PR #248, and
+  protected transition-retirement PR #256. PR #248 retained the exact footer `Closes #208`; issue
+  closure is delivery linkage, not independent completion approval.
+- Capability boundary: schema-two authorization permits an ordinary test to remain narrow only
+  through an exact fixed-profile source association bound to authenticated scope and targets.
+  `series_id` separates independent step-one refactors from continuations; later steps require the
+  same series, exact predecessor merge, adjacent step, and stable target identities excluding only
+  line spans. Missing, stale, malformed, wrong-series, replayed, skipped, forged, or substituted
+  evidence remains fail-closed. Target paths, kinds, symbols, and spans remain footprint evidence,
+  not semantic certification of smallness, cohesion, or quality.
+- Protected delivery: implementation head `aca555026a0b96635a802b6b259fb5f080284ef5` passed Source
+  Integrity run `35716559142`, Source Validation run `35716559167`, CodeQL run `35716555891`, all
+  eight deterministic contexts, and aggregate Gate run `35716559248`. Evidence artifact
+  `10689451304` has digest
+  `sha256:ff6a5fc8a61734813facb1f0365d211b3b2caf218b02edd5cb7630a6c9c2631f`.
+  PR #248 merged normally without bypass as `2a50a986cdc03f3711ae75a2268d1c7b77a8b7f0` and issue
+  #208 closed through the required footer.
+- Post-merge qualification exposed and corrected one consumed characterization transition that
+  would otherwise block every successor PR. PR #256 head
+  `b4036deb7e14bd46c43a7b572424166ece186b96` passed Source Integrity run `35718759869`, Source
+  Validation run `35718759817`, CodeQL run `35718755252`, all eight contexts, and Gate run
+  `35718759818`; artifact `10689533652` has digest
+  `sha256:1c6a81bdb3c809949c9cff6df58a80b2b944b2e378306f7184e1e2ea2697319d`.
+  It merged normally as `58ee6f0a4c2cde88640779635a43e1c6217f71b5`.
+- Deployment readback: organization ruleset `21664395` is active and pins the executable workflow
+  exactly to `58ee6f0a4c2cde88640779635a43e1c6217f71b5`, with zero bypass actors, strict current-head
+  enforcement, the same five repository IDs, and all eight required App `15368` contexts. Source
+  Integrity ruleset `23795033` remains pinned to
+  `a645c1d3c6fd7f9d9c804b173c5b2ac0a420d786` with zero bypass actors; repository ruleset
+  `19767613` remains zero-bypass and reports `current_user_can_bypass: never`.
+- Protected canary proof: related-test PR #249 run `35719986349` and independent-series PR #250 run
+  `35719563846` produced Gate 6 `PASS`. Unrelated-scope PR #251 run `35720161559` produced policy
+  `BLOCK / BROAD_AUTHORIZATION_REQUIRED`; stale-authorization PR #252 run `35719567904` produced
+  `BLOCK / STALE_OWNER_AUTHORIZATION`; wrong-series PR #253 run `35719571087` and forged-predecessor
+  PR #254 run `35719577074` each produced `BLOCK / INVALID_STRANGLER_SEQUENCE`; malformed-proof PR
+  #255 run `35719427291` produced `TECHNICAL_FAILURE`, not a policy BLOCK. Their evidence artifacts
+  are respectively `10690737807`, `10690921750`, `10691660343`, `10689399800`, `10689639860`,
+  `10691257405`, and `10690956557`.
+- Every canary was marked NEVER MERGE. Normal merge mutations were refused by required protection:
+  intentionally unresolved review threads guarded the two positive cases, Gate 6 guarded the four
+  policy negatives, and required technical checks guarded the malformed-proof case. PRs #249–#255
+  are closed unmerged, all seven remote canary branches are deleted, and main was unchanged by them.
+- Local source proof: Python `3.12.10`, exact lock SHA-256
+  `fa152bc59237a214f1f4057bd00d2da37eea21dafa44a1cfa96d39959ca61a60`; Ruff lint and format,
+  C901 maximum 10, strict mypy, Import Linter, 1199 passed and 8 skipped tests, compileall, immutable
+  Standard tamper test, exact diff check, wheel build, fresh exact-lock installation, and installed
+  CLI help all passed. The post-merge transition-only correction additionally passed 65 focused
+  characterization/source-integrity tests and the full protected source workflows.
+- Guarantee boundary: exact mappings and authenticated sequence facts are deterministic enforcement;
+  they do not prove semantic test relevance, refactor quality, or that a thousand-line span is small.
+  No command, executable path, environment control, exclusion, waiver, threshold, package, workflow
+  identity, or Standard clause changed. The immutable Standard SHA-256 remains
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`.
+- Remaining transaction: merge this ledger-and-evidence-only PR normally, verify the deployed Gate
+  source remains `58ee6f0a4c2cde88640779635a43e1c6217f71b5`, post the durable issue evidence index, set only
+  S07 to `In Review / Partial / On scope / No`, clean owned temporary outputs, and stop. Independent
+  controller review owns any terminal Project transition; S08 is not activated.
