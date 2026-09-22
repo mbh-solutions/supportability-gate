@@ -3,12 +3,26 @@ from __future__ import annotations
 import json
 import time
 
-from supportability_gate import characterization, quality_profile, standard_block_ownership
+from supportability_gate import (
+    characterization,
+    cli,
+    complexity_metrics,
+    contract,
+    function_changes,
+    git_changes,
+    quality_profile,
+    standard_block_ownership,
+)
 from supportability_gate.standard_results import RunIdentity
 
 
 def _case(value: object, result: object) -> dict[str, object]:
     return {"input": value, "output": result}
+
+
+def _complexity(source: str) -> int:
+    parsed = function_changes.parse_python_file("src/sample.py", source.encode())
+    return complexity_metrics.measure_definitions(parsed.functions)[0].complexity
 
 
 def main() -> None:
@@ -41,6 +55,51 @@ def main() -> None:
             _case(
                 "UNTESTED_AREA:src/sample.py",
                 sorted(standard_block_ownership.owners("UNTESTED_AREA:src/sample.py")),
+            ),
+        ],
+        "cli-profile-detection": [
+            _case(
+                {"language": "python", "path": "src/sample.py"},
+                cli._is_profile_source("src/sample.py", "python"),
+            ),
+            _case(
+                {"language": "python", "path": "src/sample.ts"},
+                cli._is_profile_source("src/sample.ts", "python"),
+            ),
+        ],
+        "complexity-measurement": [
+            _case(
+                "straight-line",
+                _complexity("def calculate(value: int) -> int:\n    return value\n"),
+            ),
+            _case(
+                "branch",
+                _complexity(
+                    "def calculate(value: int) -> int:\n"
+                    "    if value > 0:\n"
+                    "        return value\n"
+                    "    return 0\n"
+                ),
+            ),
+        ],
+        "contract-command-policy": [
+            _case(
+                {"adapter": "python.c901-touched.v1", "exit_code": 1},
+                contract.command_failed("python", "python.c901-touched.v1", True, 1),
+            ),
+            _case(
+                {"adapter": "python.mypy-strict.v1", "exit_code": 1},
+                contract.command_failed("python", "python.mypy-strict.v1", True, 1),
+            ),
+        ],
+        "git-remote-identity": [
+            _case(
+                "git@GitHub.com:acme/one.git",
+                git_changes._remote_identity("git@GitHub.com:acme/one.git"),
+            ),
+            _case(
+                "https://example.com/acme/two.git",
+                git_changes._remote_identity("https://example.com/acme/two.git"),
             ),
         ],
         "quality-suppression": [
