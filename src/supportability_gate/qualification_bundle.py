@@ -144,10 +144,13 @@ def _regular_files(directory: Path, output: Path) -> list[Path]:
     for path in sorted(directory.rglob("*")):
         if path.resolve() == output.resolve():
             continue
-        if path.is_symlink() or (path.exists() and not path.is_file()):
+        if path.is_symlink():
             raise QualificationBundleError("UNSAFE_EVIDENCE_PATH")
-        if path.is_file():
-            files.append(path)
+        if path.is_dir():
+            continue
+        if not path.is_file():
+            raise QualificationBundleError("UNSAFE_EVIDENCE_PATH")
+        files.append(path)
     if not files:
         raise QualificationBundleError("EMPTY_EVIDENCE_DIRECTORY")
     return files

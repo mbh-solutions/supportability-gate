@@ -1,88 +1,44 @@
 schema_version = "1.0"
+module_boundaries = []
 
 [behavior]
-intended_behavior = "The existing deterministic evidence job packages canonical results and their retained source files, then verifies the bundle without network access before upload."
-proof = "tests/test_qualification_bundle.py covers byte stability, PASS and TECHNICAL_FAILURE restoration, digest and path tamper failures, context binding, CLI behavior, and the fixed hosted isolation step."
+intended_behavior = "Qualification bundles accept ordinary nested evidence directories, retain their regular files, and continue to reject symlinks and non-regular filesystem entries."
+proof = "tests/test_qualification_bundle.py::test_technical_failure_bundle_restores_without_missing_raw_source exercises a retained diagnostics directory through build and restore."
 
 [characterization]
-captured_behavior = "The retained meaningful-behavior scenario adds an exact qualification-bundle obligation that rejects an archive without a manifest and an archive containing a parent-traversal member."
-proof = "tests/characterization/s05-meaningful-behavior.characterization.py and s05-meaningful-behavior.golden.json retain the fail-closed outputs."
+captured_behavior = "The existing qualification-bundle obligation continues to reject a missing manifest and parent traversal while the bounded directory fix preserves those outputs."
+proof = "tests/characterization/s05-meaningful-behavior.characterization.py and s05-meaningful-behavior.golden.json remain unchanged and execute the deployed restore boundary."
 
 [separation_of_concerns]
-before = "Canonical result validation and hosted artifact upload had no compact, independently restorable evidence boundary."
-after = "qualification_bundle owns deterministic packaging and restoration while standard_results remains the decision and source-binding validator."
+before = "Evidence discovery treated every directory returned by recursive traversal as an unsafe non-file entry."
+after = "Evidence discovery descends through ordinary directories, rejects symlinks and special entries, and returns only regular files to hashing and archive construction."
 boundaries = [
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "QualificationBundleError.__init__", before = "Qualification archive failures had no stable typed code.", after = "Each archive failure exposes one deterministic code." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_canonical", before = "Qualification metadata had no canonical byte form.", after = "Sorted compact JSON supplies canonical metadata bytes." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_reject_duplicate_pairs", before = "Qualification JSON had no duplicate-key rejection boundary.", after = "Duplicate keys fail closed before validation." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_json_bytes", before = "Retained JSON bytes had no strict decoder.", after = "UTF-8, syntax, and duplicate-key failures are typed." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_exact_mapping", before = "Qualification records had no exact-field check.", after = "Every validated record rejects missing or extra fields." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_nonblank", before = "Text fields had no whitespace-normalized boundary.", after = "Required text is nonblank and exact." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_sha", before = "Recorded hashes had no exact hexadecimal check.", after = "SHA-1 and SHA-256 identities use fixed lowercase widths." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_positive_int", before = "Numeric delivery identities had no exact positive-integer check.", after = "Run, repository, pull request, and artifact IDs are positive integers." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_identity", before = "Bundle validation had no canonical run identity constructor.", after = "Repository, commits, workflow, run, and attempt form one existing RunIdentity." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_decision", before = "Bundle metadata had no deterministic aggregate classification.", after = "Eight validated rows reduce only to PASS, BLOCK, or TECHNICAL_FAILURE." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_profile", before = "Bundle metadata had no bounded language profile extraction.", after = "Only python, typescript, or mixed is retained from source evidence." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_regular_files", before = "Evidence collection had no regular-file boundary.", after = "Only regular non-symlink evidence files enter the archive." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_bounded_bytes", before = "Evidence reads had no per-file size bound.", after = "Each retained file is size-bounded before reading." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_evidence", before = "Evidence collection had no aggregate bound or normalized path map.", after = "Sorted safe relative paths are retained under a fixed total size ceiling." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_safe_name", before = "Archive paths had no parent, absolute, or backslash guard.", after = "Only safe relative POSIX member names are accepted." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_required_json", before = "Required canonical sources had no named read boundary.", after = "Missing or malformed required source JSON fails with an exact code." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_optional_json", before = "Technical-failure bundles could not retain an unavailable source.", after = "Available diagnostic JSON is parsed without fabricating a missing source." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_validate_standard_evidence", before = "Compact evidence had no reuse of the canonical result validators.", after = "The existing payload and handoff-source validators reproduce nontechnical decisions; technical failures retain their canonical result." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_string_sequence", before = "Reference and limitation lists had no exact list boundary.", after = "Nonempty unique string lists are required." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_validate_runtime", before = "Replay records omitted exact runtime and lock fields.", after = "Python, Node, runner, pinned isolation image, and lock digest are required." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_validate_delivery", before = "Release evidence had no exact PR, run, artifact, merge, and pin binding.", after = "Delivery fields are exact and the workflow run matches canonical evidence." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_validate_rulesets", before = "Qualification context had no retained ruleset snapshot contract.", after = "Each relevant ruleset retains scope, retrieval time, and complete payload." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_validate_context", before = "Release context could drift from the recorded decision and profile.", after = "Case, profile, classification, tests, runtime, delivery, rulesets, limitations, and restore command are cross-bound." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_manifest", before = "Retained files had no compact deterministic digest index.", after = "One canonical manifest binds every file, run identity, decision, profile, context, and restore command." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_zip_info", before = "Archive metadata could vary by machine or time.", after = "Each member uses fixed timestamp, permissions, system, and compression." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_write_zip", before = "Qualification evidence had no byte-stable archive writer.", after = "Sorted members are written deterministically with Zip64 disabled." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "build_bundle", before = "Canonical evidence expired without a compact self-verifying copy.", after = "Validated evidence and optional release context produce one byte-stable archive digest." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_archive_entries", before = "Archive reads had no duplicate, traversal, member, or total-size boundary.", after = "Unsafe or oversized member sets fail before evidence validation." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_manifest_files", before = "Manifest file records had no exact shape check.", after = "Unique evidence paths bind exact byte length and SHA-256." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_verify_entries", before = "Archive members could not be reconciled with their index.", after = "The member set, size, and digest must exactly match the manifest." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_validate_manifest", before = "Bundle metadata had no exact schema boundary.", after = "The manifest schema and fixed restore command are required." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "restore_bundle", before = "A copied evidence artifact could not reproduce its decision offline.", after = "Archive integrity, canonical evidence, identity, classification, profile, and optional release context are restored without external access." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_parser", before = "Qualification build and restore had no fixed command surface.", after = "Only build and restore subcommands with fixed path arguments are exposed." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "main", before = "Qualification commands had no deterministic process boundary.", after = "Success emits canonical JSON and validation or I/O failure exits two with one code." },
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "module", symbol = "src/supportability_gate/qualification_bundle.py", before = "The canonical result artifact had no durable self-verifying archive or offline replay boundary.", after = "One module builds a byte-stable archive, binds retained files and release context by digest, and restores the recorded decision through existing validators." },
+  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_regular_files", before = "Normal diagnostics directories caused UNSAFE_EVIDENCE_PATH before their retained files could be collected.", after = "Normal directories are traversal containers while only regular non-symlink files enter the evidence map." },
 ]
 
 [architecture]
-dependency_direction = "The new top-layer qualification_bundle module depends on the existing standard_results validation boundary and is independently covered by Import Linter."
+dependency_direction = "The bounded fix remains inside qualification_bundle evidence discovery and does not change its dependency on the existing standard_results validation boundary."
 reviewed_paths = [
-  ".github/workflows/organization-required.yml",
-  ".supportability-characterization.json",
   ".supportability-review.toml",
-  "pyproject.toml",
   "src/supportability_gate/qualification_bundle.py",
-  "tests/characterization/s05-meaningful-behavior.characterization.py",
-  "tests/characterization/s05-meaningful-behavior.golden.json",
   "tests/test_qualification_bundle.py",
 ]
 
 [responsibility_boundary]
 path = "src/supportability_gate/qualification_bundle.py"
-owns = "A bounded deterministic archive, file and context digests, canonical evidence replay, and one offline restore command."
-does_not_own = "Supportability policy decisions, target execution, artifact hosting, ruleset mutation, semantic review, or a second policy engine."
+owns = "Safe deterministic discovery of nested regular evidence files for qualification bundle construction."
+does_not_own = "Filesystem mutation, target execution, Supportability policy decisions, artifact hosting, or a second policy engine."
 
 [incremental_refactor]
-target = "Project 25 S08 compact qualification evidence boundary."
-completed_step = "Added one producer/validator module and integrated build plus offline restoration into the existing deterministic evidence job."
+target = "S08 qualification evidence traversal."
+completed_step = "Corrected one regular-file collector to distinguish ordinary directories from unsafe symlinks and special entries."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Bundle, manifest, context, evidence, decision, profile, and delivery names match their recorded deterministic roles."
-cohesion = "The production module owns only archive construction and restoration; existing validators continue to own evidence meaning."
-intended_behavior = "Every uploaded authoritative evidence artifact contains a compact bundle that has already restored successfully with network disabled."
-reviewability = "The change is bounded to one production module, focused tests and characterization, one dependency-layer entry, and two steps in the existing evidence job."
-
-[[module_boundaries]]
-path = "src/supportability_gate/qualification_bundle.py"
-owner_path = "src/supportability_gate/qualification_bundle.py"
-basis = "responsibility"
-justification = "One new module owns deterministic qualification archive construction and offline restoration while reusing the existing standard-results policy validator."
+naming = "_regular_files names the exact filesystem classification it owns."
+cohesion = "Directory traversal stays in the existing qualification-bundle collector and archive validation remains unchanged."
+intended_behavior = "Technical-failure artifacts with a diagnostics directory now produce and restore a durable bundle."
+reviewability = "The fix changes one production branch and extends one direct regression test."
