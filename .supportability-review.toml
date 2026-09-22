@@ -2,50 +2,41 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "S08 must produce repeatable runtime identity, complete locked and installed dependency evidence, fail-closed characterization compatibility, controlled Gate 8 validation, and exact Standard 5 ownership for environment drift."
-proof = "Focused regressions cover every corrected defect, and the full exact-lock suite, static checks, wheel build, fresh install, and protected evidence workflow exercise the combined change."
+intended_behavior = "A package-lock link row derives its locked identity only from the lock graph, while an installed link is independently required to resolve to the exact repository-contained lock target."
+proof = "Focused receipt tests distinguish an absent optional link from an installed copy, the full suite passes, and GitHub-hosted Source Validation exercises npm's real file-link installation."
 
 [characterization]
-captured_behavior = "Successful captures retain matching non-null behavior hashes; failed, incomplete, malformed, and unauthenticated captures remain BLOCK and cannot round-trip as PASS."
-proof = "tests/test_characterization.py validates successful, failed, incomplete, malformed-capture, and malformed-result round trips, while the Gate 8 driver uses an internal controlled review fixture."
+captured_behavior = "The follow-up does not change characterization capture or compatibility behavior."
+proof = "The protected base and head characterization jobs pass against the same controlled scenarios."
 
 [separation_of_concerns]
-before = "Runtime selection was floating, npm lock rows were mistaken for installed packages, absent behavior hashes could compare equal, Gate 8 read mutable target review prose, and environment drift had no owner."
-after = "The workflow pins exact runtimes, dependency evidence distinguishes the lock graph from the installed tree, compatibility requires a real base behavior hash, Gate 8 probes a controlled fixture, and Standard 5 owns environment drift."
-boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_compatibility_evidence", before = "Two failed scenario rows with absent behavior hashes could compare equal and report compatibility PASS.", after = "Compatibility PASS requires a non-null base behavior hash equal to the head behavior hash; failed or incomplete captures remain BLOCK." },
-  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "CHARACTERIZATION_ENVIRONMENT_DRIFT was not assigned to a Standard and therefore fell through unknown-owner routing.", after = "CHARACTERIZATION_ENVIRONMENT_DRIFT is an exact Standard 5 block family while unknown future blocks still fail closed across all Standards." },
-]
+before = "The interim file-link correction derived part of a locked receipt from a checked-out package manifest and accepted a copied directory when its tree hash matched the declared link source."
+after = "The lock receipt uses only package-lock rows, and installed link evidence separately proves exact path resolution to the contained lock target."
+boundaries = []
 
 [architecture]
-dependency_direction = "The required workflow selects exact runtimes, the hosted quality profile derives dependency receipts, characterization verifies behavior evidence, ownership maps policy blocks, and tests consume those public boundaries without reversing production dependencies."
+dependency_direction = "The hosted quality-profile verifier consumes the lock graph first and then checks installed filesystem identity; the focused tests exercise that one-way evidence flow."
 reviewed_paths = [
   ".supportability-review.toml",
-  ".github/workflows/organization-required.yml",
-  "src/supportability_gate/characterization.py",
-  "src/supportability_gate/standard_block_ownership.py",
-  "tests/characterization/gate8-standard-results-boundary-v3.characterization.py",
   "tests/hosted_quality_profile.py",
-  "tests/test_characterization.py",
-  "tests/test_quality_profile.py",
   "tests/test_standard_results.py",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/characterization.py"
-owns = "Compatibility decisions for authenticated base and head scenario evidence, including non-null behavior identity."
-does_not_own = "Workflow runtime selection, dependency installation, Gate 8 review-field validation, block-to-Standard ownership, consumer repository repair, or controller policy."
+path = "tests/hosted_quality_profile.py"
+owns = "Hosted verification of lock-derived and installed npm dependency identities, including contained file-link targets."
+does_not_own = "npm installation, consumer dependency selection, characterization policy, review prose, or organization ruleset configuration."
 
 [incremental_refactor]
-target = "S08 deterministic qualification boundary correction."
-completed_step = "Corrected the five reproduced enforcement defects as one bounded executable slice with direct regression coverage and no immutable-standard or roadmap change."
+target = "S08 npm file-link provenance correction."
+completed_step = "Removed repository-file fallback from locked identity and replaced content-equivalence acceptance with exact installed-link target proof."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Locked, installed, optional, compatibility, controlled fixture, and environment drift names state the measured boundary directly."
-cohesion = "Runtime pins remain in the workflow, dependency graph proof remains in the hosted quality profile, compatibility remains in characterization, and ownership remains in the block map."
-intended_behavior = "Fresh Python, TypeScript, and mixed qualification changes produce stable authenticated PASS, policy poison produces BLOCK, and technical poison produces TECHNICAL_FAILURE without consumer mutation."
-reviewability = "Each production correction is small and paired with exact regression tests; the larger dependency helper separates path validation, graph traversal, identity comparison, and receipt construction."
+naming = "Lock source, installed link, safe location, and copy describe the measured npm identities directly."
+cohesion = "Lock graph derivation and installed-tree validation remain separate steps in the hosted quality-profile verifier."
+intended_behavior = "A valid npm file link passes, an absent proven-optional link remains allowed, and a copied look-alike directory fails closed."
+reviewability = "The follow-up changes one verifier boundary and pairs its positive and adversarial cases in focused receipt tests."

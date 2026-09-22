@@ -191,6 +191,8 @@ def _node_link_source(packages: dict[str, dict[str, object]], location: str) -> 
     source = _node_safe_location(resolved).as_posix()
     if source not in packages or source == "" or "node_modules" in PurePosixPath(source).parts:
         raise _node_identity_error(location)
+    if packages[source].get("link") is True:
+        raise _node_identity_error(location)
     return source
 
 
@@ -218,7 +220,6 @@ def _optional_locked_locations(packages: dict[str, dict[str, object]]) -> set[st
 
 
 def _node_lock_entry(
-    root: Path,
     packages: dict[str, dict[str, object]],
     location: str,
     value: dict[str, object],
@@ -230,12 +231,14 @@ def _node_lock_entry(
         version = value.get("version")
         identity_value: object = value
     else:
-        manifest_identity = _node_manifest_identity(root, source, installed=False)
-        source_version = packages[source].get("version")
-        if manifest_identity is None or manifest_identity[1] != source_version:
-            raise _node_identity_error(location)
-        declared_name, version = manifest_identity
-        identity_value = {"link": value, "source": packages[source]}
+        source_value = packages[source]
+        declared_name = source_value.get("name", installed_name)
+        version = source_value.get("version")
+        identity_value = {
+            "link": value,
+            "source_location": source,
+            "source": source_value,
+        }
     if not isinstance(declared_name, str) or not isinstance(version, str) or not version:
         raise _node_identity_error(location)
     _node_location_name(f"node_modules/{declared_name}")
@@ -313,20 +316,16 @@ def _node_package_receipts(
         if "node_modules" in PurePosixPath(location).parts
         if (source := _node_link_source(packages, location)) is not None
     }
-    for location in sorted(locked_locations):
-        if "node_modules" not in PurePosixPath(location).parts:
-            if location not in link_sources:
-                raise _node_identity_error(location)
-            installed = _node_manifest_identity(root, location, installed=False)
-            version = packages[location].get("version")
-            if installed is None or installed[1] != version:
-                raise _node_identity_error(location)
-            name, version = installed
-            identity = _node_tree_hash(root, location, installed=False)
-            receipts.append(f"npm-{kind}-locked-source:{location}:{name}@{version}:{identity}")
-            continue
+    package_locations = {
+        location for location in locked_locations if "node_modules" in PurePosixPath(location).parts
+    }
+    for location in sorted(locked_locations - package_locations):
+        _node_safe_location(location)
+        if location not in link_sources:
+            raise _node_identity_error(location)
+    for location in sorted(package_locations):
         receipt_name, declared_name, version, lock_identity = _node_lock_entry(
-            root, packages, location, packages[location]
+            packages, location, packages[location]
         )
         receipts.append(f"npm-{kind}-locked:{location}:{receipt_name}@{version}:{lock_identity}")
         installed = _node_manifest_identity(root, location)
@@ -337,9 +336,11 @@ def _node_package_receipts(
         if installed != (declared_name, version):
             raise _node_identity_error(f"installed identity mismatch {location}")
         source = _node_link_source(packages, location)
-        installed_hash = _node_tree_hash(root, location)
-        if source is not None and installed_hash != _node_tree_hash(root, source, installed=False):
+        if source is not None and _node_package_path(
+            root, location, strict=True
+        ) != _node_package_path(root, source, installed=False, strict=True):
             raise _node_identity_error(f"installed link mismatch {location}")
+        installed_hash = _node_tree_hash(root, location)
         receipts.append(
             f"npm-{kind}-installed:{location}:{receipt_name}@{version}:{installed_hash}"
         )
