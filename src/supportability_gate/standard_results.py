@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from supportability_gate import (
@@ -1473,9 +1473,18 @@ def _s02_refactor_authorization(
         if comment_id is not None:
             raise StandardResultsError(code)
         return None
-    keys = {"base_sha", "broad", "head_sha", "repository", "scope", "sequence", "targets"}
+    keys = {
+        "base_sha",
+        "broad",
+        "head_sha",
+        "related_tests",
+        "repository",
+        "scope",
+        "sequence",
+        "targets",
+    }
     row = _s02_exact(value, keys, code)
-    sequence = _s02_exact(row["sequence"], {"predecessor_sha", "step"}, code)
+    sequence = _s02_exact(row["sequence"], {"predecessor_sha", "series_id", "step"}, code)
     if (
         not _s02_sha(row["base_sha"], _S02_SHA40)
         or not _s02_sha(row["head_sha"], _S02_SHA40)
@@ -1484,6 +1493,8 @@ def _s02_refactor_authorization(
         or type(comment_id) is not int
         or comment_id < 1
         or not _s02_sha(sequence["predecessor_sha"], _S02_SHA40)
+        or not isinstance(sequence["series_id"], str)
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", sequence["series_id"]) is None
         or type(sequence["step"]) is not int
         or sequence["step"] < 1
     ):
@@ -1496,6 +1507,7 @@ def _s02_refactor_authorization(
     except contract.ContractError:
         raise StandardResultsError(code) from None
     targets = _s02_strings(row["targets"], code, True)
+    _s02_refactor_related_tests(row["related_tests"], code)
     if (
         scope != sorted(set(normalized))
         or targets != sorted(set(targets))
@@ -1503,6 +1515,25 @@ def _s02_refactor_authorization(
     ):
         raise StandardResultsError(code)
     return row
+
+
+def _s02_refactor_related_tests(value: object, code: str) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise StandardResultsError(code)
+    rows: list[dict[str, Any]] = []
+    for item in value:
+        row = _s02_exact(item, {"path", "targets"}, code)
+        try:
+            path = contract.normalize_repository_path(row["path"], "authorization.related_tests")
+        except contract.ContractError:
+            raise StandardResultsError(code) from None
+        targets = _s02_strings(row["targets"], code, True)
+        rows.append({"path": path, "targets": targets})
+    ordered = sorted(rows, key=lambda item: (item["path"], item["targets"]))
+    identities = [(item["path"], tuple(item["targets"])) for item in rows]
+    if rows != ordered or len(identities) != len(set(identities)):
+        raise StandardResultsError(code)
+    return rows
 
 
 def _s02_refactor_predecessor(
@@ -1630,12 +1661,25 @@ def _s02_refactor_sequence_blocks(
         return blocks
     step = authorization["sequence"]["step"]
     if step == 1:
-        if predecessor is not None:
+        if (
+            predecessor is not None
+            and predecessor["sequence"]["series_id"] == authorization["sequence"]["series_id"]
+        ):
             blocks.add("INVALID_STRANGLER_SEQUENCE")
         return blocks
-    if predecessor is None or predecessor["sequence"]["step"] != step - 1:
+    if (
+        predecessor is None
+        or predecessor["sequence"]["series_id"] != authorization["sequence"]["series_id"]
+        or predecessor["sequence"]["step"] != step - 1
+        or _s02_target_identities(predecessor["targets"])
+        != _s02_target_identities(authorization["targets"])
+    ):
         blocks.add("INVALID_STRANGLER_SEQUENCE")
     return blocks
+
+
+def _s02_target_identities(targets: list[str]) -> list[str]:
+    return [target.rsplit(":", 1)[0] for target in targets]
 
 
 def _s02_refactor_focus_blocks(
@@ -1644,22 +1688,68 @@ def _s02_refactor_focus_blocks(
     scope: list[str],
     production: list[str],
     target_paths: list[str],
+    language: str,
 ) -> set[str]:
     blocks: set[str] = set()
     if authorization["scope"] != scope:
         blocks.add("UNFOCUSED_DIFF_SCOPE")
     if authorization["targets"] != row["targets"] or row["unbounded_paths"]:
         blocks.add("UNVERIFIABLE_BOUNDED_TARGET")
+    related, invalid_related = _s02_valid_related_tests(
+        authorization, scope, target_paths, language
+    )
     unrelated = [
-        path for path in scope if path not in target_paths and not _s02_refactor_proof_path(path)
+        path
+        for path in scope
+        if path not in target_paths and path not in related and not _s02_refactor_proof_path(path)
     ]
-    if (len(row["targets"]) != 1 or len(set(target_paths)) != 1 or unrelated) and not authorization[
-        "broad"
-    ]:
+    if (
+        len(row["targets"]) != 1 or len(set(target_paths)) != 1 or unrelated or invalid_related
+    ) and not authorization["broad"]:
         blocks.add("BROAD_AUTHORIZATION_REQUIRED")
     if not row["targets"] or any(path not in production for path in target_paths):
         blocks.add("MISSING_BOUNDED_PRODUCTION_TARGET")
     return blocks
+
+
+def _s02_valid_related_tests(
+    authorization: dict[str, Any], scope: list[str], target_paths: list[str], language: str
+) -> tuple[set[str], bool]:
+    targets = {target: path for target, path in zip(authorization["targets"], target_paths)}
+    valid: set[str] = set()
+    invalid = False
+    for row in authorization["related_tests"]:
+        path = row["path"]
+        matches = (
+            path in scope
+            and bool(row["targets"])
+            and all(
+                target in targets and _s02_related_test_matches(path, targets[target], language)
+                for target in row["targets"]
+            )
+        )
+        if matches:
+            valid.add(path)
+        else:
+            invalid = True
+    return valid, invalid
+
+
+def _s02_related_test_matches(path: str, target_path: str, language: str) -> bool:
+    if not path.startswith("tests/") or path.startswith("tests/characterization/"):
+        return False
+    test_name = PurePosixPath(path).name
+    source_stem = PurePosixPath(target_path).stem
+    python_match = test_name == f"test_{source_stem}.py"
+    typescript_match = any(
+        test_name == f"{source_stem}.test{suffix}"
+        for suffix in (".js", ".mjs", ".cjs", ".ts", ".mts", ".cts")
+    )
+    if language == "python":
+        return python_match
+    if language == "typescript":
+        return typescript_match
+    return python_match or typescript_match
 
 
 def _s02_refactor_runnability_blocks(
@@ -1793,6 +1883,7 @@ def _s02_refactor_authenticated_authorization(
     target_paths: list[str],
     predecessor: dict[str, Any] | None,
     predecessor_block: str | None,
+    language: str,
 ) -> None:
     if not row["applicable"]:
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
@@ -1803,7 +1894,9 @@ def _s02_refactor_authenticated_authorization(
     }:
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
     expected = _s02_refactor_authorization_blocks(authorization, identity)
-    expected.update(_s02_refactor_focus_blocks(row, authorization, scope, allowed, target_paths))
+    expected.update(
+        _s02_refactor_focus_blocks(row, authorization, scope, allowed, target_paths, language)
+    )
     expected.update(
         _s02_refactor_sequence_blocks(authorization, predecessor, predecessor_block, identity)
     )
@@ -1837,6 +1930,7 @@ def _s02_refactor_binding(
         target_paths,
         predecessor,
         predecessor_block,
+        language,
     )
 
 

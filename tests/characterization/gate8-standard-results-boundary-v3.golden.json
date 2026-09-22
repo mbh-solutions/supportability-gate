@@ -3501,5 +3501,19 @@
     "accepted": true,
     "blocks": []
   },
+  "s07-focused-regression-contract": [
+    {
+      "input": "schema-valid-authorization",
+      "output": "accepted"
+    },
+    {
+      "input": "unrelated-test-narrow-authorization",
+      "output": "blocked"
+    },
+    {
+      "input": "versioned-series-contract",
+      "output": "accepted"
+    }
+  ],
   "schema_version": "standard-results.v3"
 }

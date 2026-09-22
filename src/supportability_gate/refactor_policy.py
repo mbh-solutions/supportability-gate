@@ -18,7 +18,7 @@ from supportability_gate import characterization as characterization_evidence
 from supportability_gate import contract, git_changes, refactor_targets
 
 AUTHORIZATION_PREFIX = "Supportability-Refactor-Authorization: "
-AUTHORIZATION_SCHEMA = "1.0"
+AUTHORIZATION_SCHEMA = "2.0"
 RESULT_SCHEMA = "refactor-policy-result.v1"
 CHARACTERIZATION_SCHEMA = characterization_evidence.RESULT_SCHEMA
 COMPATIBLE_CHARACTERIZATION_SCHEMAS = frozenset(
@@ -27,6 +27,7 @@ COMPATIBLE_CHARACTERIZATION_SCHEMAS = frozenset(
 RUNNABILITY_SCHEMA = characterization_evidence.RUNNABILITY_SCHEMA
 TRUSTED_OWNER_ID = 229662739
 SHA = re.compile(r"[0-9a-f]{40}\Z")
+SERIES_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 MAX_JSON_BYTES = 1_000_000
 MAX_GITHUB_PAGES = 10
 
@@ -58,6 +59,15 @@ class Sequence:
 
     step: int
     predecessor_sha: str
+    series_id: str
+
+
+@dataclass(frozen=True)
+class RelatedTest:
+    """One exact fixed-profile test-to-target association."""
+
+    path: str
+    targets: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -68,6 +78,7 @@ class Authorization:
     base_sha: str
     head_sha: str
     broad: bool
+    related_tests: tuple[RelatedTest, ...]
     scope: tuple[str, ...]
     targets: tuple[str, ...]
     sequence: Sequence
@@ -126,6 +137,22 @@ def _target_list(value: object) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _related_tests(value: object) -> tuple[RelatedTest, ...]:
+    if not isinstance(value, list):
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    rows: list[RelatedTest] = []
+    for item in value:
+        row = _exact_keys(item, {"path", "targets"}, "MALFORMED_OWNER_AUTHORIZATION")
+        try:
+            path = contract.normalize_repository_path(row["path"], "authorization.related_tests")
+        except contract.ContractError as error:
+            raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION") from error
+        rows.append(RelatedTest(path, _target_list(row["targets"])))
+    if rows != sorted(set(rows), key=lambda item: (item.path, item.targets)):
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    return tuple(rows)
+
+
 def _parse_authorization(body: object) -> Authorization:
     if not isinstance(body, str):
         raise RefactorPolicyError("MISSING_OWNER_AUTHORIZATION")
@@ -148,6 +175,7 @@ def _parse_authorization(body: object) -> Authorization:
             "base_sha",
             "broad",
             "head_sha",
+            "related_tests",
             "repository",
             "schema_version",
             "scope",
@@ -157,7 +185,9 @@ def _parse_authorization(body: object) -> Authorization:
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     sequence = _exact_keys(
-        row["sequence"], {"predecessor_sha", "step"}, "MALFORMED_OWNER_AUTHORIZATION"
+        row["sequence"],
+        {"predecessor_sha", "series_id", "step"},
+        "MALFORMED_OWNER_AUTHORIZATION",
     )
     if (
         row["schema_version"] != AUTHORIZATION_SCHEMA
@@ -169,6 +199,8 @@ def _parse_authorization(body: object) -> Authorization:
         or type(row["broad"]) is not bool
         or type(sequence["step"]) is not int
         or sequence["step"] < 1
+        or not isinstance(sequence["series_id"], str)
+        or SERIES_ID.fullmatch(sequence["series_id"]) is None
         or not isinstance(sequence["predecessor_sha"], str)
         or SHA.fullmatch(sequence["predecessor_sha"]) is None
     ):
@@ -178,9 +210,10 @@ def _parse_authorization(body: object) -> Authorization:
         row["base_sha"],
         row["head_sha"],
         row["broad"],
+        _related_tests(row["related_tests"]),
         _path_list(row["scope"], "authorization.scope"),
         _target_list(row["targets"]),
-        Sequence(sequence["step"], sequence["predecessor_sha"]),
+        Sequence(sequence["step"], sequence["predecessor_sha"], sequence["series_id"]),
     )
 
 
@@ -229,10 +262,23 @@ def _sequence_blocks(
     if predecessor_block is not None:
         return [predecessor_block]
     if authorization.sequence.step == 1:
-        return ["INVALID_STRANGLER_SEQUENCE"] if predecessor is not None else []
-    if predecessor is None or predecessor.sequence.step != authorization.sequence.step - 1:
+        same_series = (
+            predecessor is not None
+            and predecessor.sequence.series_id == authorization.sequence.series_id
+        )
+        return ["INVALID_STRANGLER_SEQUENCE"] if same_series else []
+    if (
+        predecessor is None
+        or predecessor.sequence.series_id != authorization.sequence.series_id
+        or predecessor.sequence.step != authorization.sequence.step - 1
+        or _target_identities(predecessor.targets) != _target_identities(authorization.targets)
+    ):
         return ["INVALID_STRANGLER_SEQUENCE"]
     return []
+
+
+def _target_identities(targets: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(target.rsplit(":", 1)[0] for target in targets)
 
 
 def _owner_authorization(
@@ -423,10 +469,15 @@ def _authorization_payload(authorization: Authorization | None) -> dict[str, obj
         "base_sha": authorization.base_sha,
         "broad": authorization.broad,
         "head_sha": authorization.head_sha,
+        "related_tests": [
+            {"path": related.path, "targets": list(related.targets)}
+            for related in authorization.related_tests
+        ],
         "repository": authorization.repository,
         "scope": list(authorization.scope),
         "sequence": {
             "predecessor_sha": authorization.sequence.predecessor_sha,
+            "series_id": authorization.sequence.series_id,
             "step": authorization.sequence.step,
         },
         "targets": list(authorization.targets),
@@ -471,8 +522,15 @@ def _focus_blocks(
     if authorization.targets != targets or unbounded:
         blocks.append("UNVERIFIABLE_BOUNDED_TARGET")
     production_paths = {item.split("::", 1)[0] for item in targets}
+    related_paths, invalid_related = _related_test_paths(
+        authorization, actual_scope, targets, policy.language
+    )
+    if invalid_related:
+        blocks.append("BROAD_AUTHORIZATION_REQUIRED")
     unrelated = [
-        path for path in actual_scope if path not in production_paths and not _proof_path(path)
+        path
+        for path in actual_scope
+        if path not in production_paths and path not in related_paths and not _proof_path(path)
     ]
     broad_required = len(targets) != 1 or len(production_paths) != 1 or bool(unrelated)
     if broad_required and not authorization.broad:
@@ -480,6 +538,34 @@ def _focus_blocks(
     if not targets or any(not policy.is_production_path(path) for path in production_paths):
         blocks.append("MISSING_BOUNDED_PRODUCTION_TARGET")
     return blocks
+
+
+def _related_test_paths(
+    authorization: Authorization,
+    actual_scope: tuple[str, ...],
+    targets: tuple[str, ...],
+    language: str,
+) -> tuple[set[str], bool]:
+    target_paths = {target: target.split("::", 1)[0] for target in targets}
+    valid: set[str] = set()
+    invalid = False
+    for related in authorization.related_tests:
+        matches = (
+            related.path in actual_scope
+            and bool(related.targets)
+            and all(
+                target in target_paths
+                and refactor_targets.related_test_matches(
+                    related.path, target_paths[target], language
+                )
+                for target in related.targets
+            )
+        )
+        if matches:
+            valid.add(related.path)
+        else:
+            invalid = True
+    return valid, invalid
 
 
 def _runnability_blocks(

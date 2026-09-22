@@ -125,7 +125,7 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
         SimpleNamespace(old_path=None, new_path=path),
     )
     module.contract.parse_contract = lambda content: SimpleNamespace(
-        is_production_path=lambda candidate: candidate.startswith("src/")
+        language="python", is_production_path=lambda candidate: candidate.startswith("src/")
     )
     setattr(target_owner, target_name, lambda *args: ((target,), ()))
     try:
@@ -142,11 +142,14 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
             "broad": False,
             "head_sha": head_sha,
             "repository": "acme/repo",
-            "schema_version": "1.0",
+            "schema_version": module.AUTHORIZATION_SCHEMA,
             "scope": [path],
             "sequence": {"predecessor_sha": base_sha, "step": 1},
             "targets": [target],
         }
+        if module.AUTHORIZATION_SCHEMA == "2.0":
+            authorization["related_tests"] = []
+            authorization["sequence"]["series_id"] = "fixture-series"
         characterization = {
             "base_sha": base_sha,
             "coverage": {"covered_paths": [path], "required_paths": [path]},
@@ -201,6 +204,125 @@ def _refactor_policy_probe(module: ModuleType, target: str) -> bool:
     ):
         raise RuntimeError("Gate 6 producer is not independently runnable")
     return True
+
+
+def _probe_authorization(
+    module: ModuleType,
+    base_sha: str,
+    head_sha: str,
+    scope: list[str],
+    targets: list[str],
+    *,
+    series_id: str,
+    step: int = 1,
+    related_tests: list[dict[str, object]] | None = None,
+) -> Any:
+    value: dict[str, Any] = {
+        "base_sha": base_sha,
+        "broad": False,
+        "head_sha": head_sha,
+        "repository": "acme/repo",
+        "schema_version": module.AUTHORIZATION_SCHEMA,
+        "scope": sorted(scope),
+        "sequence": {"predecessor_sha": base_sha, "step": step},
+        "targets": sorted(targets),
+    }
+    if module.AUTHORIZATION_SCHEMA == "2.0":
+        value["related_tests"] = related_tests or []
+        value["sequence"]["series_id"] = series_id
+    return module._parse_authorization(
+        module.AUTHORIZATION_PREFIX + json.dumps(value, separators=(",", ":"), sort_keys=True)
+    )
+
+
+def _s07_regression_probe(module: ModuleType, target: str) -> list[dict[str, object]]:
+    base_sha, head_sha = "a" * 40, "b" * 40
+    path = target.split("::", 1)[0]
+    related_path = "tests/test_sample.py"
+    related_rows = [{"path": related_path, "targets": [target]}]
+    policy = SimpleNamespace(
+        language="python", is_production_path=lambda candidate: candidate.startswith("src/")
+    )
+    focused = _probe_authorization(
+        module,
+        base_sha,
+        head_sha,
+        [path, related_path],
+        [target],
+        series_id="focused-series",
+        related_tests=related_rows,
+    )
+    focus_blocks = module._focus_blocks(
+        focused,
+        (path, related_path),
+        (target,),
+        (),
+        policy,
+    )
+    expected_focus = (
+        [] if module.AUTHORIZATION_SCHEMA == "2.0" else ["BROAD_AUTHORIZATION_REQUIRED"]
+    )
+    unrelated = _probe_authorization(
+        module,
+        base_sha,
+        head_sha,
+        [path, "tests/test_other.py"],
+        [target],
+        series_id="focused-series",
+    )
+    unrelated_blocks = module._focus_blocks(
+        unrelated,
+        (path, "tests/test_other.py"),
+        (target,),
+        (),
+        policy,
+    )
+    previous = _probe_authorization(
+        module, base_sha, head_sha, [path], [target], series_id="previous-series"
+    )
+    independent = _probe_authorization(
+        module, base_sha, head_sha, [path], [target], series_id="independent-series"
+    )
+    continuation = _probe_authorization(
+        module,
+        base_sha,
+        head_sha,
+        [path],
+        [target],
+        series_id="previous-series",
+        step=2,
+    )
+    substituted = _probe_authorization(
+        module,
+        base_sha,
+        head_sha,
+        ["src/other.py"],
+        ["src/other.py::function:normalize:1-2"],
+        series_id="previous-series",
+        step=2,
+    )
+    expected_independent = (
+        [] if module.AUTHORIZATION_SCHEMA == "2.0" else ["INVALID_STRANGLER_SEQUENCE"]
+    )
+    expected_substitution = (
+        ["INVALID_STRANGLER_SEQUENCE"] if module.AUTHORIZATION_SCHEMA == "2.0" else []
+    )
+    payload = module._authorization_payload(focused)
+    if (
+        focus_blocks != expected_focus
+        or unrelated_blocks != ["BROAD_AUTHORIZATION_REQUIRED"]
+        or module._sequence_blocks(independent, previous, None) != expected_independent
+        or module._sequence_blocks(continuation, previous, None) != []
+        or module._sequence_blocks(substituted, previous, None) != expected_substitution
+        or payload is None
+        or ("related_tests" in payload) is not (module.AUTHORIZATION_SCHEMA == "2.0")
+    ):
+        raise RuntimeError("S07 focused regression contract is not preserved")
+    return [
+        {"input": "schema-valid-authorization", "output": "accepted"},
+        {"input": "unrelated-test-narrow-authorization", "output": "blocked"},
+        {"input": "versioned-series-contract", "output": "accepted"},
+    ]
 
 
 def _gate_seven_probe(
@@ -406,6 +528,7 @@ def main() -> None:
         target_deriver = refactor_policy
     derived_targets = _gate_six_derivation_probe(target_deriver)
     producer_runnable = _refactor_policy_probe(refactor_policy, derived_targets["src/sample.py"])
+    s07_regression = _s07_regression_probe(refactor_policy, derived_targets["src/sample.py"])
     _gate_seven_probe(quality_profile, quality_runner, standard_results, target)
 
     legacy = _legacy_driver(definition)
@@ -524,18 +647,22 @@ def main() -> None:
             }
         if gate_six_binding and path.startswith("src/"):
             target_identity = derived_targets[path]
+            authorization = {
+                "base_sha": identity.base_sha,
+                "broad": False,
+                "head_sha": identity.head_sha,
+                "repository": identity.repository,
+                "scope": [path],
+                "sequence": {"predecessor_sha": identity.base_sha, "step": 1},
+                "targets": [target_identity],
+            }
+            if refactor_policy.AUTHORIZATION_SCHEMA == "2.0":
+                authorization["related_tests"] = []
+                authorization["sequence"]["series_id"] = "fixture-series"
             value.update(
                 {
                     "applicable": True,
-                    "authorization": {
-                        "base_sha": identity.base_sha,
-                        "broad": False,
-                        "head_sha": identity.head_sha,
-                        "repository": identity.repository,
-                        "scope": [path],
-                        "sequence": {"predecessor_sha": identity.base_sha, "step": 1},
-                        "targets": [target_identity],
-                    },
+                    "authorization": authorization,
                     "authorization_comment_id": 11,
                     "targets": [target_identity],
                 }
@@ -653,6 +780,7 @@ def main() -> None:
         "accepted": parsed is not None,
         "blocks": list(blocks),
     }
+    payload["behavior"]["s07-focused-regression-contract"] = s07_regression
     payload["behavior"]["schema_version"] = "standard-results.v3"
     payload["scenario"] = "gate8-standard-results-boundary-v3"
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))

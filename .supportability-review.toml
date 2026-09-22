@@ -2,37 +2,71 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The persistent product ledger records the completed S06 delivery evidence while leaving independent controller verification and S07 authorization separate."
-proof = "The diff changes only the product completion ledger and this exact structured review record; deployed Gate source and workflow blobs remain unchanged."
+intended_behavior = "Focused refactor authorization accepts exact ordinary related tests without broad approval, distinguishes independent refactor series from continuations, and fails closed for stale, forged, substituted, or unavailable evidence."
+proof = "Focused and full regression suites cover ordinary and characterization tests, thousand-line footprint handling, independent step one, exact continuation, wrong-series and forged predecessor failures, and independent result composition."
 
 [characterization]
-captured_behavior = "Before this transaction, the ledger still named S05 as the latest delivered slice and contained no S06 delivery record."
-proof = "The ledger diff updates the current product status and adds exact S06 merge, pin, source, consumer-canary, limitation, and handoff evidence."
+captured_behavior = "Existing characterization proof paths retain their accepted treatment while ordinary tests require an exact fixed-profile related-test declaration."
+proof = "Protected Gate 8 boundary characterization drivers exercise the schema 2.0 authorization payload through both decision and independent standard-result paths."
 
 [separation_of_concerns]
-before = "Delivery evidence existed in live GitHub state but was not yet recorded in the persistent product ledger."
-after = "The ledger records delivery facts without changing executable responsibilities or activating a successor slice."
-boundaries = []
+before = "Authorization treated every ordinary test as unrelated scope and used adjacent predecessor step numbers without a refactor-series identity."
+after = "Authorization carries exact related-test associations and a series identifier; production and independent result composition validate both using separate implementations."
+boundaries = [
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_authorization_payload", before = "Authorization payload omitted S07 fields.", after = "Authorization payload includes exact S07 fields." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_focus_blocks", before = "Every ordinary test required broad approval.", after = "Only an exact related test can remain narrow." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_parse_authorization", before = "Schema 1 lacked related tests and series identity.", after = "Schema 2 parses both exact fields." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_related_test_paths", before = "No ordinary-test association existed.", after = "Exact declarations are checked against scope and targets." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_related_tests", before = "No related-test rows were parsed.", after = "Sorted unique related-test rows are parsed." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_sequence_blocks", before = "Step adjacency conflated unrelated series.", after = "Series and stable target identities bind continuations." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_target_identities", before = "Continuation targets lacked stable identity comparison.", after = "Line spans are removed for stable identity comparison." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "module", symbol = "src/supportability_gate/refactor_policy.py", before = "Authorization schema was version 1.", after = "Authorization schema is version 2." },
+  { path = "src/supportability_gate/refactor_targets.py", kind = "function", symbol = "related_test_matches", before = "No fixed ordinary-test mapping existed.", after = "Python and TypeScript filenames map deterministically." },
+  { path = "src/supportability_gate/refactor_targets.py", kind = "module", symbol = "src/supportability_gate/refactor_targets.py", before = "Target helpers used only filesystem paths.", after = "Target helpers also compare portable repository paths." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_authenticated_authorization", before = "Independent binding lacked language-aware related tests.", after = "Independent binding receives the target language." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_authorization", before = "Independent parsing accepted only schema 1 payloads.", after = "Independent parsing validates S07 payload fields." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_binding", before = "Language was not passed into focus validation.", after = "Language is bound into independent focus validation." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_focus_blocks", before = "Ordinary tests were always unrelated scope.", after = "Only independently valid related tests are narrow." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_related_tests", before = "Related-test rows were not independently parsed.", after = "Rows are exact, sorted, unique, and normalized." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_sequence_blocks", before = "Continuation validation checked only adjacent steps.", after = "Series and stable targets are independently checked." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_related_test_matches", before = "No independent fixed test mapping existed.", after = "The fixed mapping is reconstructed independently." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_target_identities", before = "Target spans were not normalized for continuation checks.", after = "Stable target identities exclude only line spans." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_valid_related_tests", before = "Related-test claims were not cross-bound.", after = "Claims are cross-bound to scope and target inventory." },
+  { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "Independent validation used only pathlib Path.", after = "Portable repository path comparison is available." },
+]
 
 [architecture]
-dependency_direction = "The product ledger records verified delivery state; executable Gate source and workflow ownership remain unchanged."
-reviewed_paths = [".supportability-review.toml", "docs/product_completion_contract.md"]
+dependency_direction = "refactor_policy depends on refactor_targets for target association; standard_results independently validates evidence without importing analysis dependencies."
+reviewed_paths = [
+  ".supportability-characterization.json",
+  "src/supportability_gate/refactor_policy.py",
+  "src/supportability_gate/refactor_targets.py",
+  "src/supportability_gate/standard_results.py",
+  "tests/characterization/gate8-standard-results-boundary-v2.characterization.py",
+  "tests/characterization/gate8-standard-results-boundary-v3.characterization.py",
+  "tests/characterization/gate8-standard-results-boundary-v3.golden.json",
+  "tests/test_evaluate_complexity.py",
+  "tests/test_refactor_policy.py",
+  "tests/test_standard_results.py",
+  "docs/refactor_authorization.md",
+  ".supportability-review.toml",
+]
 
 [responsibility_boundary]
-path = "docs/product_completion_contract.md"
-owns = "Persistent S06 delivery status, evidence, remaining transaction, product status, and next authorized milestone record."
-does_not_own = "Independent controller approval, S07 activation, executable Gate behavior, workflow enforcement, thresholds, waivers, or semantic review."
+path = "src/supportability_gate/refactor_policy.py"
+owns = "Authenticated schema 2.0 authorization, related-test focus decisions, and series-aware predecessor decisions."
+does_not_own = "Git diff discovery, function span derivation, characterization execution, quality thresholds, waivers, or semantic review."
 
 [incremental_refactor]
-target = "Record the delivered S06 slice without expanding implementation scope or advancing its successor."
-completed_step = "Added the exact S06 evidence and executor handoff to the existing product completion ledger."
+target = "Project 25 S07 focused regression authorization and series-safe incremental refactors."
+completed_step = "Added exact related-test declarations and series-bound continuation validation while preserving the existing fail-closed result vocabulary."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The S06 heading and status terms match the Project #25 slice and controller handoff vocabulary."
-cohesion = "All new delivery facts remain in one S06 ledger section; global product-status lines carry only current slice state."
-intended_behavior = "The ledger exposes delivered evidence while preserving In Review and Partial until independent verification."
-reviewability = "The two-file diff contains only the durable ledger record and its exact structured review evidence."
+naming = "related_tests, series_id, and INVALID_STRANGLER_SEQUENCE state the authenticated evidence and failure boundary directly."
+cohesion = "Each production module retains one existing responsibility and every new branch is exercised by direct tests."
+intended_behavior = "Ordinary related tests can remain narrow only when their fixed path association and exact targets match; series continuations cannot skip, replay, switch, or substitute targets."
+reviewability = "The change is bounded to three existing production modules, their direct and protected tests, one owner-format document, and exact review evidence."

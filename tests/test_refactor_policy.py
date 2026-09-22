@@ -112,17 +112,27 @@ def _authorization(
     *,
     broad: bool = False,
     predecessor_sha: str | None = None,
+    related_tests: dict[str, list[str]] | None = None,
     repository: str = "example/fixture",
+    series_id: str = "fixture-series",
     step: int = 1,
 ) -> str:
     value = {
         "base_sha": base_sha,
         "broad": broad,
         "head_sha": head_sha,
+        "related_tests": [
+            {"path": path, "targets": sorted(associated)}
+            for path, associated in sorted((related_tests or {}).items())
+        ],
         "repository": repository,
-        "schema_version": "1.0",
+        "schema_version": refactor_policy.AUTHORIZATION_SCHEMA,
         "scope": sorted(scope),
-        "sequence": {"predecessor_sha": predecessor_sha or base_sha, "step": step},
+        "sequence": {
+            "predecessor_sha": predecessor_sha or base_sha,
+            "series_id": series_id,
+            "step": step,
+        },
         "targets": sorted(targets),
     }
     return refactor_policy.AUTHORIZATION_PREFIX + json.dumps(value, separators=(",", ":"))
@@ -406,6 +416,93 @@ def test_unrelated_churn_requires_broad_authorization(tmp_path: Path) -> None:
     result = _verify(repository, event, _characterization(base_sha, head_sha, ["src/sample.py"]))
 
     assert result["policy_blocks"] == ["BROAD_AUTHORIZATION_REQUIRED"]
+
+
+@pytest.mark.parametrize(
+    ("test_path", "expected"),
+    [
+        ("tests/test_sample.py", []),
+        ("tests/characterization/test_sample.py", []),
+        ("tests/hidden.py", ["BROAD_AUTHORIZATION_REQUIRED"]),
+        ("tests/test_other.py", ["BROAD_AUTHORIZATION_REQUIRED"]),
+    ],
+)
+def test_focused_source_change_distinguishes_related_test_scope(
+    tmp_path: Path, test_path: str, expected: list[str]
+) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _write(repository / test_path, "def test_calculate() -> None:\n    assert True\n")
+    head_sha = _commit(repository, "source and test")
+    source = "src/sample.py"
+    target = f"{source}::function:calculate:1-2"
+    scope = [source, test_path]
+    related_tests = {test_path: [target]} if test_path == "tests/test_sample.py" else None
+    event = _event(
+        base_sha,
+        head_sha,
+        _authorization(
+            base_sha,
+            head_sha,
+            scope,
+            [target],
+            related_tests=related_tests,
+        ),
+    )
+
+    result = _verify(repository, event, _characterization(base_sha, head_sha, [source]))
+
+    assert result["policy_blocks"] == expected
+
+
+def test_forged_related_test_target_remains_broad_scope(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    test_path = "tests/test_other.py"
+    _write(repository / test_path, "def test_other() -> None:\n    assert True\n")
+    head_sha = _commit(repository, "source and unrelated test")
+    source = "src/sample.py"
+    target = f"{source}::function:calculate:1-2"
+    scope = [source, test_path]
+    event = _event(
+        base_sha,
+        head_sha,
+        _authorization(
+            base_sha,
+            head_sha,
+            scope,
+            [target],
+            related_tests={test_path: [target]},
+        ),
+    )
+
+    result = _verify(repository, event, _characterization(base_sha, head_sha, [source]))
+
+    assert result["policy_blocks"] == ["BROAD_AUTHORIZATION_REQUIRED"]
+
+
+def test_large_module_footprint_is_reported_without_semantic_smallness_claim(
+    tmp_path: Path,
+) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    source = "src/sample.py"
+    _git(repository, "reset", "--hard", base_sha)
+    _write(repository / source, "")
+    base_sha = _commit(repository, "module base")
+    _write(
+        repository / source,
+        "".join(f"value_{index} = {index}\n" for index in range(1, 1_001)),
+    )
+    head_sha = _commit(repository, "large syntactic target")
+    targets, unbounded = _derived_targets(repository, base_sha, head_sha)
+    assert unbounded == ()
+    assert len(targets) == 1
+    target = targets[0]
+    event = _event(base_sha, head_sha, _authorization(base_sha, head_sha, [source], [target]))
+
+    result = _verify(repository, event, _characterization(base_sha, head_sha, [source]))
+
+    assert result["overall_result"] == "PASS"
+    assert result["targets"] == [target]
+    assert target.endswith(":1-1000")
 
 
 def test_multiple_unbounded_targets_block(tmp_path: Path) -> None:
@@ -1687,15 +1784,63 @@ def test_sequence_step_requires_immediate_authenticated_predecessor() -> None:
             ["src/sample.py::function:calculate:1-2"],
         )
     )
+    wrong_series = refactor_policy._parse_authorization(
+        _authorization(
+            "a" * 40,
+            "b" * 40,
+            ["src/sample.py"],
+            ["src/sample.py::function:calculate:1-2"],
+            series_id="wrong-series",
+            step=3,
+        )
+    )
+    substituted = refactor_policy._parse_authorization(
+        _authorization(
+            "a" * 40,
+            "b" * 40,
+            ["src/other.py"],
+            ["src/other.py::function:normalize:1-2"],
+            step=3,
+        )
+    )
 
     assert refactor_policy._sequence_blocks(step_three, previous, None) == []
     assert refactor_policy._sequence_blocks(reset, previous, None) == ["INVALID_STRANGLER_SEQUENCE"]
+    assert refactor_policy._sequence_blocks(wrong_series, previous, None) == [
+        "INVALID_STRANGLER_SEQUENCE"
+    ]
+    assert refactor_policy._sequence_blocks(substituted, previous, None) == [
+        "INVALID_STRANGLER_SEQUENCE"
+    ]
     assert refactor_policy._sequence_blocks(step_three, None, None) == [
         "INVALID_STRANGLER_SEQUENCE"
     ]
     assert refactor_policy._sequence_blocks(
         step_three, previous, "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"
     ) == ["GITHUB_AUTHORIZATION_EVIDENCE_FAILURE"]
+
+
+def test_independent_step_one_series_is_not_an_adjacent_counter_continuation() -> None:
+    previous = refactor_policy._parse_authorization(
+        _authorization(
+            "d" * 40,
+            "e" * 40,
+            ["src/other.py"],
+            ["src/other.py::function:normalize:1-2"],
+            series_id="previous-series",
+        )
+    )
+    independent = refactor_policy._parse_authorization(
+        _authorization(
+            "a" * 40,
+            "b" * 40,
+            ["src/sample.py"],
+            ["src/sample.py::function:calculate:1-2"],
+            series_id="independent-series",
+        )
+    )
+
+    assert refactor_policy._sequence_blocks(independent, previous, None) == []
 
 
 @pytest.mark.parametrize(

@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from supportability_gate import contract, function_changes, git_changes
 
 TargetSpan = tuple[str, function_changes.ResponsibilitySpan]
+
+
+def related_test_matches(path: str, target_path: str, language: str) -> bool:
+    """Return whether one fixed-profile test path names one exact source path."""
+    if not path.startswith("tests/") or path.startswith("tests/characterization/"):
+        return False
+    test_name = PurePosixPath(path).name
+    source_stem = PurePosixPath(target_path).stem
+    python_match = test_name == f"test_{source_stem}.py"
+    typescript_match = any(
+        test_name == f"{source_stem}.test{suffix}"
+        for suffix in (".js", ".mjs", ".cjs", ".ts", ".mts", ".cts")
+    )
+    return (
+        python_match
+        if language == "python"
+        else typescript_match
+        if language == "typescript"
+        else python_match or typescript_match
+    )
 
 
 def _profile_source(path: str, language: str) -> bool:

@@ -72,7 +72,7 @@
     },
     {
       "category": "static",
-      "id": "gate8-standard-results-boundary-v4",
+      "id": "gate8-standard-results-boundary-v5",
       "scenario": "gate8-standard-results-boundary-v3",
       "selector": "$",
       "target": "scenario:gate8-standard-results-boundary-v3"
@@ -132,6 +132,62 @@
       "scenario": "s05-meaningful-behavior",
       "selector": "result-identity",
       "target": "src/supportability_gate/standard_results.py"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-authorization-parser",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_parse_authorization"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-authorization-payload",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_authorization_payload"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-focus-decision",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_focus_blocks"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-related-test-association",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_related_test_paths"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-related-test-mapping",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_targets.py::function:related_test_matches"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-related-test-parser",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_related_tests"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-series-sequence",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_sequence_blocks"
+    },
+    {
+      "category": "behavior",
+      "id": "s07-stable-target-identity",
+      "scenario": "gate8-standard-results-boundary-v3",
+      "selector": "s07-focused-regression-contract",
+      "target": "src/supportability_gate/refactor_policy.py::function:_target_identities"
     }
   ],
   "scenarios": [
@@ -231,5 +287,13 @@
     }
   ],
   "schema_version": "2.0",
-  "transitions": []
+  "transitions": [
+    {
+      "baseline_sha256": "94db1d80b98a97923d88b5730b0d54f9bf119b14d4227eabf47aac940a53024f",
+      "from": "gate8-standard-results-boundary-v4",
+      "to": [
+        "gate8-standard-results-boundary-v5"
+      ]
+    }
+  ]
 }
