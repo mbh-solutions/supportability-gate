@@ -891,6 +891,101 @@ def test_decorated_python_complexity_binds_ruff_to_definition_line(tmp_path: Pat
     assert diagnostic["line"] == 5
 
 
+def test_python_property_accessors_receive_stable_construct_identities(tmp_path: Path) -> None:
+    source = """\
+class Reading:
+    @property
+    def value(self) -> int:
+        return 1
+
+    @value.setter
+    def value(self, new_value: int) -> None:
+        self._value = new_value
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["overall_result"] == "PASS"
+    assert result["touched_qualified_functions"] == [
+        "Reading.value|kind=python-property|role=getter",
+        "Reading.value|kind=python-property|role=setter",
+    ]
+
+
+def test_python_overloads_and_implementation_receive_distinct_identities(tmp_path: Path) -> None:
+    source = """\
+from typing import overload
+
+@overload
+def normalize(value: int) -> int: ...
+
+@overload
+def normalize(value: str) -> str: ...
+
+def normalize(value: int | str) -> int | str:
+    return value
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["overall_result"] == "PASS"
+    assert result["touched_qualified_functions"] == [
+        "normalize",
+        "normalize|kind=python-overload|role=declaration-1",
+        "normalize|kind=python-overload|role=declaration-2",
+    ]
+
+
+def test_typescript_accessors_receive_distinct_identities(tmp_path: Path) -> None:
+    source = """\
+export class Reading {
+  private current = 0;
+
+  get value(): number { return this.current; }
+  set value(newValue: number) { this.current = newValue; }
+}
+"""
+    repository, base_sha, head_sha = _typescript_repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["overall_result"] == "PASS"
+    assert result["touched_qualified_functions"] == [
+        "Reading.value|kind=typescript-accessor|role=getter",
+        "Reading.value|kind=typescript-accessor|role=setter",
+    ]
+
+
+def test_python_match_complexity_agrees_with_ruff_and_blocks(tmp_path: Path) -> None:
+    cases = "\n".join(f"        case {index}: return {index}" for index in range(12))
+    source = f"""\
+def classify(value: int) -> int:
+    match value:
+{cases}
+        case _: return -1
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
+
+    assert exit_code == 1
+    assert result["overall_result"] == "BLOCK"
+    assert result["technical_errors"] == []
+    assert result["functions"][0]["head"]["complexity"] == 13
+    assert result["ruff_diagnostics"][0]["complexity"] == 13
+
+
 def test_untouched_ruff_diagnostic_is_not_serialized_as_touched_evidence(
     tmp_path: Path,
 ) -> None:
