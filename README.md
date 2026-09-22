@@ -11,11 +11,13 @@ for architecture, configuration, evidence, lifecycle, and module details.
 
 Historical integrated qualification and organization-wide activation completed on 2026-08-27.
 Current remediation is governed by
-[Project #25](https://github.com/orgs/mbh-solutions/projects/25); its active slice is
-[S00](https://github.com/mbh-solutions/supportability-gate/issues/201), which makes the
-deterministic assurance contract and normative traceability accurate. Durable current status and
-dated historical evidence remain in the
-[Product Completion Contract](docs/product_completion_contract.md).
+[Project #25](https://github.com/orgs/mbh-solutions/projects/25). S00-S07 are independently
+verified. [S08](https://github.com/mbh-solutions/supportability-gate/issues/209) has been delivered
+for independent review with Partial evidence; no successor exists and the Project remains open.
+The [current disposition](docs/deterministic_assurance_disposition.md),
+[durable qualification bundles](docs/qualification/README.md), and
+[Product Completion Contract](docs/product_completion_contract.md) distinguish current guarantees,
+accepted boundaries, unresolved runtime risks, and dated historical evidence.
 
 Protected `main` requires Source Validation plus eight strict, independently owned deterministic
 contexts:
@@ -98,6 +100,9 @@ A normal authenticated evaluation writes:
 
 The required workflow combines those sources with characterization and refactor evidence into
 `standard-results.json`, schema `standard-results.v3`, then enforces its eight rows separately.
+It also builds `qualification-bundle.zip` and restores that bundle with networking disabled in an
+immutable container before the authoritative artifact upload can succeed. Repository-retained S08
+bundles remain independently restorable after their original Actions artifacts expire.
 
 Exit `0` means PASS, `1` means BLOCK, and `2` means TECHNICAL_FAILURE.
 

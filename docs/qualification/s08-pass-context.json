@@ -1,0 +1,329 @@
+{
+  "case_id": "S08-PYTHON-PROTECTED-PASS",
+  "classification": "PASS",
+  "delivery": {
+    "artifact_digest": "7592a384ffa165361650357864e92ebc4008c60c4ec8954449c983b2288f049a",
+    "artifact_expires_at": "2026-12-21T13:13:25Z",
+    "artifact_id": 10695444829,
+    "deployed_workflow_sha": "2c461f5f8554e1092fe9a6706904578dcbe2fc37",
+    "merge_sha": "2c461f5f8554e1092fe9a6706904578dcbe2fc37",
+    "pull_request": 261,
+    "workflow_run": 35731537978
+  },
+  "limitations": [
+    "The original GitHub Actions artifact expires at the recorded time; this repository copy is the durable restoration source.",
+    "The workflow selects Node 24 and ubuntu-24.04 labels; their patch and host-image revisions are moving identities not attested by GitHub in the retained canonical evidence.",
+    "Fresh enrolled TypeScript and mixed-profile consumers retained existing dependency-identity technical failures and are not represented as clean PASS results.",
+    "Independent controller verification is still required before the Project item may become Done and Proven."
+  ],
+  "profile": "python",
+  "restore_command": "python -P -m supportability_gate.qualification_bundle restore --bundle qualification-bundle.zip",
+  "rulesets": [
+    {
+      "payload": {
+        "_links": {
+          "html": {
+            "href": "http://github.com/organizations/mbh-solutions/settings/rules/21664395"
+          },
+          "self": {
+            "href": "https://api.github.com/orgs/mbh-solutions/rulesets/21664395"
+          }
+        },
+        "bypass_actors": [],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/main"
+            ]
+          },
+          "repository_id": {
+            "repository_ids": [
+              1296846001,
+              1312412529,
+              1326160036,
+              1348980141,
+              1349986662
+            ]
+          }
+        },
+        "created_at": "2026-08-27T11:25:48.403-05:00",
+        "enforcement": "active",
+        "id": 21664395,
+        "name": "supportability-gate-organization-production",
+        "node_id": "RRS_lACkVXNlcs4SbMUpzgFKkos",
+        "rules": [
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          },
+          {
+            "parameters": {
+              "allowed_merge_methods": [
+                "merge",
+                "squash",
+                "rebase"
+              ],
+              "dismiss_stale_reviews_on_push": true,
+              "require_code_owner_review": false,
+              "require_extra_approval_for_unattributed_changes": true,
+              "require_last_push_approval": false,
+              "required_approving_review_count": 0,
+              "required_review_thread_resolution": true,
+              "required_reviewers": []
+            },
+            "type": "pull_request"
+          },
+          {
+            "parameters": {
+              "do_not_enforce_on_create": false,
+              "workflows": [
+                {
+                  "path": ".github/workflows/organization-required.yml",
+                  "repository_id": 1312412529,
+                  "sha": "2c461f5f8554e1092fe9a6706904578dcbe2fc37"
+                }
+              ]
+            },
+            "type": "workflows"
+          },
+          {
+            "parameters": {
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "Supportability 1 - Cyclomatic Complexity",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 2 - Separation of Concerns",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 3 - Dependency Direction",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 4 - Domain Modularity",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 5 - Characterization",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 6 - Incremental Refactor",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 7 - Quality Gates",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 8 - Review Handoff",
+                  "integration_id": 15368
+                }
+              ],
+              "strict_required_status_checks_policy": true
+            },
+            "type": "required_status_checks"
+          }
+        ],
+        "source": "mbh-solutions",
+        "source_type": "Organization",
+        "target": "branch",
+        "updated_at": "2026-09-22T08:19:16.651-05:00"
+      },
+      "retrieved_at": "2026-09-22T13:22:00Z",
+      "scope": "organization Gate ruleset 21664395"
+    },
+    {
+      "payload": {
+        "_links": {
+          "html": {
+            "href": "http://github.com/organizations/mbh-solutions/settings/rules/23795033"
+          },
+          "self": {
+            "href": "https://api.github.com/orgs/mbh-solutions/rulesets/23795033"
+          }
+        },
+        "bypass_actors": [],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/main"
+            ]
+          },
+          "repository_id": {
+            "repository_ids": [
+              1312412529
+            ]
+          }
+        },
+        "created_at": "2026-09-21T18:02:06.367-05:00",
+        "enforcement": "active",
+        "id": 23795033,
+        "name": "supportability-gate-source-integrity",
+        "node_id": "RRS_lACkVXNlcs4SbMUpzgFrFVk",
+        "rules": [
+          {
+            "parameters": {
+              "do_not_enforce_on_create": false,
+              "workflows": [
+                {
+                  "path": ".github/workflows/source-integrity.yml",
+                  "repository_id": 1312412529,
+                  "sha": "a645c1d3c6fd7f9d9c804b173c5b2ac0a420d786"
+                }
+              ]
+            },
+            "type": "workflows"
+          },
+          {
+            "parameters": {
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "Source Integrity",
+                  "integration_id": 15368
+                }
+              ],
+              "strict_required_status_checks_policy": true
+            },
+            "type": "required_status_checks"
+          }
+        ],
+        "source": "mbh-solutions",
+        "source_type": "Organization",
+        "target": "branch",
+        "updated_at": "2026-09-21T18:02:06.493-05:00"
+      },
+      "retrieved_at": "2026-09-22T13:22:00Z",
+      "scope": "organization Source Integrity ruleset 23795033"
+    },
+    {
+      "payload": {
+        "_links": {
+          "html": {
+            "href": "https://github.com/mbh-solutions/supportability-gate/rules/19767613"
+          },
+          "self": {
+            "href": "https://api.github.com/repos/mbh-solutions/supportability-gate/rulesets/19767613"
+          }
+        },
+        "bypass_actors": [],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/main"
+            ]
+          }
+        },
+        "created_at": "2026-07-26T09:29:30.120-05:00",
+        "current_user_can_bypass": "never",
+        "enforcement": "active",
+        "id": 19767613,
+        "name": "Supportability Gate Source Protection",
+        "node_id": "RRS_lACqUmVwb3NpdG9yec5OOdNxzgEtoT0",
+        "rules": [
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          },
+          {
+            "parameters": {
+              "allowed_merge_methods": [
+                "merge",
+                "squash",
+                "rebase"
+              ],
+              "dismiss_stale_reviews_on_push": false,
+              "dismissal_restriction": {
+                "allowed_actors": [],
+                "enabled": false
+              },
+              "require_code_owner_review": false,
+              "require_extra_approval_for_unattributed_changes": true,
+              "require_last_push_approval": false,
+              "required_approving_review_count": 0,
+              "required_review_thread_resolution": true,
+              "required_reviewers": []
+            },
+            "type": "pull_request"
+          },
+          {
+            "parameters": {
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "Source Validation",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 1 - Cyclomatic Complexity",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 2 - Separation of Concerns",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 3 - Dependency Direction",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 4 - Domain Modularity",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 5 - Characterization",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 6 - Incremental Refactor",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 7 - Quality Gates",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Supportability 8 - Review Handoff",
+                  "integration_id": 15368
+                }
+              ],
+              "strict_required_status_checks_policy": true
+            },
+            "type": "required_status_checks"
+          }
+        ],
+        "source": "mbh-solutions/supportability-gate",
+        "source_type": "Repository",
+        "target": "branch",
+        "updated_at": "2026-08-27T11:36:02.880-05:00"
+      },
+      "retrieved_at": "2026-09-22T13:22:00Z",
+      "scope": "repository source-protection ruleset 19767613"
+    }
+  ],
+  "runtime": {
+    "isolation_image": "ubuntu@sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4",
+    "lock_sha256": "fa152bc59237a214f1f4057bd00d2da37eea21dafa44a1cfa96d39959ca61a60",
+    "node": "24 (workflow selector; exact patch not retained)",
+    "python": "3.12.14",
+    "runner_image": "ubuntu-24.04"
+  },
+  "schema_version": "supportability-qualification-context.v1",
+  "source_test_references": [
+    "tests/test_qualification_bundle.py::test_build_and_offline_restore_are_deterministic",
+    "tests/test_qualification_bundle.py::test_required_workflow_retains_and_restores_bundle_in_fixed_isolation",
+    "tests/test_qualification_bundle.py::test_technical_failure_bundle_restores_without_missing_raw_source",
+    "tests/characterization/s05-meaningful-behavior.characterization.py::bundle-restore-fail-closed"
+  ]
+}

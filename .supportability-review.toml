@@ -2,43 +2,52 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Qualification bundles accept ordinary nested evidence directories, retain their regular files, and continue to reject symlinks and non-regular filesystem entries."
-proof = "tests/test_qualification_bundle.py::test_technical_failure_bundle_restores_without_missing_raw_source exercises a retained diagnostics directory through build and restore."
+intended_behavior = "Current documentation and repository-retained bundles hand off the exact S08 result without converting unresolved consumer or policy-canary technical failures into PASS."
+proof = "Each docs/qualification/*.zip file restores through supportability_gate.qualification_bundle and reports its bound decision, profile, repository, head, run, and manifest identity."
 
 [characterization]
-captured_behavior = "The existing qualification-bundle obligation continues to reject a missing manifest and parent traversal while the bounded directory fix preserves those outputs."
-proof = "tests/characterization/s05-meaningful-behavior.characterization.py and s05-meaningful-behavior.golden.json remain unchanged and execute the deployed restore boundary."
+captured_behavior = "The qualification-bundle characterization continues to exercise missing-manifest, traversal, and release-context behavior; this final transaction changes documentation and retained artifacts only."
+proof = "tests/characterization/s05-meaningful-behavior.characterization.py and its golden file remain unchanged, while the protected executable revision is already qualified and deployed."
 
 [separation_of_concerns]
-before = "Evidence discovery treated every directory returned by recursive traversal as an unsafe non-file entry."
-after = "Evidence discovery descends through ordinary directories, rejects symlinks and special entries, and returns only regular files to hashing and archive construction."
-boundaries = [
-  { path = "src/supportability_gate/qualification_bundle.py", kind = "function", symbol = "_regular_files", before = "Normal diagnostics directories caused UNSAFE_EVIDENCE_PATH before their retained files could be collected.", after = "Normal directories are traversal containers while only regular non-symlink files enter the evidence map." },
-]
+before = "Current-facing documentation did not yet index S08 durable restoration proof, observed runtime limits, or the final audit disposition."
+after = "The scope and matrix define the product boundary, the disposition index owns current audit outcomes, the qualification index owns bundle identities, and the completion contract owns delivery history."
+boundaries = []
 
 [architecture]
-dependency_direction = "The bounded fix remains inside qualification_bundle evidence discovery and does not change its dependency on the existing standard_results validation boundary."
+dependency_direction = "Documentation and generated qualification archives consume the deployed bundle contract; they add no production import, runtime dependency, command, policy engine, or target-repository behavior."
 reviewed_paths = [
   ".supportability-review.toml",
-  "src/supportability_gate/qualification_bundle.py",
-  "tests/test_qualification_bundle.py",
+  "README.md",
+  "docs/deterministic_assurance_disposition.md",
+  "docs/enforcement_matrix.md",
+  "docs/product_completion_contract.md",
+  "docs/product_scope.md",
+  "docs/qualification/README.md",
+  "docs/qualification/s08-mixed-consumer-technical.zip",
+  "docs/qualification/s08-pass-context.json",
+  "docs/qualification/s08-policy-poison-with-technical-failure.zip",
+  "docs/qualification/s08-provenance-technical-failure.zip",
+  "docs/qualification/s08-python-consumer-technical.zip",
+  "docs/qualification/s08-python-protected-pass.zip",
+  "docs/qualification/s08-typescript-consumer-technical.zip",
 ]
 
 [responsibility_boundary]
-path = "src/supportability_gate/qualification_bundle.py"
-owns = "Safe deterministic discovery of nested regular evidence files for qualification bundle construction."
-does_not_own = "Filesystem mutation, target execution, Supportability policy decisions, artifact hosting, or a second policy engine."
+path = "docs/qualification/README.md"
+owns = "The compact bundle index, exact durable hashes, restore command, measured observations, and limitations of the retained S08 evidence."
+does_not_own = "Gate policy, target repair, runtime mutation, Project completion approval, Semantic Review, or a new evidence service."
 
 [incremental_refactor]
-target = "S08 qualification evidence traversal."
-completed_step = "Corrected one regular-file collector to distinguish ordinary directories from unsafe symlinks and special entries."
+target = "S08 lifecycle and evidence handoff."
+completed_step = "Retained compact proof, reconciled current guarantee wording, and recorded unresolved limits without changing deployed enforcement."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "_regular_files names the exact filesystem classification it owns."
-cohesion = "Directory traversal stays in the existing qualification-bundle collector and archive validation remains unchanged."
-intended_behavior = "Technical-failure artifacts with a diagnostics directory now produce and restore a durable bundle."
-reviewability = "The fix changes one production branch and extends one direct regression test."
+naming = "Bundle, context, disposition, evidence, and lifecycle names match the deterministic records they describe."
+cohesion = "Each current document owns one concise surface while the dated completion ledger preserves delivery history."
+intended_behavior = "A controller can restore retained proof offline, verify exact identities, and see why S08 remains Partial without relying on chat or expiring Actions data."
+reviewability = "The final change is documentation plus compact generated evidence; executable Gate and workflow bytes remain the already qualified deployed revision."

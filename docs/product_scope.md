@@ -44,6 +44,19 @@ The current evidence classes are:
 The canonical 218-clause registry records one class and one retained test-proof class per clause.
 Family-level tests intentionally share rule behavior; they are not 218 independent behavior tests.
 
+## Durable qualification boundary
+
+The required workflow packages canonical decision artifacts, retained diagnostics, file digests,
+and restore metadata into a compact deterministic bundle. Bundle construction and restoration reuse
+the existing `standard-results` validators. The workflow must restore its bundle with networking
+disabled in the pinned isolation image before the evidence artifact upload can succeed.
+
+Release-qualified bundles may additionally bind exact PR, head, merge, workflow, artifact, ruleset,
+runtime, lock, source-test, expiry, and limitation records. The repository-retained S08 copies can
+be validated after Actions expiry without a hosted service. This proves the recorded deterministic
+decision and identities; it does not recreate unavailable external logs, make a moving runner label
+immutable, or convert an earlier BLOCK or TECHNICAL_FAILURE into PASS.
+
 ## Human review
 
 People remain responsible for whether names express responsibilities, boundaries are cohesive,
@@ -69,6 +82,11 @@ Certification is limited to the committed Python, TypeScript, or mixed profile a
 production paths. Outside-profile code, unclassified or dynamic architecture, subjective cohesion,
 and exhaustive intended behavior are not certified. Static architecture roles are inferred within
 the supported contract and parser boundary; they are not a proof of every runtime dependency.
+
+Moving Node patch versions and GitHub-hosted runner-image revisions remain external operational
+limits when the platform does not retain their exact identity in canonical evidence. Optional
+dependency identity failures remain TECHNICAL_FAILURE. S08 does not authorize product-specific
+consumer repair, obsolete-head cancellation without a reproduced need, or a report-only conversion.
 
 ## Package dependency direction
 

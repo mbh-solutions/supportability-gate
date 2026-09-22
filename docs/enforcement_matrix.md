@@ -15,6 +15,7 @@ status, authorized work, and historical evidence are recorded in the
 | Focused incremental refactor scope and runnability | Supportability 6 | Deterministic decisions; exact broad scope requires authenticated owner attestation |
 | Fixed quality commands, coverage, and anti-weakening | Supportability 7 | Authenticated measurements and deterministic decisions |
 | Review handoff and remaining-risk records | Supportability 8 | Process evidence and author declarations; no prose-quality judgment |
+| Qualification bundle construction and offline restoration | Deterministic evidence job | Existing canonical validators, exact file digests, bounded archive members, and optional release context |
 
 | Supportability requirement | Enforcement class | Historical origin |
 |---|---|---:|
@@ -41,6 +42,8 @@ status, authorized work, and historical evidence are recorded in the
 | Organization required-workflow enforcement proof | DETERMINISTIC | Protected workflow |
 | Source workflow, immutable inputs, tool/action pins, and validator conformance | DETERMINISTIC | Independently pinned Source Integrity workflow |
 | Protected clean, policy-BLOCK, and technical-failure canaries | DETERMINISTIC | Never merge |
+| Repository-retained qualification bundle restoration | DETERMINISTIC | Revalidates the recorded decision and identity without the original Actions artifact |
+| Actions retention and moving hosted runtime labels | OPERATIONAL_LIMITATION | Recorded explicitly; never converted to PASS |
 
 ## Source Integrity promotion and rollback
 
