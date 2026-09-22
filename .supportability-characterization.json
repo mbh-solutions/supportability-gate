@@ -85,11 +85,25 @@
       "target": "src/supportability_gate/git_changes.py"
     },
     {
+      "category": "behavior",
+      "id": "language-construct-identities",
+      "scenario": "s06-language-features",
+      "selector": "language-construct-identities",
+      "target": "src/supportability_gate/function_changes.py"
+    },
+    {
       "category": "static",
       "id": "m9-quality-profile",
       "scenario": "m9-quality-profile",
       "selector": "$",
       "target": "scenario:m9-quality-profile"
+    },
+    {
+      "category": "behavior",
+      "id": "modern-match-complexity",
+      "scenario": "s06-language-features",
+      "selector": "modern-match-complexity",
+      "target": "src/supportability_gate/complexity_metrics.py"
     },
     {
       "category": "static",
@@ -214,16 +228,16 @@
       ],
       "id": "s05-meaningful-behavior",
       "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/complexity_metrics.py",
+        "src/supportability_gate/function_changes.py"
+      ],
+      "id": "s06-language-features",
+      "kind": "regression"
     }
   ],
   "schema_version": "2.0",
-  "transitions": [
-    {
-      "baseline_sha256": "55f7137f13900e8cd30872930e1f53ff749cc0e292a77be353a4affb2bb149e2",
-      "from": "gate8-standard-results-boundary-v3",
-      "to": [
-        "gate8-standard-results-boundary-v4"
-      ]
-    }
-  ]
+  "transitions": []
 }

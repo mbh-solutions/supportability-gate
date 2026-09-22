@@ -1,0 +1,43 @@
+{
+  "language-construct-identities": [
+    {
+      "input": "python-property",
+      "output": [
+        "Reading.value|kind=python-property|role=getter",
+        "Reading.value|kind=python-property|role=setter"
+      ]
+    },
+    {
+      "input": "python-property-after-line-movement",
+      "output": [
+        "Reading.value|kind=python-property|role=getter",
+        "Reading.value|kind=python-property|role=setter"
+      ]
+    },
+    {
+      "input": "python-overloads",
+      "output": [
+        "normalize|kind=python-overload|role=declaration-1",
+        "normalize|kind=python-overload|role=declaration-2",
+        "normalize"
+      ]
+    },
+    {
+      "input": "typescript-accessors",
+      "output": [
+        "Reading.value|kind=typescript-accessor|role=getter",
+        "Reading.value|kind=typescript-accessor|role=setter"
+      ]
+    }
+  ],
+  "modern-match-complexity": [
+    {
+      "input": "guarded-low-complexity",
+      "output": 3
+    },
+    {
+      "input": "twelve-cases",
+      "output": 13
+    }
+  ]
+}
