@@ -39,6 +39,45 @@ GATE_EIGHT_EVIDENCE_SOURCES = [
     "quality-provenance.json",
 ]
 HANDOFF_SENTINEL = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
+CONTROLLED_REVIEW_EVIDENCE = b"""schema_version = "1.0"
+module_boundaries = []
+
+[behavior]
+intended_behavior = "Controlled behavior."
+proof = "Controlled proof."
+
+[characterization]
+captured_behavior = "Controlled characterization."
+proof = "Controlled proof."
+
+[separation_of_concerns]
+before = "Controlled before boundary."
+after = "Controlled after boundary."
+boundaries = []
+
+[architecture]
+dependency_direction = "Controlled dependency direction."
+reviewed_paths = ["src/sample.py"]
+
+[responsibility_boundary]
+path = "src/sample.py"
+owns = "Controlled behavior."
+does_not_own = "Unrelated behavior."
+
+[incremental_refactor]
+target = "Controlled boundary."
+completed_step = "Controlled step."
+
+[review_handoff]
+summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
+remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
+
+[human_review]
+naming = "Controlled naming."
+cohesion = "Controlled cohesion."
+intended_behavior = "Controlled intended behavior."
+reviewability = "Controlled reviewability."
+"""
 
 
 def _legacy_driver(definition: Path) -> ModuleType:
@@ -763,19 +802,22 @@ def main() -> None:
                 }
             )
 
-    content = (target / ".supportability-review.toml").read_bytes()
     if (
         "expected_boundaries"
         in inspect.signature(review_evidence.evaluate_review_evidence).parameters
     ):
-        parsed, blocks = review_evidence.evaluate_review_evidence(content, None)
-        forged, forged_blocks = review_evidence.evaluate_review_evidence(content, FORGED_BOUNDARIES)
+        parsed, blocks = review_evidence.evaluate_review_evidence(CONTROLLED_REVIEW_EVIDENCE, ())
+        if parsed is None or blocks:
+            raise RuntimeError("Gate 2 controlled positive fixture is rejected")
+        forged, forged_blocks = review_evidence.evaluate_review_evidence(
+            CONTROLLED_REVIEW_EVIDENCE, FORGED_BOUNDARIES
+        )
         if forged is not None or forged_blocks != (
             "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",
         ):
             raise RuntimeError("Gate 2 boundary comparison is not enforced")
     else:
-        parsed, blocks = review_evidence.evaluate_review_evidence(content)
+        parsed, blocks = review_evidence.evaluate_review_evidence(CONTROLLED_REVIEW_EVIDENCE)
     payload["behavior"]["review_evidence"] = {
         "accepted": parsed is not None,
         "blocks": list(blocks),

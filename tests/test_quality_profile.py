@@ -1953,7 +1953,15 @@ maximum = 10
     assert provenance["container"]["image"] == quality_runner.CONTAINER_IMAGE
     assert provenance["security_controls"]["init_process"] is True
     assert any(
-        item.startswith("npm-target:fixture-dependency@1.0.0:sha256:")
+        item.startswith(
+            "npm-target-locked:node_modules/fixture-dependency:fixture-dependency@1.0.0:"
+        )
+        for item in provenance["resolved_dependencies"]
+    )
+    assert any(
+        item.startswith(
+            "npm-target-installed:node_modules/fixture-dependency:fixture-dependency@1.0.0:sha256:"
+        )
         for item in provenance["resolved_dependencies"]
     )
     assert [item["path"] for item in provenance["source_receipts"]] == list(evidence.source_files)

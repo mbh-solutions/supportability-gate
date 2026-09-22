@@ -1940,6 +1940,7 @@ def test_gate_five_vocabulary_is_exact_and_ordered() -> None:
         "CHANGED_GOLDEN_OUTPUT:",
         "CHARACTERIZATION_DEFINITION_MISMATCH:",
         "CHARACTERIZATION_DRIVER_IDENTITY_MISMATCH:",
+        "CHARACTERIZATION_ENVIRONMENT_DRIFT",
         "CHARACTERIZATION_EXECUTION_FAILED:",
         "CHARACTERIZATION_FINGERPRINT_MISMATCH",
         "CHARACTERIZATION_REPLAY_DRIFT:",
@@ -1957,6 +1958,21 @@ def test_gate_five_vocabulary_is_exact_and_ordered() -> None:
         "STALE_POST_CHANGE_ARTIFACT",
         "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
     )
+
+
+def test_characterization_environment_drift_is_owned_and_propagated_by_gate_five() -> None:
+    inputs = _inputs()
+    block = "CHARACTERIZATION_ENVIRONMENT_DRIFT"
+    inputs[1]["overall_result"] = "BLOCK"
+    inputs[1]["policy_blocks"] = [block]
+    _bind_characterization(inputs)
+
+    payload = _compose(inputs)
+
+    assert standard_block_ownership.owners(block) == frozenset({5})
+    assert _results(payload) == ["PASS", "PASS", "PASS", "PASS", "BLOCK", *["PASS"] * 3]
+    assert _entry(payload, 5)["policy_blocks"] == [block]
+    assert payload["shared_failures"] == []
 
 
 def _bind_characterization(inputs: tuple[dict[str, Any], ...]) -> None:
@@ -2031,6 +2047,7 @@ def _gate_five_poison(
         "CHARACTERIZATION_DEFINITION_MISMATCH:sample",
         "CHARACTERIZATION_DRIVER_IDENTITY_MISMATCH:sample",
         "CHARACTERIZATION_EXECUTION_FAILED:sample",
+        "CHARACTERIZATION_ENVIRONMENT_DRIFT",
         "CHARACTERIZATION_FINGERPRINT_MISMATCH",
         "CHARACTERIZATION_REPLAY_DRIFT:sample",
         "GOLDEN_ARTIFACT_IDENTITY_MISMATCH:sample",
@@ -2056,6 +2073,28 @@ def test_authentic_gate_five_poison_blocks_only_gate_five(block: str) -> None:
     assert _results(payload) == ["PASS", "PASS", "PASS", "PASS", "BLOCK", *["PASS"] * 3]
     assert _entry(payload, 5)["policy_blocks"] == blocks
     assert payload["shared_failures"] == []
+
+
+def test_unknown_characterization_block_still_fails_closed() -> None:
+    inputs = _inputs()
+    block = "FUTURE_CHARACTERIZATION_BLOCK"
+    inputs[1]["policy_blocks"] = [block]
+    inputs[1]["overall_result"] = "BLOCK"
+    _bind_characterization(inputs)
+
+    payload = _compose(inputs)
+
+    code = f"UNKNOWN_STANDARD_BLOCK_OWNER:{block}"
+    assert _technical_standards(payload) == set(range(1, 9))
+    assert all(_entry(payload, standard)["technical_errors"] == [code] for standard in range(1, 9))
+    assert payload["shared_failures"] == [
+        {
+            "affected_standards": list(range(1, 9)),
+            "code": code,
+            "dependency": "standard-block-ownership",
+            "kind": "TECHNICAL_ERROR",
+        }
+    ]
 
 
 @pytest.mark.parametrize(
@@ -4542,6 +4581,209 @@ def _hosted_characterization_module() -> Any:
     return module
 
 
+def _node_lock_fixture(root: Path, packages: dict[str, object]) -> None:
+    root.mkdir(parents=True)
+    (root / "package-lock.json").write_text(
+        json.dumps({"lockfileVersion": 3, "name": "fixture", "packages": packages}) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def _installed_node_package(root: Path, location: str, name: str, version: str) -> None:
+    package = root.joinpath(*location.split("/"))
+    package.mkdir(parents=True)
+    (package / "package.json").write_text(
+        json.dumps({"name": name, "version": version}) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (package / "index.js").write_text("export default 1;\n", encoding="utf-8", newline="\n")
+
+
+def test_node_receipts_retain_scoped_locked_and_installed_graphs(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    location = "node_modules/@scope/package"
+    integrity = "sha512-c2NvcGVk"
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"@scope/package": "1.0.0"}},
+            location: {"integrity": integrity, "version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, location, "@scope/package", "1.0.0")
+
+    receipts = hosted._node_lock_receipts(root, "target")
+
+    assert f"npm-target-locked:{location}:@scope/package@1.0.0:{integrity}" in receipts
+    assert any(
+        item.startswith(f"npm-target-installed:{location}:@scope/package@1.0.0:sha256:")
+        for item in receipts
+    )
+
+
+def test_node_receipts_retain_absent_proven_optional_transitive_lock(
+    tmp_path: Path,
+) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    host = "node_modules/host"
+    optional = "node_modules/@scope/optional"
+    integrity = "sha512-b3B0aW9uYWw="
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"host": "1.0.0"}},
+            host: {
+                "integrity": "sha512-aG9zdA==",
+                "optionalDependencies": {"@scope/optional": "1.0.0"},
+                "version": "1.0.0",
+            },
+            optional: {"integrity": integrity, "optional": True, "version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, host, "host", "1.0.0")
+
+    receipts = hosted._node_lock_receipts(root, "target")
+
+    assert f"npm-target-locked:{optional}:@scope/optional@1.0.0:{integrity}" in receipts
+    assert not any(item.startswith(f"npm-target-installed:{optional}:") for item in receipts)
+
+
+@pytest.mark.parametrize(
+    "packages",
+    [
+        {
+            "": {},
+            "node_modules/unproven": {
+                "integrity": "sha512-dW5wcm92ZW4=",
+                "optional": True,
+                "version": "1.0.0",
+            },
+        },
+        {
+            "": {"dependencies": {"required": "1.0.0"}},
+            "node_modules/required": {
+                "integrity": "sha512-cmVxdWlyZWQ=",
+                "version": "1.0.0",
+            },
+        },
+    ],
+)
+def test_node_receipts_reject_missing_packages_without_proven_optional_edge(
+    tmp_path: Path, packages: dict[str, object]
+) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    _node_lock_fixture(root, packages)
+
+    with pytest.raises(quality_profile.QualityProfileError) as raised:
+        hosted._node_lock_receipts(root, "target")
+
+    assert raised.value.code == "UNVERIFIABLE_DEPENDENCY_IDENTITY"
+
+
+def test_node_receipts_preserve_alias_location_and_manifest_identity(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    location = "node_modules/alias"
+    integrity = "sha512-YWxpYXM="
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"alias": "npm:real-package@1.0.0"}},
+            location: {"integrity": integrity, "name": "real-package", "version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, location, "real-package", "1.0.0")
+
+    receipts = hosted._node_lock_receipts(root, "target")
+
+    assert f"npm-target-locked:{location}:alias->real-package@1.0.0:{integrity}" in receipts
+    assert any(
+        item.startswith(f"npm-target-installed:{location}:alias->real-package@1.0.0:sha256:")
+        for item in receipts
+    )
+
+
+def test_node_receipts_join_file_link_lock_source_and_installed_tree(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    location = "node_modules/fixture-dependency"
+    source = "vendor/fixture-dependency"
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"fixture-dependency": "file:vendor/fixture-dependency"}},
+            location: {"link": True, "resolved": source},
+            source: {"version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, source, "fixture-dependency", "1.0.0")
+    _installed_node_package(root, location, "fixture-dependency", "1.0.0")
+
+    receipts = hosted._node_lock_receipts(root, "target")
+
+    assert any(
+        item.startswith(f"npm-target-locked:{location}:fixture-dependency@1.0.0:sha256:")
+        for item in receipts
+    )
+    assert any(
+        item.startswith(f"npm-target-locked-source:{source}:fixture-dependency@1.0.0:sha256:")
+        for item in receipts
+    )
+    assert any(
+        item.startswith(f"npm-target-installed:{location}:fixture-dependency@1.0.0:sha256:")
+        for item in receipts
+    )
+
+
+def test_node_receipts_reject_file_link_with_different_installed_tree(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    location = "node_modules/fixture-dependency"
+    source = "vendor/fixture-dependency"
+    _node_lock_fixture(
+        root,
+        {
+            "": {"dependencies": {"fixture-dependency": "file:vendor/fixture-dependency"}},
+            location: {"link": True, "resolved": source},
+            source: {"version": "1.0.0"},
+        },
+    )
+    _installed_node_package(root, source, "fixture-dependency", "1.0.0")
+    _installed_node_package(root, location, "fixture-dependency", "1.0.0")
+    (root / location / "index.js").write_text("export default 2;\n", encoding="utf-8", newline="\n")
+
+    with pytest.raises(quality_profile.QualityProfileError) as raised:
+        hosted._node_lock_receipts(root, "target")
+
+    assert raised.value.code == "UNVERIFIABLE_DEPENDENCY_IDENTITY"
+
+
+def test_node_receipts_reject_lock_location_outside_dependency_root(tmp_path: Path) -> None:
+    hosted = _hosted_quality_profile_module()
+    root = tmp_path / "target"
+    _node_lock_fixture(
+        root,
+        {
+            "": {},
+            "../outside": {
+                "integrity": "sha512-b3V0c2lkZQ==",
+                "optional": True,
+                "version": "1.0.0",
+            },
+        },
+    )
+
+    with pytest.raises(quality_profile.QualityProfileError) as raised:
+        hosted._node_lock_receipts(root, "target")
+
+    assert raised.value.code == "UNVERIFIABLE_DEPENDENCY_IDENTITY"
+
+
 def _diagnostic_payload(output: Path) -> dict[str, Any]:
     paths = list((output / "diagnostics").glob("*.json"))
     assert len(paths) == 1
@@ -4747,6 +4989,45 @@ def _job(name: str, next_name: str | None) -> str:
     ).read_text(encoding="utf-8")
     body = workflow.split(f"\n  {name}:\n", 1)[1]
     return body.split(f"\n  {next_name}:\n", 1)[0] if next_name else body
+
+
+def test_capture_jobs_pin_identical_exact_runtime_versions() -> None:
+    jobs = (
+        _job("characterize-base", "characterize-head"),
+        _job("characterize-head", "quality-profile"),
+        _job("quality-profile", "deterministic-evidence"),
+    )
+
+    for job in jobs:
+        assert "Set up Python 3.12.14" in job
+        assert 'python-version: "3.12.14"' in job
+        assert "Set up Node.js 24.20.0" in job
+        assert 'node-version: "24.20.0"' in job
+
+
+def test_gate_eight_boundary_probe_uses_controlled_validator_fixtures() -> None:
+    path = (
+        Path(__file__).parent
+        / "characterization"
+        / "gate8-standard-results-boundary-v3.characterization.py"
+    )
+    source = path.read_text(encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("gate8_boundary_characterization", path)
+    assert spec and spec.loader
+    driver = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(driver)
+
+    accepted, blocks = review_evidence.evaluate_review_evidence(
+        driver.CONTROLLED_REVIEW_EVIDENCE, ()
+    )
+    forged, forged_blocks = review_evidence.evaluate_review_evidence(
+        driver.CONTROLLED_REVIEW_EVIDENCE, driver.FORGED_BOUNDARIES
+    )
+
+    assert '(target / ".supportability-review.toml")' not in source
+    assert accepted is not None and blocks == ()
+    assert forged is None
+    assert forged_blocks == ("INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",)
 
 
 def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
