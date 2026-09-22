@@ -4972,9 +4972,7 @@ def test_gate_eight_boundary_probe_uses_controlled_validator_fixtures() -> None:
     assert '(target / ".supportability-review.toml")' not in source
     assert accepted is not None and blocks == ()
     assert forged is None
-    assert forged_blocks == (
-        "INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",
-    )
+    assert forged_blocks == ("INSUFFICIENT_REVIEW_EVIDENCE:separation_of_concerns.boundaries",)
 
 
 def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
