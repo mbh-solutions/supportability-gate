@@ -1,42 +1,60 @@
 schema_version = "1.0"
 module_boundaries = [
-  { path = "tests/source_integrity_check.py", owner_path = "tests/source_integrity_check.py", basis = "responsibility", justification = "Owns independently pinned static receipts, source-control validation, sandboxed conformance orchestration, and its authenticated result." },
-  { path = "tests/source_integrity_conformance.py", owner_path = "tests/source_integrity_conformance.py", basis = "responsibility", justification = "Owns the trusted positive, policy-negative, and malformed-input cases executed against candidate validator code." },
+  { path = "src/supportability_gate/quality_profile.py", owner_path = "src/supportability_gate/quality_profile.py", basis = "responsibility", justification = "Owns immutable source-manifest suppression classification, canonical evidence records, and quality policy blocks." },
+  { path = "src/supportability_gate/standard_results.py", owner_path = "src/supportability_gate/standard_results.py", basis = "responsibility", justification = "Owns independent reconstruction and binding of authenticated per-Standard results." },
+  { path = "src/supportability_gate/standard_block_ownership.py", owner_path = "src/supportability_gate/standard_block_ownership.py", basis = "responsibility", justification = "Owns the fixed mapping from deterministic policy-block families to Supportability Standards." },
 ]
 
 [behavior]
-intended_behavior = "A source-only pinned workflow independently authenticates immutable inputs and required controls, validates the canonical clause registry with trusted code, and executes trusted conformance against candidate validator code only inside the S02 sandbox."
-proof = "Local tests cover current source, workflow replacement, immutable tamper, clean trusted cases, and candidate-validator weakening; protected canaries exercise PASS, policy BLOCK, technical failure, and pinned-fixture independence."
+intended_behavior = "Tracked Python and TypeScript source and tests are scanned from immutable base and head Git blobs; blanket and region-wide inline suppression blocks Gate 7, while narrow annotations remain visible without disabling file-wide checking."
+proof = "Pinned-tool source fixtures establish the accepted Ruff, mypy, TypeScript, and ESLint directive grammar; focused regressions cover classification, source binding, policy ownership, malformed evidence, and independent result recomposition."
 
 [characterization]
-captured_behavior = "Before S03, a coordinated candidate replaced Source Validation with success, removed the Standard negative test, weakened the inventory validator, and changed the Standard; the candidate-controlled check passed while pinned Gate lanes blocked."
-proof = "Never-merge baseline PR #230 retains exact head, candidate Source Validation run, pinned organization run, named policy blocks, and artifact digests."
+captured_behavior = "Before S04, undefined-name Python and incompatible-type TypeScript fixtures failed the fixed lint or type commands, while accepted whole-file directives changed those same tool exits to zero; ESLint inline configuration remained disabled by its fixed command vector."
+proof = "Retained paired fixtures record raw pinned-tool exits before the production change, and regression nodes preserve accepted casing, spacing, placement, narrow, region, zero-width, and malformed-source cases."
 
 [separation_of_concerns]
-before = "Source Validation and its tests came from the candidate branch; coordinated edits could make its required context report success even though other Gate defenses might still block."
-after = "A source-only workflow comes from an exact protected pin, owns its manifest and conformance fixture, authenticates candidate bytes, and imports candidate validator code only in S02 isolation."
+before = "The hosted quality runner always reported an empty exclusions list, and result composition could not authenticate suppression-derived Gate 7 blocks."
+after = "The hosted runner inventories immutable blobs, quality_profile classifies and evaluates canonical suppression records, the ownership table assigns violations only to Gate 7, and standard_results independently reconstructs the matching blocks."
 boundaries = [
+  { path = "src/supportability_gate/quality_profile.py", kind = "module", symbol = "src/supportability_gate/quality_profile.py", before = "No pinned inline-suppression grammar or record contract existed.", after = "Pinned suppression grammar and canonical record identities are explicit module policy." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_policy_blocks", before = "Every exclusions string became a generic quality exclusion block.", after = "Canonical suppression records produce exact blanket or region blocks while legacy exclusions retain their prior block." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_python_comments", before = "Python comments were not independently tokenized for suppression analysis.", after = "The standard tokenizer extracts only real comments and fails closed on unreadable source." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_python_suppressions", before = "Accepted Ruff and mypy directives were not classified.", after = "Pinned Python directives are classified by exact adapter, line, scope, and reason." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_record", before = "No suppression record constructor existed.", after = "One focused constructor emits the canonical source-bound record." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_typescript_comments", before = "TypeScript comments were not independently identified.", after = "Tree-sitter comment nodes prevent directive lookalikes in strings from being classified." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_typescript_suppressions", before = "Accepted TypeScript and ESLint controls were not classified.", after = "Pinned directives are classified with placement-aware whole-file, region, or narrow scope." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_typescript_tree", before = "Suppression analysis had no bounded TypeScript syntax source.", after = "The pinned parser supplies immutable comment placement and rejects non-UTF-8 source." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_validate_suppression_record", before = "No strict suppression evidence shape existed.", after = "Adapter, reason, scope, side, line, path, and source digest must form one approved record." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "collect_suppression_records", before = "The hosted runner did not inventory suppressions across source and tests.", after = "Applicable fixed adapters scan every immutable base and head source or test blob." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "encode_suppression_record", before = "Suppression facts had no canonical evidence encoding.", after = "Facts use one deterministic sorted compact JSON encoding inside the existing exclusions field." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "parse_suppression_record", before = "Suppression evidence could not be validated independently.", after = "Only strict canonical records parse; missing, extra, or malformed fields fail closed." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "suppression_policy_blocks", before = "Suppression scope and source side were not reflected in Gate 7 policy.", after = "Head blanket and region records block, base and narrow records remain visible, and legacy exclusions keep blocking." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "suppression_records", before = "No profile-specific suppression classification entrypoint existed.", after = "One entrypoint dispatches only to the pinned Python or TypeScript grammar." },
+  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Blanket suppression had no deterministic Standard owner.", after = "QUALITY_BLANKET_SUPPRESSION is owned only by Supportability Standard 7." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_complexity_components", before = "Composed results did not compare suppression facts with claimed policy blocks.", after = "Suppression-derived blocks must exactly match authenticated quality evidence or the result is malformed." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_profile", before = "Quality profile validation did not reconstruct suppression policy.", after = "Strict profile validation independently derives both asset and suppression block sets." },
 ]
 
 [architecture]
-dependency_direction = "The source-integrity orchestrator depends inward on the existing clause validator and S02 sandbox constructor; the trusted fixture is mounted read-only and candidate code cannot own the host collector or authoritative output."
-reviewed_paths = [".github/workflows/source-integrity.yml", ".supportability-review.toml", "docs/enforcement_matrix.md", "docs/source_integrity_manifest.json", "tests/source_integrity_check.py", "tests/source_integrity_conformance.py", "tests/test_source_integrity.py"]
+dependency_direction = "The trusted hosted adapter reads immutable Git blobs and calls pure quality_profile classification; standard_results independently recomputes policy from the authenticated artifact, and neither layer executes target code or accepts candidate configuration."
+reviewed_paths = [".supportability-review.toml", "src/supportability_gate/quality_profile.py", "src/supportability_gate/standard_block_ownership.py", "src/supportability_gate/standard_results.py", "tests/hosted_quality_profile.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
-path = "tests/source_integrity_check.py"
-owns = "Pinned source-input authentication, trusted source-control checks, isolated conformance orchestration, and exact result identity."
-does_not_own = "The eight consumer policy lanes, semantic review, candidate workflow execution, ruleset administration, or successor remediation."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Pinned suppression grammar, immutable source-bound records, and exact quality policy blocks."
+does_not_own = "Target repairs, waivers, command or threshold overrides, semantic review, protected transport, or successor remediation."
 
 [incremental_refactor]
-target = "Protect essential Gate source qualification independently from candidate-controlled workflows and tests without adding another policy engine."
-completed_step = "Added one pinned source-only guard with immutable receipts, current-control validation, trusted clause conformance in the existing S02 sandbox, and authenticated evidence output."
+target = "Prevent blanket inline suppression from silently converting failing lint or type evidence into a covered quality PASS."
+completed_step = "Added bounded immutable source analysis, exact visible records, Gate 7 policy ownership, and independent result binding without changing command vectors or adding waivers."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Trusted root, candidate repository, manifest, receipts, conformance, and source identity distinguish every authority boundary."
-cohesion = "The new production module owns source integrity only; the fixture owns cases; the workflow owns transport; the existing validator and S02 sandbox keep their original responsibilities."
-intended_behavior = "Candidate workflow/test coordination cannot supply the required Source Integrity result, alter immutable bytes, weaken canonical mapping, or execute candidate validator code outside isolation."
-reviewability = "The manifest names protected inputs and pins; result JSON binds exact identities and receipts; focused tests reproduce success, workflow replacement, tamper, and weakened-validator outcomes."
+naming = "Suppression record, scope, side, reason, source digest, and policy block names expose the exact deterministic decision inputs."
+cohesion = "Source classification stays in quality_profile, hosted orchestration stays in the existing runner adapter, ownership stays in the mapping table, and result authentication stays in standard_results."
+intended_behavior = "Accepted whole-file and region controls cannot yield a clean Gate 7 decision; narrow annotations remain visible and checked, and malformed analysis fails closed."
+reviewability = "Focused tests enumerate pinned grammar and negative lookalikes, while canonical records make path, line, adapter, reason, source side, and source digest directly inspectable."
