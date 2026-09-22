@@ -35,6 +35,25 @@ def test_retained_quality_runner_has_characterization() -> None:
     assert "src/supportability_gate/quality_runner.py" in covered
 
 
+def test_s05_live_driver_matches_golden(capsys: pytest.CaptureFixture[str]) -> None:
+    root = Path(__file__).parents[1]
+    driver_path = root / "tests/characterization/s05-meaningful-behavior.characterization.py"
+    specification = importlib.util.spec_from_file_location("s05_meaningful_behavior", driver_path)
+    assert specification and specification.loader
+    driver = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(driver)
+
+    driver.main()
+
+    actual = json.loads(capsys.readouterr().out)["behavior"]
+    expected = json.loads(
+        (root / "tests/characterization/s05-meaningful-behavior.golden.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert actual == expected
+
+
 def test_runtime_probe_retains_sandbox_stderr(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
