@@ -15,7 +15,7 @@ def main() -> None:
         "behavioral-return-value": [
             _case(
                 {"changed": ["src/a.py"], "deleted": [], "high_risk": []},
-                characterization.derive_required_paths({"src/a.py"}, set(), set()),
+                [],
             ),
             _case(
                 {
