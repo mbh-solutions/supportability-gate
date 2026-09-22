@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from mccabe import PathGraphingAstVisitor  # type: ignore[import-untyped]
+from mccabe import PathGraphingAstVisitor, PathNode  # type: ignore[import-untyped]
 from tree_sitter import Node
 
 from supportability_gate import __version__
@@ -97,6 +97,37 @@ class RuffResult:
     command: RuffCommandRecord | None
 
 
+def _irrefutable_match_pattern(pattern: ast.pattern) -> bool:
+    if isinstance(pattern, ast.MatchAs):
+        return pattern.pattern is None or _irrefutable_match_pattern(pattern.pattern)
+    if isinstance(pattern, ast.MatchOr):
+        return any(_irrefutable_match_pattern(item) for item in pattern.patterns)
+    return False
+
+
+def _match_has_default(node: ast.Match) -> bool:
+    return any(
+        case.guard is None and _irrefutable_match_pattern(case.pattern) for case in node.cases
+    )
+
+
+class _RuffCompatiblePathGraphingAstVisitor(PathGraphingAstVisitor):  # type: ignore[misc]
+    def visitMatch(self, node: ast.Match) -> None:  # noqa: N802
+        pathnode = self.appendPathNode(f"Match {node.lineno}")
+        loose_ends = []
+        for case in node.cases:
+            self.tail = pathnode
+            self.dispatch_list(case.body)
+            loose_ends.append(self.tail)
+        if not _match_has_default(node):
+            loose_ends.append(pathnode)
+        if pathnode:
+            bottom = PathNode("", look="point")
+            for loose_end in loose_ends:
+                self.graph.connect(loose_end, bottom)
+            self.tail = bottom
+
+
 def _digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -112,7 +143,7 @@ def measure_definitions(
     for definition in definitions:
         if not isinstance(definition.node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             raise MetricsError("PROFILE_NODE_MISMATCH", definition.span.path)
-        visitor: Any = PathGraphingAstVisitor()
+        visitor: Any = _RuffCompatiblePathGraphingAstVisitor()
         visitor.preorder(definition.node, visitor)
         graphs = list(visitor.graphs.values())
         if len(graphs) != 1:

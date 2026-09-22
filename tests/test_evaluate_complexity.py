@@ -815,7 +815,7 @@ def _compose_cli_result(
         },
         source_outcomes={
             "install": "success",
-            "complexity": "failure",
+            "complexity": "success" if result["overall_result"] == "PASS" else "failure",
             "characterization": "success",
             "refactor": "success",
             "quality": "success",
@@ -904,14 +904,26 @@ class Reading:
 """
     repository, base_sha, head_sha = _repository(tmp_path, None, source)
 
-    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
-
-    assert exit_code == 0
-    assert result["overall_result"] == "PASS"
-    assert result["touched_qualified_functions"] == [
+    output = tmp_path / "result"
+    repeated_output = tmp_path / "repeated-result"
+    exit_code, result = _evaluate(repository, base_sha, head_sha, output)
+    repeated_exit_code, _ = _evaluate(repository, base_sha, head_sha, repeated_output)
+    aggregate = _compose_cli_result(result, base_sha, head_sha)
+    identities = [
         "Reading.value|kind=python-property|role=getter",
         "Reading.value|kind=python-property|role=setter",
     ]
+
+    assert exit_code == repeated_exit_code == 0
+    assert (output / "complexity-result.json").read_bytes() == (
+        repeated_output / "complexity-result.json"
+    ).read_bytes()
+    assert result["overall_result"] == "PASS"
+    assert result["touched_qualified_functions"] == identities
+    assert [item["head"]["qualified_name"] for item in result["functions"]] == identities
+    assert [entry["result"] for entry in aggregate["entries"]] == ["PASS"] * 8
+    assert aggregate["shared_failures"] == []
+    assert aggregate["review_handoff"]["responsibility_targets"] == result["responsibility_targets"]
 
 
 def test_python_overloads_and_implementation_receive_distinct_identities(tmp_path: Path) -> None:
@@ -952,6 +964,7 @@ export class Reading {
     repository, base_sha, head_sha = _typescript_repository(tmp_path, None, source)
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+    aggregate = _compose_cli_result(result, base_sha, head_sha, "src/sample.ts")
 
     assert exit_code == 0
     assert result["overall_result"] == "PASS"
@@ -959,6 +972,8 @@ export class Reading {
         "Reading.value|kind=typescript-accessor|role=getter",
         "Reading.value|kind=typescript-accessor|role=setter",
     ]
+    assert [entry["result"] for entry in aggregate["entries"]] == ["PASS"] * 8
+    assert aggregate["review_handoff"]["responsibility_targets"] == result["responsibility_targets"]
 
 
 def test_python_match_complexity_agrees_with_ruff_and_blocks(tmp_path: Path) -> None:
@@ -984,6 +999,237 @@ def classify(value: int) -> int:
     assert result["technical_errors"] == []
     assert result["functions"][0]["head"]["complexity"] == 13
     assert result["ruff_diagnostics"][0]["complexity"] == 13
+
+
+def test_language_feature_corpus_preserves_named_identities_through_line_movement() -> None:
+    python_source = b"""\
+from typing import overload
+
+def trace(function: object) -> object:
+    return function
+
+@trace
+async def fetch(value: int) -> int:
+    def normalize(inner: int) -> int:
+        match inner:
+            case 0:
+                return 0
+            case _:
+                return inner
+    return normalize(value)
+
+class Reading:
+    def method(self) -> int:
+        return 1
+
+    @property
+    def value(self) -> int:
+        return 1
+
+    @value.setter
+    def value(self, new_value: int) -> None:
+        self.current = new_value
+
+@overload
+def render(value: int) -> int: ...
+
+@overload
+def render(value: str) -> str: ...
+
+def render(value: int | str) -> int | str:
+    return value
+"""
+    typescript_source = b"""\
+export class Reading {
+  get value(): number { return 1; }
+  set value(next: number) { this.current = next; }
+  private current = 0;
+}
+
+export const callback = (value: number) => value > 0 ? value : 0;
+"""
+
+    python = function_changes.parse_python_file("src/sample.py", python_source)
+    moved_python = function_changes.parse_python_file(
+        "src/sample.py", b"UNCHANGED = True\n\n" + python_source
+    )
+    typescript = function_changes.parse_typescript_file("src/sample.ts", typescript_source)
+    moved_typescript = function_changes.parse_typescript_file(
+        "src/sample.ts", b"export const unchanged = true;\n\n" + typescript_source
+    )
+
+    assert (
+        [item.span.qualified_name for item in python.functions]
+        == [item.span.qualified_name for item in moved_python.functions]
+        == [
+            "trace",
+            "fetch",
+            "fetch.normalize",
+            "Reading.method",
+            "Reading.value|kind=python-property|role=getter",
+            "Reading.value|kind=python-property|role=setter",
+            "render|kind=python-overload|role=declaration-1",
+            "render|kind=python-overload|role=declaration-2",
+            "render",
+        ]
+    )
+    assert (
+        [item.span.qualified_name for item in typescript.functions]
+        == [item.span.qualified_name for item in moved_typescript.functions]
+        == [
+            "Reading.value|kind=typescript-accessor|role=getter",
+            "Reading.value|kind=typescript-accessor|role=setter",
+            "callback",
+        ]
+    )
+    python_metrics = {
+        item.span.qualified_name: item.complexity
+        for item in complexity_metrics.measure_definitions(python.functions)
+    }
+    assert python_metrics["fetch.normalize"] == 2
+
+
+def test_over_limit_property_setter_blocks_without_colliding_with_getter(tmp_path: Path) -> None:
+    branches = "\n".join(
+        f"        if new_value == {index}: self.current = {index}" for index in range(10)
+    )
+    source = f"""\
+class Reading:
+    @property
+    def value(self) -> int:
+        return 1
+
+    @value.setter
+    def value(self, new_value: int) -> None:
+{branches}
+        self.current = new_value
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
+
+    setter = next(
+        item
+        for item in result["functions"]
+        if item["head"]["qualified_name"].endswith("role=setter")
+    )
+    assert exit_code == 1
+    assert result["overall_result"] == "BLOCK"
+    assert setter["state"] == "NEW"
+    assert setter["decision"] == "BLOCK"
+    assert setter["ending_complexity"] == 11
+
+
+def test_over_limit_overload_implementation_blocks_without_colliding(tmp_path: Path) -> None:
+    branches = "\n".join(f"    if value == {index}: return {index}" for index in range(10))
+    source = f"""\
+from typing import overload
+
+@overload
+def normalize(value: int) -> int: ...
+
+@overload
+def normalize(value: str) -> str: ...
+
+def normalize(value: int | str) -> int | str:
+{branches}
+    return value
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(
+        repository,
+        base_sha,
+        head_sha,
+        tmp_path / "result",
+        complexity_exit_code=1,
+    )
+
+    implementation = next(
+        item for item in result["functions"] if item["head"]["qualified_name"] == "normalize"
+    )
+    assert exit_code == 1
+    assert result["overall_result"] == "BLOCK"
+    assert implementation["state"] == "NEW"
+    assert implementation["decision"] == "BLOCK"
+    assert implementation["ending_complexity"] == 11
+
+
+def test_moved_property_setter_remains_existing_legacy_debt(tmp_path: Path) -> None:
+    branches = "\n".join(
+        f"        if new_value == {index}: self.current = {index}" for index in range(13)
+    )
+    base = f"""\
+class Reading:
+    @property
+    def value(self) -> int:
+        return 1
+
+    @value.setter
+    def value(self, new_value: int) -> None:
+{branches}
+        self.current = 0
+"""
+    head = "UNCHANGED = True\n\n" + base.replace("self.current = 0", "self.current = 1")
+    repository, base_sha, head_sha = _repository(tmp_path, base, head)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    setter = next(
+        item
+        for item in result["functions"]
+        if item["head"] is not None and item["head"]["qualified_name"].endswith("role=setter")
+    )
+    assert exit_code == 1
+    assert setter["state"] == "EXISTING_LEGACY"
+    assert setter["decision"] == "BLOCK"
+    assert setter["starting_complexity"] == setter["ending_complexity"] == 14
+
+
+def test_low_complexity_match_agrees_with_ruff_and_passes(tmp_path: Path) -> None:
+    source = """\
+def classify(value: int) -> int:
+    match value:
+        case 0:
+            return 0
+        case 1 if value > 0:
+            return 1
+        case _:
+            return -1
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 0
+    assert result["overall_result"] == "PASS"
+    assert result["functions"][0]["head"]["complexity"] == 3
+    assert result["ruff_diagnostics"] == []
+
+
+def test_true_duplicate_ordinary_functions_remain_technical_failure(tmp_path: Path) -> None:
+    source = """\
+def duplicate() -> int:
+    return 1
+
+def duplicate() -> int:
+    return 2
+"""
+    repository, base_sha, head_sha = _repository(tmp_path, None, source)
+
+    exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
+
+    assert exit_code == 2
+    assert result["overall_result"] == "TECHNICAL_FAILURE"
+    assert "COMPLEXITY_AMBIGUOUS_FUNCTION_IDENTITY" in {
+        item["code"] for item in result["technical_errors"]
+    }
 
 
 def test_untouched_ruff_diagnostic_is_not_serialized_as_touched_evidence(

@@ -33,6 +33,49 @@ _TYPESCRIPT_FUNCTIONS = {
 }
 
 
+def _construct_identity(name: str, kind: str, role: str) -> str:
+    return f"{name}|kind={kind}|role={role}"
+
+
+def _decorator_name(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        owner = _decorator_name(node.value)
+        return f"{owner}.{node.attr}" if owner else node.attr
+    return None
+
+
+def _python_construct(node: FunctionNode) -> tuple[str, str] | None:
+    constructs: set[tuple[str, str]] = set()
+    for decorator in node.decorator_list:
+        name = _decorator_name(decorator)
+        if name in {"builtins.property", "property"}:
+            constructs.add(("python-property", "getter"))
+        elif name and name.rsplit(".", 1)[-1] == "overload":
+            constructs.add(("python-overload", "declaration"))
+        elif isinstance(decorator, ast.Attribute) and decorator.attr in {
+            "deleter",
+            "getter",
+            "setter",
+        }:
+            constructs.add(("python-property", decorator.attr))
+    if len(constructs) > 1:
+        raise PythonSourceError(
+            "AMBIGUOUS_FUNCTION_CONSTRUCT", f"multiple function roles: {node.name}:{node.lineno}"
+        )
+    return next(iter(constructs), None)
+
+
+def _typescript_accessor_role(node: Node) -> str | None:
+    if node.type != "method_definition":
+        return None
+    for child in node.children:
+        if child.type in {"get", "set"}:
+            return f"{child.type}ter"
+    return None
+
+
 @dataclass(frozen=True)
 class FunctionSpan:
     """Stable qualified function identity and AST span."""
@@ -106,6 +149,7 @@ class _FunctionCollector(ast.NodeVisitor):
         self.path = path
         self.context: list[str] = []
         self.functions: list[FunctionDefinition] = []
+        self.overload_counts: dict[str, int] = {}
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self.context.append(node.name)
@@ -120,7 +164,17 @@ class _FunctionCollector(ast.NodeVisitor):
         self._visit_function(node)
 
     def _visit_function(self, node: FunctionNode) -> None:
-        qualified_name = ".".join([*self.context, node.name])
+        base_name = ".".join([*self.context, node.name])
+        construct = _python_construct(node)
+        local_name = node.name
+        if construct is not None:
+            kind, role = construct
+            if kind == "python-overload":
+                count = self.overload_counts.get(base_name, 0) + 1
+                self.overload_counts[base_name] = count
+                role = f"{role}-{count}"
+            local_name = _construct_identity(node.name, kind, role)
+        qualified_name = ".".join([*self.context, local_name])
         end_line = node.end_lineno
         if end_line is None:
             raise PythonSourceError(
@@ -131,7 +185,7 @@ class _FunctionCollector(ast.NodeVisitor):
         )
         span = FunctionSpan(self.path, qualified_name, start_line, end_line)
         self.functions.append(FunctionDefinition(span, node))
-        self.context.append(node.name)
+        self.context.append(local_name)
         for child in node.body:
             self.visit(child)
         self.context.pop()
@@ -260,7 +314,11 @@ class _TypeScriptFunctionCollector:
 
     def _visit_function(self, node: Node) -> None:
         name, responsibility_start_line = self._name_and_start_line(node)
-        qualified_name = ".".join([*self.context, name])
+        role = _typescript_accessor_role(node)
+        local_name = (
+            _construct_identity(name, "typescript-accessor", role) if role is not None else name
+        )
+        qualified_name = ".".join([*self.context, local_name])
         span = FunctionSpan(
             self.path,
             qualified_name,
@@ -268,7 +326,7 @@ class _TypeScriptFunctionCollector:
             node.end_point.row + 1,
         )
         self.functions.append(FunctionDefinition(span, node, responsibility_start_line))
-        self.context.append(name)
+        self.context.append(local_name)
         parameters = node.child_by_field_name("parameters") or node.child_by_field_name("parameter")
         if parameters is not None:
             self.visit(parameters)
