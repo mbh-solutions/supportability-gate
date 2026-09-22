@@ -1291,8 +1291,8 @@ Deterministic protected merge for committed Python/TypeScript/mixed profiles: YE
 Independent semantic or qualitative judgment: NO; not a product capability
 Outside-profile or exhaustive runtime certification: NO
 Required review model: Eight deterministic contexts; Codex review is owner opt-in advisory only
-Current authorized work: Project #25 S00 issue #201, deterministic assurance and traceability
-Next slice authorized: NONE; S01 remains Backlog pending independent verification and owner Execute
+Current authorized work: Project #25 S06 issue #207, delivered for independent controller review
+Next slice authorized: NONE; S07 remains Backlog pending independent verification and owner Execute
 ```
 
 ## Milestone transition rules
@@ -2486,8 +2486,8 @@ Do not create a new terminal label not authorized by an active milestone directi
 
 ## Project #25 deterministic assurance remediation
 
-Project #25 is the only current remediation authority. S00–S04 are independently verified complete.
-S05 issue #206 is the sole delivered slice awaiting independent controller review; S06–S08 remain
+Project #25 is the only current remediation authority. S00–S05 are independently verified complete.
+S06 issue #207 is the sole delivered slice awaiting independent controller review; S07–S08 remain
 Backlog and require serial predecessor verification plus separate owner execution authorization.
 Semantic Review remains retired; no AI reviewer, probabilistic grader, model-backed required check,
 semantic approval, replacement service, or second policy engine is permitted.
@@ -2611,3 +2611,66 @@ limits, not hidden PASS conversions.
   activation files do not change Gate/workflow executable blobs, set only S05 to
   `In Review / Partial / On scope / No`, post final issue evidence, clean owned temporary outputs,
   and stop. Independent controller review owns any terminal Project transition; S06 is not activated.
+
+### S06 stable language identities and modern complexity compatibility
+
+- Executor handoff recorded by this protected ledger transaction: Status `In Review`; Evidence
+  `Partial`; Scope `On scope`; Stop confirmed `No`. Independent controller verification is still
+  required before S06 may become `Done / Proven / On scope / Yes`. S07 remains untouched and is not
+  authorized.
+- Authority: Project #25 item `PVTI_lADOEmzFKc4BkDY3zg7yET4`, repository issue #207, exact
+  activation base `9a7d9c08ed04276efc7ee183912e947ae5547599`, and implementation PR #246. The PR retained the
+  exact footer `Closes #207`; issue closure is delivery linkage, not independent completion approval.
+- Capability boundary: canonical symbol identity now distinguishes Python property getter/setter,
+  ordered overload declarations and their ordinary executable implementation, and TypeScript
+  getter/setter while retaining the prior identity of ordinary functions. The same identity flows
+  through complexity debt and downstream authorization, characterization, composition, and handoff
+  bindings. Python `match` complexity is reconciled narrowly with the pinned Ruff behavior; genuine
+  duplicate identities, malformed syntax, and unsupported ambiguity remain fail-closed.
+- Protected delivery: exact implementation head `189f4abf9ad9b823fd701acb687a96a45a88430d`
+  passed Source Validation run `35699840580`, Source Integrity run `35699840586`, CodeQL run
+  `35699837392`, all eight deterministic App `15368` contexts, and organization Gate run
+  `35699840569`. PR #246 merged normally without bypass as
+  `a84965c21e8300a09a017c6554fe1254f245b849`; issue #207 closed through the required footer.
+  Evidence artifact `10682540590` has digest
+  `sha256:7c93c3e76d75036ee8f1c3386c515d6af478075a1c403e45a26953c33eff0c79`; quality artifact
+  `10682615507` has digest
+  `sha256:d57aecd2437fac19fe504182675e8b487dccdb67d1406c9af42774fa7d8d9b4e`.
+- Deployment readback: organization ruleset `21664395` pins the executable workflow to merged SHA
+  `a84965c21e8300a09a017c6554fe1254f245b849` and remains active, strict, zero-bypass, scoped to the
+  same five repository IDs and eight required App `15368` contexts. Independently pinned Source
+  Integrity ruleset `23795033` remains unchanged at
+  `a645c1d3c6fd7f9d9c804b173c5b2ac0a420d786`; repository source-protection ruleset `19767613`
+  remains unchanged.
+- Protected consumer proof: Python PRs #217–#220 and TypeScript PRs #73–#75 exercised distinct
+  positive accessor/overload identities, policy `BLOCK` for over-limit setters, and exact
+  `TECHNICAL_FAILURE` outcomes for true ambiguity and syntax errors. Runs `35702012369`,
+  `35701100452`, `35701138921`, `35701404373`, `35702139204`, `35701313341`, and `35701364679`
+  retain the exact Gate 1 results and evidence artifacts. Every canary is closed unmerged, every
+  normal merge attempt was refused by branch policy, every owned remote branch was deleted, and both
+  consumer main SHAs remained unchanged. The Python positive consumer still has an existing target
+  sandbox-write quality failure; the TypeScript positive consumer still has an existing unavailable
+  optional-platform lock identity. Those unrelated target baselines do not convert to PASS and are
+  not repaired by this slice.
+- Legacy boundary: static readback of every enrolled consumer found no existing function above the
+  fixed complexity threshold, so creating a genuine protected nonimproving-legacy consumer change
+  would first require unauthorized pollution of protected main. The exact legacy identity and
+  progressive-improvement case is therefore retained in the protected implementation suite rather
+  than fabricated in a consumer repository. PR #246 supplies the normal all-gates positive merge.
+- Local source proof: Python `3.12.10`, exact lock SHA-256
+  `fa152bc59237a214f1f4057bd00d2da37eea21dafa44a1cfa96d39959ca61a60`; Ruff lint and format,
+  C901 maximum 10, strict mypy, Import Linter, 1186 passed and 8 skipped tests, compileall, immutable
+  Standard tamper test, exact diff check, wheel build, fresh exact-lock installation, pip check, and
+  installed CLI help all passed. Wheel SHA-256 is
+  `92615fd5d092e3ea9b08713523e188aec2787407355aff7628ac48347af3c3ba`.
+- Guarantee boundary: this corrects the demonstrated supported-language identity and Python `match`
+  compatibility defects without weakening thresholds or ambiguity handling. It does not establish
+  semantic quality, execute target code on the owner workstation, or repair unrelated consumer
+  baselines. The immutable Standard SHA-256 remains
+  `81653c5057c1555f8b6d41c6e5999d0b54caa178a2ca97a07216147ec16133e2`; the frozen roadmap,
+  commands, thresholds, scopes, exclusions, waivers, and eight check identities are unchanged.
+- Remaining transaction: merge this ledger-and-evidence-only PR normally, prove Gate/workflow executable blobs
+  still match deployed merge `a84965c21e8300a09a017c6554fe1254f245b849`, post the durable issue
+  evidence index, set only S06 to `In Review / Partial / On scope / No`, clean owned temporary
+  outputs, and stop. Independent controller review owns any terminal Project transition; S07 is not
+  activated.
