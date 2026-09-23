@@ -2,41 +2,41 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "A package-lock link row derives its locked identity only from the lock graph, while an installed link is independently required to resolve to the exact repository-contained lock target."
-proof = "Focused receipt tests distinguish an absent optional link from an installed copy, the full suite passes, and GitHub-hosted Source Validation exercises npm's real file-link installation."
+intended_behavior = "The hosted quality run installs a Python target's declared runtime wheels before testing it, while retaining the fixed isolated command, no-network execution, and authenticated dependency receipts."
+proof = "Focused tests cover static requirement parsing, safe wheel-only installation, and the read-only sandbox mount; the portfolio manifest's declared tzdata and websockets wheels were installed and imported in a local dependency-only probe."
 
 [characterization]
-captured_behavior = "The follow-up does not change characterization capture or compatibility behavior."
-proof = "The protected base and head characterization jobs pass against the same controlled scenarios."
+captured_behavior = "The fixed Python test command, characterization scenarios, and protected behavior golden remain unchanged."
+proof = "The protected base and head characterization jobs compare the same existing scenarios; focused tests assert the unchanged isolated command vector."
 
 [separation_of_concerns]
-before = "The interim file-link correction derived part of a locked receipt from a checked-out package manifest and accepted a copied directory when its tree hash matched the declared link source."
-after = "The lock receipt uses only package-lock rows, and installed link evidence separately proves exact path resolution to the contained lock target."
+before = "The hosted Python quality job installed Gate tools but not a target project's declared runtime dependencies, so pytest and Python-backed TypeScript integration tests could fail at import time."
+after = "The hosted supervisor reads static project dependencies, installs wheels into trusted storage, records installed identities, and exposes that read-only mount through the fixed interpreter's site path inside the sandbox."
 boundaries = []
 
 [architecture]
-dependency_direction = "The hosted quality-profile verifier consumes the lock graph first and then checks installed filesystem identity; the focused tests exercise that one-way evidence flow."
+dependency_direction = "The hosted quality-profile supervisor parses the target manifest and provisions wheels; the existing quality runner mounts trusted storage and the fixed interpreter consumes it through its site path."
 reviewed_paths = [
   ".supportability-review.toml",
   "tests/hosted_quality_profile.py",
-  "tests/test_standard_results.py",
+  "tests/test_target_python_dependencies.py",
 ]
 
 [responsibility_boundary]
 path = "tests/hosted_quality_profile.py"
-owns = "Hosted verification of lock-derived and installed npm dependency identities, including contained file-link targets."
-does_not_own = "npm installation, consumer dependency selection, characterization policy, review prose, or organization ruleset configuration."
+owns = "Hosted provisioning and receipt capture for statically declared Python target runtime dependencies."
+does_not_own = "Consumer source, the immutable Standard, quality policy decisions, characterization policy, or organization ruleset configuration."
 
 [incremental_refactor]
-target = "S08 npm file-link provenance correction."
-completed_step = "Removed repository-file fallback from locked identity and replaced content-equivalence acceptance with exact installed-link target proof."
+target = "Python target dependency setup defect exposed by twmn-portfolio PR #691."
+completed_step = "Install declared binary runtime packages and expose them read-only to the existing isolated quality checks without changing pass/block policy."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Lock source, installed link, safe location, and copy describe the measured npm identities directly."
-cohesion = "Lock graph derivation and installed-tree validation remain separate steps in the hosted quality-profile verifier."
-intended_behavior = "A valid npm file link passes, an absent proven-optional link remains allowed, and a copied look-alike directory fails closed."
-reviewability = "The follow-up changes one verifier boundary and pairs its positive and adversarial cases in focused receipt tests."
+naming = "Target requirements, Python dependencies, and distribution receipts name the measured setup facts directly."
+cohesion = "Static manifest parsing, trusted provisioning, receipt capture, and runtime path exposure remain in the hosted setup boundary."
+intended_behavior = "A target declaring tzdata can import it during tests, while unsupported or unresolvable declarations fail closed."
+reviewability = "The repair is bounded to Python target setup, with focused positive and adversarial tests and no change to the controlled golden."

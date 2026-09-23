@@ -10,11 +10,15 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
+import tomllib
 import traceback
 import zipfile
 from dataclasses import asdict
 from pathlib import Path, PurePosixPath
+
+from packaging.requirements import InvalidRequirement, Requirement
 
 from supportability_gate import (
     architecture_policy,
@@ -73,7 +77,9 @@ def _prepare_container() -> str:
     return image_id
 
 
-def _distribution_receipts(paths: tuple[Path, ...] | None = None) -> tuple[str, ...]:
+def _distribution_receipts(
+    paths: tuple[Path, ...] | None = None, *, kind: str = "python"
+) -> tuple[str, ...]:
     receipts: list[str] = []
     distributions = (
         importlib.metadata.distributions(path=[str(path) for path in paths])
@@ -88,7 +94,7 @@ def _distribution_receipts(paths: tuple[Path, ...] | None = None) -> tuple[str, 
         if record is None:
             raise quality_profile.QualityProfileError("UNVERIFIABLE_DEPENDENCY_IDENTITY", str(name))
         receipts.append(
-            f"python:{name.lower()}=={distribution.version}:sha256:{quality_profile._sha256(record.encode())}"
+            f"{kind}:{name.lower()}=={distribution.version}:sha256:{quality_profile._sha256(record.encode())}"
         )
     return tuple(sorted(set(receipts)))
 
@@ -426,6 +432,103 @@ def _stage_node_target(
         )
 
 
+def _python_requirements(target: Path) -> tuple[str, ...]:
+    manifest = target / "pyproject.toml"
+    if not manifest.is_file():
+        return ()
+    try:
+        project = tomllib.loads(manifest.read_text(encoding="utf-8")).get("project", {})
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+        raise quality_profile.QualityProfileError(
+            "TARGET_DEPENDENCY_MANIFEST_INVALID", "invalid pyproject.toml"
+        ) from error
+    if not isinstance(project, dict):
+        raise quality_profile.QualityProfileError(
+            "TARGET_DEPENDENCY_MANIFEST_INVALID", "invalid project metadata"
+        )
+    dynamic = project.get("dynamic", ())
+    if not isinstance(dynamic, list | tuple) or "dependencies" in dynamic:
+        raise quality_profile.QualityProfileError(
+            "TARGET_DEPENDENCY_MANIFEST_INVALID", "dynamic project dependencies"
+        )
+    requirements = project.get("dependencies", ())
+    if not isinstance(requirements, list | tuple) or len(requirements) > 128:
+        raise quality_profile.QualityProfileError(
+            "TARGET_DEPENDENCY_MANIFEST_INVALID", "invalid project dependencies"
+        )
+    selected: list[str] = []
+    for item in requirements:
+        try:
+            parsed = Requirement(item) if isinstance(item, str) and len(item) <= 512 else None
+        except InvalidRequirement as error:
+            raise quality_profile.QualityProfileError(
+                "TARGET_DEPENDENCY_MANIFEST_INVALID", "invalid requirement"
+            ) from error
+        if parsed is None or parsed.url is not None:
+            raise quality_profile.QualityProfileError(
+                "TARGET_DEPENDENCY_MANIFEST_INVALID", "unsupported requirement"
+            )
+        if parsed.marker is None or parsed.marker.evaluate():
+            selected.append(item)
+    return tuple(selected)
+
+
+def _install_python_dependencies(target: Path, output: Path) -> None:
+    requirements = _python_requirements(target)
+    if not requirements:
+        return
+    destination = quality_runner.trusted_directory(output) / "python-dependencies"
+    destination.mkdir(parents=True, exist_ok=True)
+    completed = subprocess.run(
+        (
+            sys.executable,
+            "-I",
+            "-m",
+            "pip",
+            "install",
+            "--isolated",
+            "--disable-pip-version-check",
+            "--no-input",
+            "--only-binary=:all:",
+            "--no-compile",
+            "--target",
+            str(destination),
+            *requirements,
+        ),
+        cwd=quality_runner.trusted_directory(output),
+        env=quality_runner.fixed_environment(output, target),
+        check=False,
+        capture_output=True,
+        timeout=quality_profile.TIMEOUT_SECONDS,
+    )
+    if completed.returncode:
+        raise quality_profile.QualityProfileError(
+            "TARGET_DEPENDENCY_INSTALL_FAILED",
+            "declared Python dependencies could not be installed",
+        )
+    if not _distribution_receipts((destination,), kind="python-target"):
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_DEPENDENCY_IDENTITY", "missing installed Python receipts"
+        )
+    _expose_python_dependencies(Path(sys.executable), Path(sysconfig.get_path("purelib")))
+
+
+def _expose_python_dependencies(executable: Path, purelib: Path) -> None:
+    runtime = executable.resolve().parents[1]
+    site_packages = purelib.resolve()
+    if (
+        not site_packages.is_dir()
+        or site_packages.name != "site-packages"
+        or not site_packages.is_relative_to(runtime)
+    ):
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_DEPENDENCY_IDENTITY", "Python site is outside the fixed runtime"
+        )
+    (site_packages / "supportability-target-dependencies.pth").write_text(
+        "/trusted/python-dependencies\n", encoding="ascii", newline="\n"
+    )
+
+
 def _materialize_git_tree(
     repository: Path,
     head_sha: str,
@@ -473,8 +576,15 @@ def _runtime_receipts(
             f"{node_version}:sha256:{quality_profile._sha256(node_executable.read_bytes())}"
         )
     trusted = quality_runner.trusted_directory(output)
+    python_dependencies = trusted / "python-dependencies"
+    target_python_receipts = (
+        _distribution_receipts((python_dependencies,), kind="python-target")
+        if python_dependencies.is_dir()
+        else ()
+    )
     dependencies = (
         *_distribution_receipts(),
+        *target_python_receipts,
         *_node_lock_receipts(trusted / "quality-tools", "tool"),
         *_node_lock_receipts(trusted / "target-dependencies", "target"),
     )
@@ -1205,6 +1315,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         if policy.language in {"typescript", "mixed"}:
             _stage_node_target(target, identity.head_sha, supervisor, records)
             (execution_target / "node_modules").mkdir()
+        _install_python_dependencies(execution_target, supervisor)
         container_id = _prepare_container()
         plans = quality_runner.command_plans(
             policy.language, execution_target, supervisor, test_files, source_files
