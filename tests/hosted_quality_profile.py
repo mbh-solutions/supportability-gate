@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import tomllib
 import traceback
@@ -509,6 +510,23 @@ def _install_python_dependencies(target: Path, output: Path) -> None:
         raise quality_profile.QualityProfileError(
             "UNVERIFIABLE_DEPENDENCY_IDENTITY", "missing installed Python receipts"
         )
+    _expose_python_dependencies(Path(sys.executable), Path(sysconfig.get_path("purelib")))
+
+
+def _expose_python_dependencies(executable: Path, purelib: Path) -> None:
+    runtime = executable.resolve().parents[1]
+    site_packages = purelib.resolve()
+    if (
+        not site_packages.is_dir()
+        or site_packages.name != "site-packages"
+        or not site_packages.is_relative_to(runtime)
+    ):
+        raise quality_profile.QualityProfileError(
+            "UNVERIFIABLE_DEPENDENCY_IDENTITY", "Python site is outside the fixed runtime"
+        )
+    (site_packages / "supportability-target-dependencies.pth").write_text(
+        "/trusted/python-dependencies\n", encoding="ascii", newline="\n"
+    )
 
 
 def _materialize_git_tree(

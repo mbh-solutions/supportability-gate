@@ -2,28 +2,23 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The hosted quality run installs a Python target's declared runtime wheels before testing it, while retaining the existing isolated no-network target execution and authenticated dependency receipts."
+intended_behavior = "The hosted quality run installs a Python target's declared runtime wheels before testing it, while retaining the fixed isolated command, no-network execution, and authenticated dependency receipts."
 proof = "Focused tests cover static requirement parsing, safe wheel-only installation, and the read-only sandbox mount; the portfolio manifest's declared tzdata and websockets wheels were installed and imported in a local dependency-only probe."
 
 [characterization]
-captured_behavior = "The Python pytest command now permits its explicitly mounted dependency path; its changed command identity is reflected in the Gate 8 characterization golden."
-proof = "The regenerated controlled golden changes only the pytest arguments and their derived provenance hashes; the protected base and head characterization jobs must pass."
+captured_behavior = "The fixed Python test command, characterization scenarios, and protected behavior golden remain unchanged."
+proof = "The protected base and head characterization jobs compare the same existing scenarios; focused tests assert the unchanged isolated command vector."
 
 [separation_of_concerns]
 before = "The hosted Python quality job installed Gate tools but not a target project's declared runtime dependencies, so pytest and Python-backed TypeScript integration tests could fail at import time."
-after = "The hosted supervisor reads static project dependencies, installs wheels into a trusted directory, records their installed identities, and mounts them read-only for sandboxed checks."
+after = "The hosted supervisor reads static project dependencies, installs wheels into trusted storage, records installed identities, and exposes that read-only mount through the fixed interpreter's site path inside the sandbox."
 boundaries = []
 
 [architecture]
-dependency_direction = "The hosted quality-profile supervisor parses the target manifest and provisions wheels; the quality runner only mounts that trusted output, and the fixed pytest template uses the mounted path."
+dependency_direction = "The hosted quality-profile supervisor parses the target manifest and provisions wheels; the existing quality runner mounts trusted storage and the fixed interpreter consumes it through its site path."
 reviewed_paths = [
   ".supportability-review.toml",
-  "src/supportability_gate/quality_profile.py",
-  "src/supportability_gate/quality_runner.py",
-  "tests/characterization/gate8-standard-results-boundary-v3.golden.json",
   "tests/hosted_quality_profile.py",
-  "tests/test_quality_profile.py",
-  "tests/test_standard_results.py",
   "tests/test_target_python_dependencies.py",
 ]
 
@@ -42,6 +37,6 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
 naming = "Target requirements, Python dependencies, and distribution receipts name the measured setup facts directly."
-cohesion = "Static manifest parsing, trusted provisioning, receipt capture, and sandbox mounting each remain at their existing host or runner boundary."
+cohesion = "Static manifest parsing, trusted provisioning, receipt capture, and runtime path exposure remain in the hosted setup boundary."
 intended_behavior = "A target declaring tzdata can import it during tests, while unsupported or unresolvable declarations fail closed."
-reviewability = "The repair is bounded to Python target setup and its command identity, with focused positive and adversarial tests and an updated controlled golden."
+reviewability = "The repair is bounded to Python target setup, with focused positive and adversarial tests and no change to the controlled golden."

@@ -68,6 +68,8 @@ def test_installer_uses_only_wheel_requirements_and_trusted_target(
 
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     monkeypatch.setattr(runner, "_distribution_receipts", lambda *_args, **_kwargs: ("receipt",))
+    exposed: list[tuple[Path, Path]] = []
+    monkeypatch.setattr(runner, "_expose_python_dependencies", lambda *paths: exposed.append(paths))
     runner._install_python_dependencies(target, output)
 
     command, cwd, environment = observed[0]
@@ -77,22 +79,31 @@ def test_installer_uses_only_wheel_requirements_and_trusted_target(
     assert str(target) not in command
     assert cwd == trusted
     assert "PYTHONPATH" not in environment
+    assert len(exposed) == 1
 
 
-def test_sandbox_mounts_target_packages_read_only(tmp_path: Path) -> None:
+def test_target_dependencies_are_visible_to_isolated_and_child_python(tmp_path: Path) -> None:
+    runtime = tmp_path / "fixed-runtime"
+    executable = runtime / "bin" / "python"
+    site_packages = runtime / "lib" / "python3.12" / "site-packages"
+    site_packages.mkdir(parents=True)
+    runner._expose_python_dependencies(executable, site_packages)
+    assert (site_packages / "supportability-target-dependencies.pth").read_bytes() == (
+        b"/trusted/python-dependencies\n"
+    )
+
+
+def test_python_quality_command_keeps_its_isolated_vector(tmp_path: Path) -> None:
     repository = tmp_path / "target"
     repository.mkdir()
     output = tmp_path / "output"
+    pytest_command = dict(quality_profile.command_templates("python"))["python.pytest.v1"]
+    assert pytest_command[:2] == ("$PYTHON", "-I")
     dependencies = quality_runner.trusted_directory(output) / "python-dependencies"
     dependencies.mkdir(parents=True)
-    plan = quality_runner.CommandPlan("python.pytest.v1", ("python", "-P"), (), "runtime-lines", ())
+    plan = quality_runner.CommandPlan("python.pytest.v1", ("python", "-I"), (), "runtime-lines", ())
     invocation = quality_runner.sandbox_command(
         plan, repository=repository, output=output, collector=tmp_path
     )
     assert any("dst=/trusted,readonly" in item for item in invocation)
-    assert any(
-        "dst=/work/home/.local/lib/python3.12/site-packages,readonly" in item for item in invocation
-    )
-    assert "PYTHONPATH=/trusted/python-dependencies" in invocation
-    pytest_command = dict(quality_profile.command_templates("python"))["python.pytest.v1"]
-    assert pytest_command[:3] == ("$PYTHON", "-P", "-s")
+    assert not any("PYTHONPATH=" in item for item in invocation)
