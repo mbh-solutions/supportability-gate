@@ -159,7 +159,8 @@ _PYTHON_COMMANDS = (
         "python.pytest.v1",
         (
             "$PYTHON",
-            "-I",
+            "-P",
+            "-s",
             "-m",
             "coverage",
             "run",

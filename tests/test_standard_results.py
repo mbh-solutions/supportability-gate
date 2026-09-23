@@ -43,7 +43,7 @@ SUCCESS_OUTCOMES = {
     "quality": "success",
 }
 EXPECTED_QUALITY_ARTIFACT = {
-    "capture_sha256": "54a168bb3fe0cb5640dfaa0e5ec96862fa3ff98b42702e9d6c71a0845c42d753",
+    "capture_sha256": "0c82a4b210a21be5682c8ca4cf044613f7ec8f0f76108cb8315ef377723801c7",
     "digest": "d" * 64,
     "id": "789",
 }
@@ -397,7 +397,7 @@ def _quality() -> dict[str, Any]:
     return {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
-        "capture_sha256": "54a168bb3fe0cb5640dfaa0e5ec96862fa3ff98b42702e9d6c71a0845c42d753",
+        "capture_sha256": "0c82a4b210a21be5682c8ca4cf044613f7ec8f0f76108cb8315ef377723801c7",
         "commands": _provenance_commands("python", ("src/sample.py",)),
         "job": "quality-profile",
         "repository": IDENTITY.repository,

@@ -155,6 +155,14 @@ def sandbox_command(
     target_modules = trusted / "target-dependencies" / "node_modules"
     if target_modules.is_dir():
         mounts = (*mounts, *_mount(target_modules, "/target/node_modules"))
+    python_dependencies = trusted / "python-dependencies"
+    if python_dependencies.is_dir():
+        user_site = work / "home" / ".local" / "lib" / "python3.12" / "site-packages"
+        user_site.mkdir(parents=True, exist_ok=True)
+        mounts = (
+            *mounts,
+            *_mount(python_dependencies, "/work/home/.local/lib/python3.12/site-packages"),
+        )
     for source, target in extra_mounts:
         mounts = (*mounts, *_mount(source, target))
     executable_paths = {
@@ -185,6 +193,8 @@ def sandbox_command(
     )
     for name, value in sorted((extra_environment or {}).items()):
         environment = (*environment, "--env", f"{name}={value}")
+    if python_dependencies.is_dir():
+        environment = (*environment, "--env", "PYTHONPATH=/trusted/python-dependencies")
     container_workdir = workdir or (
         "/target/src" if plan.adapter == "python.import-linter.v1" else "/target"
     )

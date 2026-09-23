@@ -180,7 +180,7 @@
               "complexity-result.json:quality_profile.commands",
               "quality-provenance.json:commands"
             ],
-            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+            "sha256": "c36ac009302284d0cb2b6601e5aad114fc28693eb4aafd6f6752830acc7af7c0"
           }
         },
         "validation": {
@@ -359,7 +359,8 @@
               "adapter": "python.pytest.v1",
               "arguments": [
                 "$PYTHON",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -378,7 +379,8 @@
               "executed": true,
               "executed_arguments": [
                 "python",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -802,7 +804,7 @@
               "complexity-result.json:quality_profile.commands",
               "quality-provenance.json:commands"
             ],
-            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+            "sha256": "c36ac009302284d0cb2b6601e5aad114fc28693eb4aafd6f6752830acc7af7c0"
           }
         },
         "validation": {
@@ -981,7 +983,8 @@
               "adapter": "python.pytest.v1",
               "arguments": [
                 "$PYTHON",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -1000,7 +1003,8 @@
               "executed": true,
               "executed_arguments": [
                 "python",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -2043,7 +2047,7 @@
               "complexity-result.json:quality_profile.commands",
               "quality-provenance.json:commands"
             ],
-            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+            "sha256": "c36ac009302284d0cb2b6601e5aad114fc28693eb4aafd6f6752830acc7af7c0"
           }
         },
         "validation": {
@@ -2222,7 +2226,8 @@
               "adapter": "python.pytest.v1",
               "arguments": [
                 "$PYTHON",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -2241,7 +2246,8 @@
               "executed": true,
               "executed_arguments": [
                 "python",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -2678,7 +2684,7 @@
               "complexity-result.json:quality_profile.commands",
               "quality-provenance.json:commands"
             ],
-            "sha256": "c9ad3a5e3f7f1ed16d0c78d61d51b018cd1200952dfb896334c8abbe79c1b70f"
+            "sha256": "c36ac009302284d0cb2b6601e5aad114fc28693eb4aafd6f6752830acc7af7c0"
           }
         },
         "validation": {
@@ -2857,7 +2863,8 @@
               "adapter": "python.pytest.v1",
               "arguments": [
                 "$PYTHON",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",
@@ -2876,7 +2883,8 @@
               "executed": true,
               "executed_arguments": [
                 "python",
-                "-I",
+                "-P",
+                "-s",
                 "-m",
                 "coverage",
                 "run",

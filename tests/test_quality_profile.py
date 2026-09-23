@@ -985,7 +985,12 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     pytest_plan = next(plan for plan in plans if plan.adapter == "python.pytest.v1")
 
     assert "PYTHONPATH" not in environment
-    assert all(plan.actual[1] == "-I" for plan in plans[:-1])
+    assert all(
+        plan.actual[1] == "-I"
+        for plan in plans
+        if plan.adapter not in {"python.pytest.v1", "python.import-linter.v1"}
+    )
+    assert pytest_plan.actual[1:3] == ("-P", "-s")
     assert Path(plans[-1].actual[0]).is_absolute()
     assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
     rcfile = next(
