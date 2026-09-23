@@ -902,6 +902,10 @@ def _run_command(
     sandboxed = approved and not provisioning
     mounted_target = execution_target or repository
     sandbox_workdir = None
+    sandbox_environment: dict[str, str] = {}
+    if plan.adapter == "python.pytest.v1":
+        (work / "tmp").mkdir(parents=True, exist_ok=True)
+        sandbox_environment["TMPDIR"] = "/work/tmp"
     if plan.adapter == "python.build-wheel.v1":
         build_source = work / "source"
         build_source.mkdir(parents=True, exist_ok=True)
@@ -915,6 +919,7 @@ def _run_command(
             repository=mounted_target,
             output=output,
             collector=Path(__file__).resolve().parent,
+            extra_environment=sandbox_environment,
             workdir=sandbox_workdir,
         )
         if sandboxed

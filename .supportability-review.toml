@@ -2,20 +2,20 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "The hosted quality run installs a Python target's declared runtime wheels before testing it, while retaining the fixed isolated command, no-network execution, and authenticated dependency receipts."
-proof = "Focused tests cover static requirement parsing, safe wheel-only installation, and the read-only sandbox mount; the portfolio manifest's declared tzdata and websockets wheels were installed and imported in a local dependency-only probe."
+intended_behavior = "The hosted pytest check stores temporary test data in its existing per-command writable sandbox area so SQLite-heavy target suites do not exhaust the small /tmp mount."
+proof = "The PR #691 rerun under the new organization pin proved Python packages installed and TypeScript tests passed, then Python pytest failed with SQLite disk-full errors; a focused test verifies pytest's TMPDIR is /work/tmp."
 
 [characterization]
 captured_behavior = "The fixed Python test command, characterization scenarios, and protected behavior golden remain unchanged."
-proof = "The protected base and head characterization jobs compare the same existing scenarios; focused tests assert the unchanged isolated command vector."
+proof = "Only the hosted sandbox environment and its focused test change; the protected base and head characterization jobs must compare the same existing scenarios."
 
 [separation_of_concerns]
-before = "The hosted Python quality job installed Gate tools but not a target project's declared runtime dependencies, so pytest and Python-backed TypeScript integration tests could fail at import time."
-after = "The hosted supervisor reads static project dependencies, installs wheels into trusted storage, records installed identities, and exposes that read-only mount through the fixed interpreter's site path inside the sandbox."
+before = "The hosted pytest check used the sandbox's 256 MB /tmp mount for all target temporary data, causing SQLite tests to fail with disk-full errors despite sufficient per-command writable storage."
+after = "The hosted supervisor creates a temporary directory inside pytest's existing /work area and sets TMPDIR only for that sandboxed command."
 boundaries = []
 
 [architecture]
-dependency_direction = "The hosted quality-profile supervisor parses the target manifest and provisions wheels; the existing quality runner mounts trusted storage and the fixed interpreter consumes it through its site path."
+dependency_direction = "The hosted quality-profile supervisor selects the fixed pytest adapter and passes a bounded environment value through the existing quality runner sandbox interface."
 reviewed_paths = [
   ".supportability-review.toml",
   "tests/hosted_quality_profile.py",
@@ -24,19 +24,19 @@ reviewed_paths = [
 
 [responsibility_boundary]
 path = "tests/hosted_quality_profile.py"
-owns = "Hosted provisioning and receipt capture for statically declared Python target runtime dependencies."
-does_not_own = "Consumer source, the immutable Standard, quality policy decisions, characterization policy, or organization ruleset configuration."
+owns = "Hosted selection of a per-command pytest temporary directory inside the established writable sandbox mount."
+does_not_own = "Consumer source, the immutable Standard, quality policy decisions, the sandbox's fixed command, or organization ruleset configuration."
 
 [incremental_refactor]
-target = "Python target dependency setup defect exposed by twmn-portfolio PR #691."
-completed_step = "Install declared binary runtime packages and expose them read-only to the existing isolated quality checks without changing pass/block policy."
+target = "Python quality temporary-storage defect exposed by twmn-portfolio PR #691."
+completed_step = "Route pytest temporary files to /work/tmp for that command only, without changing the sandbox security boundary or pass/block policy."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Target requirements, Python dependencies, and distribution receipts name the measured setup facts directly."
-cohesion = "Static manifest parsing, trusted provisioning, receipt capture, and runtime path exposure remain in the hosted setup boundary."
-intended_behavior = "A target declaring tzdata can import it during tests, while unsupported or unresolvable declarations fail closed."
-reviewability = "The repair is bounded to Python target setup, with focused positive and adversarial tests and no change to the controlled golden."
+naming = "TMPDIR and the per-command work directory name the actual temporary-storage location directly."
+cohesion = "The hosted adapter setup owns environment selection; the production quality runner only applies the supplied fixed value."
+intended_behavior = "SQLite-heavy tests can use the existing writable work area while the source, dependencies, and evidence mounts remain read-only."
+reviewability = "The repair changes one hosted command setup and one focused test; no production Gate code or controlled golden changes."
