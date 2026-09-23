@@ -107,3 +107,29 @@ def test_python_quality_command_keeps_its_isolated_vector(tmp_path: Path) -> Non
     )
     assert any("dst=/trusted,readonly" in item for item in invocation)
     assert not any("PYTHONPATH=" in item for item in invocation)
+
+
+def test_pytest_uses_existing_per_command_writable_area_for_temporary_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    observed: list[dict[str, str]] = []
+
+    def sandbox(_plan: quality_runner.CommandPlan, **kwargs: object) -> tuple[str, ...]:
+        observed.append(kwargs["extra_environment"])
+        return ("docker", "run")
+
+    monkeypatch.setattr(runner.quality_runner, "sandbox_command", sandbox)
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, b"", b""),
+    )
+    monkeypatch.setattr(runner, "_proof", lambda *args: ((), (), "a" * 64, 0))
+    output = tmp_path / "output"
+    plan = quality_runner.CommandPlan(
+        "python.pytest.v1", ("python", "-I"), ("python", "-I"), "runtime-lines", ()
+    )
+
+    assert runner._run_command(plan, tmp_path, output).exit_code == 0
+    assert observed == [{"TMPDIR": "/work/tmp"}]
+    assert (quality_runner.command_work_directory(output, plan.adapter) / "tmp").is_dir()
