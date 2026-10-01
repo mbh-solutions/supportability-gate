@@ -1,11 +1,3 @@
-> **Historical preliminary handoff evidence.** These six bundles record the earlier September 22,
-> 2026 S08 handoff, before recovery qualification and independent finalization. Their bytes, names,
-> hashes, and locations are preserved. Statements below that Evidence is Partial describe that
-> earlier observation, not the final program state. See the [dated finalization correction](../history/2026-10-01/INDEX.md)
-> and [current evidence guide](../product/Evidence-Model.md). The final ten accepted bundles are
-> recorded in the linked independent finalization; these six earlier bundles are not relabeled as
-> that final matrix.
-
 # S08 durable qualification evidence
 
 These compact bundles preserve the September 22, 2026 S08 qualification records after their
