@@ -1,7 +1,8 @@
 # Supportability Gate
 
 Supportability Gate is a repository-agnostic product assigned through GitHub organization
-rulesets. It evaluates pull-request changes against the Supportability Standard and produces
+rulesets. It evaluates pull-request changes against the
+[Supportability Standard](../supportability_standard.md) and produces
 independently enforced checks using authenticated evidence from the exact base and head commits.
 
 It helps maintainers keep changes testable and reviewable: control function complexity, preserve
