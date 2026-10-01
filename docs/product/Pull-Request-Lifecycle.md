@@ -8,7 +8,7 @@ sequenceDiagram
     participant G as Eight required checks
     participant R as GitHub ruleset
     A->>H: Pull request with exact base and head
-    H->>H: Capture base and head twice; run fixed checks
+    H->>H: Capture base and head twice and run fixed checks
     H-->>E: Authenticated artifacts and diagnostics
     E->>E: Static evaluation and canonical composition
     E->>E: Build and restore offline evidence bundle

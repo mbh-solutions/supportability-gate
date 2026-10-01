@@ -3,7 +3,7 @@ module_boundaries = []
 
 [behavior]
 intended_behavior = "Reader documentation explains the repository-agnostic organization-assigned Gate, supported profiles, eight checks, onboarding, failures, evidence, and assurance limits. Executable policy, workflow, schema, CLI, dependencies, and deployment remain unchanged."
-proof = "Production parser validation of generic contract, manifest, assertion, and authorization examples; internal link and historical-anchor validation; byte-preserved archive and retained-artifact comparison; complete existing source proof and final-head protected delivery."
+proof = "Production parser validation of generic contract, manifest, assertion, and authorization examples; internal link and historical-anchor validation; byte-preserved archive and retained-artifact comparison; GitHub-rendered architecture and lifecycle diagrams; complete existing source proof and final-head protected delivery."
 
 [characterization]
 captured_behavior = "Existing production modules, characterization scenarios and obligations, golden outputs, trusted controls, and required workflows remain byte-identical to the base."
