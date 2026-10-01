@@ -670,7 +670,7 @@ def test_native_hosted_container_observer_birth_and_rejection_controls(
         "native_revision": os.environ.get("GITHUB_SHA"),
         "native_run_id": os.environ.get("GITHUB_RUN_ID"),
         "container_image": hosted.quality_runner.CONTAINER_IMAGE,
-        "container_id": image_id,
+        "image_id": image_id,
         "api": API,
         "source_sha256": observation["source_sha256"],
         "function_code_sha256": observation["function_code_sha256"],
