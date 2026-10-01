@@ -207,7 +207,9 @@ Implementation references: [contract schema](../../src/supportability_gate/contr
 
 Manifest schema `3.0` retains the schema-2 obligations/transitions and adds `api` to every
 scenario row. Ordinary rows use `"api": null`. An observed row names one ordinary synchronous
-Python function, covers exactly its file, and supplies a behavior obligation with selector `$`:
+Python function, covers exactly its file, and supplies a behavior obligation with selector `$`
+whose target is exactly that API. Observed cases credit only the selected function; sibling
+functions require their own meaningful proof:
 
 ```json
 {"id":"new-total","kind":"regression","covers":["src/application/total.py"],"api":"src/application/total.py::function:calculate_total"}

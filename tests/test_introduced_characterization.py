@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -230,7 +232,15 @@ def test_genuine_whole_file_introduction_passes_synthetic_s5(tmp_path: Path) -> 
 
 @pytest.mark.parametrize(
     "defect",
-    ["missing-api-key", "unknown-key", "mismatched-cover", "unbound-obligation", "invalid-api"],
+    [
+        "missing-api-key",
+        "unknown-key",
+        "mismatched-cover",
+        "unbound-obligation",
+        "invalid-api",
+        "whole-file-target",
+        "extra-sibling-obligation",
+    ],
 )
 def test_observed_manifest_is_closed_and_source_bound(defect: str) -> None:
     manifest = {
@@ -258,6 +268,18 @@ def test_observed_manifest_is_closed_and_source_bound(defect: str) -> None:
         row["covers"] = ["src/unrelated.py"]
     elif defect == "unbound-obligation":
         manifest["obligations"][0].update(category="static", target="scenario:introduced")
+    elif defect == "whole-file-target":
+        manifest["obligations"][0]["target"] = "src/introduced.py"
+    elif defect == "extra-sibling-obligation":
+        manifest["obligations"].append(
+            {
+                "id": "introduced-sibling",
+                "category": "behavior",
+                "scenario": "introduced",
+                "selector": "$",
+                "target": "src/introduced.py::function:uncalled_sibling",
+            }
+        )
     else:
         row["api"] = "src/introduced.py::function:<invalid>"
     with pytest.raises(
@@ -538,6 +560,30 @@ def test_shared_consumer_rederives_introduction_authorization(tmp_path: Path) ->
         standard_results._s02_refactor(tampered, result, identity, None)
 
 
+def test_shared_result_cannot_credit_observed_api_to_whole_file(tmp_path: Path) -> None:
+    result = _verify(tmp_path, _fixture(tmp_path))
+    assert result["overall_result"] == "PASS"
+    obligation = next(item for item in result["obligations"] if item["scenario"] == "introduced")
+    obligation["target"] = "src/introduced.py"
+    result["behavior_fingerprint"] = _sha(
+        characterization._canonical(
+            {
+                "obligations": [
+                    [item["id"], item["head_assertion_sha256"]] for item in result["obligations"]
+                ],
+                "scenarios": [
+                    [item["id"], item["head_behavior_sha256"]] for item in result["scenarios"]
+                ],
+                "api_observations": result["api_observations"],
+            }
+        )
+    )
+    with pytest.raises(
+        characterization.CharacterizationError, match="MALFORMED_CHARACTERIZATION_RESULT"
+    ):
+        legacy._validate_round_trip(result)
+
+
 def test_stale_source_bytes_cannot_reuse_bound_observation(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     legacy._write(fixture[0] / "src/introduced.py", SOURCE.decode().replace("* 2", "* 3"))
@@ -559,3 +605,84 @@ def test_observed_driver_and_oracle_are_immutable_after_merge(tmp_path: Path) ->
     result = _verify(tmp_path, fixture)
     assert result["overall_result"] == "BLOCK"
     assert "CHANGED_CHARACTERIZATION_DEFINITION:introduced" in result["policy_blocks"]
+
+
+@pytest.mark.skipif(
+    sys.platform != "linux"
+    or os.environ.get("GITHUB_ACTIONS") != "true"
+    or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="Actual fixed-container observer proof requires native Linux GitHub-hosted Actions.",
+)
+def test_native_hosted_container_observer_birth_and_rejection_controls(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Real container calls joined to unit wrappers, never an adoption attestation."""
+    hosted = legacy.hosted_characterization
+    hosted._require_hosted_runner()
+    image_id = hosted._prepare_container()
+    fixture = _fixture(tmp_path)
+    repository, base_sha, head_sha, base, head = fixture
+    baseline = tmp_path / "actual-absent-side"
+    legacy._git(repository, "worktree", "add", "--detach", str(baseline), base_sha)
+    scenario = next(
+        item for item in characterization._manifest(repository, head_sha, []).scenarios if item.api
+    )
+    actual_base = hosted._scenario_capture(baseline, repository, head_sha, scenario, "python", [])
+    actual_head = hosted._scenario_capture(repository, repository, head_sha, scenario, "python", [])
+    assert actual_base["command"] is None
+    assert actual_base["api_observation"] == {"api": API, "state": "ABSENT"}
+    assert actual_head["exit_code"] == 0 and actual_head["error"] is None
+    assert actual_head["deterministic"] is True
+    assert actual_head["behavior"] == CASES
+    observation = actual_head["api_observation"]
+    assert observation["api"] == API
+    for key, value in characterization.api_source_identity(SOURCE, API).items():
+        assert observation[key] == value
+    assert actual_head["command"] == characterization.scenario_command(scenario, "python")
+    for capture, actual_row in ((base, actual_base), (head, actual_head)):
+        capture["scenarios"] = [
+            actual_row if row["id"] == scenario.id else row for row in capture["scenarios"]
+        ]
+        _fingerprint(capture)
+    result = _verify(tmp_path, fixture)
+    assert result["overall_result"] == "PASS"
+    legacy._validate_round_trip(result)
+    authorized_unit_result = _s6(fixture, result, [_grant(result)])
+    assert authorized_unit_result["overall_result"] == "PASS"
+    identity = standard_results.RunIdentity(
+        "example/fixture", 123, base_sha, head_sha, "f" * 40, 456, 1
+    )
+    assert standard_results._s02_refactor(authorized_unit_result, result, identity, None) == []
+    rejected = []
+    for defect in ("missing", "tampered"):
+        negative = copy.deepcopy(fixture)
+        row = _introduced(negative[4])
+        if defect == "missing":
+            row["api_observation"] = None
+        else:
+            row["api_observation"]["source_sha256"] = "0" * 64
+        blocked = _verify(tmp_path, negative)
+        assert blocked["overall_result"] == "BLOCK"
+        assert "MISSING_API_EXECUTION:introduced" in blocked["policy_blocks"]
+        rejected.append(defect)
+    receipt = {
+        "schema_version": "native-hosted-observer-canary.v1",
+        "native_revision": os.environ.get("GITHUB_SHA"),
+        "native_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "container_image": hosted.quality_runner.CONTAINER_IMAGE,
+        "container_id": image_id,
+        "api": API,
+        "source_sha256": observation["source_sha256"],
+        "function_code_sha256": observation["function_code_sha256"],
+        "source_span": [observation["start_line"], observation["end_line"]],
+        "cases_sha256": actual_head["behavior_sha256"],
+        "observer_envelope_sha256": _sha(characterization._canonical(observation)),
+        "stdout_sha256": actual_head["stdout_sha256"],
+        "command": actual_head["command"],
+        "two_replays_equal": actual_head["deterministic"],
+        "rejected_actual_row_mutations": rejected,
+        "verification_authentication": "synthetic unit wrapper; not authenticated adoption",
+        "owner_authorization": "synthetic unit grant; not an owner attestation",
+    }
+    with capsys.disabled():
+        print("NATIVE_HOSTED_OBSERVER_RECEIPT " + json.dumps(receipt, sort_keys=True))

@@ -269,6 +269,15 @@ def _transition_rows(value: object) -> tuple[Transition, ...]:
     return tuple(parsed)
 
 
+def _observed_obligations_valid(scenario: Scenario, obligations: tuple[Obligation, ...]) -> bool:
+    behavior = [
+        item for item in obligations if item.scenario == scenario.id and item.category == "behavior"
+    ]
+    return bool(behavior) and all(
+        item.selector == "$" and item.target == scenario.api for item in behavior
+    )
+
+
 def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
     """Parse a legacy scenario manifest or stable-obligation manifest."""
     raw = _read_json_bytes(content, "MALFORMED_CHARACTERIZATION_MANIFEST")
@@ -288,13 +297,7 @@ def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
     obligations = _obligation_rows(data["obligations"], parsed) if version != "1.0" else ()
     transitions = _transition_rows(data["transitions"]) if version != "1.0" else ()
     for scenario in parsed:
-        if scenario.api is not None and not any(
-            item.scenario == scenario.id
-            and item.category == "behavior"
-            and item.selector == "$"
-            and item.target in {scenario.api, scenario.covers[0]}
-            for item in obligations
-        ):
+        if scenario.api is not None and not _observed_obligations_valid(scenario, obligations):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return Manifest(parsed, blob_sha, _sha256(content), obligations, transitions, version)
 
@@ -1370,6 +1373,7 @@ def _result_obligation(
         or type(row["meaningful"]) is not bool
         or not isinstance(row["target"], str)
         or not row["target"]
+        or (fact is not None and row["category"] == "behavior" and row["target"] != fact["api"])
         or any(
             item is not None and (not isinstance(item, str) or SHA256.fullmatch(item) is None)
             for item in hashes
