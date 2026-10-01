@@ -56,5 +56,22 @@ matching current-head authorizations are malformed and cannot compete for author
 Scope and spans are footprint evidence, not proof that a refactor is semantically small or good.
 See [Eight Gates](Eight-Gates.md#6-incremental-refactor) and [Boundaries and Limitations](Boundaries-and-Limitations.md).
 
+## Introduced Python API scope
+
+Schema `3.0` retains every schema-2 field and adds `introductions`. This array is required for
+schema 3 and contains one exact grant for each Git-derived API birth in a schema-3 characterization
+manifest. A grant has exactly `api`, `scenario`, `source_sha256`, `driver_sha256`, `oracle_sha256`,
+`review_sha256`, `intended_feature`, and `independent_oracle_reviewed`. The last value must be
+`true`. The API must be an authenticated derived production target; each digest and the precise
+feature description must match the measured characterization facts and sealed review artifact.
+
+The same fixed numeric owner and exact current base/head comment authenticate these grants.
+The grant records the owner's approved intended feature and independently reviewed oracle; it
+does not waive actual Git absence, real head execution, meaningful cases, deterministic replay,
+or retained legacy compatibility. Missing, extra, stale, or mismatched grants block Gate 6.
+The shared result consumer repeats the exact grant join before accepting an aggregate result.
+An already present API continues to require compatible base/head behavior; introduction scope
+cannot relabel an existing scenario or obligation.
+
 Implementation references: [authorization parser and policy](../../src/supportability_gate/refactor_policy.py)
 and [derived targets](../../src/supportability_gate/refactor_targets.py).

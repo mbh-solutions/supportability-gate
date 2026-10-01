@@ -33,6 +33,14 @@ workflow SHA, run and attempt, job/artifact identity, digests, capture hashes, a
 The full-process handoff also binds the base/head review blobs. Required missing, stale, malformed,
 or mismatched evidence fails closed according to its defined policy/technical ownership.
 
+For schema-3 observed Python APIs, the collector records actual call arguments and ordinary
+returns with a closed tagged value codec. Static compilation binds the traced function's code
+to the exact source blob and span. Git-derived whole-file absence is a measured fact rather
+than a claim that an absent API executed. The sealed review artifact is a source-bound
+declaration of intended behavior; the existing trusted-owner grant authenticates its exact
+feature scope and independently reviewed oracle assertion. This does not certify the reviewer's
+identity or qualitative independence through a new service, or prove exhaustive correctness.
+
 ## Offline restoration and retention
 
 The workflow must restore its bundle inside the immutable no-network container before authoritative

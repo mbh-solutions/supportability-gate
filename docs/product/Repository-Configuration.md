@@ -202,3 +202,47 @@ Implementation references: [contract schema](../../src/supportability_gate/contr
 [anti-weakening](../../src/supportability_gate/gate_policy.py),
 [review schema](../../src/supportability_gate/review_evidence.py), and
 [manifest and assertions](../../src/supportability_gate/characterization.py).
+
+## Observed Python APIs and genuine introduction
+
+Manifest schema `3.0` retains the schema-2 obligations/transitions and adds `api` to every
+scenario row. Ordinary rows use `"api": null`. An observed row names one ordinary synchronous
+Python function, covers exactly its file, and supplies a behavior obligation with selector `$`:
+
+```json
+{"id":"new-total","kind":"regression","covers":["src/application/total.py"],"api":"src/application/total.py::function:calculate_total"}
+```
+
+Its fixed driver remains `tests/characterization/new-total.characterization.py`. The driver calls
+the actual API; its printed output is discarded. A Gate-owned observer captures actual signature
+arguments before mutation and completed normal return values. The golden is the resulting list
+of cases, using codec `python-values-v1`. For example, one integer observation is:
+
+```json
+{"input":[{"name":"quantity","value":{"type":"int","value":2}}],"output":{"type":"int","value":20}}
+```
+
+Provide at least two distinct actual inputs and outputs. The codec preserves separate type tags
+for plain scalars, lists, tuples, string-keyed dictionaries, bytes, finite Decimal values,
+fixed-offset aware datetimes, and source-bound declared dataclasses. Unknown objects, serializer
+hooks, cycles, excessive size/depth, nonfinite numbers, generators, coroutines and raised-error
+claims fail closed. The observer is fixed Gate code; contracts cannot select another command.
+
+Commit a separately reviewed intended-oracle record at
+`tests/characterization/new-total.review.json` with exactly `schema_version: "1.0"`, `api`,
+`source_sha256`, `driver_sha256`, `oracle_sha256`, `intended_feature`, `reviewer` and
+`verdict: "ACCEPTED"`. SHA-256 fields bind the actual source/driver/golden file bytes. The review
+record is a declared review artifact, with its independence and intent authenticated by the
+existing owner control; the Gate does not judge prose or reviewer independence.
+
+The Gate derives introduction from exact Git absence of the whole file at base and exact source
+presence at head. Only genuinely added files qualify; copied or renamed source, existing paths,
+and changes simultaneously retiring/moving production paths cannot use the initial birth route.
+The authenticated base capture records absence and no execution command. The head runs the
+observer twice and must match the sealed intended oracle. The exact owner authorization also
+pins this introduction; see [Refactor Authorization](Refactor-Authorization.md).
+
+After merge, the same observed scenario runs twice at both base and head and must preserve its
+observations. Existing scenario/obligation identities cannot be relabeled, and admitted driver,
+golden and review bytes remain protected. This mode adds birth proof without dropping legacy
+coverage, source integrity, quality commands, thresholds, or required native protections.

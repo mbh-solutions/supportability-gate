@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
+import marshal
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from types import CodeType
 from typing import Any
 
 from supportability_gate import contract, git_changes
@@ -18,6 +21,8 @@ CAPTURE_SCHEMA = "characterization-capture.v2"
 PROVENANCE_SCHEMA = "characterization-provenance.v1"
 LEGACY_RESULT_SCHEMA = "characterization-result.v1"
 RESULT_SCHEMA = "characterization-result.v2"
+OBSERVED_RESULT_SCHEMA = "characterization-result.v3"
+OBSERVED_CAPTURE_SCHEMA = "characterization-capture.v3"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
 OBLIGATION_CATEGORIES = frozenset({"behavior", "cli_help", "static"})
@@ -43,6 +48,7 @@ class Scenario:
     id: str
     kind: str
     covers: tuple[str, ...]
+    api: str | None = None
 
 
 @dataclass(frozen=True)
@@ -81,12 +87,17 @@ def _manifest_payload(manifest: Manifest) -> dict[str, object]:
     payload: dict[str, object] = {
         "blob_sha": manifest.blob_sha,
         "scenarios": [
-            {"covers": list(item.covers), "id": item.id, "kind": item.kind}
+            {
+                "covers": list(item.covers),
+                "id": item.id,
+                "kind": item.kind,
+                **({"api": item.api} if manifest.schema_version == "3.0" else {}),
+            }
             for item in manifest.scenarios
         ],
         "sha256": manifest.sha256,
     }
-    if manifest.schema_version == "2.0":
+    if manifest.schema_version in {"2.0", "3.0"}:
         payload.update(
             {
                 "obligations": [
@@ -145,12 +156,17 @@ def _path_list(value: object, field: str) -> tuple[str, ...]:
     return paths
 
 
-def _scenario_rows(value: object) -> tuple[Scenario, ...]:
+def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
     if not isinstance(value, list) or not value:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     parsed: list[Scenario] = []
     for item in value:
-        row = _exact_keys(item, {"covers", "id", "kind"}, "MALFORMED_CHARACTERIZATION_MANIFEST")
+        keys = {"covers", "id", "kind"}
+        row = _exact_keys(
+            item,
+            keys | ({"api"} if version == "3.0" else set()),
+            "MALFORMED_CHARACTERIZATION_MANIFEST",
+        )
         identifier, kind = row["id"], row["kind"]
         if (
             not isinstance(identifier, str)
@@ -158,10 +174,27 @@ def _scenario_rows(value: object) -> tuple[Scenario, ...]:
             or kind not in KINDS
         ):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
-        parsed.append(Scenario(identifier, str(kind), _path_list(row["covers"], "covers")))
+        covers = _path_list(row["covers"], "covers")
+        api = _parse_api(row.get("api"), covers)
+        parsed.append(Scenario(identifier, str(kind), covers, api))
     if len(parsed) != len({item.id for item in parsed}) or len(parsed) > 50:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return tuple(sorted(parsed, key=lambda item: item.id))
+
+
+def _parse_api(value: object, covers: tuple[str, ...]) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or value.count("::function:") != 1:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    path, name = value.split("::function:")
+    if (
+        covers != (path,)
+        or not path.endswith(".py")
+        or not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*", name)
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    return value
 
 
 def _obligation_rows(value: object, scenarios: tuple[Scenario, ...]) -> tuple[Obligation, ...]:
@@ -249,11 +282,20 @@ def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
     )
     data = _exact_keys(raw, expected, "MALFORMED_CHARACTERIZATION_MANIFEST")
     scenarios = data["scenarios"]
-    if version not in {"1.0", "2.0"}:
+    if version not in {"1.0", "2.0", "3.0"}:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
-    parsed = _scenario_rows(scenarios)
-    obligations = _obligation_rows(data["obligations"], parsed) if version == "2.0" else ()
-    transitions = _transition_rows(data["transitions"]) if version == "2.0" else ()
+    parsed = _scenario_rows(scenarios, version)
+    obligations = _obligation_rows(data["obligations"], parsed) if version != "1.0" else ()
+    transitions = _transition_rows(data["transitions"]) if version != "1.0" else ()
+    for scenario in parsed:
+        if scenario.api is not None and not any(
+            item.scenario == scenario.id
+            and item.category == "behavior"
+            and item.selector == "$"
+            and item.target in {scenario.api, scenario.covers[0]}
+            for item in obligations
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return Manifest(parsed, blob_sha, _sha256(content), obligations, transitions, version)
 
 
@@ -284,6 +326,274 @@ def scenario_language(scenario: Scenario, language: str) -> str:
     if len(profiles) != 1:
         raise CharacterizationError("MIXED_PROFILE_CHARACTERIZATION_SCENARIO")
     return profiles.pop()
+
+
+def scenario_command(scenario: Scenario, language: str) -> list[str]:
+    """Return the fixed recorded command; contracts cannot select executables."""
+    driver, _ = _scenario_paths(scenario, language)
+    if scenario.api is not None:
+        return [
+            "python3.12",
+            "-P",
+            "/collector/characterization_observer.py",
+            "--api",
+            scenario.api,
+            "--driver",
+            driver,
+        ]
+    return (
+        ["python3.12", "-P", driver]
+        if scenario_language(scenario, language) == "python"
+        else ["node", driver]
+    )
+
+
+def _compiled_functions(code: CodeType) -> list[CodeType]:
+    children = [value for value in code.co_consts if type(value) is CodeType]
+    return [code, *(item for child in children for item in _compiled_functions(child))]
+
+
+def api_source_identity(content: bytes, api: str) -> dict[str, Any]:
+    """Compile exact source for identity only; never import or execute it."""
+    path, name = api.split("::function:")
+    try:
+        code = compile(content, "/target/" + path, "exec", dont_inherit=True, optimize=0)
+    except (SyntaxError, ValueError) as error:
+        raise CharacterizationError("INVALID_OBSERVED_API_SOURCE") from error
+    matches = [item for item in _compiled_functions(code) if item.co_qualname == name]
+    if len(matches) != 1 or matches[0].co_flags & (0x20 | 0x80 | 0x200):
+        raise CharacterizationError("INVALID_OBSERVED_API_SOURCE")
+    start, end = _api_span(content, matches[0].co_firstlineno)
+    return {
+        "source_sha256": _sha256(content),
+        "function_code_sha256": _sha256(marshal.dumps(matches[0], 2)),
+        "start_line": start,
+        "end_line": end,
+    }
+
+
+def _api_span(content: bytes, first_line: int) -> tuple[int, int]:
+    spans = [
+        (min((item.lineno for item in node.decorator_list), default=node.lineno), node.end_lineno)
+        for node in ast.walk(ast.parse(content))
+        if isinstance(node, ast.FunctionDef)
+    ]
+    matches = [(start, end) for start, end in spans if start == first_line and end is not None]
+    if len(matches) != 1:
+        raise CharacterizationError("INVALID_OBSERVED_API_SOURCE")
+    return matches[0]
+
+
+def _api_source(
+    repository: Path, commit: str, api: str, records: list[git_changes.CommandRecord]
+) -> dict[str, Any] | None:
+    try:
+        blob = git_changes.read_regular_blob(repository, commit, api.split("::", 1)[0], records)
+    except git_changes.GitError as error:
+        if error.code == "MISSING_BLOB":
+            return None
+        raise
+    return api_source_identity(blob.content, api)
+
+
+def _copied_source_paths(
+    repository: Path, base_sha: str, head_sha: str, records: list[git_changes.CommandRecord]
+) -> set[str]:
+    raw = (
+        git_changes.run_git(
+            repository,
+            (
+                "diff",
+                "--name-status",
+                "-z",
+                "--no-ext-diff",
+                "--find-renames=50%",
+                "--find-copies=50%",
+                "--find-copies-harder",
+                base_sha,
+                head_sha,
+                "--",
+            ),
+            records,
+        )
+        .decode("utf-8")
+        .split("\0")
+    )
+    copied: set[str] = set()
+    index = 0
+    while index < len(raw) - 1:
+        status = raw[index]
+        count = 3 if status.startswith(("C", "R")) else 2
+        if count == 3:
+            copied.add(raw[index + 2])
+        index += count
+    return copied
+
+
+def _api_bindings(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    policy: contract.Contract,
+    manifest: Manifest,
+    changes: tuple[git_changes.ChangedPath, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    observed = [item for item in manifest.scenarios if item.api is not None]
+    copied = _copied_source_paths(repository, base_sha, head_sha, records) if observed else set()
+    added = {item.new_path for item in changes if item.status == "ADDED" and item.old_path is None}
+    retired = any(
+        item.old_path is not None
+        and policy.is_production_path(item.old_path)
+        and item.new_path != item.old_path
+        for item in changes
+    )
+    facts: dict[str, dict[str, Any]] = {}
+    blocks: list[str] = []
+    for item in observed:
+        assert item.api is not None
+        base = _api_source(repository, base_sha, item.api, records)
+        head = _api_source(repository, head_sha, item.api, records)
+        path = item.covers[0]
+        admissible = head is not None and policy.is_production_path(path)
+        if base is None:
+            admissible = admissible and path in added and path not in copied and not retired
+        driver_path, oracle_path = _scenario_paths(item, policy.language)
+        facts[item.id] = {
+            "api": item.api,
+            "scenario": item.id,
+            "base_absent": base is None,
+            "base_source": base,
+            "head_source": head,
+            "driver_sha256": _sha256(
+                git_changes.read_regular_blob(repository, head_sha, driver_path, records).content
+            ),
+            "oracle_sha256": _sha256(
+                git_changes.read_regular_blob(repository, head_sha, oracle_path, records).content
+            ),
+            "admissible": admissible,
+        }
+        facts[item.id].update(
+            _api_oracle_review(repository, head_sha, item, facts[item.id], records)
+        )
+        if not admissible:
+            blocks.append(f"INVALID_API_INTRODUCTION:{item.id}")
+        if not facts[item.id]["oracle_review_valid"]:
+            blocks.append(f"INVALID_API_ORACLE_REVIEW:{item.id}")
+    return facts, blocks
+
+
+def _api_review_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    row: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in row:
+            raise CharacterizationError("MALFORMED_API_ORACLE_REVIEW")
+        row[key] = value
+    return row
+
+
+def _read_api_review(content: bytes) -> Any:
+    if not content or len(content) > MAX_JSON_BYTES:
+        raise CharacterizationError("MALFORMED_API_ORACLE_REVIEW")
+    try:
+        return json.loads(content, object_pairs_hook=_api_review_object)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise CharacterizationError("MALFORMED_API_ORACLE_REVIEW") from error
+
+
+def _api_oracle_review(
+    repository: Path,
+    head_sha: str,
+    scenario: Scenario,
+    fact: dict[str, Any],
+    records: list[git_changes.CommandRecord],
+) -> dict[str, Any]:
+    path = f"{SCENARIO_ROOT}/{scenario.id}.review.json"
+    try:
+        blob = git_changes.read_regular_blob(repository, head_sha, path, records)
+        row = _exact_keys(
+            _read_api_review(blob.content),
+            {
+                "schema_version",
+                "api",
+                "source_sha256",
+                "driver_sha256",
+                "oracle_sha256",
+                "intended_feature",
+                "reviewer",
+                "verdict",
+            },
+            "MALFORMED_API_ORACLE_REVIEW",
+        )
+    except (git_changes.GitError, CharacterizationError):
+        return {"review_sha256": None, "intended_feature": None, "oracle_review_valid": False}
+    valid = _valid_api_oracle_review(row, fact)
+    return {
+        "review_sha256": _sha256(blob.content),
+        "intended_feature": row["intended_feature"] if valid else None,
+        "oracle_review_valid": valid,
+    }
+
+
+def _valid_api_oracle_review(row: dict[str, Any], fact: dict[str, Any]) -> bool:
+    source = fact["head_source"]
+    return bool(
+        row["schema_version"] == "1.0"
+        and row["api"] == fact["api"]
+        and row["verdict"] == "ACCEPTED"
+        and isinstance(row["reviewer"], str)
+        and row["reviewer"].strip()
+        and isinstance(row["intended_feature"], str)
+        and 0 < len(row["intended_feature"].strip()) <= 2000
+        and isinstance(row["source_sha256"], str)
+        and SHA256.fullmatch(row["source_sha256"])
+        and row["driver_sha256"] == fact["driver_sha256"]
+        and row["oracle_sha256"] == fact["oracle_sha256"]
+        and (
+            not fact["base_absent"]
+            or (isinstance(source, dict) and row["source_sha256"] == source["source_sha256"])
+        )
+    )
+
+
+def _api_capture_matches(row: dict[str, Any] | None, fact: dict[str, Any], side: str) -> bool:
+    if row is None:
+        return False
+    observation = row.get("api_observation")
+    if side == "base" and fact["base_absent"]:
+        return (
+            observation == {"api": fact["api"], "state": "ABSENT"}
+            and row.get("behavior") == {"api_absent": fact["api"]}
+            and row.get("command") is None
+        )
+    source = fact[f"{side}_source"]
+    if not isinstance(source, dict) or not isinstance(observation, dict):
+        return False
+    return bool(
+        set(observation)
+        == {
+            "schema_version",
+            "codec",
+            "api",
+            "source_sha256",
+            "function_code_sha256",
+            "start_line",
+            "end_line",
+            "cases",
+        }
+        and observation["schema_version"] == "1.0"
+        and observation["codec"] == "python-values-v1"
+        and observation["api"] == fact["api"]
+        and all(observation[key] == value for key, value in source.items())
+        and type(observation["start_line"]) is int
+        and type(observation["end_line"]) is int
+        and 1 <= observation["start_line"] <= observation["end_line"]
+        and observation["cases"] == row.get("behavior")
+        and _meaningful_cases(observation["cases"])
+        and row.get("exit_code") == 0
+        and row.get("error") is None
+        and row.get("deterministic") is True
+    )
 
 
 def _load_capture(path: Path, missing_code: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -329,7 +639,10 @@ def _authentication_blocks(
         "schema_version",
         "target_sha",
     }
-    if set(artifact) != expected_keys or artifact.get("schema_version") != CAPTURE_SCHEMA:
+    if set(artifact) != expected_keys or artifact.get("schema_version") not in {
+        CAPTURE_SCHEMA,
+        OBSERVED_CAPTURE_SCHEMA,
+    }:
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     authentication = artifact.get("authentication")
     if not isinstance(authentication, dict) or authentication != expected:
@@ -411,7 +724,7 @@ def _stable_environment(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _effective_obligations(manifest: Manifest) -> tuple[Obligation, ...]:
-    if manifest.schema_version == "2.0":
+    if manifest.schema_version in {"2.0", "3.0"}:
         return manifest.obligations
     return tuple(
         Obligation(item.id, "static", item.id, "$", f"scenario:{item.id}")
@@ -572,18 +885,55 @@ def _definition_blocks(
         *_common_obligation_blocks(base, head, base_assertions, head_assertions),
         *_transition_blocks(base_assertions, head_assertions, head.transitions),
         *_legacy_driver_blocks(repository, base_sha, head_sha, language, base, head, records),
+        *_observed_definition_blocks(repository, base_sha, head_sha, language, base, head, records),
     ]
+
+
+def _observed_definition_blocks(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    language: str,
+    base: Manifest,
+    head: Manifest,
+    records: list[git_changes.CommandRecord],
+) -> list[str]:
+    previous = {item.id: item for item in base.scenarios}
+    blocks: list[str] = []
+    for item in head.scenarios:
+        old = previous.get(item.id)
+        if old is None:
+            continue
+        if old.api != item.api:
+            blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{item.id}")
+        elif item.api is not None:
+            path, _ = _scenario_paths(item, language)
+            before = git_changes.read_regular_blob(repository, base_sha, path, records)
+            after = git_changes.read_regular_blob(repository, head_sha, path, records)
+            if before.content != after.content:
+                blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{item.id}")
+            review_path = f"{SCENARIO_ROOT}/{item.id}.review.json"
+            before_review = git_changes.read_regular_blob(
+                repository, base_sha, review_path, records
+            )
+            after_review = git_changes.read_regular_blob(repository, head_sha, review_path, records)
+            if before_review.content != after_review.content:
+                blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:review:{item.id}")
+    return blocks
 
 
 def _capture_blocks(
     artifact: dict[str, Any],
     manifest: Manifest,
     language: str,
+    absent_scenarios: frozenset[str] = frozenset(),
 ) -> tuple[list[str], dict[str, dict[str, Any]]]:
     blocks: list[str] = []
     rows = artifact.get("scenarios")
     if (
-        artifact.get("language") != language
+        artifact.get("schema_version")
+        != (OBSERVED_CAPTURE_SCHEMA if manifest.schema_version == "3.0" else CAPTURE_SCHEMA)
+        or artifact.get("language") != language
         or artifact.get("manifest") != _manifest_payload(manifest)
         or not isinstance(rows, list)
     ):
@@ -596,8 +946,8 @@ def _capture_blocks(
         return ["INCOMPLETE_CHARACTERIZATION_EVIDENCE"], {}
     for scenario in manifest.scenarios:
         row = by_id[scenario.id]
-        blocks.extend(_scenario_row_blocks(scenario, row))
-    blocks.extend(_obligation_capture_blocks(manifest, by_id))
+        blocks.extend(_scenario_row_blocks(scenario, row, scenario.id in absent_scenarios))
+    blocks.extend(_obligation_capture_blocks(manifest, by_id, absent_scenarios))
     expected_fingerprint = _sha256(
         _canonical(
             [[item.id, by_id[item.id].get("behavior_sha256")] for item in manifest.scenarios]
@@ -608,7 +958,9 @@ def _capture_blocks(
     return blocks, by_id
 
 
-def _scenario_row_blocks(scenario: Scenario, row: dict[str, Any]) -> list[str]:
+def _scenario_row_blocks(
+    scenario: Scenario, row: dict[str, Any], absent: bool = False
+) -> list[str]:
     blocks: list[str] = []
     if row.get("kind") != scenario.kind or row.get("covers") != list(scenario.covers):
         blocks.append(f"CHARACTERIZATION_DEFINITION_MISMATCH:{scenario.id}")
@@ -616,7 +968,7 @@ def _scenario_row_blocks(scenario: Scenario, row: dict[str, Any]) -> list[str]:
         blocks.append(f"CHARACTERIZATION_EXECUTION_FAILED:{scenario.id}")
     if row.get("deterministic") is not True:
         blocks.append(f"CHARACTERIZATION_REPLAY_DRIFT:{scenario.id}")
-    if row.get("behavior_sha256") != row.get("golden_behavior_sha256"):
+    if not absent and row.get("behavior_sha256") != row.get("golden_behavior_sha256"):
         blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:{scenario.id}")
     return blocks
 
@@ -643,9 +995,15 @@ def _valid_obligation_assertion(category: str, value: object) -> bool:
     return value is not None
 
 
-def _obligation_capture_blocks(manifest: Manifest, rows: dict[str, dict[str, Any]]) -> list[str]:
+def _obligation_capture_blocks(
+    manifest: Manifest,
+    rows: dict[str, dict[str, Any]],
+    absent_scenarios: frozenset[str] = frozenset(),
+) -> list[str]:
     blocks: list[str] = []
     for obligation in manifest.obligations:
+        if obligation.scenario in absent_scenarios:
+            continue
         row = rows.get(obligation.scenario, {})
         try:
             selected = _selected_assertion(row.get("behavior"), obligation.selector)
@@ -735,6 +1093,7 @@ def _verified_capture_rows(
     policy: contract.Contract,
     manifest: Manifest,
     records: list[git_changes.CommandRecord],
+    api_facts: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[str], dict[str, dict[str, Any]]]:
     if artifact is None:
         return [], {}
@@ -742,10 +1101,19 @@ def _verified_capture_rows(
     blocks = _authentication_blocks(artifact, expected)
     if artifact.get("target_sha") != target_sha or artifact.get("definition_sha") != head_sha:
         blocks.append(f"STALE_{'BASELINE' if side == 'base' else 'POST_CHANGE'}_ARTIFACT")
-    capture_blocks, rows = _capture_blocks(artifact, manifest, policy.language)
+    facts = api_facts or {}
+    absent = frozenset(
+        key for key, value in facts.items() if side == "base" and value["base_absent"]
+    )
+    capture_blocks, rows = _capture_blocks(artifact, manifest, policy.language, absent)
     blocks.extend(capture_blocks)
     blocks.extend(
         _artifact_identity_blocks(repository, head_sha, policy.language, manifest, rows, records)
+    )
+    blocks.extend(
+        f"MISSING_API_EXECUTION:{key}"
+        for key, fact in facts.items()
+        if not _api_capture_matches(rows.get(key), fact, side)
     )
     return blocks, rows
 
@@ -754,6 +1122,7 @@ def _compatibility_evidence(
     manifest: Manifest,
     base_rows: dict[str, dict[str, Any]],
     head_rows: dict[str, dict[str, Any]],
+    api_facts: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[str], list[dict[str, object]]]:
     blocks: list[str] = []
     scenarios: list[dict[str, object]] = []
@@ -764,6 +1133,14 @@ def _compatibility_evidence(
         compatible = bool(
             base_row and head_row and base_behavior is not None and base_behavior == head_behavior
         )
+        fact = (api_facts or {}).get(item.id)
+        if fact is not None and fact["base_absent"]:
+            compatible = bool(
+                fact["admissible"]
+                and fact["oracle_review_valid"]
+                and _api_capture_matches(base_row, fact, "base")
+                and _api_capture_matches(head_row, fact, "head")
+            )
         if base_behavior is not None and head_behavior is not None and not compatible:
             blocks.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:{item.id}")
         scenarios.append(
@@ -797,6 +1174,7 @@ def _obligation_evidence(
     manifest: Manifest,
     base_rows: dict[str, dict[str, Any]],
     head_rows: dict[str, dict[str, Any]],
+    api_facts: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[str], list[dict[str, object]]]:
     blocks: list[str] = []
     rows: list[dict[str, object]] = []
@@ -804,8 +1182,23 @@ def _obligation_evidence(
         base = _assertion_sha(base_rows.get(item.scenario), item)
         head = _assertion_sha(head_rows.get(item.scenario), item)
         compatible = base is not None and base == head
+        fact = (api_facts or {}).get(item.scenario)
+        if fact is not None and fact["base_absent"]:
+            compatible = bool(
+                fact["admissible"]
+                and fact["oracle_review_valid"]
+                and _api_capture_matches(base_rows.get(item.scenario), fact, "base")
+                and _api_capture_matches(head_rows.get(item.scenario), fact, "head")
+            )
         if base is not None and head is not None and not compatible:
             blocks.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item.id}")
+        meaningful = _obligation_meaningful(head_rows.get(item.scenario), item)
+        if fact is not None:
+            meaningful = meaningful and (
+                fact["base_absent"] or _obligation_meaningful(base_rows.get(item.scenario), item)
+            )
+            if not meaningful:
+                blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{item.id}")
         rows.append(
             {
                 "base_assertion_sha256": base,
@@ -813,7 +1206,7 @@ def _obligation_evidence(
                 "compatibility": "PASS" if compatible else "BLOCK",
                 "head_assertion_sha256": head,
                 "id": item.id,
-                "meaningful": _obligation_meaningful(head_rows.get(item.scenario), item),
+                "meaningful": meaningful,
                 "scenario": item.scenario,
                 "target": item.target,
             }
@@ -837,6 +1230,7 @@ def _logical_step_runnable(
     head_rows: dict[str, dict[str, Any]],
     responsibility_targets: tuple[str, ...],
     language: str,
+    api_facts: dict[str, dict[str, Any]] | None = None,
 ) -> bool:
     target_paths = {target.split("::", 1)[0] for target in responsibility_targets}
     runnable_paths = {
@@ -844,16 +1238,29 @@ def _logical_step_runnable(
         for scenario in manifest.scenarios
         if (base := base_rows.get(scenario.id)) is not None
         and (head := head_rows.get(scenario.id)) is not None
-        and base.get("command")
-        == head.get("command")
-        == (
-            ["python3.12", "-P", _scenario_paths(scenario, language)[0]]
-            if scenario_language(scenario, language) == "python"
-            else ["node", _scenario_paths(scenario, language)[0]]
-        )
+        and _scenario_runnable(scenario, base, head, language, (api_facts or {}).get(scenario.id))
         for path in scenario.covers
     }
     return target_paths.issubset(runnable_paths)
+
+
+def _scenario_runnable(
+    scenario: Scenario,
+    base: dict[str, Any],
+    head: dict[str, Any],
+    language: str,
+    fact: dict[str, Any] | None,
+) -> bool:
+    command = scenario_command(scenario, language)
+    if fact is not None and fact["base_absent"]:
+        return (
+            fact["admissible"]
+            and fact["oracle_review_valid"]
+            and _api_capture_matches(base, fact, "base")
+            and _api_capture_matches(head, fact, "head")
+            and head.get("command") == command
+        )
+    return bool(base.get("command") == head.get("command") == command)
 
 
 def _result_paths(value: object, field: str) -> tuple[str, ...]:
@@ -914,7 +1321,9 @@ def _result_scenario(value: object) -> dict[str, Any]:
     return row
 
 
-def _result_scenarios(value: object) -> list[dict[str, Any]]:
+def _result_scenarios(
+    value: object, api_facts: dict[str, dict[str, Any]] | None = None
+) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value or len(value) > 50:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     rows = [_result_scenario(item) for item in value]
@@ -926,12 +1335,17 @@ def _result_scenarios(value: object) -> list[dict[str, Any]]:
             row["base_behavior_sha256"] is not None
             and row["base_behavior_sha256"] == row["head_behavior_sha256"]
         )
+        fact = (api_facts or {}).get(row["id"])
+        if fact is not None and fact["base_absent"]:
+            compatible = _introduction_compatible(fact)
         if row["compatibility"] != ("PASS" if compatible else "BLOCK"):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return rows
 
 
-def _result_obligation(value: object, scenario_ids: set[str]) -> dict[str, Any]:
+def _result_obligation(
+    value: object, scenario_ids: set[str], api_facts: dict[str, dict[str, Any]] | None = None
+) -> dict[str, Any]:
     keys = {
         "base_assertion_sha256",
         "category",
@@ -945,6 +1359,9 @@ def _result_obligation(value: object, scenario_ids: set[str]) -> dict[str, Any]:
     row = _exact_keys(value, keys, "MALFORMED_CHARACTERIZATION_RESULT")
     hashes = (row["base_assertion_sha256"], row["head_assertion_sha256"])
     compatible = hashes[0] is not None and hashes[0] == hashes[1]
+    fact = (api_facts or {}).get(row["scenario"])
+    if fact is not None and fact["base_absent"]:
+        compatible = _introduction_compatible(fact)
     if (
         not isinstance(row["id"], str)
         or SCENARIO_ID.fullmatch(row["id"]) is None
@@ -963,15 +1380,139 @@ def _result_obligation(value: object, scenario_ids: set[str]) -> dict[str, Any]:
     return row
 
 
-def _result_obligations(value: object, scenarios: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _result_obligations(
+    value: object,
+    scenarios: list[dict[str, Any]],
+    api_facts: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     scenario_ids = {str(item["id"]) for item in scenarios}
-    rows = [_result_obligation(item, scenario_ids) for item in value]
+    rows = [_result_obligation(item, scenario_ids, api_facts) for item in value]
     identifiers = [str(item["id"]) for item in rows]
     if identifiers != sorted(set(identifiers)):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return rows
+
+
+def _introduction_compatible(fact: dict[str, Any]) -> bool:
+    return bool(
+        fact["admissible"]
+        and fact["oracle_review_valid"]
+        and fact["base_execution_verified"]
+        and fact["head_execution_verified"]
+    )
+
+
+def _serialized_api_facts(
+    facts: dict[str, dict[str, Any]],
+    base_rows: dict[str, dict[str, Any]],
+    head_rows: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            **fact,
+            "base_execution_verified": _api_capture_matches(base_rows.get(key), fact, "base"),
+            "head_execution_verified": _api_capture_matches(head_rows.get(key), fact, "head"),
+            "head_cases_sha256": head_rows.get(key, {}).get("behavior_sha256"),
+        }
+        for key, fact in sorted(facts.items())
+    ]
+
+
+def _result_api_facts(value: object) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, list) or len(value) > 50:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    rows = [_result_api_fact(item) for item in value]
+    names = [item["scenario"] for item in rows]
+    if names != sorted(set(names)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return {item["scenario"]: item for item in rows}
+
+
+def _result_api_fact(value: object) -> dict[str, Any]:
+    row = _exact_keys(
+        value,
+        {
+            "api",
+            "scenario",
+            "base_absent",
+            "base_source",
+            "head_source",
+            "driver_sha256",
+            "oracle_sha256",
+            "admissible",
+            "base_execution_verified",
+            "head_execution_verified",
+            "head_cases_sha256",
+            "review_sha256",
+            "intended_feature",
+            "oracle_review_valid",
+        },
+        "MALFORMED_CHARACTERIZATION_RESULT",
+    )
+    booleans = (
+        "base_absent",
+        "admissible",
+        "base_execution_verified",
+        "head_execution_verified",
+        "oracle_review_valid",
+    )
+    if (
+        any(type(row[key]) is not bool for key in booleans)
+        or not isinstance(row["scenario"], str)
+        or SCENARIO_ID.fullmatch(row["scenario"]) is None
+        or not isinstance(row["api"], str)
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    _parse_api(row["api"], (row["api"].split("::", 1)[0],))
+    for key in ("driver_sha256", "oracle_sha256"):
+        if not isinstance(row[key], str) or SHA256.fullmatch(row[key]) is None:
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    _result_api_sources(row)
+    if row["oracle_review_valid"] and (
+        not isinstance(row["review_sha256"], str)
+        or SHA256.fullmatch(row["review_sha256"]) is None
+        or not isinstance(row["intended_feature"], str)
+        or not row["intended_feature"].strip()
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return row
+
+
+def _result_api_sources(row: dict[str, Any]) -> None:
+    for key in ("base_source", "head_source"):
+        value = row[key]
+        if value is not None:
+            source = _exact_keys(
+                value,
+                {"source_sha256", "function_code_sha256", "start_line", "end_line"},
+                "MALFORMED_CHARACTERIZATION_RESULT",
+            )
+            if any(
+                not isinstance(item, str) or SHA256.fullmatch(item) is None
+                for item in (source["source_sha256"], source["function_code_sha256"])
+            ):
+                raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+            if not _valid_source_span(source):
+                raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    digest = row["head_cases_sha256"]
+    if (
+        row["base_absent"] != (row["base_source"] is None)
+        or (
+            digest is not None and (not isinstance(digest, str) or SHA256.fullmatch(digest) is None)
+        )
+        or (row["head_execution_verified"] and (row["head_source"] is None or digest is None))
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+
+
+def _valid_source_span(value: dict[str, Any]) -> bool:
+    return (
+        type(value["start_line"]) is int
+        and type(value["end_line"]) is int
+        and 1 <= value["start_line"] <= value["end_line"]
+    )
 
 
 def _result_artifact(value: object) -> dict[str, Any]:
@@ -1124,7 +1665,11 @@ def _legacy_result_coverage(
     return [f"MISSING_CHARACTERIZATION_COVERAGE:{path}" for path in required if path not in covered]
 
 
-def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> list[str]:
+def _result_scenario_blocks(
+    rows: list[dict[str, Any]],
+    blocks: list[str],
+    api_facts: dict[str, dict[str, Any]] | None = None,
+) -> list[str]:
     derived: list[str] = []
     incomplete = any(
         block
@@ -1137,6 +1682,7 @@ def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> li
         head = row["head_behavior_sha256"]
         golden = row["golden_behavior_sha256"]
         execution_failed = f"CHARACTERIZATION_EXECUTION_FAILED:{identifier}" in blocks
+        birth = bool((api_facts or {}).get(identifier, {}).get("base_absent"))
         if (
             ((row["command"] is None or golden is None) and not incomplete)
             or (
@@ -1146,10 +1692,16 @@ def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> li
             or (head is None and not (incomplete or execution_failed))
         ):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-        if base is not None and head is not None and base != head:
+        if (
+            base is not None
+            and head is not None
+            and base != head
+            and row["compatibility"] == "BLOCK"
+        ):
             derived.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:{identifier}")
         behavior_mismatch = golden is not None and any(
-            behavior is not None and behavior != golden for behavior in (base, head)
+            behavior is not None and behavior != golden
+            for behavior in ((head,) if birth else (base, head))
         )
         if golden is not None and execution_failed and (base is None or head is None):
             behavior_mismatch = True
@@ -1158,18 +1710,7 @@ def _result_scenario_blocks(rows: list[dict[str, Any]], blocks: list[str]) -> li
     return derived
 
 
-def validate_result(
-    value: object,
-    *,
-    repository: str,
-    base_sha: str,
-    head_sha: str,
-    workflow_sha: str,
-    required_paths: tuple[str, ...] | None,
-    required_targets: tuple[str, ...] | None = None,
-    expected_artifacts: object = None,
-) -> list[str]:
-    """Validate serialized Gate 5 facts without repository or target execution."""
+def _result_shape(value: object) -> dict[str, Any]:
     common_keys = {
         "artifacts",
         "base_sha",
@@ -1188,13 +1729,35 @@ def validate_result(
     if not isinstance(value, dict):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     schema_version = value.get("schema_version")
-    keys = {*common_keys, "obligations"} if schema_version == RESULT_SCHEMA else common_keys
-    if schema_version not in {LEGACY_RESULT_SCHEMA, RESULT_SCHEMA} or set(value) not in (
+    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA}
+    keys = {*common_keys, "obligations"} if modern else common_keys
+    if schema_version == OBSERVED_RESULT_SCHEMA:
+        keys.add("api_observations")
+    if schema_version not in {LEGACY_RESULT_SCHEMA, RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA} or set(
+        value
+    ) not in (
         keys,
         {*keys, "refactor_runnability"},
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-    row = value
+    return value
+
+
+def validate_result(
+    value: object,
+    *,
+    repository: str,
+    base_sha: str,
+    head_sha: str,
+    workflow_sha: str,
+    required_paths: tuple[str, ...] | None,
+    required_targets: tuple[str, ...] | None = None,
+    expected_artifacts: object = None,
+) -> list[str]:
+    """Validate serialized Gate 5 facts without repository or target execution."""
+    row = _result_shape(value)
+    schema_version = row["schema_version"]
+    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA}
     if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
         repository,
         base_sha,
@@ -1225,24 +1788,31 @@ def validate_result(
         for block in blocks
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-    scenarios = _result_scenarios(row["scenarios"])
-    obligations = (
-        _result_obligations(row["obligations"], scenarios)
-        if schema_version == RESULT_SCHEMA
-        else []
+    api_facts = (
+        _result_api_facts(row["api_observations"])
+        if schema_version == OBSERVED_RESULT_SCHEMA
+        else {}
     )
+    scenarios = _result_scenarios(row["scenarios"], api_facts)
+    derived.extend(_result_api_blocks(api_facts, scenarios))
+    obligations = _result_obligations(row["obligations"], scenarios, api_facts) if modern else []
     fingerprint_payload: object = (
         {
             "obligations": [[item["id"], item["head_assertion_sha256"]] for item in obligations],
             "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
+            **(
+                {"api_observations": list(api_facts.values())}
+                if schema_version == OBSERVED_RESULT_SCHEMA
+                else {}
+            ),
         }
-        if schema_version == RESULT_SCHEMA
+        if modern
         else [[item["id"], item["head_behavior_sha256"]] for item in scenarios]
     )
     fingerprint = _sha256(_canonical(fingerprint_payload))
     if row["behavior_fingerprint"] != fingerprint:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-    derived.extend(_result_scenario_blocks(scenarios, blocks))
+    derived.extend(_result_scenario_blocks(scenarios, blocks, api_facts))
     derived.extend(
         f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item['id']}"
         for item in obligations
@@ -1255,7 +1825,7 @@ def validate_result(
         for item in obligations
         if item["meaningful"] is False
     )
-    if schema_version == RESULT_SCHEMA:
+    if modern:
         derived.extend(
             _result_coverage(
                 row["coverage"], scenarios, obligations, required_paths, required_targets
@@ -1271,12 +1841,40 @@ def validate_result(
         "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
         "INVALID_ARTIFACT_IDENTITY",
         "MISSING_CHARACTERIZATION_COVERAGE:",
+        "INVALID_API_INTRODUCTION:",
+        "INVALID_API_ORACLE_REVIEW:",
+        "MISSING_API_EXECUTION:",
     )
     actual = sorted(
         block for block in blocks if any(block.startswith(family) for family in exact_families)
     )
     if actual != sorted(set(derived)):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    return blocks
+
+
+def _result_api_blocks(
+    facts: dict[str, dict[str, Any]], scenarios: list[dict[str, Any]]
+) -> list[str]:
+    by_id = {item["id"]: item for item in scenarios}
+    blocks: list[str] = []
+    for key, fact in facts.items():
+        scenario = by_id.get(key)
+        if (
+            scenario is None
+            or scenario["covers"] != [fact["api"].split("::", 1)[0]]
+            or scenario["head_behavior_sha256"] != fact["head_cases_sha256"]
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+        if fact["base_absent"] and scenario["base_behavior_sha256"] is not None:
+            if scenario["base_behavior_sha256"] != _sha256(_canonical({"api_absent": fact["api"]})):
+                raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+        if not fact["admissible"]:
+            blocks.append(f"INVALID_API_INTRODUCTION:{key}")
+        if not fact["oracle_review_valid"]:
+            blocks.append(f"INVALID_API_ORACLE_REVIEW:{key}")
+        if not fact["base_execution_verified"] or not fact["head_execution_verified"]:
+            blocks.append(f"MISSING_API_EXECUTION:{key}")
     return blocks
 
 
@@ -1300,6 +1898,7 @@ def _verification_result(
     base_artifact_digest: str,
     head_artifact_id: str,
     head_artifact_digest: str,
+    api_observations: list[dict[str, Any]] | None = None,
 ) -> dict[str, object]:
     unique_blocks = sorted(set(blocks))
     return {
@@ -1323,6 +1922,11 @@ def _verification_result(
                         [item["id"], item["head_assertion_sha256"]] for item in obligations
                     ],
                     "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
+                    **(
+                        {"api_observations": api_observations or []}
+                        if manifest.schema_version == "3.0"
+                        else {}
+                    ),
                 }
             )
         ),
@@ -1350,7 +1954,12 @@ def _verification_result(
             "workflow_sha": workflow_sha,
         },
         "scenarios": scenarios,
-        "schema_version": RESULT_SCHEMA,
+        "schema_version": OBSERVED_RESULT_SCHEMA
+        if manifest.schema_version == "3.0"
+        else RESULT_SCHEMA,
+        **(
+            {"api_observations": api_observations or []} if manifest.schema_version == "3.0" else {}
+        ),
         "workflow_sha": workflow_sha,
     }
 
@@ -1424,9 +2033,12 @@ def verify_evidence(
         if item.old_path and item.new_path is None and policy.is_production_path(item.old_path)
     }
     manifest = _manifest(repository, head_sha, records)
+    api_facts, api_blocks = _api_bindings(
+        repository, base_sha, head_sha, policy, manifest, changes, records
+    )
     base, base_error = _load_capture(base_path, "MISSING_BASELINE")
     head, head_error = _load_capture(head_path, "INCOMPLETE_CHARACTERIZATION_EVIDENCE")
-    blocks = [item for item in (base_error, head_error) if item]
+    blocks = [item for item in (base_error, head_error) if item] + api_blocks
     if base is None and head is not None:
         blocks.append("HEAD_ONLY_CHARACTERIZATION_CLAIM")
     blocks.extend(_capture_digest_blocks(base, head, base_capture_sha256, head_capture_sha256))
@@ -1440,10 +2052,28 @@ def verify_evidence(
         "workflow_sha": workflow_sha,
     }
     base_blocks, base_rows = _verified_capture_rows(
-        base, "base", expected_common, base_sha, head_sha, repository, policy, manifest, records
+        base,
+        "base",
+        expected_common,
+        base_sha,
+        head_sha,
+        repository,
+        policy,
+        manifest,
+        records,
+        api_facts,
     )
     head_blocks, head_rows = _verified_capture_rows(
-        head, "head", expected_common, head_sha, head_sha, repository, policy, manifest, records
+        head,
+        "head",
+        expected_common,
+        head_sha,
+        head_sha,
+        repository,
+        policy,
+        manifest,
+        records,
+        api_facts,
     )
     blocks.extend((*base_blocks, *head_blocks))
     base_environment, base_provenance_blocks = _load_environment_provenance(
@@ -1487,12 +2117,20 @@ def verify_evidence(
         or SHA256.fullmatch(head_capture_sha256) is None
     ):
         blocks.append("INVALID_ARTIFACT_IDENTITY")
-    compatibility_blocks, scenarios = _compatibility_evidence(manifest, base_rows, head_rows)
+    compatibility_blocks, scenarios = _compatibility_evidence(
+        manifest, base_rows, head_rows, api_facts
+    )
     blocks.extend(compatibility_blocks)
-    obligation_blocks, obligations = _obligation_evidence(manifest, base_rows, head_rows)
+    obligation_blocks, obligations = _obligation_evidence(manifest, base_rows, head_rows, api_facts)
     blocks.extend(obligation_blocks)
+    covered_obligations = _verified_obligation_coverage(required_obligations, obligations)
+    blocks.extend(
+        f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"
+        for target in required_obligations
+        if target not in covered_obligations
+    )
     runnable = not target_derivation_failed and _logical_step_runnable(
-        manifest, base_rows, head_rows, responsibility_targets, policy.language
+        manifest, base_rows, head_rows, responsibility_targets, policy.language, api_facts
     )
     result = _verification_result(
         identity,
@@ -1514,6 +2152,7 @@ def verify_evidence(
         base_artifact_digest,
         head_artifact_id,
         head_artifact_digest,
+        _serialized_api_facts(api_facts, base_rows, head_rows),
     )
     validate_result(
         result,
@@ -1537,6 +2176,17 @@ def verify_evidence(
         },
     )
     return result
+
+
+def _verified_obligation_coverage(
+    required: list[str], obligations: list[dict[str, object]]
+) -> list[str]:
+    targets = {
+        str(item["target"])
+        for item in obligations
+        if item["category"] == "behavior" and item["compatibility"] == "PASS"
+    }
+    return [item for item in required if item in targets or item.split("::", 1)[0] in targets]
 
 
 def _write_json(path: Path, value: object) -> bytes:

@@ -359,6 +359,35 @@ def _behavior(stdout: bytes, scenario_id: str) -> tuple[object | None, str | Non
     return data["behavior"], None
 
 
+def _observed_behavior(
+    stdout: bytes, api: str
+) -> tuple[object | None, str | None, dict[str, object] | None]:
+    try:
+        value = characterization._exact_keys(
+            characterization._read_json_bytes(stdout, "MALFORMED_API_OBSERVATION"),
+            {
+                "schema_version",
+                "codec",
+                "api",
+                "source_sha256",
+                "function_code_sha256",
+                "start_line",
+                "end_line",
+                "cases",
+            },
+            "MALFORMED_API_OBSERVATION",
+        )
+        if (
+            value["schema_version"] != "1.0"
+            or value["codec"] != "python-values-v1"
+            or value["api"] != api
+        ):
+            raise characterization.CharacterizationError("MALFORMED_API_OBSERVATION")
+    except characterization.CharacterizationError as error:
+        return None, error.code, None
+    return value["cases"], None, value
+
+
 def _run_driver(
     target: Path,
     definition: Path,
@@ -382,6 +411,17 @@ def _run_driver(
             if language == "python"
             else (arguments[0], container_driver)
         )
+        if scenario.api is not None:
+            inner = (
+                arguments[0],
+                "-P",
+                "/collector/characterization_observer.py",
+                "--api",
+                scenario.api,
+                "--driver",
+                container_driver,
+            )
+            recorded = characterization.scenario_command(scenario, language)
         output = execution_output or Path(temporary) / "supervisor"
         plan = quality_runner.CommandPlan(
             f"characterization-{scenario.id}", inner, (), "runtime-lines", scenario.covers
@@ -438,7 +478,11 @@ def _run_driver(
             stdout, stderr, exit_code = error.stdout or b"", error.stderr or b"", -1
         except OSError as error:
             stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
-    behavior, error_code = _behavior(stdout, scenario.id) if exit_code == 0 else (None, None)
+    observation = None
+    if scenario.api is not None and exit_code == 0:
+        behavior, error_code, observation = _observed_behavior(stdout, scenario.api)
+    else:
+        behavior, error_code = _behavior(stdout, scenario.id) if exit_code == 0 else (None, None)
     failure_code = (
         error_code
         or ("CHARACTERIZATION_TIMEOUT" if exit_code == -1 else None)
@@ -468,6 +512,7 @@ def _run_driver(
         "exit_code": exit_code,
         "stderr_sha256": characterization._sha256(stderr),
         "stdout_sha256": characterization._sha256(stdout),
+        **({"api_observation": observation} if scenario.api is not None else {}),
     }
 
 
@@ -489,6 +534,15 @@ def _scenario_capture(
     driver = git_changes.read_regular_blob(definition, definition_sha, driver_path, records)
     golden = git_changes.read_regular_blob(definition, definition_sha, golden_path, records)
     golden_behavior = characterization._read_json_bytes(golden.content, "MALFORMED_GOLDEN_OUTPUT")
+    if scenario.api is not None:
+        source = characterization._api_source(
+            target,
+            git_changes.run_git(target, ("rev-parse", "HEAD"), records).decode().strip(),
+            scenario.api,
+            records,
+        )
+        if source is None:
+            return _absent_api_capture(scenario, driver, golden, golden_behavior)
     first = _run_driver(
         target,
         definition,
@@ -530,6 +584,36 @@ def _scenario_capture(
         "kind": scenario.kind,
         "stderr_sha256": first["stderr_sha256"],
         "stdout_sha256": first["stdout_sha256"],
+        **({"api_observation": first["api_observation"]} if scenario.api is not None else {}),
+    }
+
+
+def _absent_api_capture(
+    scenario: characterization.Scenario,
+    driver: git_changes.GitBlob,
+    golden: git_changes.GitBlob,
+    golden_behavior: object,
+) -> dict[str, object]:
+    behavior = {"api_absent": scenario.api}
+    empty = characterization._sha256(b"")
+    return {
+        "behavior": behavior,
+        "behavior_sha256": characterization._sha256(characterization._canonical(behavior)),
+        "command": None,
+        "covers": list(scenario.covers),
+        "deterministic": True,
+        "driver_blob_sha": driver.object_sha,
+        "error": None,
+        "exit_code": 0,
+        "golden_behavior_sha256": characterization._sha256(
+            characterization._canonical(golden_behavior)
+        ),
+        "golden_blob_sha": golden.object_sha,
+        "id": scenario.id,
+        "kind": scenario.kind,
+        "stderr_sha256": empty,
+        "stdout_sha256": empty,
+        "api_observation": {"api": scenario.api, "state": "ABSENT"},
     }
 
 
@@ -648,7 +732,9 @@ def capture_evidence(
         "language": policy.language,
         "manifest": characterization._manifest_payload(manifest),
         "scenarios": scenarios,
-        "schema_version": characterization.CAPTURE_SCHEMA,
+        "schema_version": characterization.OBSERVED_CAPTURE_SCHEMA
+        if manifest.schema_version == "3.0"
+        else characterization.CAPTURE_SCHEMA,
         "target_sha": target_sha,
     }
     environment = {
