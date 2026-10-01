@@ -2,37 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Reader documentation explains the repository-agnostic organization-assigned Gate, supported profiles, eight checks, onboarding, failures, evidence, and assurance limits. Executable policy, workflow, schema, CLI, dependencies, and deployment remain unchanged."
-proof = "Production parser validation of generic contract, manifest, assertion, and authorization examples; internal link and historical-anchor validation; byte-preserved archive and retained-artifact comparison; GitHub-rendered architecture and lifecycle diagrams; complete existing source proof and final-head protected delivery."
+intended_behavior = "The product definition in README and the canonical wiki Home page links Supportability Standard to the immutable Standard at its existing repository path."
+proof = "Verify both Markdown link targets, the Standard hash, the protected final-head checks, and the published wiki link from the exact documentation merge."
 
 [characterization]
-captured_behavior = "Existing production modules, characterization scenarios and obligations, golden outputs, trusted controls, and required workflows remain byte-identical to the base."
-proof = "The existing hosted base/head capture process assesses unchanged executable behavior. The documentation update preserves the committed characterization manifest and every existing driver/golden."
+captured_behavior = "Production modules, characterization inputs, golden files, workflows, and policy remain unchanged."
+proof = "Compare executable and immutable inputs against the base and retain existing hosted base/head evidence."
 
 [separation_of_concerns]
-before = "Reader documentation mixed product behavior with consumer incidents, historical project instructions, superseded status, and retired review transports."
-after = "Canonical product pages own reader guidance; dated byte-preserving history owns previous observations; maintenance guidance owns current contribution and manual publication requirements."
+before = "The opening product definition names the Standard without a direct hyperlink."
+after = "README and canonical Home provide a direct link; the wiki projects canonical Home after protected merge."
 boundaries = []
 
 [architecture]
-dependency_direction = "No production module or import direction changes. Documentation refers to the existing source responsibilities and independently pinned protection boundary."
-reviewed_paths = [".github/ISSUE_TEMPLATE/delivery-milestone.yml", ".supportability-review.toml", "AGENTS.md", "README.md", "docs/deterministic_assurance_disposition.md", "docs/enforcement_matrix.md", "docs/enforcement_milestone_1.md", "docs/enforcement_milestone_10.md", "docs/enforcement_milestone_2.md", "docs/enforcement_milestone_3.md", "docs/enforcement_milestone_4.md", "docs/enforcement_milestone_5.md", "docs/enforcement_milestone_6.md", "docs/enforcement_milestone_7.md", "docs/enforcement_milestone_8.md", "docs/enforcement_milestone_9.md", "docs/history/2026-10-01/.github/ISSUE_TEMPLATE/delivery-milestone.yml", "docs/history/2026-10-01/AGENTS.md", "docs/history/2026-10-01/INDEX.md", "docs/history/2026-10-01/README.md", "docs/history/2026-10-01/docs/deterministic_assurance_disposition.md", "docs/history/2026-10-01/docs/enforcement_matrix.md", "docs/history/2026-10-01/docs/enforcement_milestone_1.md", "docs/history/2026-10-01/docs/enforcement_milestone_10.md", "docs/history/2026-10-01/docs/enforcement_milestone_2.md", "docs/history/2026-10-01/docs/enforcement_milestone_3.md", "docs/history/2026-10-01/docs/enforcement_milestone_4.md", "docs/history/2026-10-01/docs/enforcement_milestone_5.md", "docs/history/2026-10-01/docs/enforcement_milestone_6.md", "docs/history/2026-10-01/docs/enforcement_milestone_7.md", "docs/history/2026-10-01/docs/enforcement_milestone_8.md", "docs/history/2026-10-01/docs/enforcement_milestone_9.md", "docs/history/2026-10-01/docs/fixed_roadmap.md", "docs/history/2026-10-01/docs/product_completion_contract.md", "docs/history/2026-10-01/docs/product_scope.md", "docs/history/2026-10-01/docs/qualification/README.md", "docs/history/2026-10-01/docs/refactor_authorization.md", "docs/history/2026-10-01/docs/supportability_standard.md", "docs/history/2026-10-01/manifest.json", "docs/history/README.md", "docs/maintenance.md", "docs/product/Architecture.md", "docs/product/Boundaries-and-Limitations.md", "docs/product/CLI-Reference.md", "docs/product/Eight-Gates.md", "docs/product/Evidence-Model.md", "docs/product/Getting-Started.md", "docs/product/Home.md", "docs/product/Module-Map.md", "docs/product/Pull-Request-Lifecycle.md", "docs/product/Refactor-Authorization.md", "docs/product/Repository-Configuration.md", "docs/product/Troubleshooting.md", "docs/product/Validation-and-Protection.md", "docs/product_completion_contract.md", "docs/product_scope.md", "docs/qualification/README.md", "docs/refactor_authorization.md"]
+dependency_direction = "No production module or dependency direction changes."
+reviewed_paths = [".supportability-review.toml", "README.md", "docs/product/Home.md"]
 
 [responsibility_boundary]
 path = "docs/product/Home.md"
-owns = "Product entrypoint, capability explanation, profile-versus-enrollment distinction, and navigation to canonical reader topics."
-does_not_own = "Runtime decisions, production consumer behavior, policy changes, source qualification, deployment promotion, historical project execution, or ruleset enrollment."
+owns = "The canonical product introduction and its direct Standard hyperlink."
+does_not_own = "Policy wording, runtime enforcement, repository enrollment, or deployment protection."
 
 [incremental_refactor]
-target = "Owner-authorized documentation reset and manual wiki publication only; no production refactor target."
-completed_step = "Separate product documentation from retained history, preserve original-path historical anchors, and replace closed-project contributor instructions with durable maintenance guidance."
+target = "Owner-requested introductory hyperlinks and corresponding manual wiki publication; no production refactor target."
+completed_step = "Link both product definitions to the existing immutable Standard without changing the surrounding product claims."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Topic and module names describe their actual product or historical-record responsibilities; examples use neutral application names."
-cohesion = "Product guidance, archive evidence, and contributor publication steps each have a separate named purpose; existing executable architecture is unchanged."
-intended_behavior = "Readers can prepare an eligible arbitrary repository, understand enrollment and each check, diagnose failures, and recognize assurance limits without consulting consumer projects."
-reviewability = "The changes are documentation and the existing issue authoring template plus required review evidence. Historical bytes and executable/protected inputs are checked independently of prose claims."
+naming = "Supportability Standard is the visible link text and names the actual policy document."
+cohesion = "Only the two product introductions and required current review evidence change."
+intended_behavior = "Readers can open the actual Standard directly from either introductory definition."
+reviewability = "The small Markdown change preserves wording and uses the correct relative target from each file location."
