@@ -1,0 +1,771 @@
+{
+  "schema_version": "documentation-history.v1",
+  "snapshot_date": "2026-10-01",
+  "source_sha": "db91e1e8ed6484c36fbee2eaba46800dabb895bc",
+  "records": [
+    {
+      "original_path": "README.md",
+      "archive_path": "docs/history/2026-10-01/README.md",
+      "sha256": "cbf92fb4711378939a5d01c070ab44f6cc7efa53bf3524b927c4d5f9fc80f327",
+      "anchors": [
+        [
+          "Supportability Gate",
+          "supportability-gate"
+        ],
+        [
+          "Status",
+          "status"
+        ],
+        [
+          "Repository inputs",
+          "repository-inputs"
+        ],
+        [
+          "Requirements",
+          "requirements"
+        ],
+        [
+          "CLI",
+          "cli"
+        ],
+        [
+          "Enforcement boundary",
+          "enforcement-boundary"
+        ],
+        [
+          "Source validation",
+          "source-validation"
+        ]
+      ]
+    },
+    {
+      "original_path": "AGENTS.md",
+      "archive_path": "docs/history/2026-10-01/AGENTS.md",
+      "sha256": "32700330e6ac5a00bd929f7d6c2d12e1d4bec4e91b451d7d03d0e18f77c1a6e3",
+      "anchors": [
+        [
+          "Repository Agent Contract",
+          "repository-agent-contract"
+        ],
+        [
+          "Immutable policy",
+          "immutable-policy"
+        ],
+        [
+          "Product boundary",
+          "product-boundary"
+        ],
+        [
+          "Required reading before mutation",
+          "required-reading-before-mutation"
+        ],
+        [
+          "Scope and architecture control",
+          "scope-and-architecture-control"
+        ],
+        [
+          "Global skill boundary",
+          "global-skill-boundary"
+        ],
+        [
+          "Completion ledger control",
+          "completion-ledger-control"
+        ],
+        [
+          "Completion claims",
+          "completion-claims"
+        ],
+        [
+          "Codex review",
+          "codex-review"
+        ],
+        [
+          "Active milestone control",
+          "active-milestone-control"
+        ],
+        [
+          "Required source proof",
+          "required-source-proof"
+        ]
+      ]
+    },
+    {
+      "original_path": ".github/ISSUE_TEMPLATE/delivery-milestone.yml",
+      "archive_path": "docs/history/2026-10-01/.github/ISSUE_TEMPLATE/delivery-milestone.yml",
+      "sha256": "984b4ac52bcfbf5676c68e575cc8c50cc549ca325120eaf2a31783d98ef63da4",
+      "anchors": []
+    },
+    {
+      "original_path": "docs/product_completion_contract.md",
+      "archive_path": "docs/history/2026-10-01/docs/product_completion_contract.md",
+      "sha256": "ece917443f0417479fc1deab6ee8041c6047148b370457c5efbd117ebd4a455a",
+      "anchors": [
+        [
+          "Product Completion Contract",
+          "product-completion-contract"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Final product objective",
+          "final-product-objective"
+        ],
+        [
+          "Current deterministic assurance contract",
+          "current-deterministic-assurance-contract"
+        ],
+        [
+          "Historical successor enforcement ledger",
+          "historical-successor-enforcement-ledger"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #79",
+          "critical-maintenance--project-3-issue-79"
+        ],
+        [
+          "Historical delivery ledger",
+          "historical-delivery-ledger"
+        ],
+        [
+          "1. Changed files, touched functions, progressive C901 complexity, deterministic evidence.",
+          "1-changed-files-touched-functions-progressive-c901-complexity-deterministic-evidence"
+        ],
+        [
+          "2. Approved gate adapters, changed-file gate coverage, high-risk-file gate coverage, threshold and scope anti-weakening.",
+          "2-approved-gate-adapters-changed-file-gate-coverage-high-risk-file-gate-coverage-threshold-and-scope-anti-weakening"
+        ],
+        [
+          "3. Behavior proof, characterization evidence, architecture-review evidence, responsibility-boundary reporting.",
+          "3-behavior-proof-characterization-evidence-architecture-review-evidence-responsibility-boundary-reporting"
+        ],
+        [
+          "4. Organization required workflow proof in one temporary target repository.",
+          "4-organization-required-workflow-proof-in-one-temporary-target-repository"
+        ],
+        [
+          "5. TWMN adoption with clean, defect, gate-weakening, and scope-narrowing canaries.",
+          "5-twmn-adoption-with-clean-defect-gate-weakening-and-scope-narrowing-canaries"
+        ],
+        [
+          "Critical maintenance \u2014 Project #6",
+          "critical-maintenance--project-6"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #92",
+          "critical-maintenance--project-3-issue-92"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #95",
+          "critical-maintenance--project-3-issue-95"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #100",
+          "critical-maintenance--project-3-issue-100"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #103",
+          "critical-maintenance--project-3-issue-103"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #106",
+          "critical-maintenance--project-3-issue-106"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #109",
+          "critical-maintenance--project-3-issue-109"
+        ],
+        [
+          "Critical maintenance \u2014 Project #3 issue #116",
+          "critical-maintenance--project-3-issue-116"
+        ],
+        [
+          "Product status",
+          "product-status"
+        ],
+        [
+          "Milestone transition rules",
+          "milestone-transition-rules"
+        ],
+        [
+          "Final completion rule",
+          "final-completion-rule"
+        ],
+        [
+          "Project #9 S03 retirement assurance",
+          "project-9-s03-retirement-assurance"
+        ],
+        [
+          "Project #9 S05 exact-head Codex completion assurance",
+          "project-9-s05-exact-head-codex-completion-assurance"
+        ],
+        [
+          "Project #9 S07 focused Codex review assurance",
+          "project-9-s07-focused-codex-review-assurance"
+        ],
+        [
+          "Project #10 S00 authority migration",
+          "project-10-s00-authority-migration"
+        ],
+        [
+          "Project #10 S01 connector separation and one-time review lifecycle",
+          "project-10-s01-connector-separation-and-one-time-review-lifecycle"
+        ],
+        [
+          "Project #10 S02 applicability and gate failure isolation",
+          "project-10-s02-applicability-and-gate-failure-isolation"
+        ],
+        [
+          "Project #10 S03 Gate 1 qualification",
+          "project-10-s03-gate-1-qualification"
+        ],
+        [
+          "Project #10 S04 Gate 2 qualification",
+          "project-10-s04-gate-2-qualification"
+        ],
+        [
+          "Project #10 S05 Gate 3 qualification",
+          "project-10-s05-gate-3-qualification"
+        ],
+        [
+          "Project #10 S06 Gate 4 qualification",
+          "project-10-s06-gate-4-qualification"
+        ],
+        [
+          "Project #10 S07 Gate 5 qualification",
+          "project-10-s07-gate-5-qualification"
+        ],
+        [
+          "Project #10 S08 Gate 6 qualification",
+          "project-10-s08-gate-6-qualification"
+        ],
+        [
+          "Project #10 S09 Gate 7 qualification",
+          "project-10-s09-gate-7-qualification"
+        ],
+        [
+          "Project #10 S10 Gate 8 qualification",
+          "project-10-s10-gate-8-qualification"
+        ],
+        [
+          "Project #10 S11 integrated qualification and organization-wide activation",
+          "project-10-s11-integrated-qualification-and-organization-wide-activation"
+        ],
+        [
+          "Project #10 S12 mixed production-asset quality coverage",
+          "project-10-s12-mixed-production-asset-quality-coverage"
+        ],
+        [
+          "Project #10 S13 mixed Python and TypeScript profile support",
+          "project-10-s13-mixed-python-and-typescript-profile-support"
+        ],
+        [
+          "Project #10 S14 exact deleted high-risk transition",
+          "project-10-s14-exact-deleted-high-risk-transition"
+        ],
+        [
+          "Project #10 S15 exact language-profile retirement",
+          "project-10-s15-exact-language-profile-retirement"
+        ],
+        [
+          "Project #10 S16 executable Python characterization prerequisites",
+          "project-10-s16-executable-python-characterization-prerequisites"
+        ],
+        [
+          "Project #10 S17 validated failure summaries",
+          "project-10-s17-validated-failure-summaries"
+        ],
+        [
+          "Project #25 deterministic assurance remediation",
+          "project-25-deterministic-assurance-remediation"
+        ],
+        [
+          "Durable audit disposition",
+          "durable-audit-disposition"
+        ],
+        [
+          "S00 deterministic assurance contract and traceability",
+          "s00-deterministic-assurance-contract-and-traceability"
+        ],
+        [
+          "S05 meaningful behavior coverage and preserved scenario obligations",
+          "s05-meaningful-behavior-coverage-and-preserved-scenario-obligations"
+        ],
+        [
+          "S06 stable language identities and modern complexity compatibility",
+          "s06-stable-language-identities-and-modern-complexity-compatibility"
+        ],
+        [
+          "S07 focused regression authorization and series-safe incremental refactors",
+          "s07-focused-regression-authorization-and-series-safe-incremental-refactors"
+        ],
+        [
+          "S08 integrated qualification, durable evidence, and lifecycle handoff",
+          "s08-integrated-qualification-durable-evidence-and-lifecycle-handoff"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/deterministic_assurance_disposition.md",
+      "archive_path": "docs/history/2026-10-01/docs/deterministic_assurance_disposition.md",
+      "sha256": "4e85c8f35fa9827a12ba7245cb84849d151ecdaf95d16aa825fe7544a9a56e7e",
+      "anchors": [
+        [
+          "Deterministic assurance disposition",
+          "deterministic-assurance-disposition"
+        ],
+        [
+          "Slice state",
+          "slice-state"
+        ],
+        [
+          "Audit findings and assumptions",
+          "audit-findings-and-assumptions"
+        ],
+        [
+          "Final S08 boundary",
+          "final-s08-boundary"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/product_scope.md",
+      "archive_path": "docs/history/2026-10-01/docs/product_scope.md",
+      "sha256": "228f317dbd8328af898a1c22a8fd7a199f86ded5cd25a0218e1b5300e21ceda6",
+      "anchors": [
+        [
+          "Product Scope",
+          "product-scope"
+        ],
+        [
+          "Purpose",
+          "purpose"
+        ],
+        [
+          "Responsibility split",
+          "responsibility-split"
+        ],
+        [
+          "Deterministic rules",
+          "deterministic-rules"
+        ],
+        [
+          "Deterministic assurance evidence",
+          "deterministic-assurance-evidence"
+        ],
+        [
+          "Durable qualification boundary",
+          "durable-qualification-boundary"
+        ],
+        [
+          "Human review",
+          "human-review"
+        ],
+        [
+          "Fixed V1 exclusions",
+          "fixed-v1-exclusions"
+        ],
+        [
+          "Package dependency direction",
+          "package-dependency-direction"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_matrix.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_matrix.md",
+      "sha256": "ef3c56f9b31b58a5bf9eb4a5d489ef545f83b072601d2093f5f3d6c301b451b2",
+      "anchors": [
+        [
+          "Enforcement Matrix",
+          "enforcement-matrix"
+        ],
+        [
+          "Source Integrity promotion and rollback",
+          "source-integrity-promotion-and-rollback"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/refactor_authorization.md",
+      "archive_path": "docs/history/2026-10-01/docs/refactor_authorization.md",
+      "sha256": "6403e4860aef5e290e92507a818a870a07287449c67f3b65d6f01c2bbe590977",
+      "anchors": [
+        [
+          "Refactor Authorization",
+          "refactor-authorization"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/qualification/README.md",
+      "archive_path": "docs/history/2026-10-01/docs/qualification/README.md",
+      "sha256": "fa82b6719e3a570e6dc9d428ac951e3f02210b7727e7f6017da8bf988544bd9c",
+      "anchors": [
+        [
+          "S08 durable qualification evidence",
+          "s08-durable-qualification-evidence"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_1.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_1.md",
+      "sha256": "4a24817941653cfeeef8623e618be5160833772054d2592633b6110418afebee",
+      "anchors": [
+        [
+          "Enforcement Milestone 1 Execution Directive",
+          "enforcement-milestone-1-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_10.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_10.md",
+      "sha256": "94f25d9fd6ba33d7804d6b03c33e300ec1c05a2e0367d7203962e3ddd4cf7c31",
+      "anchors": [
+        [
+          "Enforcement Milestone 10 Execution Directive",
+          "enforcement-milestone-10-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Protected delivery",
+          "protected-delivery"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_2.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_2.md",
+      "sha256": "4a556c90489a3771d9bcef19fb69c755dfe678e1432cd626b0faf7854762e90b",
+      "anchors": [
+        [
+          "Enforcement Milestone 2 Execution Directive",
+          "enforcement-milestone-2-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_3.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_3.md",
+      "sha256": "e0c253bdaee8517ca310e09c043c53362626ae4363851828c9f88b9f9b24b024",
+      "anchors": [
+        [
+          "Enforcement Milestone 3 Execution Directive",
+          "enforcement-milestone-3-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_4.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_4.md",
+      "sha256": "b3d984e6d73856ff0d9b650c366527be463af22a9a5172838ffed553812006f7",
+      "anchors": [
+        [
+          "Enforcement Milestone 4 Execution Directive",
+          "enforcement-milestone-4-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_5.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_5.md",
+      "sha256": "13458be3b593de6e2983576377826d7c13d4e3107d71ce1c2db359cd59787a5e",
+      "anchors": [
+        [
+          "Enforcement Milestone 5 Execution Directive",
+          "enforcement-milestone-5-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_6.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_6.md",
+      "sha256": "3ecc43392c4ba18a2a9ee1071684a99f728b07db8ed01da93ceb5ee315730b18",
+      "anchors": [
+        [
+          "Enforcement Milestone 6 Execution Directive",
+          "enforcement-milestone-6-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_7.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_7.md",
+      "sha256": "1f48695ab8be2ef0c027d23877dfa36003e36a1f816edfce0c8d5d5a760571ec",
+      "anchors": [
+        [
+          "Enforcement Milestone 7 Execution Directive",
+          "enforcement-milestone-7-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_8.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_8.md",
+      "sha256": "9937b5d5fdc98804512c723f1be8f550e01919a4a2e5ae89122debab39f35ab5",
+      "anchors": [
+        [
+          "Enforcement Milestone 8 Execution Directive",
+          "enforcement-milestone-8-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    },
+    {
+      "original_path": "docs/enforcement_milestone_9.md",
+      "archive_path": "docs/history/2026-10-01/docs/enforcement_milestone_9.md",
+      "sha256": "01e7b92fba862d3dc429267991d1e19c8f3dbaccd01d0df4ff663f7c50112ce9",
+      "anchors": [
+        [
+          "Enforcement Milestone 9 Execution Directive",
+          "enforcement-milestone-9-execution-directive"
+        ],
+        [
+          "Authority",
+          "authority"
+        ],
+        [
+          "Terminal capability",
+          "terminal-capability"
+        ],
+        [
+          "Approved scope",
+          "approved-scope"
+        ],
+        [
+          "Excluded scope",
+          "excluded-scope"
+        ],
+        [
+          "Required direct proof",
+          "required-direct-proof"
+        ],
+        [
+          "Protected delivery",
+          "protected-delivery"
+        ],
+        [
+          "Closure",
+          "closure"
+        ]
+      ]
+    }
+  ]
+}

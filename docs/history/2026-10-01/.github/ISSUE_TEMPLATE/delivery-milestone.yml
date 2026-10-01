@@ -1,0 +1,94 @@
+name: Delivery milestone
+description: Track one frozen Supportability Gate delivery milestone and its direct evidence.
+title: "Milestone "
+labels:
+  - delivery-milestone
+body:
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone name and order
+      description: Use the frozen milestone number and authoritative name.
+      placeholder: Milestone 1 — Foundation vertical slice
+    validations:
+      required: true
+  - type: input
+    id: roadmap-source
+    attributes:
+      label: Authoritative roadmap source
+      placeholder: docs/fixed_roadmap.md item 1 at commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: terminal-capability
+    attributes:
+      label: Exact terminal capability
+      description: State the exact testable capability required at milestone completion.
+    validations:
+      required: true
+  - type: textarea
+    id: direct-evidence
+    attributes:
+      label: Direct evidence requirements
+      description: List required source, runtime, GitHub, enforcement, coverage, and cleanup proof.
+    validations:
+      required: true
+  - type: textarea
+    id: approved-scope
+    attributes:
+      label: Approved scope
+      description: List only source-authorized work for this milestone.
+    validations:
+      required: true
+  - type: textarea
+    id: excluded-scope
+    attributes:
+      label: Explicitly excluded scope
+      description: List later milestones and other source-grounded exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: additions-review
+    attributes:
+      label: Unrequired additions review
+      description: Record unplanned files, packages, tooling, or architecture and their disposition.
+    validations:
+      required: true
+  - type: dropdown
+    id: stop-confirmation
+    attributes:
+      label: Stop confirmation
+      options:
+        - Not reached
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: input
+    id: next-action
+    attributes:
+      label: Single next action
+      description: Give one independently useful action that closes the smallest evidence gap.
+    validations:
+      required: true
+  - type: textarea
+    id: terminal-condition
+    attributes:
+      label: Terminal condition
+      description: State the exact condition permitting milestone closure.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence-record
+    attributes:
+      label: Evidence record
+      description: Record commit, pull request, workflow, check, ruleset, validation, and coverage proof.
+    validations:
+      required: true
+  - type: textarea
+    id: completion-decision
+    attributes:
+      label: Completion decision
+      description: Record Evidence, Scope, Stop confirmed, and milestone-close approval decisions.
+    validations:
+      required: true

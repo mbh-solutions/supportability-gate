@@ -1,0 +1,60 @@
+# Refactor Authorization
+
+The Gate authenticates required refactor scope through exactly one trusted-owner PR comment
+matching the current head and beginning `Supportability-Refactor-Authorization: `. Repository enrollment and ordinary
+admin permissions do not change who is trusted: the current source uses numeric owner ID
+`229662739`, fixed in `refactor_policy.py`. The repository contract cannot override that identity.
+
+## Existing schema
+
+Schema `2.0` binds the exact repository, full base/head commits, complete sorted changed scope,
+derived production targets, related test associations, and refactor sequence. This fictional
+example illustrates a narrow Python change; replace every identity with the actual current facts:
+
+```json
+{
+  "repository": "example-org/order-service",
+  "schema_version": "2.0",
+  "base_sha": "1111111111111111111111111111111111111111",
+  "head_sha": "2222222222222222222222222222222222222222",
+  "broad": false,
+  "scope": ["src/application/pricing.py", "tests/test_pricing.py"],
+  "targets": ["src/application/pricing.py::function:calculate_total:1-20"],
+  "related_tests": [{"path": "tests/test_pricing.py", "targets": ["src/application/pricing.py::function:calculate_total:1-20"]}],
+  "sequence": {"predecessor_sha": "1111111111111111111111111111111111111111", "series_id": "pricing-refactor", "step": 1}
+}
+```
+
+The actual comment is the exact prefix followed by the JSON object. The pretty-printed object
+above is reference structure, not evidence for any real pull request. Use the Gate-derived target
+symbols and line spans, not guessed function identities. All required keys are fixed and unknown
+keys do not add authority.
+
+## Scope and related tests
+
+For a narrow Python association use `tests/test_<source-stem>.py`. A narrow TypeScript association
+uses `tests/<source-stem>.test.{js,mjs,cjs,ts,mts,cts}`. Every associated test and target must exist
+in the authenticated changed scope and derived inventory. Existing characterization proof paths
+retain their fixed treatment. Other tests, documentation, multiple production targets, and
+unrelated files require the defined exact broad authorization when that policy applies.
+
+An authenticated broad declaration records actual approved scope; it does not waive complexity,
+coverage, characterization, or any other deterministic rule. Non-production-only changes use their
+defined applicability and need not invent a production target to satisfy this example.
+
+## Series and freshness
+
+Step 1 starts a new named series even if the base is an unrelated refactor merge. Later steps
+must use the same series ID, name the exact immediate predecessor merge, increment by one, and
+preserve target identity apart from its line span. Missing lookup evidence fails closed; skipped,
+replayed, substituted, or wrong-series predecessors block.
+
+After a push, earlier base/head authorization is stale. Supply exact current evidence, verify its
+author and content, and obtain fresh checks. Earlier-head comments may remain as history; multiple
+matching current-head authorizations are malformed and cannot compete for authority.
+
+Scope and spans are footprint evidence, not proof that a refactor is semantically small or good.
+See [Eight Gates](Eight-Gates.md#6-incremental-refactor) and [Boundaries and Limitations](Boundaries-and-Limitations.md).
+
+Implementation references: [authorization parser and policy](../../src/supportability_gate/refactor_policy.py)
+and [derived targets](../../src/supportability_gate/refactor_targets.py).
