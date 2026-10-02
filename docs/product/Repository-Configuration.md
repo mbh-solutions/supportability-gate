@@ -205,6 +205,17 @@ Implementation references: [contract schema](../../src/supportability_gate/contr
 
 ## Observed Python APIs and genuine introduction
 
+The fixed manifest capacity is 64 total scenarios, including at most 50 observed Python API
+scenarios. The Gate rejects larger manifests before target execution. Serialized results retain
+the same 64-scenario limit; observed API facts and owner introduction grants remain limited to
+50 each. A manifest supports at most 200 obligations. These are resource bounds, not permission
+to omit required behavior or combine distinct API identities into one proof.
+
+Machine captures use canonical compact JSON plus a final newline. All observations remain in
+the artifact, and capture digests/provenance bind its actual emitted bytes. The existing
+1,000,000-byte JSON input limit, case/codec limits, replay timeouts and hosted job limits remain
+in force; larger evidence needs a supported scope design rather than dropped observations.
+
 Manifest schema `3.0` retains the schema-2 obligations/transitions and adds `api` to every
 scenario row. Ordinary rows use `"api": null`. An observed row names one ordinary synchronous
 Python function, covers exactly its file, and supplies a behavior obligation with selector `$`
