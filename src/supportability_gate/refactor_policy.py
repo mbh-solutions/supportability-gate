@@ -15,14 +15,27 @@ from pathlib import Path
 from typing import Any
 
 from supportability_gate import characterization as characterization_evidence
-from supportability_gate import contract, git_changes, refactor_targets
+from supportability_gate import contract, git_changes
+
+
+def __getattr__(name: str) -> Any:
+    if name != "refactor_targets":
+        raise AttributeError(name)
+    from supportability_gate import refactor_targets
+
+    return refactor_targets
+
 
 AUTHORIZATION_PREFIX = "Supportability-Refactor-Authorization: "
 AUTHORIZATION_SCHEMA = "2.0"
 RESULT_SCHEMA = "refactor-policy-result.v1"
 CHARACTERIZATION_SCHEMA = characterization_evidence.RESULT_SCHEMA
 COMPATIBLE_CHARACTERIZATION_SCHEMAS = frozenset(
-    {"characterization-result.v1", CHARACTERIZATION_SCHEMA}
+    {
+        "characterization-result.v1",
+        CHARACTERIZATION_SCHEMA,
+        characterization_evidence.OBSERVED_RESULT_SCHEMA,
+    }
 )
 RUNNABILITY_SCHEMA = characterization_evidence.RUNNABILITY_SCHEMA
 TRUSTED_OWNER_ID = 229662739
@@ -82,6 +95,7 @@ class Authorization:
     scope: tuple[str, ...]
     targets: tuple[str, ...]
     sequence: Sequence
+    introductions: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -169,6 +183,9 @@ def _parse_authorization(body: object) -> Authorization:
         data = json.loads(rows[0], object_pairs_hook=_unique_object)
     except (json.JSONDecodeError, _DuplicateKeyError) as error:
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION") from error
+    if not isinstance(data, dict):
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    version = data.get("schema_version")
     row = _exact_keys(
         data,
         {
@@ -181,7 +198,8 @@ def _parse_authorization(body: object) -> Authorization:
             "scope",
             "sequence",
             "targets",
-        },
+        }
+        | ({"introductions"} if version == "3.0" else set()),
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     sequence = _exact_keys(
@@ -190,7 +208,7 @@ def _parse_authorization(body: object) -> Authorization:
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     if (
-        row["schema_version"] != AUTHORIZATION_SCHEMA
+        row["schema_version"] not in {AUTHORIZATION_SCHEMA, "3.0"}
         or not isinstance(row["repository"], str)
         or not isinstance(row["base_sha"], str)
         or SHA.fullmatch(row["base_sha"]) is None
@@ -214,6 +232,95 @@ def _parse_authorization(body: object) -> Authorization:
         _path_list(row["scope"], "authorization.scope"),
         _target_list(row["targets"]),
         Sequence(sequence["step"], sequence["predecessor_sha"], sequence["series_id"]),
+        tuple(parse_introduction_grants(row["introductions"])) if version == "3.0" else (),
+    )
+
+
+def parse_introduction_grants(value: object) -> list[dict[str, Any]]:
+    """Validate precise owner-reviewed intended-oracle grants, never waivers."""
+    if not isinstance(value, list) or len(value) > 50:
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    rows = [_introduction_grant(item) for item in value]
+    identities = [item["scenario"] for item in rows]
+    if identities != sorted(set(identities)):
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    return rows
+
+
+def _introduction_grant(value: object) -> dict[str, Any]:
+    row = _exact_keys(
+        value,
+        {
+            "api",
+            "scenario",
+            "source_sha256",
+            "driver_sha256",
+            "oracle_sha256",
+            "review_sha256",
+            "intended_feature",
+            "independent_oracle_reviewed",
+        },
+        "MALFORMED_OWNER_AUTHORIZATION",
+    )
+    hashes = ("source_sha256", "driver_sha256", "oracle_sha256", "review_sha256")
+    if (
+        any(
+            not isinstance(row[key], str)
+            or characterization_evidence.SHA256.fullmatch(row[key]) is None
+            for key in hashes
+        )
+        or not isinstance(row["scenario"], str)
+        or characterization_evidence.SCENARIO_ID.fullmatch(row["scenario"]) is None
+        or not isinstance(row["api"], str)
+        or "::function:" not in row["api"]
+        or not isinstance(row["intended_feature"], str)
+        or not row["intended_feature"].strip()
+        or len(row["intended_feature"]) > 2000
+        or row["independent_oracle_reviewed"] is not True
+    ):
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    return row
+
+
+def introduction_authorization_blocks(
+    characterization: object, grants: object, targets: tuple[str, ...]
+) -> list[str]:
+    """Join authenticated owner intent to every exact measured API birth."""
+    if not isinstance(characterization, dict):
+        return ["UNAUTHENTICATED_RUNNABILITY_EVIDENCE"]
+    try:
+        approved = parse_introduction_grants(grants)
+        facts = characterization_evidence._result_api_facts(
+            characterization.get("api_observations", [])
+        )
+    except (RefactorPolicyError, characterization_evidence.CharacterizationError):
+        return ["MALFORMED_INTRODUCTION_AUTHORIZATION"]
+    births = {key: row for key, row in facts.items() if row["base_absent"]}
+    by_id = {row["scenario"]: row for row in approved}
+    if births.keys() != by_id.keys():
+        return ["INTRODUCTION_AUTHORIZATION_MISMATCH"]
+    return [
+        f"INTRODUCTION_AUTHORIZATION_MISMATCH:{key}"
+        for key, fact in births.items()
+        if not _introduction_grant_matches(fact, by_id[key], targets)
+    ]
+
+
+def _introduction_grant_matches(
+    fact: dict[str, Any], grant: dict[str, Any], targets: tuple[str, ...]
+) -> bool:
+    source = fact["head_source"]
+    return bool(
+        isinstance(source, dict)
+        and fact["admissible"]
+        and grant["api"] == fact["api"]
+        and grant["source_sha256"] == source["source_sha256"]
+        and grant["driver_sha256"] == fact["driver_sha256"]
+        and grant["oracle_sha256"] == fact["oracle_sha256"]
+        and fact["oracle_review_valid"]
+        and grant["review_sha256"] == fact["review_sha256"]
+        and grant["intended_feature"] == fact["intended_feature"]
+        and fact["api"] in _target_identities(targets)
     )
 
 
@@ -481,6 +588,11 @@ def _authorization_payload(authorization: Authorization | None) -> dict[str, obj
             "step": authorization.sequence.step,
         },
         "targets": list(authorization.targets),
+        **(
+            {"introductions": list(authorization.introductions)}
+            if authorization.introductions
+            else {}
+        ),
     }
 
 
@@ -546,6 +658,8 @@ def _related_test_paths(
     targets: tuple[str, ...],
     language: str,
 ) -> tuple[set[str], bool]:
+    from supportability_gate import refactor_targets
+
     target_paths = {target: target.split("::", 1)[0] for target in targets}
     valid: set[str] = set()
     invalid = False
@@ -692,6 +806,8 @@ def verify_refactor(
     authorization_block: str | None = None,
 ) -> dict[str, object]:
     """Return deterministic M8 authorization, focus, runnability, and sequence evidence."""
+    from supportability_gate import refactor_targets
+
     records: list[git_changes.CommandRecord] = []
     repository = git_changes.validate_repository(repository, records)
     repository_name, base_sha, head_sha, _ = _event_values(event)
@@ -748,6 +864,12 @@ def verify_refactor(
                 unbounded,
             )
         )
+        if authorization is not None:
+            blocks.extend(
+                introduction_authorization_blocks(
+                    characterization, list(authorization.introductions), targets
+                )
+            )
     unique_blocks = sorted(set(blocks))
     if not applicable:
         predecessor = PredecessorEvidence()

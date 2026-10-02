@@ -53,6 +53,17 @@ Static roles and coverage are bounded by declared roots and parser support. Path
 and one-target refactors do not prove semantic smallness. Adversarial tests and protected canaries
 establish their named cases, not exhaustive assurance or a service-level objective.
 
+Observed Python API introduction is limited to a genuinely new whole production file, with no
+copy, rename, simultaneous production path/function retirement, or relabeling of existing proof.
+Static function identities must remain present in every changed existing production source;
+this also rejects moves padded below Git's copy-detection threshold. Its closed
+codec supports finite scalar/container values, finite `Decimal`, aware fixed-offset `datetime`,
+and exact source-bound declared dataclasses. Unsupported custom objects, timezone providers,
+generators, async functions, and raised-error outcomes fail closed. Actual ordinary returns are
+observed in the collector's traced thread; multithreaded execution and hostile same-process
+memory introspection are outside this proof boundary. Fixed collector code and container
+isolation remain the enforcement boundary; this mode adds no semantic policy engine.
+
 Implementation references: [short-task classifier](../../src/supportability_gate/standard_results.py),
 [profile limits](../../src/supportability_gate/contract.py),
 [owner identity](../../src/supportability_gate/refactor_policy.py), and

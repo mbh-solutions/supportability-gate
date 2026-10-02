@@ -15,6 +15,7 @@ from supportability_gate import (
     contract,
     modularity_policy,
     quality_profile,
+    refactor_policy,
     review_evidence,
     standard_block_ownership,
 )
@@ -1483,6 +1484,8 @@ def _s02_refactor_authorization(
         "sequence",
         "targets",
     }
+    if isinstance(value, dict) and "introductions" in value:
+        keys.add("introductions")
     row = _s02_exact(value, keys, code)
     sequence = _s02_exact(row["sequence"], {"predecessor_sha", "series_id", "step"}, code)
     if (
@@ -1508,6 +1511,7 @@ def _s02_refactor_authorization(
         raise StandardResultsError(code) from None
     targets = _s02_strings(row["targets"], code, True)
     _s02_refactor_related_tests(row["related_tests"], code)
+    _s02_refactor_introductions(row, code)
     if (
         scope != sorted(set(normalized))
         or targets != sorted(set(targets))
@@ -1515,6 +1519,14 @@ def _s02_refactor_authorization(
     ):
         raise StandardResultsError(code)
     return row
+
+
+def _s02_refactor_introductions(row: dict[str, Any], code: str) -> None:
+    if "introductions" in row:
+        try:
+            refactor_policy.parse_introduction_grants(row["introductions"])
+        except refactor_policy.RefactorPolicyError:
+            raise StandardResultsError(code) from None
 
 
 def _s02_refactor_related_tests(value: object, code: str) -> list[dict[str, Any]]:
@@ -1990,7 +2002,33 @@ def _s02_refactor(
         or set(blocks) & _S02_REFACTOR_RUNNABILITY_BLOCKS != expected_runnability
     ):
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
+    _s02_introduction_binding(row, authorization, characterization)
     return blocks
+
+
+def _s02_introduction_binding(
+    row: dict[str, Any],
+    authorization: dict[str, Any] | None,
+    characterization_result: object,
+) -> None:
+    if authorization is None:
+        return
+    expected = set(
+        refactor_policy.introduction_authorization_blocks(
+            characterization_result,
+            authorization.get("introductions", []),
+            tuple(row["targets"]),
+        )
+    )
+    actual = {
+        block
+        for block in row["policy_blocks"]
+        if block.startswith(
+            ("INTRODUCTION_AUTHORIZATION_MISMATCH", "MALFORMED_INTRODUCTION_AUTHORIZATION")
+        )
+    }
+    if actual != expected:
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
 
 
 def _s02_provenance_adapters(value: object, code: str) -> tuple[str, ...]:

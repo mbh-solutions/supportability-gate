@@ -58,8 +58,11 @@ recording the human cohesion assessment.
 
 **Enforcement and evidence:** authenticated measured base/head captures and deterministic checks
 of identity, repeatability, golden behavior, covered responsibilities, and retained obligations.
-This lane also owns the intended-behavior author declarations. Each declared scenario runs twice
-at base and twice at head. Supported schema-2 obligations keep
+This lane also owns the intended-behavior author declarations. Existing behavior runs twice
+at base and twice at head. A schema-3 observed Python API can record exact Git absence at base
+when its entire production file is genuinely new, then execute twice at head against a sealed
+intended oracle. The absence row records no executed command. Once merged, the same scenario
+requires real compatible base/head execution. Supported schema-2 and schema-3 obligations keep
 assertion identities stable when scenario packaging changes.
 
 **Example failure:** an observable result changes unexpectedly, or a scenario replacement drops
@@ -72,6 +75,8 @@ meaningful behavior coverage.
 **Enforcement and evidence:** deterministic scope, target, sequencing, and runnability checks.
 Where authorization is required, an authenticated owner attestation binds the exact repository,
 base/head, changed scope, targets, and refactor series. Related tests have exact source associations.
+Introduced API proof additionally requires the same owner's exact feature and reviewed-oracle
+grant, joined to the measured source, driver, oracle, and review digests.
 
 **Example failure:** an authorization names an earlier head or skips a predecessor step.
 **Limit:** path and span bounds do not establish semantic smallness or quality. The format and

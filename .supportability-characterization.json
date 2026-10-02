@@ -142,6 +142,13 @@
     },
     {
       "category": "behavior",
+      "id": "retained-owner-scope-behavior",
+      "scenario": "gate-api-proof-legacy-compatibility",
+      "selector": "$",
+      "target": "src/supportability_gate/refactor_policy.py"
+    },
+    {
+      "category": "behavior",
       "id": "s07-authorization-parser",
       "scenario": "gate8-standard-results-boundary-v3",
       "selector": "s07-focused-regression-contract",
@@ -291,6 +298,13 @@
         "src/supportability_gate/function_changes.py"
       ],
       "id": "s06-language-features",
+      "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/refactor_policy.py"
+      ],
+      "id": "gate-api-proof-legacy-compatibility",
       "kind": "regression"
     }
   ],

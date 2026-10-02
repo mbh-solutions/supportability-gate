@@ -1,0 +1,112 @@
+[
+  {
+    "input": {
+      "base_sha": "1111111111111111111111111111111111111111",
+      "broad": false,
+      "head_sha": "2222222222222222222222222222222222222222",
+      "related_tests": [
+        {
+          "path": "tests/test_pricing.py",
+          "targets": [
+            "src/application/pricing.py::function:calculate_total:1-20"
+          ]
+        }
+      ],
+      "repository": "example-org/order-service",
+      "schema_version": "2.0",
+      "scope": [
+        "src/application/pricing.py",
+        "tests/test_pricing.py"
+      ],
+      "sequence": {
+        "predecessor_sha": "1111111111111111111111111111111111111111",
+        "series_id": "narrow-pricing",
+        "step": 1
+      },
+      "targets": [
+        "src/application/pricing.py::function:calculate_total:1-20"
+      ]
+    },
+    "output": {
+      "base_sha": "1111111111111111111111111111111111111111",
+      "broad": false,
+      "head_sha": "2222222222222222222222222222222222222222",
+      "related_tests": [
+        {
+          "path": "tests/test_pricing.py",
+          "targets": [
+            "src/application/pricing.py::function:calculate_total:1-20"
+          ]
+        }
+      ],
+      "repository": "example-org/order-service",
+      "scope": [
+        "src/application/pricing.py",
+        "tests/test_pricing.py"
+      ],
+      "sequence": {
+        "predecessor_sha": "1111111111111111111111111111111111111111",
+        "series_id": "narrow-pricing",
+        "step": 1
+      },
+      "targets": [
+        "src/application/pricing.py::function:calculate_total:1-20"
+      ]
+    }
+  },
+  {
+    "input": {
+      "base_sha": "1111111111111111111111111111111111111111",
+      "broad": true,
+      "head_sha": "2222222222222222222222222222222222222222",
+      "related_tests": [
+        {
+          "path": "tests/test_pricing.py",
+          "targets": [
+            "src/application/pricing.py::function:calculate_total:1-20"
+          ]
+        }
+      ],
+      "repository": "example-org/order-service",
+      "schema_version": "2.0",
+      "scope": [
+        "src/application/pricing.py",
+        "tests/test_pricing.py"
+      ],
+      "sequence": {
+        "predecessor_sha": "1111111111111111111111111111111111111111",
+        "series_id": "broad-pricing",
+        "step": 1
+      },
+      "targets": [
+        "src/application/pricing.py::function:calculate_total:1-20"
+      ]
+    },
+    "output": {
+      "base_sha": "1111111111111111111111111111111111111111",
+      "broad": true,
+      "head_sha": "2222222222222222222222222222222222222222",
+      "related_tests": [
+        {
+          "path": "tests/test_pricing.py",
+          "targets": [
+            "src/application/pricing.py::function:calculate_total:1-20"
+          ]
+        }
+      ],
+      "repository": "example-org/order-service",
+      "scope": [
+        "src/application/pricing.py",
+        "tests/test_pricing.py"
+      ],
+      "sequence": {
+        "predecessor_sha": "1111111111111111111111111111111111111111",
+        "series_id": "broad-pricing",
+        "step": 1
+      },
+      "targets": [
+        "src/application/pricing.py::function:calculate_total:1-20"
+      ]
+    }
+  }
+]
