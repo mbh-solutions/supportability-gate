@@ -253,7 +253,7 @@ def test_native_hosted_exact_64_mixed_capacity_endpoint(
     legacy._validate_round_trip(result)
     receipt["s5_result"] = result["overall_result"]
     receipt["result_sha256"] = _capacity_sha(characterization._canonical(result))
-    receipt["shared_result_round_trip"] = "PASS"
+    receipt["characterization_validator_round_trip"] = "PASS"
     receipt["not_ready_hand_off"] = True
     with capsys.disabled():
         print("NATIVE_MIXED_CAPACITY_ENDPOINT_RECEIPT " + json.dumps(receipt, sort_keys=True))
