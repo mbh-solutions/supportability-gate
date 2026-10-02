@@ -1511,11 +1511,7 @@ def _s02_refactor_authorization(
         raise StandardResultsError(code) from None
     targets = _s02_strings(row["targets"], code, True)
     _s02_refactor_related_tests(row["related_tests"], code)
-    if "introductions" in row:
-        try:
-            refactor_policy.parse_introduction_grants(row["introductions"])
-        except refactor_policy.RefactorPolicyError:
-            raise StandardResultsError(code) from None
+    _s02_refactor_introductions(row, code)
     if (
         scope != sorted(set(normalized))
         or targets != sorted(set(targets))
@@ -1523,6 +1519,14 @@ def _s02_refactor_authorization(
     ):
         raise StandardResultsError(code)
     return row
+
+
+def _s02_refactor_introductions(row: dict[str, Any], code: str) -> None:
+    if "introductions" in row:
+        try:
+            refactor_policy.parse_introduction_grants(row["introductions"])
+        except refactor_policy.RefactorPolicyError:
+            raise StandardResultsError(code) from None
 
 
 def _s02_refactor_related_tests(value: object, code: str) -> list[dict[str, Any]]:

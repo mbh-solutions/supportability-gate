@@ -17,6 +17,15 @@ from typing import Any
 from supportability_gate import characterization as characterization_evidence
 from supportability_gate import contract, git_changes
 
+
+def __getattr__(name: str) -> Any:
+    if name != "refactor_targets":
+        raise AttributeError(name)
+    from supportability_gate import refactor_targets
+
+    return refactor_targets
+
+
 AUTHORIZATION_PREFIX = "Supportability-Refactor-Authorization: "
 AUTHORIZATION_SCHEMA = "2.0"
 RESULT_SCHEMA = "refactor-policy-result.v1"
