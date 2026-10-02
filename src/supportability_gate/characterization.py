@@ -31,6 +31,8 @@ ARTIFACT_ID = re.compile(r"[1-9][0-9]*")
 SHA = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 MAX_JSON_BYTES = 1_000_000
+MAX_SCENARIOS = 64
+MAX_OBSERVED_APIS = 50
 
 
 class CharacterizationError(ValueError):
@@ -177,7 +179,11 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
         covers = _path_list(row["covers"], "covers")
         api = _parse_api(row.get("api"), covers)
         parsed.append(Scenario(identifier, str(kind), covers, api))
-    if len(parsed) != len({item.id for item in parsed}) or len(parsed) > 50:
+    if (
+        len(parsed) != len({item.id for item in parsed})
+        or len(parsed) > MAX_SCENARIOS
+        or sum(item.api is not None for item in parsed) > MAX_OBSERVED_APIS
+    ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return tuple(sorted(parsed, key=lambda item: item.id))
 
@@ -1369,7 +1375,7 @@ def _result_scenario(value: object) -> dict[str, Any]:
 def _result_scenarios(
     value: object, api_facts: dict[str, dict[str, Any]] | None = None
 ) -> list[dict[str, Any]]:
-    if not isinstance(value, list) or not value or len(value) > 50:
+    if not isinstance(value, list) or not value or len(value) > MAX_SCENARIOS:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     rows = [_result_scenario(item) for item in value]
     identifiers = [str(item["id"]) for item in rows]
@@ -1467,7 +1473,7 @@ def _serialized_api_facts(
 
 
 def _result_api_facts(value: object) -> dict[str, dict[str, Any]]:
-    if not isinstance(value, list) or len(value) > 50:
+    if not isinstance(value, list) or len(value) > MAX_OBSERVED_APIS:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     rows = [_result_api_fact(item) for item in value]
     names = [item["scenario"] for item in rows]
@@ -2235,8 +2241,12 @@ def _verified_obligation_coverage(
     return [item for item in required if item in targets or item.split("::", 1)[0] in targets]
 
 
-def _write_json(path: Path, value: object) -> bytes:
-    content = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True).encode() + b"\n"
+def _write_json(path: Path, value: object, *, compact: bool = False) -> bytes:
+    content = (
+        _canonical(value)
+        if compact
+        else json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True).encode()
+    ) + b"\n"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
     return content

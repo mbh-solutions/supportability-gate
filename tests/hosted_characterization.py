@@ -783,7 +783,7 @@ def main(argv: list[str] | None = None) -> int:
             diagnostics=Path(arguments.output).parent,
         )
         output = Path(arguments.output)
-        characterization._write_json(output, result)
+        characterization._write_json(output, result, compact=True)
         characterization._write_json(
             characterization._provenance_path(output),
             {
