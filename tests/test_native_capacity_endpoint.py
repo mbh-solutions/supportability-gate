@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 import test_characterization as legacy
+
 from supportability_gate import characterization, git_changes
 
 # Read native state at collection, before any fixture can set environment values.
