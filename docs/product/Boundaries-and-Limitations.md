@@ -54,7 +54,9 @@ and one-target refactors do not prove semantic smallness. Adversarial tests and 
 establish their named cases, not exhaustive assurance or a service-level objective.
 
 Observed Python API introduction is limited to a genuinely new whole production file, with no
-copy, rename, simultaneous production retirement, or relabeling of existing proof. Its closed
+copy, rename, simultaneous production path/function retirement, or relabeling of existing proof.
+Static function identities must remain present in every changed existing production source;
+this also rejects moves padded below Git's copy-detection threshold. Its closed
 codec supports finite scalar/container values, finite `Decimal`, aware fixed-offset `datetime`,
 and exact source-bound declared dataclasses. Unsupported custom objects, timezone providers,
 generators, async functions, and raised-error outcomes fail closed. Actual ordinary returns are

@@ -39,6 +39,12 @@ their direct tests live under [tests](../../tests). The independently pinned
 [Source Integrity workflow](../../.github/workflows/source-integrity.yml) uses its trusted
 [source guard](../../tests/source_integrity_check.py) and [manifest](../source_integrity_manifest.json).
 
+The fixed [hosted characterization collector](../../tests/hosted_characterization.py) runs
+[the observed Python API collector](../../tests/characterization_observer.py) inside the existing
+isolated target boundary for explicit schema-3 APIs. Static source/birth verification remains
+in `characterization`; exact trusted-owner feature scope stays in `refactor_policy`, and the
+shared result consumer repeats the join without loading target-analysis dependencies at import.
+
 ## Change routing
 
 | Responsibility being changed | Start with |

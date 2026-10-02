@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from supportability_gate import characterization as characterization_evidence
-from supportability_gate import contract, git_changes, refactor_targets
+from supportability_gate import contract, git_changes
 
 AUTHORIZATION_PREFIX = "Supportability-Refactor-Authorization: "
 AUTHORIZATION_SCHEMA = "2.0"
@@ -303,6 +303,7 @@ def _introduction_grant_matches(
     source = fact["head_source"]
     return bool(
         isinstance(source, dict)
+        and fact["admissible"]
         and grant["api"] == fact["api"]
         and grant["source_sha256"] == source["source_sha256"]
         and grant["driver_sha256"] == fact["driver_sha256"]
@@ -648,6 +649,8 @@ def _related_test_paths(
     targets: tuple[str, ...],
     language: str,
 ) -> tuple[set[str], bool]:
+    from supportability_gate import refactor_targets
+
     target_paths = {target: target.split("::", 1)[0] for target in targets}
     valid: set[str] = set()
     invalid = False
@@ -794,6 +797,8 @@ def verify_refactor(
     authorization_block: str | None = None,
 ) -> dict[str, object]:
     """Return deterministic M8 authorization, focus, runnability, and sequence evidence."""
+    from supportability_gate import refactor_targets
+
     records: list[git_changes.CommandRecord] = []
     repository = git_changes.validate_repository(repository, records)
     repository_name, base_sha, head_sha, _ = _event_values(event)

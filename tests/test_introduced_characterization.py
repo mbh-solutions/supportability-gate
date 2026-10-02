@@ -6,6 +6,7 @@ import copy
 import hashlib
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -582,6 +583,189 @@ def test_shared_result_cannot_credit_observed_api_to_whole_file(tmp_path: Path) 
         characterization.CharacterizationError, match="MALFORMED_CHARACTERIZATION_RESULT"
     ):
         legacy._validate_round_trip(result)
+
+
+def _function_move_fixture(tmp_path: Path, *, move: bool) -> tuple:
+    """Owned synthetic source only: reproduce A/M movement below Git's copy threshold."""
+    repository, baseline, _, _ = legacy._repository(tmp_path)
+    old_padding = "".join(
+        f"# Existing retained module documentation {number}: unique old context.\n"
+        for number in range(100)
+    )
+    new_padding = "".join(
+        f"# Brand new API documentation {number}: separate distinct head context.\n"
+        for number in range(100)
+    )
+    retained = "def retained(value):\n    return value + 1\n"
+    old_cases = [{"input": 1, "output": 2}, {"input": 2, "output": 3}]
+    legacy._write(
+        repository / "src/sample.py", SOURCE.decode() + "\n" + retained + "\n" + old_padding
+    )
+    old_scenario = {"id": "existing", "kind": "golden", "covers": ["src/sample.py"]}
+    old_obligation = {
+        "id": "existing",
+        "category": "behavior",
+        "scenario": "existing",
+        "selector": "$",
+        "target": "src/sample.py",
+    }
+    _json(
+        repository / characterization.MANIFEST_PATH,
+        {
+            "schema_version": "2.0",
+            "scenarios": [old_scenario],
+            "obligations": [old_obligation],
+            "transitions": [],
+        },
+    )
+    driver_path = repository / "tests/characterization/existing.characterization.py"
+    legacy._write(
+        driver_path,
+        "import json, sample\nprint(json.dumps({'schema_version': '1.0', 'scenario': 'existing', 'behavior': [{'input': value, 'output': sample.retained(value)} for value in (1, 2)]}, sort_keys=True))\n",
+    )
+    _json(repository / "tests/characterization/existing.golden.json", old_cases)
+    base_sha = legacy._commit(repository, "synthetic existing calculate and retained APIs")
+    legacy._git(baseline, "checkout", "--detach", base_sha)
+    templates = legacy._captures(repository, baseline, base_sha, base_sha)
+    if move:
+        head_source = retained + "\n" + old_padding
+    else:
+        # The separate ordinary legacy scenario exercises this new helper via
+        # retained(), preserving base/head behavior and every old function name.
+        head_source = (
+            SOURCE.decode()
+            + "\ndef retained(value):\n    return added(value)\n"
+            + "\ndef added(value):\n    return value + 1\n\n"
+            + old_padding
+        )
+    legacy._write(repository / "src/sample.py", head_source)
+    introduced_source = SOURCE + b"\n" + new_padding.encode()
+    legacy._write(repository / "src/introduced.py", introduced_source.decode())
+    observed_scenario = {
+        "id": "introduced",
+        "kind": "golden",
+        "covers": ["src/introduced.py"],
+        "api": API,
+    }
+    _json(
+        repository / characterization.MANIFEST_PATH,
+        {
+            "schema_version": "3.0",
+            "scenarios": [{**old_scenario, "api": None}, observed_scenario],
+            "obligations": [
+                old_obligation,
+                {
+                    "id": "introduced",
+                    "category": "behavior",
+                    "scenario": "introduced",
+                    "selector": "$",
+                    "target": API,
+                },
+            ],
+            "transitions": [],
+        },
+    )
+    legacy._write(
+        repository / "tests/characterization/introduced.characterization.py",
+        "from introduced import calculate\ncalculate(1)\ncalculate(2)\n",
+    )
+    _json(repository / "tests/characterization/introduced.golden.json", CASES)
+    _review(repository)
+    head_sha = legacy._commit(
+        repository,
+        "synthetic function move" if move else "synthetic retained identity helper addition",
+    )
+    manifest = characterization._manifest(repository, head_sha, [])
+    scenario = next(item for item in manifest.scenarios if item.api)
+    driver_name, golden_name = characterization._scenario_paths(scenario, "python")
+    driver = git_changes.read_regular_blob(repository, head_sha, driver_name, [])
+    golden = git_changes.read_regular_blob(repository, head_sha, golden_name, [])
+    observation = {
+        "schema_version": "1.0",
+        "codec": "python-values-v1",
+        "api": API,
+        **characterization.api_source_identity(introduced_source, API),
+        "cases": copy.deepcopy(CASES),
+    }
+    observed = {
+        "behavior": copy.deepcopy(CASES),
+        "behavior_sha256": _sha(characterization._canonical(CASES)),
+        "command": characterization.scenario_command(scenario, "python"),
+        "covers": list(scenario.covers),
+        "deterministic": True,
+        "driver_blob_sha": driver.object_sha,
+        "error": None,
+        "exit_code": 0,
+        "golden_behavior_sha256": _sha(characterization._canonical(CASES)),
+        "golden_blob_sha": golden.object_sha,
+        "id": scenario.id,
+        "kind": scenario.kind,
+        "stderr_sha256": _sha(b""),
+        "stdout_sha256": _sha(characterization._canonical(observation)),
+        "api_observation": observation,
+    }
+    absent = legacy.hosted_characterization._absent_api_capture(scenario, driver, golden, CASES)
+    captures = []
+    for side, target, template in zip(
+        ("base", "head"), (baseline, repository), templates, strict=True
+    ):
+        # This fixed subprocess executes only this test's owned synthetic legacy
+        # fixture; the new observer envelope remains explicitly a unit fixture.
+        replay = subprocess.run(
+            [sys.executable, "-P", str(driver_path)],
+            cwd=target,
+            env={**os.environ, "PYTHONPATH": str(target / "src")},
+            check=True,
+            capture_output=True,
+            timeout=15,
+        )
+        actual_cases = json.loads(replay.stdout)["behavior"]
+        assert actual_cases == old_cases
+        capture = copy.deepcopy(template)
+        _set_behavior(capture["scenarios"][0], actual_cases)
+        capture["authentication"].update(base_sha=base_sha, head_sha=head_sha)
+        capture["definition_sha"] = head_sha
+        capture["target_sha"] = base_sha if side == "base" else head_sha
+        capture["manifest"] = characterization._manifest_payload(manifest)
+        capture["schema_version"] = characterization.OBSERVED_CAPTURE_SCHEMA
+        capture["scenarios"].append(copy.deepcopy(absent if side == "base" else observed))
+        _fingerprint(capture)
+        captures.append(capture)
+    return repository, base_sha, head_sha, captures[0], captures[1]
+
+
+@pytest.mark.parametrize(
+    "move", [True, False], ids=["removed-old-function", "preserved-old-functions"]
+)
+def test_api_birth_cannot_hide_function_move_below_copy_threshold(
+    tmp_path: Path, move: bool
+) -> None:
+    fixture = _function_move_fixture(tmp_path, move=move)
+    repository, base_sha, head_sha, _, _ = fixture
+    statuses = legacy._git(
+        repository,
+        "diff",
+        "--name-status",
+        "--find-copies=50%",
+        "--find-copies-harder",
+        base_sha,
+        head_sha,
+    ).splitlines()
+    assert "A\tsrc/introduced.py" in statuses
+    assert "M\tsrc/sample.py" in statuses
+    assert characterization._copied_source_paths(repository, base_sha, head_sha, []) == set()
+    result = _verify(tmp_path, fixture)
+    retained = next(item for item in result["obligations"] if item["id"] == "existing")
+    assert retained["compatibility"] == "PASS" and retained["meaningful"] is True
+    authorized = _s6(fixture, result, [_grant(result)])
+    if move:
+        assert result["overall_result"] == "BLOCK"
+        assert "INVALID_API_INTRODUCTION:introduced" in result["policy_blocks"]
+        assert authorized["overall_result"] == "BLOCK"
+    else:
+        assert result["overall_result"] == "PASS"
+        assert authorized["overall_result"] == "PASS"
+        assert "src/sample.py::function:added" in result["coverage"]["covered_obligations"]
 
 
 def test_stale_source_bytes_cannot_reuse_bound_observation(tmp_path: Path) -> None:

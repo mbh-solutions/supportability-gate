@@ -433,6 +433,49 @@ def _copied_source_paths(
     return copied
 
 
+def _production_function_names(path: str, content: bytes) -> set[str] | None:
+    from supportability_gate import function_changes
+
+    try:
+        parsed = (
+            function_changes.parse_python_file(path, content)
+            if path.endswith((".py", ".pyi"))
+            else function_changes.parse_typescript_file(path, content)
+        )
+    except function_changes.PythonSourceError:
+        return None
+    return {item.span.qualified_name for item in parsed.functions}
+
+
+def _retired_production_targets(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    policy: contract.Contract,
+    changes: tuple[git_changes.ChangedPath, ...],
+    records: list[git_changes.CommandRecord],
+) -> bool:
+    for change in changes:
+        path = change.old_path
+        if path is None or not policy.is_production_path(path):
+            continue
+        if change.new_path != path:
+            return True
+        if not path.endswith(
+            (".py", ".pyi", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
+        ):
+            continue
+        base = _production_function_names(
+            path, git_changes.read_regular_blob(repository, base_sha, path, records).content
+        )
+        head = _production_function_names(
+            path, git_changes.read_regular_blob(repository, head_sha, path, records).content
+        )
+        if base is None or head is None or base - head:
+            return True
+    return False
+
+
 def _api_bindings(
     repository: Path,
     base_sha: str,
@@ -445,11 +488,10 @@ def _api_bindings(
     observed = [item for item in manifest.scenarios if item.api is not None]
     copied = _copied_source_paths(repository, base_sha, head_sha, records) if observed else set()
     added = {item.new_path for item in changes if item.status == "ADDED" and item.old_path is None}
-    retired = any(
-        item.old_path is not None
-        and policy.is_production_path(item.old_path)
-        and item.new_path != item.old_path
-        for item in changes
+    retired = (
+        _retired_production_targets(repository, base_sha, head_sha, policy, changes, records)
+        if observed
+        else False
     )
     facts: dict[str, dict[str, Any]] = {}
     blocks: list[str] = []

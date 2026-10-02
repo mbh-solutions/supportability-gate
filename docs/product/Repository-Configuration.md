@@ -239,7 +239,9 @@ existing owner control; the Gate does not judge prose or reviewer independence.
 
 The Gate derives introduction from exact Git absence of the whole file at base and exact source
 presence at head. Only genuinely added files qualify; copied or renamed source, existing paths,
-and changes simultaneously retiring/moving production paths cannot use the initial birth route.
+and changes simultaneously retiring/moving production paths or function identities cannot use
+the initial birth route. Existing function identities in modified production files must remain
+present, so padding a moved function below Git's copy threshold cannot make it introduced.
 The authenticated base capture records absence and no execution command. The head runs the
 observer twice and must match the sealed intended oracle. The exact owner authorization also
 pins this introduction; see [Refactor Authorization](Refactor-Authorization.md).
