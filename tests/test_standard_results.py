@@ -2565,6 +2565,66 @@ def test_quality_argv_requires_exact_test_manifest() -> None:
         standard_results._s02_quality_argv(profile, provenance, "MALFORMED_QUALITY_RESULT_BINDING")
 
 
+def _language_test_argv(language: str, extension: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    profiles = ("python", "typescript") if language == "mixed" else ("typescript",)
+    sources = {"python": "src/sample.py", "typescript": "web/sample.ts"}
+    tests = {"python": "tests/test_sample.py", "typescript": f"tests/sample.test.{extension}"}
+    decisions = []
+    proofs = []
+    for profile in profiles:
+        for adapter in quality_profile.required_adapters(profile):
+            template, executed = _quality_arguments(
+                adapter, profile, (sources[profile],), (tests[profile],)
+            )
+            decisions.append({"adapter": adapter, "arguments": template})
+            proofs.append({"executed_arguments": executed})
+    return (
+        {
+            "language": language,
+            "source_files": sorted(sources[profile] for profile in profiles),
+            "test_files": sorted(tests[profile] for profile in profiles),
+            "commands": decisions,
+        },
+        {"commands": proofs},
+    )
+
+
+@pytest.mark.parametrize("language", ["typescript", "mixed"])
+@pytest.mark.parametrize("extension", ["js", "mjs", "cjs", "ts", "mts", "cts"])
+def test_quality_argv_accepts_admitted_language_tests(language: str, extension: str) -> None:
+    profile, provenance = _language_test_argv(language, extension)
+
+    standard_results._s02_quality_argv(profile, provenance, "MALFORMED_QUALITY_RESULT_BINDING")
+
+
+@pytest.mark.parametrize("language", ["typescript", "mixed"])
+@pytest.mark.parametrize("mutation", ["missing", "extra", "substituted", "foreign-profile"])
+def test_quality_argv_rejects_misbound_module_tests(language: str, mutation: str) -> None:
+    profile, provenance = _language_test_argv(language, "mjs")
+    index = next(
+        index
+        for index, row in enumerate(profile["commands"])
+        if row["adapter"] == "typescript.eslint.v1"
+    )
+    arguments = provenance["commands"][index]["executed_arguments"]
+    test = "C:/repo/target/tests/sample.test.mjs"
+    if mutation == "missing":
+        arguments.remove(test)
+    elif mutation == "extra":
+        arguments.append("C:/repo/target/tests/extra.test.mjs")
+    else:
+        arguments[arguments.index(test)] = (
+            "C:/repo/target/tests/test_sample.py"
+            if mutation == "foreign-profile"
+            else "C:/repo/target/tests/replaced.test.mjs"
+        )
+
+    with pytest.raises(
+        standard_results.StandardResultsError, match="MALFORMED_QUALITY_RESULT_BINDING"
+    ):
+        standard_results._s02_quality_argv(profile, provenance, "MALFORMED_QUALITY_RESULT_BINDING")
+
+
 def _mixed_asset_inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     inputs = _inputs()
     profile = inputs[0]["quality_profile"]

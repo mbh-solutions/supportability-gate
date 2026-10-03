@@ -1,38 +1,45 @@
 schema_version = "1.0"
-module_boundaries = []
+module_boundaries = [
+  { basis = "responsibility", justification = "Existing owner of fixed adapters, declared coverage and contract anti-weakening.", owner_path = "src/supportability_gate/gate_policy.py", path = "src/supportability_gate/gate_policy.py" },
+  { basis = "responsibility", justification = "Existing owner of authenticated Standard composition and exact quality argument binding.", owner_path = "src/supportability_gate/standard_results.py", path = "src/supportability_gate/standard_results.py" },
+]
 
 [behavior]
-intended_behavior = "Reject runtime-created target code omitted from the schema-4 source inventory, while preserving declared function traces, exact class/module scaffolding and trusted standard-library dataclass generation."
-proof = "Real collector regressions reproduce same-file and foreign-filename generation, aliased creation, caught errors and precreated injected functions; existing typed and class-helper positives remain passing. Native hosted collector controls exercise same-file and alternate-filename runtime code."
+intended_behavior = "Bind admitted TypeScript module tests to their actual commands and require mixed adapter coverage for its admitted source language. Preserve exact manifests, own-language coverage, unclassified file obligations, both Git sides and contract anti-weakening."
+proof = "39 focused assertions cover all six TypeScript test suffixes in TypeScript and mixed profiles, missing/extra/substituted/foreign test arguments, all seven mixed adapters, admitted source suffixes, renames/deletions and unclassified assets. Native qualification must confirm valid profiles pass and genuine defects remain BLOCK."
 
 [characterization]
-captured_behavior = "Before the repair, nine adversarial collector cases failed their literal expected rejection assertions. Existing normal and exception oracles, the named-body execution metric, and all historical characterization assets remain unchanged."
-proof = "The same regressions must reject after the observer repair. The full source suite and protected base/head characterization preserve ordinary API, typed dataclass, class-helper, capacity and owner-authorization behavior."
+captured_behavior = "Before repair, 19 assertions fail: .mjs/.cjs evidence is rejected and mixed adapters falsely require other-language coverage. Twenty negative or compatible outcomes already hold."
+proof = "Retain the pre-fix log and every existing characterization driver/oracle/manifest. Run the complete source suite and protected base/head characterization."
 
 [separation_of_concerns]
-before = "The module observer silently skips any code absent from the named function inventory, and skips foreign filenames even when runtime code belongs to the observed module."
-after = "The existing observer owns runtime provenance and fail-closed capture. Static inventory, root oracles, authorization, capacity and Standard composition retain their existing responsibilities."
-boundaries = []
+before = "The consumer duplicates a source-only suffix list for tests. The coverage policy applies every mixed adapter to both languages."
+after = "Command binding uses existing source/test definitions. A responsibility-named selector excludes only admitted other-language source; coverage decisions and anti-weakening remain in the existing policy owner."
+boundaries = [
+  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "_adapter_coverage_paths", before = "Mixed adapters share unfiltered file obligations.", after = "Select applicable obligations; unknown files and single profiles retain prior scope." },
+  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "evaluate_contract", before = "Every adapter must cover every changed/high-risk file in either language.", after = "Apply unchanged coverage failures to each adapter's applicable source paths." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_quality_argv", before = "Local source suffixes discard admitted .mjs/.cjs tests.", after = "Reuse distinct fixed source/test suffixes with exact executed argument checks." },
+]
 
 [architecture]
-dependency_direction = "Keep target execution and audit hooks in the fixed isolated collector. Static production policy still does not import or execute target modules; no new production dependency or policy engine is introduced."
-reviewed_paths = [".supportability-review.toml", "tests/module_characterization_observer.py", "tests/test_module_observation.py", "tests/test_module_introduction.py", "docs/product/Repository-Configuration.md"]
+dependency_direction = "Standard composition already depends on quality_profile. Gate policy retains its contract/source classification dependencies. Target execution remains inside fixed hosted runners."
+reviewed_paths = [".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/gate_policy.py", "src/supportability_gate/standard_results.py", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
-path = "tests/module_characterization_observer.py"
-owns = "Fixed schema-4 hosted collection of inventory-bound target calls, root outcomes, body line witnesses and runtime-code refusal."
-does_not_own = "Static acceptance policy, semantic truth, branch completeness, imported dependency inventories, owner authority, scope enrollment or promotion."
+path = "src/supportability_gate/gate_policy.py"
+owns = "Fixed adapter identity, applicable declared coverage and deterministic contract anti-weakening."
+does_not_own = "Target execution, command evidence generation, characterization, owner authorization or semantic certification."
 
 [incremental_refactor]
-target = "Repair the runtime-code inventory omission independently identified in PR 276, without rolling back evidence capacity or PR 278."
-completed_step = "Add observer-owned runtime provenance checks, meaningful collector and native hosted regressions, and precise same-file assurance documentation."
+target = "Repair the two Gate 7 qualification failures independently of the runtime inventory repair."
+completed_step = "Align argument binding with admitted tests and mixed coverage with fixed language adapters, retaining meaningful positive/negative regressions and product documentation."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Frame ownership, unaccounted code and declared dataclass factory name concrete execution-boundary responsibilities."
-cohesion = "Runtime checks remain with the module observer; collector regression fixtures and native sandbox controls remain in existing test owners."
-intended_behavior = "Unsupported runtime-created target code fails capture even if the target catches the error; supported static bodies and generated dataclass methods retain their existing proof."
-reviewability = "A bounded five-file change, recorded pre-fix failures, literal regression outcomes, preserved historical oracles and final-head source/hosted evidence support independent review."
+naming = "Adapter coverage paths names the exact selection responsibility; existing fixed profile definitions still own source/test suffixes."
+cohesion = "Coverage selection stays in gate_policy; argument binding stays in standard_results and reuses quality_profile."
+intended_behavior = "Admitted module tests and split language scopes pass. Missing/wrong arguments, own-language gaps, threshold changes and candidate narrowing still fail closed."
+reviewability = "Two small production edits with 39 focused assertions, retained pre-fix failures and preserved historical oracles; native qualification binds outcomes to actual execution."
