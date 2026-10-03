@@ -46,15 +46,22 @@ class _ModuleCodec(ordinary._Codec):
     def _enum_class(self, value: object) -> tuple[type, dict[str, Any], dict[str, Any]]:
         cls = type(value)
         namespace = vars(cls)
+        if any(type(key) is not str for key in namespace):
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
         name, module_name = type.__getattribute__(cls, "__qualname__"), namespace.get("__module__")
+        if type(name) is not str:
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
         module = sys.modules.get(module_name) if type(module_name) is str else None
-        filename = vars(module).get("__file__") if type(module) is ModuleType else None
+        module_namespace = vars(module) if type(module) is ModuleType else {}
+        if any(type(key) is not str for key in module_namespace):
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        filename = module_namespace.get("__file__")
         declared = next((row for row in self.declarations if row["name"] == name), None)
         if (
             declared is None
             or type(filename) is not str
             or Path(filename).resolve() != (self.root / self.path).resolve()
-            or vars(module).get(name) is not cls
+            or module_namespace.get(name) is not cls
             or cls.__bases__ != ({"Enum": enum.Enum, "StrEnum": enum.StrEnum}[declared["base"]],)
         ):
             raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
@@ -72,7 +79,13 @@ class _ModuleCodec(ordinary._Codec):
         storage = object.__getattribute__(value, "__dict__")
         members = namespace.get("_member_map_")
         names = [row["name"] for row in declared["members"]]
-        if type(storage) is not dict or type(members) is not dict or list(members) != names:
+        if (
+            type(storage) is not dict
+            or any(type(key) is not str for key in storage)
+            or type(members) is not dict
+            or any(type(key) is not str for key in members)
+            or list(members) != names
+        ):
             raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
         if (
             set(storage) != {"_value_", "_name_", "__objclass__", "_sort_order_"}
@@ -119,6 +132,8 @@ def _enum_hooks(namespace: Any) -> None:
 
 
 def _enum_namespace(namespace: Any, declared: dict[str, Any]) -> None:
+    if any(type(key) is not str for key in namespace):
+        raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
     generated = {
         "_generate_next_value_",
         "__module__",
@@ -140,7 +155,17 @@ def _enum_namespace(namespace: Any, declared: dict[str, Any]) -> None:
     names = [member["name"] for member in declared["members"]]
     if set(namespace) != generated.intersection(namespace) | set(names):
         raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
-    if type(namespace.get("_member_names_")) is not list or namespace["_member_names_"] != names:
+    stored_names = namespace.get("_member_names_")
+    if (
+        type(stored_names) is not list
+        or any(type(name) is not str for name in stored_names)
+        or stored_names != names
+    ):
+        raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+    value_members = namespace.get("_value2member_map_")
+    if type(value_members) is not dict or any(
+        type(key) not in {bool, int, str} for key in value_members
+    ):
         raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
     if namespace.get("_member_type_") is not (str if declared["base"] == "StrEnum" else object):
         raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")

@@ -381,6 +381,43 @@ def test_module_v2_runtime_enum_declaration_mutation_rejected(
 
 
 @pytest.mark.parametrize(
+    "storage", ["names", "member-keys", "value-keys", "instance-keys", "module-keys"]
+)
+def test_module_v2_enum_metadata_hooks_are_rejected_without_execution(
+    tmp_path: Path, storage: str
+) -> None:
+    module, declarations = _typed_module(tmp_path)
+    member = module.Exercise.SALE
+    calls = []
+
+    class EqualHook:
+        def __eq__(self, other):
+            calls.append("eq")
+            return True
+
+        def __hash__(self):
+            calls.append("hash")
+            return 1
+
+    hook = EqualHook()
+    namespace = vars(module.Exercise)
+    if storage == "names":
+        module.Exercise._member_names_ = [hook]
+    elif storage == "member-keys":
+        namespace["_member_map_"][hook] = member
+    elif storage == "value-keys":
+        namespace["_value2member_map_"][hook] = member
+    elif storage == "instance-keys":
+        object.__getattribute__(member, "__dict__")[hook] = member
+    else:
+        vars(module)[hook] = member
+    calls.clear()  # Fixture mutation is outside capture; encoding must execute no hook.
+    with pytest.raises(ordinary.ObserverError, match="OBSERVER_ENUM_INVALID"):
+        collector._encode(member, tmp_path, "observed_fixture.py", declarations)
+    assert calls == []
+
+
+@pytest.mark.parametrize(
     "defect",
     [
         "bool-int-collision",

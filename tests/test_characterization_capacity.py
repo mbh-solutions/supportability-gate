@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import copy
 import hashlib
 import json
@@ -17,7 +18,14 @@ import test_introduced_characterization as birth
 import test_module_introduction as module_birth
 import test_module_observation as witness
 
-from supportability_gate import characterization, refactor_policy
+from supportability_gate import (
+    characterization,
+    refactor_policy,
+    standard_results,
+)
+from supportability_gate import (
+    standard_results_producer as composer,
+)
 
 
 def _identity_records(size: int, parameter: str, extra: int = 0) -> tuple[list, list]:
@@ -327,8 +335,91 @@ def _verify_actual_transport_calls(repository: Path, capture: dict[str, Any]) ->
         )
 
 
-def test_schema4_result_exact_32m_transport_endpoints(tmp_path: Path) -> None:
-    fixture = module_birth._fixture(tmp_path, payload_size=10)
+def _standard_transport_endpoints(
+    path: Path,
+    result: dict[str, Any],
+    repository: Path,
+    event: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    overflow: bool = False,
+) -> None:
+    monkeypatch.setenv("GITHUB_WORKSPACE", str(repository.parent))
+    unused = path.parent / "other-sources.json"
+    unused.write_bytes(b"{}\n")
+    arguments = argparse.Namespace(
+        head_sha=event["pull_request"]["head"]["sha"],
+        **{
+            name: str(path if source == "characterization" else unused)
+            for source, name, *_ in composer.SOURCE_SPECS
+        },
+    )
+    loaded, errors = composer._load_sources(
+        arguments,
+        {
+            "complexity": "success",
+            "characterization": "success",
+            "refactor": "success",
+            "quality": "success",
+        },
+    )
+    identity = standard_results.RunIdentity(
+        result["repository"].removeprefix("github.com/"),
+        123,
+        result["base_sha"],
+        result["head_sha"],
+        result["workflow_sha"],
+        456,
+        1,
+    )
+    if overflow:
+        assert loaded["characterization"] == {}
+        assert errors["characterization"] == "MALFORMED_CHARACTERIZATION_RESULT"
+        with pytest.raises(
+            standard_results.StandardResultsError, match="MALFORMED_CHARACTERIZATION_RESULT"
+        ):
+            standard_results._s02_characterization(
+                result,
+                identity,
+                tuple(result["coverage"]["required_paths"]),
+                None,
+                result["artifacts"],
+            )
+    else:
+        assert loaded["characterization"] == result
+        assert "characterization" not in errors
+        assert (
+            standard_results._s02_characterization(
+                loaded["characterization"],
+                identity,
+                tuple(result["coverage"]["required_paths"]),
+                None,
+                result["artifacts"],
+            )
+            == []
+        )
+    composed = standard_results.compose_results(
+        loaded["complexity"],
+        loaded["characterization"],
+        loaded["refactor"],
+        loaded["quality_provenance"],
+        identity,
+        expected_quality_artifact=None,
+        expected_characterization_artifacts=result["artifacts"],
+        source_errors=errors,
+    )
+    assert ("MALFORMED_CHARACTERIZATION_RESULT" in json.dumps(composed)) is overflow
+
+
+def test_schema4_result_exact_32m_transport_endpoints(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    fixture = module_birth._fixture(workspace, payload_size=10)
+    target = workspace / "target"
+    fixture[0].rename(target)
+    fixture = (target, *fixture[1:])
     template = birth._verify(tmp_path, fixture)
     documents = _exact_transport(template, fixture[4], capture=False)
     result = documents[0]
@@ -346,6 +437,17 @@ def test_schema4_result_exact_32m_transport_endpoints(tmp_path: Path) -> None:
     )
     legacy._validate_round_trip(parsed)
     assert refactor_policy._read_characterization_result(path, fixture[0], event) == (parsed, raw)
+    # Fixed hosted checkout selection, without a new flag, consumer limit, or payload authority.
+    _standard_transport_endpoints(path, parsed, fixture[0], event, monkeypatch)
+    bad = tmp_path / "duplicate-result.json"
+    bad.write_bytes(b'{"schema_version":"characterization-result.v4","schema_version":"x"}')
+    assert composer._read_characterization(bad, "MISSING", "MALFORMED", result["head_sha"]) == (
+        {},
+        "MALFORMED",
+    )
+    assert composer._read_characterization(
+        tmp_path / "absent.json", "MISSING", "MALFORMED", result["head_sha"]
+    ) == ({}, "MISSING")
     with pytest.raises(characterization.CharacterizationError, match="OVERSIZED"):
         characterization._read_json_bytes(raw, "OVERSIZED")
     # Coherent identity arguments and the source parameter name tune a complete
@@ -358,6 +460,7 @@ def test_schema4_result_exact_32m_transport_endpoints(tmp_path: Path) -> None:
             oversized_raw, "OVERSIZED", characterization.MODULE_RESULT_SCHEMA
         )
     path.write_bytes(oversized_raw)
+    _standard_transport_endpoints(path, oversized, fixture[0], event, monkeypatch, overflow=True)
     with pytest.raises(
         refactor_policy.RefactorPolicyError, match="MALFORMED_CHARACTERIZATION_RESULT"
     ):
@@ -377,6 +480,10 @@ def test_schema4_result_exact_32m_transport_endpoints(tmp_path: Path) -> None:
     path.write_bytes(characterization._canonical(result) + b"\n")
     (fixture[0] / characterization.MANIFEST_PATH).write_bytes(_manifest(0, 1))
     legacy_head = legacy._commit(fixture[0], "synthetic legacy manifest transport control")
+    assert composer._read_characterization(path, "MISSING", "MALFORMED", legacy_head) == (
+        {},
+        "MALFORMED",
+    )
     event["pull_request"]["head"]["sha"] = legacy_head
     with pytest.raises(
         refactor_policy.RefactorPolicyError, match="MALFORMED_CHARACTERIZATION_RESULT"

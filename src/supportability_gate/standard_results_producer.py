@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from supportability_gate import standard_results
+from supportability_gate import characterization, git_changes, standard_results
 
 GITHUB_OUTCOMES = ("success", "failure", "cancelled", "skipped")
 SOURCE_SPECS = (
@@ -83,6 +83,38 @@ def _read_json(path: Path, missing: str, malformed: str) -> tuple[dict[str, Any]
     except (UnicodeDecodeError, json.JSONDecodeError, _DuplicateJsonKeyError):
         return {}, malformed
     if not isinstance(value, dict):
+        return {}, malformed
+    return value, None
+
+
+def _module_characterization_head(head_sha: str) -> bool:
+    """Select transport from the fixed workflow checkout, never a payload label."""
+    repository = Path(os.environ.get("GITHUB_WORKSPACE", str(Path.cwd()))) / "target"
+    try:
+        manifest = characterization._manifest(repository, head_sha, [])
+    except (characterization.CharacterizationError, git_changes.GitError, OSError):
+        return False
+    return manifest.schema_version == "4.0"
+
+
+def _read_characterization(
+    path: Path, missing: str, malformed: str, head_sha: str
+) -> tuple[dict[str, Any], str | None]:
+    """Bound only the actual module4 ingress; preserve other JSON readers."""
+    if not _module_characterization_head(head_sha):
+        value, error = _read_json(path, missing, malformed)
+        if value.get("schema_version") == characterization.MODULE_RESULT_SCHEMA:
+            return {}, malformed
+        return value, error
+    try:
+        with path.open("rb") as stream:
+            raw = stream.read(characterization.MODULE_AGGREGATE_JSON_BYTES + 1)
+        value = characterization._read_module_aggregate(
+            raw, malformed, characterization.MODULE_RESULT_SCHEMA
+        )
+    except FileNotFoundError:
+        return {}, missing
+    except (OSError, characterization.CharacterizationError):
         return {}, malformed
     return value, None
 
@@ -297,7 +329,12 @@ def _load_sources(
     sources: dict[str, dict[str, Any]] = {}
     errors: dict[str, str] = {}
     for source, path_name, missing, malformed, stage in SOURCE_SPECS:
-        value, error = _read_json(Path(getattr(arguments, path_name)), missing, malformed)
+        path = Path(getattr(arguments, path_name))
+        value, error = (
+            _read_characterization(path, missing, malformed, arguments.head_sha)
+            if source == "characterization"
+            else _read_json(path, missing, malformed)
+        )
         sources[source] = value
         if error is not None:
             outcome = outcomes[stage]

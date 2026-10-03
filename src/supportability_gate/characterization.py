@@ -2079,7 +2079,7 @@ def validate_result(
     row = _result_shape(value)
     if (
         row["schema_version"] == MODULE_RESULT_SCHEMA
-        and len(_canonical(row)) > MODULE_AGGREGATE_JSON_BYTES
+        and len(_canonical(row)) + 1 > MODULE_AGGREGATE_JSON_BYTES
     ):
         raise CharacterizationError("MODULE_AGGREGATE_VALUE_LIMIT")
     schema_version = row["schema_version"]
