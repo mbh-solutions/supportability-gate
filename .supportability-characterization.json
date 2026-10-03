@@ -202,6 +202,13 @@
       "scenario": "gate8-standard-results-boundary-v3",
       "selector": "s07-focused-regression-contract",
       "target": "src/supportability_gate/refactor_policy.py::function:_target_identities"
+    },
+    {
+      "id": "standard-composer-source-boundary",
+      "category": "behavior",
+      "scenario": "standard-composer-source-boundary",
+      "selector": "cases",
+      "target": "src/supportability_gate/standard_results_producer.py"
     }
   ],
   "scenarios": [
@@ -306,6 +313,13 @@
       ],
       "id": "gate-api-proof-legacy-compatibility",
       "kind": "regression"
+    },
+    {
+      "id": "standard-composer-source-boundary",
+      "kind": "regression",
+      "covers": [
+        "src/supportability_gate/standard_results_producer.py"
+      ]
     }
   ],
   "schema_version": "2.0",

@@ -360,11 +360,17 @@ def _behavior(stdout: bytes, scenario_id: str) -> tuple[object | None, str | Non
 
 
 def _observed_behavior(
-    stdout: bytes, api: str
+    stdout: bytes, api: str, module_roots: tuple[str, ...] = (), *, codec: str = "python-values-v1"
 ) -> tuple[object | None, str | None, dict[str, object] | None]:
+    if module_roots:
+        return _module_observed_behavior(stdout, api, module_roots)
     try:
         value = characterization._exact_keys(
-            characterization._read_json_bytes(stdout, "MALFORMED_API_OBSERVATION"),
+            (
+                characterization._read_module_json
+                if codec == characterization.MODULE_CODEC
+                else characterization._read_json_bytes
+            )(stdout, "MALFORMED_API_OBSERVATION"),
             {
                 "schema_version",
                 "codec",
@@ -377,15 +383,36 @@ def _observed_behavior(
             },
             "MALFORMED_API_OBSERVATION",
         )
-        if (
-            value["schema_version"] != "1.0"
-            or value["codec"] != "python-values-v1"
-            or value["api"] != api
-        ):
+        if value["schema_version"] != "1.0" or value["codec"] != codec or value["api"] != api:
             raise characterization.CharacterizationError("MALFORMED_API_OBSERVATION")
     except characterization.CharacterizationError as error:
         return None, error.code, None
     return value["cases"], None, value
+
+
+def _module_observed_behavior(
+    stdout: bytes, api: str, roots: tuple[str, ...]
+) -> tuple[object | None, str | None, dict[str, object] | None]:
+    try:
+        value = characterization._read_module_json(stdout, "MALFORMED_MODULE_OBSERVATION")
+        if (
+            not isinstance(value, dict)
+            or value.get("schema_version") != characterization.MODULE_WITNESS_SCHEMA
+            or value.get("api") != api
+            or value.get("roots") != list(roots)
+            or value.get("body_metric") != characterization.MODULE_BODY_METRIC
+        ):
+            raise characterization.CharacterizationError("MALFORMED_MODULE_OBSERVATION")
+        cases, error, primary = _observed_behavior(
+            characterization._canonical(value.get("primary")),
+            api,
+            codec=characterization.MODULE_CODEC,
+        )
+        if error is not None or primary is None:
+            raise characterization.CharacterizationError("MALFORMED_MODULE_OBSERVATION")
+    except characterization.CharacterizationError as error:
+        return None, error.code, None
+    return cases, None, {**primary, "module_witness": value}
 
 
 def _run_driver(
@@ -412,21 +439,15 @@ def _run_driver(
             else (arguments[0], container_driver)
         )
         if scenario.api is not None:
-            inner = (
-                arguments[0],
-                "-P",
-                "/collector/characterization_observer.py",
-                "--api",
-                scenario.api,
-                "--driver",
-                container_driver,
-            )
             recorded = characterization.scenario_command(scenario, language)
+            inner = tuple([arguments[0], *recorded[1:6], container_driver, *recorded[7:]])
         output = execution_output or Path(temporary) / "supervisor"
         plan = quality_runner.CommandPlan(
             f"characterization-{scenario.id}", inner, (), "runtime-lines", scenario.covers
         )
         mounts = [(definition, "/definition"), (Path(temporary), "/driver")]
+        if scenario.module_roots:
+            mounts.append((Path(__file__).resolve().parents[1] / "src", "/gate-source"))
         if dependencies is not None:
             mounts.append((dependencies, "/dependencies"))
         sandbox = quality_runner.sandbox_command(
@@ -436,7 +457,9 @@ def _run_driver(
             collector=Path(__file__).resolve().parent,
             extra_mounts=tuple(mounts),
             extra_environment={
-                "PYTHONPATH": "/target/src:/dependencies",
+                "PYTHONPATH": "/collector:/gate-source:/target/src:/dependencies"
+                if scenario.module_roots
+                else "/target/src:/dependencies",
                 "SUPPORTABILITY_CHARACTERIZATION_DEFINITION": "/definition",
                 "SUPPORTABILITY_CHARACTERIZATION_TARGET": "/target",
             },
@@ -480,7 +503,9 @@ def _run_driver(
             stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
     observation = None
     if scenario.api is not None and exit_code == 0:
-        behavior, error_code, observation = _observed_behavior(stdout, scenario.api)
+        behavior, error_code, observation = _observed_behavior(
+            stdout, scenario.api, scenario.module_roots
+        )
     else:
         behavior, error_code = _behavior(stdout, scenario.id) if exit_code == 0 else (None, None)
     failure_code = (
@@ -732,9 +757,7 @@ def capture_evidence(
         "language": policy.language,
         "manifest": characterization._manifest_payload(manifest),
         "scenarios": scenarios,
-        "schema_version": characterization.OBSERVED_CAPTURE_SCHEMA
-        if manifest.schema_version == "3.0"
-        else characterization.CAPTURE_SCHEMA,
+        "schema_version": characterization.capture_schema(manifest.schema_version),
         "target_sha": target_sha,
     }
     environment = {

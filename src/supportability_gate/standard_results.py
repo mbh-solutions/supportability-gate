@@ -1486,6 +1486,10 @@ def _s02_refactor_authorization(
     }
     if isinstance(value, dict) and "introductions" in value:
         keys.add("introductions")
+    if isinstance(value, dict) and "schema_version" in value:
+        keys.add("schema_version")
+        if value["schema_version"] != "4.0" or "introductions" not in value:
+            raise StandardResultsError(code)
     row = _s02_exact(value, keys, code)
     sequence = _s02_exact(row["sequence"], {"predecessor_sha", "series_id", "step"}, code)
     if (
@@ -1524,7 +1528,9 @@ def _s02_refactor_authorization(
 def _s02_refactor_introductions(row: dict[str, Any], code: str) -> None:
     if "introductions" in row:
         try:
-            refactor_policy.parse_introduction_grants(row["introductions"])
+            refactor_policy.parse_introduction_grants(
+                row["introductions"], version=row.get("schema_version", "3.0")
+            )
         except refactor_policy.RefactorPolicyError:
             raise StandardResultsError(code) from None
 
@@ -2018,13 +2024,17 @@ def _s02_introduction_binding(
             characterization_result,
             authorization.get("introductions", []),
             tuple(row["targets"]),
+            authorization_version=authorization.get("schema_version", "3.0"),
         )
     )
     actual = {
         block
         for block in row["policy_blocks"]
         if block.startswith(
-            ("INTRODUCTION_AUTHORIZATION_MISMATCH", "MALFORMED_INTRODUCTION_AUTHORIZATION")
+            (
+                "INTRODUCTION_AUTHORIZATION_MISMATCH",
+                "MALFORMED_INTRODUCTION_AUTHORIZATION",
+            )
         )
     }
     if actual != expected:
