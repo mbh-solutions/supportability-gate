@@ -24,6 +24,7 @@ from supportability_gate import (
     git_changes,
     quality_profile,
     quality_runner,
+    refactor_policy,
     reporting,
     review_evidence,
     standard_block_ownership,
@@ -963,6 +964,7 @@ def test_gate_six_vocabulary_is_exact_and_ordered() -> None:
         "GITHUB_AUTHORIZATION_EVIDENCE_FAILURE",
         "INVALID_STRANGLER_SEQUENCE",
         "INTRODUCTION_AUTHORIZATION_MISMATCH",
+        "INTRODUCTION_AUTHORIZATION_MISMATCH:",
         "MALFORMED_INTRODUCTION_AUTHORIZATION",
         "MALFORMED_OWNER_AUTHORIZATION",
         "MISSING_BOUNDED_PRODUCTION_TARGET",
@@ -976,6 +978,69 @@ def test_gate_six_vocabulary_is_exact_and_ordered() -> None:
         "UNFOCUSED_DIFF_SCOPE",
         "UNVERIFIABLE_BOUNDED_TARGET",
     )
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "INTRODUCTION_AUTHORIZATION_MISMATCH",
+        "INTRODUCTION_AUTHORIZATION_MISMATCH:version",
+        "INTRODUCTION_AUTHORIZATION_MISMATCH:typed-packet-module-v1",
+    ],
+)
+def test_introduction_mismatch_forms_have_only_gate_six_ownership(block: str) -> None:
+    assert standard_block_ownership.owners(block) == frozenset({6})
+
+
+@pytest.mark.parametrize(
+    "block", ["INTRODUCTION_AUTHORIZATION_MISMATCH_EXTRA:scenario", "INTRODUCTION_UNKNOWN:scenario"]
+)
+def test_nearby_unknown_introduction_codes_have_no_owner(block: str) -> None:
+    assert standard_block_ownership.owners(block) == frozenset()
+
+
+def test_archived_actual_module_oracle_mismatch_blocks_only_gate_six() -> None:
+    """Historical source documents exercise joins; replay is not new native authority."""
+    fixture = json.loads(
+        (
+            Path(__file__).parent / "data/introduction-authorization-native-negative-v1.json"
+        ).read_bytes()
+    )
+    sources = fixture["sources"]
+    for name, value in sources.items():
+        canonical = json.dumps(
+            value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode()
+        assert (
+            hashlib.sha256(canonical).hexdigest()
+            == fixture["source_hashes"][name]["canonical_sha256"]
+        )
+    expected = ["PASS", "PASS", "PASS", "PASS", "PASS", "BLOCK", "PASS", "PASS"]
+    block = "INTRODUCTION_AUTHORIZATION_MISMATCH:typed-packet-module-v1"
+    assert fixture["expected_results"] == expected
+    assert fixture["expected_policy_block"] == block
+    assert refactor_policy.introduction_authorization_blocks(
+        sources["characterization"],
+        sources["refactor"]["authorization"]["introductions"],
+        tuple(sources["refactor"]["targets"]),
+        authorization_version="4.0",
+    ) == [block]
+    payload = standard_results.compose_results(
+        sources["complexity"],
+        sources["characterization"],
+        sources["refactor"],
+        sources["quality"],
+        standard_results.RunIdentity(**fixture["identity"]),
+        expected_characterization_artifacts=fixture["expected_characterization_artifacts"],
+        expected_quality_artifact=fixture["expected_quality_artifact"],
+        source_outcomes=fixture["source_outcomes"],
+    )
+    assert _results(payload) == expected
+    assert _entry(payload, 6)["policy_blocks"] == [block]
+    assert all(not row["technical_errors"] for row in payload["entries"])
+    assert all(not row["policy_blocks"] for row in payload["entries"] if row["standard"] != 6)
+    assert payload["shared_failures"] == []
+    standard_results.validate_payload(payload)
 
 
 @pytest.mark.parametrize(
@@ -4088,6 +4153,29 @@ def _producer_arguments(tmp_path: Path) -> tuple[list[str], dict[str, Path], Pat
         paths,
         output,
     )
+
+
+def test_producer_actual_version_mismatch_is_gate_six_policy_block(tmp_path: Path) -> None:
+    arguments, paths, output = _producer_arguments(tmp_path)
+    refactor = json.loads(paths["refactor"].read_bytes())
+    characterized = json.loads(paths["characterization"].read_bytes())
+    refactor["authorization"].update(schema_version="4.0", introductions=[])
+    block = "INTRODUCTION_AUTHORIZATION_MISMATCH:version"
+    blocks = refactor_policy.introduction_authorization_blocks(
+        characterized, [], tuple(refactor["targets"]), authorization_version="4.0"
+    )
+    assert blocks == [block]
+    refactor.update(overall_result="BLOCK", policy_blocks=blocks)
+    paths["refactor"].write_text(json.dumps(refactor), encoding="utf-8")
+    arguments[arguments.index("--refactor-outcome") + 1] = "failure"
+    expected = ["PASS", "PASS", "PASS", "PASS", "PASS", "BLOCK", "PASS", "PASS"]
+    assert standard_results_producer.main(arguments) == 0
+    payload = json.loads(output.read_bytes())
+    assert _results(payload) == expected
+    assert _entry(payload, 6)["policy_blocks"] == [block]
+    assert all(not row["technical_errors"] for row in payload["entries"])
+    assert payload["shared_failures"] == []
+    standard_results.validate_payload(payload)
 
 
 @pytest.mark.parametrize(
