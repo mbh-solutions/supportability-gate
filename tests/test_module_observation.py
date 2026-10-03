@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import characterization_observer as ordinary
@@ -299,9 +301,57 @@ def test_module_v2_real_typed_calls_and_integer_key_exception(tmp_path: Path) ->
     [None, True, False, -3, "text", b"bytes", 1.25, [1, "x"], (1, False), {"b": [2], "a": 1}],
 )
 def test_module_v2_retains_legacy_value_bytes(tmp_path: Path, value: object) -> None:
-    assert ordinary.canonical_bytes(
-        collector._encode(value, tmp_path, "observed_fixture.py", [])
-    ) == ordinary.canonical_bytes(ordinary.encode_value(value, tmp_path))
+    encoded = collector._encode(value, tmp_path, "observed_fixture.py", [])
+    assert ordinary.canonical_bytes(encoded) == ordinary.canonical_bytes(
+        ordinary.encode_value(value, tmp_path)
+    )
+    proof.module_validate_value(encoded, "observed_fixture.py", [])
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        b"\x00\xff",
+        -0.0,
+        Decimal("1.2300"),
+        Decimal("1E-10000"),
+        datetime(2026, 10, 3, 12, 30, tzinfo=UTC, fold=1),
+    ],
+)
+def test_module_v2_text_primitive_values_use_actual_fixed_encoder(
+    tmp_path: Path, value: object
+) -> None:
+    encoded = collector._encode(value, tmp_path, "observed_fixture.py", [])
+    assert encoded == ordinary.encode_value(value, tmp_path)
+    proof.module_validate_value(encoded, "observed_fixture.py", [])
+
+
+@pytest.mark.parametrize(
+    "encoded",
+    [
+        {"type": "bytes", "value": "FF"},
+        {"type": "bytes", "value": "not-hex"},
+        {"type": "float", "value": "1.0"},
+        {"type": "float", "value": "nan"},
+        {"type": "float", "value": "inf"},
+        {"type": "float", "value": "-inf"},
+        {"type": "decimal", "value": "NaN"},
+        {"type": "decimal", "value": "Infinity"},
+        {"type": "decimal", "value": "1" * 257},
+        {"type": "decimal", "value": "1E10001"},
+        {"type": "decimal", "value": "invalid"},
+        {"type": "datetime", "value": "2026-10-03T12:30:00.000000", "fold": 0},
+        {"type": "datetime", "value": "2026-10-03T12:30:00+00:00", "fold": 0},
+        {"type": "datetime", "value": "2026-10-03T12:30:00.000000+00:00", "fold": True},
+        {"type": "datetime", "value": "2026-10-03T12:30:00.000000+00:00", "fold": 2},
+        {"type": "unknown", "value": "text"},
+    ],
+)
+def test_module_v2_text_primitive_tags_reject_noncanonical_or_unsupported_values(
+    encoded: object,
+) -> None:
+    with pytest.raises(proof.ModuleObservationError, match="INVALID_MODULE_VALUE"):
+        proof.module_validate_value(encoded, "observed_fixture.py", [])
 
 
 def test_module_v2_typed_keys_and_primitive_enum_values(tmp_path: Path) -> None:
