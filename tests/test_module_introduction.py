@@ -203,7 +203,9 @@ def _large_oracles(size: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]
 
 
 def test_actual_large_module_receipt_keeps_individual_limits_and_all_joins(tmp_path: Path) -> None:
-    fixture = _fixture(tmp_path, payload_size=45000)
+    nested = tmp_path / "large-unit-fixture"
+    nested.mkdir()
+    fixture = _fixture(nested, payload_size=45000)
     actual = birth._introduced(fixture[4])["api_observation"]["module_witness"]
     assert 262144 < len(gate._canonical(actual)) < gate.MODULE_MAX_JSON_BYTES
     assert max(len(gate._canonical(case["output"])) for case in actual["root_cases"]) < 262144
@@ -378,7 +380,9 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
         gate._canonical({"schema_version": "1.0", "error": "OBSERVER_UNSUPPORTED_VALUE"}) + b"\n"
     )
     assert hook["stdout_sha256"] == birth._sha(expected_hook_stdout)
-    large_fixture = _fixture(tmp_path / "large-native-fixture", payload_size=45000)
+    large_directory = tmp_path / "large-native-fixture"
+    large_directory.mkdir()
+    large_fixture = _fixture(large_directory, payload_size=45000)
     large_repository, _, large_head, _, _ = large_fixture
     large_scenario = next(
         row for row in gate._manifest(large_repository, large_head, []).scenarios if row.api
