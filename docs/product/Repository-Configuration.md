@@ -223,14 +223,23 @@ metric records every body's exact executable, hit and missing lines and recomput
 from the authenticated traces. It does not require every line to execute or claim complete paths
 or semantic truth. Missing bodies, false reports and old witness relabelling fail closed. Unsupported
 async, generator, generator-expression, lambda, conditional function definitions or unaccounted
-separately compiled function bodies fail closed. Body-line coverage is a
+separately compiled function bodies fail closed. The collector rejects target-origin runtime
+compilation, evaluation, execution and explicit code/function creation, including aliases and
+generated code with a different filename. A precreated function executing with the target's
+filename or module globals must match the source inventory. Exact compiled module/class
+scaffolding and standard-library dataclass generation remain supported; separately imported
+dependency bodies remain outside this same-file witness. Move runtime-generated application
+behavior into statically declared source before requesting module coverage. A caught observer
+error still invalidates capture. Body-line coverage is a
 bounded proxy, not proof of every branch combination or semantic fidelity.
 
 The ordinary `.golden.json` remains the primary normal-return oracle, requiring at least two
 distinct inputs and outputs. Add `<id>.module.golden.json` containing independently established root
 records with exact `root`, `input`, `arguments_after`, `outcome`, `output` and `exception` fields.
 Returned `None` and an exception are distinct outcomes. Void mutations use actual arguments before
-and after the call; exception-only roots cannot replace meaningful primary returns. The fixed
+and after the call; exception-only roots cannot replace meaningful primary returns. Include
+independently reviewed normal and relevant failure cases: a normal-only oracle does not establish
+an unexercised guard's exception behavior, even when its named body has line hits. The fixed
 `python-values-v1` codec remains unchanged for ordinary and function-only observations, including
 exact bytes and source-bound dataclasses. Module rows always use fixed `python-values-v2` and
 `module-witness.v3`; repositories cannot choose a codec. Existing supported values retain their

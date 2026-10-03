@@ -417,6 +417,8 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
             b"type Value = int\n\ndef calculate(value):\n    return value * 2\n",
             "UNSUPPORTED_MODULE_COMPILED_FUNCTION",
         ),
+        (witness.runtime_source("__file__"), "OBSERVER_UNACCOUNTED_CODE"),
+        (witness.runtime_source("'generated.py'"), "OBSERVER_UNACCOUNTED_CODE"),
     ):
         target = tmp_path / error
         legacy._write(target / "src/introduced.py", source.decode())

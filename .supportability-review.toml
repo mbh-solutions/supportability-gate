@@ -2,39 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Preserve introduction authorization mismatch policy blocks in their Gate 6 lane, including the existing version and scenario-qualified forms. Unknown block families remain technical failures."
-proof = "tests/test_standard_results.py replays the archived wrong-module-oracle grant through the real shared composer and the actual producer version-mismatch route, with literal expected Gate 6 BLOCK and seven PASS results; bare/version/scenario owner and unknown-family controls remain exact."
+intended_behavior = "Reject runtime-created target code omitted from the schema-4 source inventory, while preserving declared function traces, exact class/module scaffolding and trusted standard-library dataclass generation."
+proof = "Real collector regressions reproduce same-file and foreign-filename generation, aliased creation, caught errors and precreated injected functions; existing typed and class-helper positives remain passing. Native hosted collector controls exercise same-file and alternate-filename runtime code."
 
 [characterization]
-captured_behavior = "All 13 existing scenarios, 30 obligation records and original 12 drivers and goldens remain byte-identical. Their actual merged-base and corrected-head outputs retain the original canonical values."
-proof = "Existing source-owner characterization drivers and goldens cover the changed owner vocabulary file. Exact merged-base/head replays through deployed static policy and the complete final-head suite remain required. The archived native negative sources are ordinary regression data, not new hosted authentication."
+captured_behavior = "Before the repair, nine adversarial collector cases failed their literal expected rejection assertions. Existing normal and exception oracles, the named-body execution metric, and all historical characterization assets remain unchanged."
+proof = "The same regressions must reject after the observer repair. The full source suite and protected base/head characterization preserve ordinary API, typed dataclass, class-helper, capacity and owner-authorization behavior."
 
 [separation_of_concerns]
-before = "The owner-dispatch vocabulary recognizes the bare mismatch code while the authorization producer also emits existing colon-qualified version and scenario forms."
-after = "The same fixed owner vocabulary explicitly maps that one existing parameterized family to Gate 6. Source authorization, source readers, shared composition and unknown-family refusal retain their existing responsibilities."
-boundaries = [
-  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "The Gate 6 block-owner vocabulary recognizes only the bare introduction authorization mismatch code.", after = "The same vocabulary explicitly recognizes the existing colon-qualified version and scenario mismatch family as Gate 6; unknown families remain unowned and fail closed." },
-]
+before = "The module observer silently skips any code absent from the named function inventory, and skips foreign filenames even when runtime code belongs to the observed module."
+after = "The existing observer owns runtime provenance and fail-closed capture. Static inventory, root oracles, authorization, capacity and Standard composition retain their existing responsibilities."
+boundaries = []
 
 [architecture]
-dependency_direction = "Keep the fixed owner-dispatch data in its existing leaf module. Existing shared composition consumes this vocabulary; no new production dependency, consumer-name policy or target execution is introduced."
-reviewed_paths = [".supportability-review.toml", "src/supportability_gate/standard_block_ownership.py", "tests/test_standard_results.py", "tests/data/introduction-authorization-native-negative-v1.json"]
+dependency_direction = "Keep target execution and audit hooks in the fixed isolated collector. Static production policy still does not import or execute target modules; no new production dependency or policy engine is introduced."
+reviewed_paths = [".supportability-review.toml", "tests/module_characterization_observer.py", "tests/test_module_observation.py", "tests/test_module_introduction.py", "docs/product/Repository-Configuration.md"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_block_ownership.py"
-owns = "Explicit fixed block-family ownership and technical dependency dispatch for the eight Standard lanes."
-does_not_own = "Authorization decisions, owner authentication, source/oracle validation, semantic judgment, consumer execution, protection configuration or deployment."
+path = "tests/module_characterization_observer.py"
+owns = "Fixed schema-4 hosted collection of inventory-bound target calls, root outcomes, body line witnesses and runtime-code refusal."
+does_not_own = "Static acceptance policy, semantic truth, branch completeness, imported dependency inventories, owner authority, scope enrollment or promotion."
 
 [incremental_refactor]
-target = "One existing Gate 6 block-family mapping and meaningful composer/producer regressions for owner issue 277."
-completed_step = "Route the existing parameterized introduction authorization mismatch codes to Gate 6 without changing the authorization rejection, other lane ownership, immutable policy, limits or old oracles."
+target = "Repair the runtime-code inventory omission independently identified in PR 276, without rolling back evidence capacity or PR 278."
+completed_step = "Add observer-owned runtime provenance checks, meaningful collector and native hosted regressions, and precise same-file assurance documentation."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The explicit INTRODUCTION_AUTHORIZATION_MISMATCH family names the same authorization failure already emitted by the producer."
-cohesion = "One vocabulary entry stays in the existing owner-dispatch component; regressions stay in the existing Standard composer test owner."
-intended_behavior = "A genuine wrong introduction grant remains rejected as a Gate 6 policy BLOCK, with unaffected lanes passing; unknown families still fail closed."
-reviewability = "Literal precomparison lane expectations, hash-bound archived source documents, real producer inputs, exact changed module evidence and final-head checks permit bounded independent review. Native successor qualification and deployment are separate owner-controlled steps."
+naming = "Frame ownership, unaccounted code and declared dataclass factory name concrete execution-boundary responsibilities."
+cohesion = "Runtime checks remain with the module observer; collector regression fixtures and native sandbox controls remain in existing test owners."
+intended_behavior = "Unsupported runtime-created target code fails capture even if the target catches the error; supported static bodies and generated dataclass methods retain their existing proof."
+reviewability = "A bounded five-file change, recorded pre-fix failures, literal regression outcomes, preserved historical oracles and final-head source/hosted evidence support independent review."
