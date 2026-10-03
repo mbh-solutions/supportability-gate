@@ -12,9 +12,7 @@ proof = "The same regressions must reject after the observer repair. The full so
 [separation_of_concerns]
 before = "The module observer silently skips any code absent from the named function inventory, and skips foreign filenames even when runtime code belongs to the observed module."
 after = "The existing observer owns runtime provenance and fail-closed capture. Static inventory, root oracles, authorization, capacity and Standard composition retain their existing responsibilities."
-boundaries = [
-  { path = "tests/module_characterization_observer.py", kind = "module", symbol = "tests/module_characterization_observer.py", before = "Uninventoried runtime target bodies can be omitted from a complete-looking witness.", after = "Target-origin code creation and unaccounted target frames invalidate capture, with narrowly verified standard-library dataclass scaffolding admitted." },
-]
+boundaries = []
 
 [architecture]
 dependency_direction = "Keep target execution and audit hooks in the fixed isolated collector. Static production policy still does not import or execute target modules; no new production dependency or policy engine is introduced."
