@@ -35,6 +35,7 @@ COMPATIBLE_CHARACTERIZATION_SCHEMAS = frozenset(
         "characterization-result.v1",
         CHARACTERIZATION_SCHEMA,
         characterization_evidence.OBSERVED_RESULT_SCHEMA,
+        characterization_evidence.MODULE_RESULT_SCHEMA,
     }
 )
 RUNNABILITY_SCHEMA = characterization_evidence.RUNNABILITY_SCHEMA
@@ -242,12 +243,17 @@ def parse_introduction_grants(value: object) -> list[dict[str, Any]]:
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
     rows = [_introduction_grant(item) for item in value]
     identities = [item["scenario"] for item in rows]
-    if identities != sorted(set(identities)):
+    if (
+        identities != sorted(set(identities))
+        or sum(len(row.get("module_roots", [row["api"]])) for row in rows) > 50
+    ):
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
     return rows
 
 
 def _introduction_grant(value: object) -> dict[str, Any]:
+    module_keys = {"module_roots", "module_inventory_sha256", "module_oracle_sha256"}
+    module = isinstance(value, dict) and bool(module_keys & value.keys())
     row = _exact_keys(
         value,
         {
@@ -259,7 +265,8 @@ def _introduction_grant(value: object) -> dict[str, Any]:
             "review_sha256",
             "intended_feature",
             "independent_oracle_reviewed",
-        },
+        }
+        | (module_keys if module else set()),
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     hashes = ("source_sha256", "driver_sha256", "oracle_sha256", "review_sha256")
@@ -279,7 +286,24 @@ def _introduction_grant(value: object) -> dict[str, Any]:
         or row["independent_oracle_reviewed"] is not True
     ):
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    if module:
+        _module_introduction_grant(row)
     return row
+
+
+def _module_introduction_grant(row: dict[str, Any]) -> None:
+    try:
+        roots = characterization_evidence._module_roots(
+            row["module_roots"], row["api"], (row["api"].split("::", 1)[0],)
+        )
+    except characterization_evidence.CharacterizationError as error:
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION") from error
+    if not roots or any(
+        not isinstance(row[key], str)
+        or characterization_evidence.SHA256.fullmatch(row[key]) is None
+        for key in ("module_inventory_sha256", "module_oracle_sha256")
+    ):
+        raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
 
 
 def introduction_authorization_blocks(
@@ -291,7 +315,9 @@ def introduction_authorization_blocks(
     try:
         approved = parse_introduction_grants(grants)
         facts = characterization_evidence._result_api_facts(
-            characterization.get("api_observations", [])
+            characterization.get("api_observations", []),
+            allow_module=characterization.get("schema_version")
+            == characterization_evidence.MODULE_RESULT_SCHEMA,
         )
     except (RefactorPolicyError, characterization_evidence.CharacterizationError):
         return ["MALFORMED_INTRODUCTION_AUTHORIZATION"]
@@ -321,6 +347,20 @@ def _introduction_grant_matches(
         and grant["review_sha256"] == fact["review_sha256"]
         and grant["intended_feature"] == fact["intended_feature"]
         and fact["api"] in _target_identities(targets)
+        and _module_introduction_matches(fact, grant)
+    )
+
+
+def _module_introduction_matches(fact: dict[str, Any], grant: dict[str, Any]) -> bool:
+    module = fact.get("module")
+    if module is None:
+        return "module_roots" not in grant
+    return bool(
+        fact["base_execution_verified"]
+        and fact["head_execution_verified"]
+        and grant.get("module_roots") == module["roots"]
+        and grant.get("module_inventory_sha256") == module["head_inventory"]["inventory_sha256"]
+        and grant.get("module_oracle_sha256") == module["oracle_sha256"]
     )
 
 

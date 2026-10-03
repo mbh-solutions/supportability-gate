@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import dis
 import hashlib
 import json
 import marshal
@@ -23,6 +24,8 @@ LEGACY_RESULT_SCHEMA = "characterization-result.v1"
 RESULT_SCHEMA = "characterization-result.v2"
 OBSERVED_RESULT_SCHEMA = "characterization-result.v3"
 OBSERVED_CAPTURE_SCHEMA = "characterization-capture.v3"
+MODULE_RESULT_SCHEMA = "characterization-result.v4"
+MODULE_CAPTURE_SCHEMA = "characterization-capture.v4"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
 OBLIGATION_CATEGORIES = frozenset({"behavior", "cli_help", "static"})
@@ -51,6 +54,7 @@ class Scenario:
     kind: str
     covers: tuple[str, ...]
     api: str | None = None
+    module_roots: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -93,13 +97,18 @@ def _manifest_payload(manifest: Manifest) -> dict[str, object]:
                 "covers": list(item.covers),
                 "id": item.id,
                 "kind": item.kind,
-                **({"api": item.api} if manifest.schema_version == "3.0" else {}),
+                **({"api": item.api} if manifest.schema_version in {"3.0", "4.0"} else {}),
+                **(
+                    {"module_roots": list(item.module_roots)}
+                    if manifest.schema_version == "4.0"
+                    else {}
+                ),
             }
             for item in manifest.scenarios
         ],
         "sha256": manifest.sha256,
     }
-    if manifest.schema_version in {"2.0", "3.0"}:
+    if manifest.schema_version in {"2.0", "3.0", "4.0"}:
         payload.update(
             {
                 "obligations": [
@@ -166,7 +175,9 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
         keys = {"covers", "id", "kind"}
         row = _exact_keys(
             item,
-            keys | ({"api"} if version == "3.0" else set()),
+            keys
+            | ({"api"} if version in {"3.0", "4.0"} else set())
+            | ({"module_roots"} if version == "4.0" else set()),
             "MALFORMED_CHARACTERIZATION_MANIFEST",
         )
         identifier, kind = row["id"], row["kind"]
@@ -178,14 +189,32 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
         covers = _path_list(row["covers"], "covers")
         api = _parse_api(row.get("api"), covers)
-        parsed.append(Scenario(identifier, str(kind), covers, api))
+        roots = _module_roots(row.get("module_roots", []), api, covers)
+        parsed.append(Scenario(identifier, str(kind), covers, api, roots))
     if (
         len(parsed) != len({item.id for item in parsed})
         or len(parsed) > MAX_SCENARIOS
-        or sum(item.api is not None for item in parsed) > MAX_OBSERVED_APIS
+        or sum(max(1, len(item.module_roots)) for item in parsed if item.api is not None)
+        > MAX_OBSERVED_APIS
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return tuple(sorted(parsed, key=lambda item: item.id))
+
+
+def _module_roots(value: object, api: str | None, covers: tuple[str, ...]) -> tuple[str, ...]:
+    if not isinstance(value, list) or len(value) > MAX_OBSERVED_APIS:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    if not value:
+        return ()
+    if api is None or api not in value or any(not isinstance(item, str) for item in value):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    if value != sorted(set(value)):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    for root in value:
+        _parse_api(root, covers)
+        if root.rsplit(".", 1)[-1].split("::function:")[-1].startswith("_"):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    return tuple(value)
 
 
 def _parse_api(value: object, covers: tuple[str, ...]) -> str | None:
@@ -279,8 +308,11 @@ def _observed_obligations_valid(scenario: Scenario, obligations: tuple[Obligatio
     behavior = [
         item for item in obligations if item.scenario == scenario.id and item.category == "behavior"
     ]
-    return bool(behavior) and all(
-        item.selector == "$" and item.target == scenario.api for item in behavior
+    allowed = {scenario.api, *scenario.covers} if scenario.module_roots else {scenario.api}
+    return (
+        bool(behavior)
+        and any(item.target == scenario.api for item in behavior)
+        and all(item.selector == "$" and item.target in allowed for item in behavior)
     )
 
 
@@ -297,7 +329,7 @@ def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
     )
     data = _exact_keys(raw, expected, "MALFORMED_CHARACTERIZATION_MANIFEST")
     scenarios = data["scenarios"]
-    if version not in {"1.0", "2.0", "3.0"}:
+    if version not in {"1.0", "2.0", "3.0", "4.0"}:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     parsed = _scenario_rows(scenarios, version)
     obligations = _obligation_rows(data["obligations"], parsed) if version != "1.0" else ()
@@ -344,11 +376,18 @@ def scenario_command(scenario: Scenario, language: str) -> list[str]:
         return [
             "python3.12",
             "-P",
-            "/collector/characterization_observer.py",
+            "/collector/module_characterization_observer.py"
+            if scenario.module_roots
+            else "/collector/characterization_observer.py",
             "--api",
             scenario.api,
             "--driver",
             driver,
+            *(
+                ["--module-roots", _canonical(list(scenario.module_roots)).decode()]
+                if scenario.module_roots
+                else []
+            ),
         ]
     return (
         ["python3.12", "-P", driver]
@@ -524,6 +563,10 @@ def _api_bindings(
             ),
             "admissible": admissible,
         }
+        if item.module_roots:
+            facts[item.id]["module"] = _module_binding(
+                repository, base_sha, head_sha, item, records
+            )
         facts[item.id].update(
             _api_oracle_review(repository, head_sha, item, facts[item.id], records)
         )
@@ -532,6 +575,47 @@ def _api_bindings(
         if not facts[item.id]["oracle_review_valid"]:
             blocks.append(f"INVALID_API_ORACLE_REVIEW:{item.id}")
     return facts, blocks
+
+
+def _module_binding(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    scenario: Scenario,
+    records: list[git_changes.CommandRecord],
+) -> dict[str, Any]:
+    path = scenario.covers[0]
+    inventories: dict[str, object] = {}
+    for side, sha in (("base", base_sha), ("head", head_sha)):
+        try:
+            source = git_changes.read_regular_blob(repository, sha, path, records).content
+        except git_changes.GitError as error:
+            if side != "base" or error.code != "MISSING_BLOB":
+                raise
+            inventories[side + "_inventory"] = None
+            continue
+        try:
+            inventory = module_source_inventory(source, path)
+            module_public_roots(
+                list(scenario.module_roots),
+                str(scenario.api),
+                {row["name"]: row for row in inventory["functions"]},
+            )
+        except ModuleObservationError as error:
+            raise CharacterizationError("INVALID_MODULE_SOURCE", str(error)) from error
+        inventories[side + "_inventory"] = inventory
+    oracle = git_changes.read_regular_blob(
+        repository, head_sha, f"{SCENARIO_ROOT}/{scenario.id}.module.golden.json", records
+    ).content
+    cases = _read_json_bytes(oracle, "INVALID_MODULE_ORACLE")
+    if not isinstance(cases, list) or not 2 <= len(cases) <= MODULE_MAX_EXECUTIONS:
+        raise CharacterizationError("INVALID_MODULE_ORACLE")
+    return {
+        "roots": list(scenario.module_roots),
+        **inventories,
+        "oracle_sha256": _sha256(oracle),
+        "oracle_cases": cases,
+    }
 
 
 def _api_review_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -562,6 +646,7 @@ def _api_oracle_review(
     path = f"{SCENARIO_ROOT}/{scenario.id}.review.json"
     try:
         blob = git_changes.read_regular_blob(repository, head_sha, path, records)
+        module = fact.get("module")
         row = _exact_keys(
             _read_api_review(blob.content),
             {
@@ -573,12 +658,17 @@ def _api_oracle_review(
                 "intended_feature",
                 "reviewer",
                 "verdict",
-            },
+            }
+            | (
+                {"module_roots", "module_inventory_sha256", "module_oracle_sha256"}
+                if module is not None
+                else set()
+            ),
             "MALFORMED_API_ORACLE_REVIEW",
         )
     except (git_changes.GitError, CharacterizationError):
         return {"review_sha256": None, "intended_feature": None, "oracle_review_valid": False}
-    valid = _valid_api_oracle_review(row, fact)
+    valid = _valid_api_oracle_review(row, fact) and _module_review_matches(row, fact)
     return {
         "review_sha256": _sha256(blob.content),
         "intended_feature": row["intended_feature"] if valid else None,
@@ -589,7 +679,7 @@ def _api_oracle_review(
 def _valid_api_oracle_review(row: dict[str, Any], fact: dict[str, Any]) -> bool:
     source = fact["head_source"]
     return bool(
-        row["schema_version"] == "1.0"
+        row["schema_version"] == ("2.0" if "module" in fact else "1.0")
         and row["api"] == fact["api"]
         and row["verdict"] == "ACCEPTED"
         and isinstance(row["reviewer"], str)
@@ -607,6 +697,16 @@ def _valid_api_oracle_review(row: dict[str, Any], fact: dict[str, Any]) -> bool:
     )
 
 
+def _module_review_matches(row: dict[str, Any], fact: dict[str, Any]) -> bool:
+    module = fact.get("module")
+    return module is None or bool(
+        row["module_roots"] == module["roots"]
+        and row["module_inventory_sha256"] == module["head_inventory"]["inventory_sha256"]
+        and row["module_oracle_sha256"] == module["oracle_sha256"]
+        and row["source_sha256"] == fact["head_source"]["source_sha256"]
+    )
+
+
 def _api_capture_matches(row: dict[str, Any] | None, fact: dict[str, Any], side: str) -> bool:
     if row is None:
         return False
@@ -620,6 +720,9 @@ def _api_capture_matches(row: dict[str, Any] | None, fact: dict[str, Any], side:
     source = fact[f"{side}_source"]
     if not isinstance(source, dict) or not isinstance(observation, dict):
         return False
+    module_valid = _module_capture_matches(row, fact, side)
+    if "module" in fact:
+        observation = {key: value for key, value in observation.items() if key != "module_witness"}
     return bool(
         set(observation)
         == {
@@ -644,7 +747,33 @@ def _api_capture_matches(row: dict[str, Any] | None, fact: dict[str, Any], side:
         and row.get("exit_code") == 0
         and row.get("error") is None
         and row.get("deterministic") is True
+        and module_valid
     )
+
+
+def _module_capture_matches(row: dict[str, Any], fact: dict[str, Any], side: str) -> bool:
+    module = fact.get("module")
+    if module is None:
+        return "module_witness" not in row.get("api_observation", {})
+    observation = row.get("api_observation", {})
+    witness = observation.get("module_witness")
+    if not isinstance(witness, dict) or witness.get("roots") != module["roots"]:
+        return False
+    primary = {key: value for key, value in observation.items() if key != "module_witness"}
+    if witness.get("primary") != primary:
+        return False
+    try:
+        verify_module_inventory_observation(
+            module[side + "_inventory"],
+            fact["api"].split("::", 1)[0],
+            fact["api"],
+            witness,
+            row.get("behavior"),
+            module["oracle_cases"],
+        )
+    except (ModuleObservationError, TypeError, ValueError, KeyError):
+        return False
+    return True
 
 
 def _load_capture(path: Path, missing_code: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -693,6 +822,7 @@ def _authentication_blocks(
     if set(artifact) != expected_keys or artifact.get("schema_version") not in {
         CAPTURE_SCHEMA,
         OBSERVED_CAPTURE_SCHEMA,
+        MODULE_CAPTURE_SCHEMA,
     }:
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     authentication = artifact.get("authentication")
@@ -775,7 +905,7 @@ def _stable_environment(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _effective_obligations(manifest: Manifest) -> tuple[Obligation, ...]:
-    if manifest.schema_version in {"2.0", "3.0"}:
+    if manifest.schema_version in {"2.0", "3.0", "4.0"}:
         return manifest.obligations
     return tuple(
         Obligation(item.id, "static", item.id, "$", f"scenario:{item.id}")
@@ -955,7 +1085,7 @@ def _observed_definition_blocks(
         old = previous.get(item.id)
         if old is None:
             continue
-        if old.api != item.api:
+        if old.api != item.api or old.module_roots != item.module_roots:
             blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{item.id}")
         elif item.api is not None:
             path, _ = _scenario_paths(item, language)
@@ -982,8 +1112,7 @@ def _capture_blocks(
     blocks: list[str] = []
     rows = artifact.get("scenarios")
     if (
-        artifact.get("schema_version")
-        != (OBSERVED_CAPTURE_SCHEMA if manifest.schema_version == "3.0" else CAPTURE_SCHEMA)
+        artifact.get("schema_version") != capture_schema(manifest.schema_version)
         or artifact.get("language") != language
         or artifact.get("manifest") != _manifest_payload(manifest)
         or not isinstance(rows, list)
@@ -1421,7 +1550,14 @@ def _result_obligation(
         or type(row["meaningful"]) is not bool
         or not isinstance(row["target"], str)
         or not row["target"]
-        or (fact is not None and row["category"] == "behavior" and row["target"] != fact["api"])
+        or (
+            fact is not None
+            and row["category"] == "behavior"
+            and row["target"]
+            not in (
+                {fact["api"], fact["api"].split("::", 1)[0]} if "module" in fact else {fact["api"]}
+            )
+        )
         or any(
             item is not None and (not isinstance(item, str) or SHA256.fullmatch(item) is None)
             for item in hashes
@@ -1472,17 +1608,21 @@ def _serialized_api_facts(
     ]
 
 
-def _result_api_facts(value: object) -> dict[str, dict[str, Any]]:
+def _result_api_facts(value: object, *, allow_module: bool = False) -> dict[str, dict[str, Any]]:
     if not isinstance(value, list) or len(value) > MAX_OBSERVED_APIS:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-    rows = [_result_api_fact(item) for item in value]
+    rows = [_result_api_fact(item, allow_module=allow_module) for item in value]
     names = [item["scenario"] for item in rows]
-    if names != sorted(set(names)):
+    if (
+        names != sorted(set(names))
+        or sum(len(row["module"]["roots"]) if "module" in row else 1 for row in rows)
+        > MAX_OBSERVED_APIS
+    ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return {item["scenario"]: item for item in rows}
 
 
-def _result_api_fact(value: object) -> dict[str, Any]:
+def _result_api_fact(value: object, *, allow_module: bool = False) -> dict[str, Any]:
     row = _exact_keys(
         value,
         {
@@ -1500,7 +1640,8 @@ def _result_api_fact(value: object) -> dict[str, Any]:
             "review_sha256",
             "intended_feature",
             "oracle_review_valid",
-        },
+        }
+        | ({"module"} if allow_module and isinstance(value, dict) and "module" in value else set()),
         "MALFORMED_CHARACTERIZATION_RESULT",
     )
     booleans = (
@@ -1522,6 +1663,8 @@ def _result_api_fact(value: object) -> dict[str, Any]:
         if not isinstance(row[key], str) or SHA256.fullmatch(row[key]) is None:
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     _result_api_sources(row)
+    if "module" in row:
+        _result_module_fact(row)
     if row["oracle_review_valid"] and (
         not isinstance(row["review_sha256"], str)
         or SHA256.fullmatch(row["review_sha256"]) is None
@@ -1530,6 +1673,57 @@ def _result_api_fact(value: object) -> dict[str, Any]:
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return row
+
+
+def _result_module_fact(fact: dict[str, Any]) -> None:
+    row = _exact_keys(
+        fact["module"],
+        {"roots", "base_inventory", "head_inventory", "oracle_sha256", "oracle_cases"},
+        "MALFORMED_CHARACTERIZATION_RESULT",
+    )
+    _module_roots(row["roots"], fact["api"], (fact["api"].split("::", 1)[0],))
+    if (
+        not row["roots"]
+        or not isinstance(row["oracle_sha256"], str)
+        or SHA256.fullmatch(row["oracle_sha256"]) is None
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    try:
+        _module_root_cases(row["oracle_cases"], row["oracle_cases"], len(row["oracle_cases"]))
+        if not 2 <= len(row["oracle_cases"]) <= MODULE_MAX_EXECUTIONS:
+            raise ModuleObservationError("INVALID_MODULE_ORACLE")
+        for side in ("base", "head"):
+            source, inventory = fact[side + "_source"], row[side + "_inventory"]
+            if source is None:
+                if inventory is not None:
+                    raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+                continue
+            module_validate_inventory(inventory, source["source_sha256"])
+            module_public_roots(
+                row["roots"], fact["api"], {item["name"]: item for item in inventory["functions"]}
+            )
+    except (ModuleObservationError, TypeError, ValueError, KeyError) as error:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT") from error
+
+
+def capture_schema(version: str) -> str:
+    return (
+        MODULE_CAPTURE_SCHEMA
+        if version == "4.0"
+        else OBSERVED_CAPTURE_SCHEMA
+        if version == "3.0"
+        else CAPTURE_SCHEMA
+    )
+
+
+def result_schema(version: str) -> str:
+    return (
+        MODULE_RESULT_SCHEMA
+        if version == "4.0"
+        else OBSERVED_RESULT_SCHEMA
+        if version == "3.0"
+        else RESULT_SCHEMA
+    )
 
 
 def _result_api_sources(row: dict[str, Any]) -> None:
@@ -1781,13 +1975,16 @@ def _result_shape(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     schema_version = value.get("schema_version")
-    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA}
+    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
     keys = {*common_keys, "obligations"} if modern else common_keys
-    if schema_version == OBSERVED_RESULT_SCHEMA:
+    if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}:
         keys.add("api_observations")
-    if schema_version not in {LEGACY_RESULT_SCHEMA, RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA} or set(
-        value
-    ) not in (
+    if schema_version not in {
+        LEGACY_RESULT_SCHEMA,
+        RESULT_SCHEMA,
+        OBSERVED_RESULT_SCHEMA,
+        MODULE_RESULT_SCHEMA,
+    } or set(value) not in (
         keys,
         {*keys, "refactor_runnability"},
     ):
@@ -1809,7 +2006,7 @@ def validate_result(
     """Validate serialized Gate 5 facts without repository or target execution."""
     row = _result_shape(value)
     schema_version = row["schema_version"]
-    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA}
+    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
     if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
         repository,
         base_sha,
@@ -1841,8 +2038,10 @@ def validate_result(
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     api_facts = (
-        _result_api_facts(row["api_observations"])
-        if schema_version == OBSERVED_RESULT_SCHEMA
+        _result_api_facts(
+            row["api_observations"], allow_module=schema_version == MODULE_RESULT_SCHEMA
+        )
+        if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
         else {}
     )
     scenarios = _result_scenarios(row["scenarios"], api_facts)
@@ -1854,7 +2053,7 @@ def validate_result(
             "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
             **(
                 {"api_observations": list(api_facts.values())}
-                if schema_version == OBSERVED_RESULT_SCHEMA
+                if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
                 else {}
             ),
         }
@@ -1976,7 +2175,7 @@ def _verification_result(
                     "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
                     **(
                         {"api_observations": api_observations or []}
-                        if manifest.schema_version == "3.0"
+                        if manifest.schema_version in {"3.0", "4.0"}
                         else {}
                     ),
                 }
@@ -2006,11 +2205,11 @@ def _verification_result(
             "workflow_sha": workflow_sha,
         },
         "scenarios": scenarios,
-        "schema_version": OBSERVED_RESULT_SCHEMA
-        if manifest.schema_version == "3.0"
-        else RESULT_SCHEMA,
+        "schema_version": result_schema(manifest.schema_version),
         **(
-            {"api_observations": api_observations or []} if manifest.schema_version == "3.0" else {}
+            {"api_observations": api_observations or []}
+            if manifest.schema_version in {"3.0", "4.0"}
+            else {}
         ),
         "workflow_sha": workflow_sha,
     }
@@ -2250,6 +2449,383 @@ def _write_json(path: Path, value: object, *, compact: bool = False) -> bytes:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
     return content
+
+
+MODULE_MAX_FUNCTIONS = 128
+MODULE_MAX_EXECUTIONS = 128
+MODULE_MAX_CALLS = 4096
+MODULE_WITNESS_SCHEMA = "module-witness.v1"
+
+
+class ModuleObservationError(ValueError):
+    """One deterministic incomplete or inconsistent module witness."""
+
+
+def module_validate_inventory(value: object, source_sha256: str) -> dict[str, Any]:
+    inventory = _module_exact(value, {"source_sha256", "inventory_sha256", "functions"})
+    rows = inventory["functions"]
+    if not isinstance(rows, list) or not 1 <= len(rows) <= MODULE_MAX_FUNCTIONS:
+        raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    functions = [_module_inventory_row(row) for row in rows]
+    names = [row["name"] for row in functions]
+    if names != sorted(set(names)) or inventory["source_sha256"] != source_sha256:
+        raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    if inventory["inventory_sha256"] != hashlib.sha256(_module_canonical(functions)).hexdigest():
+        raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    return inventory
+
+
+def _module_inventory_row(value: object) -> dict[str, Any]:
+    row = _module_exact(value, {"name", "code_sha256", "lines"})
+    if (
+        not isinstance(row["name"], str)
+        or not row["name"]
+        or not isinstance(row["code_sha256"], str)
+        or SHA256.fullmatch(row["code_sha256"]) is None
+    ):
+        raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    lines = row["lines"]
+    if (
+        not isinstance(lines, list)
+        or not lines
+        or any(type(line) is not int or line < 1 for line in lines)
+        or lines != sorted(set(lines))
+    ):
+        raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    return row
+
+
+def _module_canonical(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+
+
+def _module_codes(code: CodeType) -> list[CodeType]:
+    return [
+        code,
+        *(
+            item
+            for child in code.co_consts
+            if type(child) is CodeType
+            for item in _module_codes(child)
+        ),
+    ]
+
+
+def _module_functions(
+    nodes: list[ast.stmt], parents: tuple[str, ...] = ()
+) -> list[tuple[str, ast.FunctionDef]]:
+    found: list[tuple[str, ast.FunctionDef]] = []
+    for node in nodes:
+        if isinstance(node, ast.AsyncFunctionDef):
+            raise ModuleObservationError("UNSUPPORTED_MODULE_FUNCTION")
+        if isinstance(node, ast.FunctionDef):
+            found.append((".".join((*parents, node.name)), node))
+            nested = _module_functions(node.body, (*parents, node.name, "<locals>"))
+            found.extend(nested)
+        elif isinstance(node, ast.ClassDef):
+            found.extend(_module_functions(node.body, (*parents, node.name)))
+        elif any(
+            isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            for child in ast.walk(node)
+        ):
+            raise ModuleObservationError("UNSUPPORTED_CONDITIONAL_DECLARATION")
+    return found
+
+
+def module_source_inventory(source: bytes, path: str) -> dict[str, Any]:
+    """Bind every declared function, its code and executable body lines to source."""
+    if (
+        not path.endswith(".py")
+        or "\\" in path
+        or ":" in path
+        or any(part in {"", ".", ".."} for part in path.split("/"))
+    ):
+        raise ModuleObservationError("INVALID_MODULE_PATH")
+    try:
+        module = compile(source, "/target/" + path, "exec", dont_inherit=True, optimize=0)
+        declared = _module_functions(ast.parse(source).body)
+        if any(isinstance(node, ast.Lambda) for node in ast.walk(ast.parse(source))):
+            raise ModuleObservationError("UNSUPPORTED_MODULE_LAMBDA")
+    except (SyntaxError, ValueError) as error:
+        raise ModuleObservationError("INVALID_MODULE_SOURCE") from error
+    codes = _module_codes(module)
+    rows = [_module_function_row(name, node, codes) for name, node in declared]
+    rows.sort(key=lambda row: row["name"])
+    if (
+        not rows
+        or len(rows) > MODULE_MAX_FUNCTIONS
+        or len({row["name"] for row in rows}) != len(rows)
+    ):
+        raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    return {
+        "source_sha256": hashlib.sha256(source).hexdigest(),
+        "inventory_sha256": hashlib.sha256(_module_canonical(rows)).hexdigest(),
+        "functions": rows,
+    }
+
+
+def _module_function_row(name: str, node: ast.FunctionDef, codes: list[CodeType]) -> dict[str, Any]:
+    matching = [code for code in codes if code.co_qualname == name]
+    if len(matching) != 1 or matching[0].co_flags & (0x20 | 0x80 | 0x200):
+        raise ModuleObservationError("UNSUPPORTED_MODULE_FUNCTION")
+    code = matching[0]
+    lines = sorted({line for _, line in dis.findlinestarts(code) if line >= node.body[0].lineno})
+    if not lines:
+        raise ModuleObservationError("INVALID_FUNCTION_LINES")
+    return {
+        "name": name,
+        "code_sha256": hashlib.sha256(marshal.dumps(code, 2)).hexdigest(),
+        "lines": lines,
+    }
+
+
+def _module_exact(value: object, keys: set[str]) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != keys:
+        raise ModuleObservationError("INVALID_MODULE_WITNESS_SHAPE")
+    return value
+
+
+def _module_meaningful(cases: object) -> bool:
+    if not isinstance(cases, list) or not 2 <= len(cases) <= MODULE_MAX_EXECUTIONS:
+        return False
+    if any(not isinstance(row, dict) or set(row) != {"input", "output"} for row in cases):
+        return False
+    return (
+        len({_module_canonical(row["input"]) for row in cases}) >= 2
+        and len({_module_canonical(row["output"]) for row in cases}) >= 2
+    )
+
+
+def _module_primary(
+    source: bytes, path: str, api: str, value: object, expected: object
+) -> dict[str, Any]:
+    row = _module_exact(
+        value,
+        {
+            "schema_version",
+            "codec",
+            "api",
+            "source_sha256",
+            "function_code_sha256",
+            "start_line",
+            "end_line",
+            "cases",
+        },
+    )
+    if not api.startswith(path + "::function:"):
+        raise ModuleObservationError("MODULE_PRIMARY_OUTSIDE_SOURCE")
+    name = api.split("::function:", 1)[1]
+    codes = _module_codes(compile(source, "/target/" + path, "exec", dont_inherit=True, optimize=0))
+    selected = [code for code in codes if code.co_qualname == name]
+    if len(selected) != 1:
+        raise ModuleObservationError("INVALID_MODULE_PRIMARY")
+    if row["schema_version"] != "1.0" or row["codec"] != "python-values-v1" or row["api"] != api:
+        raise ModuleObservationError("INVALID_MODULE_PRIMARY")
+    if (
+        row["source_sha256"] != hashlib.sha256(source).hexdigest()
+        or row["function_code_sha256"] != hashlib.sha256(marshal.dumps(selected[0], 2)).hexdigest()
+    ):
+        raise ModuleObservationError("STALE_MODULE_PRIMARY")
+    nodes = [
+        node for qualified, node in _module_functions(ast.parse(source).body) if qualified == name
+    ]
+    if (
+        len(nodes) != 1
+        or row["start_line"]
+        != min((item.lineno for item in nodes[0].decorator_list), default=nodes[0].lineno)
+        or row["end_line"] != nodes[0].end_lineno
+    ):
+        raise ModuleObservationError("STALE_MODULE_PRIMARY")
+    if row["cases"] != expected or not _module_meaningful(row["cases"]):
+        raise ModuleObservationError("INVALID_MODULE_ORACLE_CASES")
+    return row
+
+
+def module_public_roots(value: object, api: str, functions: dict[str, Any]) -> tuple[str, ...]:
+    if not isinstance(value, list) or not value or len(value) > MODULE_MAX_FUNCTIONS:
+        raise ModuleObservationError("INVALID_MODULE_ROOTS")
+    path = api.split("::", 1)[0]
+    if any(
+        not isinstance(root, str) or not root.startswith(path + "::function:") for root in value
+    ):
+        raise ModuleObservationError("INVALID_MODULE_ROOTS")
+    if value != sorted(set(value)) or api not in value:
+        raise ModuleObservationError("INVALID_MODULE_ROOTS")
+    names = tuple(root.split("::function:", 1)[1] for root in value)
+    if any(name not in functions or name.rsplit(".", 1)[-1].startswith("_") for name in names):
+        raise ModuleObservationError("INVALID_MODULE_ROOTS")
+    return names
+
+
+def _module_executions(
+    value: object, primary: dict[str, Any], root_cases: list[dict[str, Any]], roots: tuple[str, ...]
+) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not 2 <= len(value) <= MODULE_MAX_EXECUTIONS:
+        raise ModuleObservationError("INVALID_MODULE_EXECUTIONS")
+    rows = [_module_exact(row, {"id", "root", "outcome", "case", "primary_case"}) for row in value]
+    expected_case = 0
+    for index, row in enumerate(rows):
+        if (
+            type(row["id"]) is not int
+            or row["id"] != index
+            or row["outcome"] not in {"RETURN", "EXCEPTION"}
+        ):
+            raise ModuleObservationError("INVALID_MODULE_EXECUTIONS")
+        if row["root"] not in roots or type(row["case"]) is not int or row["case"] != index:
+            raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
+        case = root_cases[index]
+        if case["root"] != row["root"] or case["outcome"] != row["outcome"]:
+            raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
+        expected_case = _module_primary_case_link(row, case, primary, expected_case)
+    if expected_case != len(primary["cases"]):
+        raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
+    return rows
+
+
+def _module_primary_case_link(
+    row: dict[str, Any], case: dict[str, Any], primary: dict[str, Any], index: int
+) -> int:
+    if row["root"] != primary["api"].split("::function:", 1)[1] or row["outcome"] != "RETURN":
+        if row["primary_case"] is not None:
+            raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
+        return index
+    if (
+        type(row["primary_case"]) is not int
+        or row["primary_case"] != index
+        or index >= len(primary["cases"])
+    ):
+        raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
+    if {"input": case["input"], "output": case["output"]} != primary["cases"][index]:
+        raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
+    return index + 1
+
+
+def _module_root_cases(
+    value: object, expected: object, execution_count: int
+) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or len(value) != execution_count or value != expected:
+        raise ModuleObservationError("INVALID_MODULE_ROOT_ORACLE")
+    rows = [
+        _module_exact(row, {"root", "input", "arguments_after", "outcome", "output", "exception"})
+        for row in value
+    ]
+    for row in rows:
+        if row["outcome"] not in {"RETURN", "EXCEPTION"}:
+            raise ModuleObservationError("INVALID_MODULE_ROOT_ORACLE")
+        if row["outcome"] == "RETURN" and row["exception"] is not None:
+            raise ModuleObservationError("INVALID_MODULE_ROOT_ORACLE")
+        if row["outcome"] == "EXCEPTION" and (
+            row["output"] is not None
+            or not isinstance(row["exception"], str)
+            or not row["exception"]
+        ):
+            raise ModuleObservationError("INVALID_MODULE_ROOT_ORACLE")
+    return rows
+
+
+def _module_call(
+    row: object, functions: dict[str, dict[str, Any]], execution_count: int
+) -> dict[str, Any]:
+    call = _module_exact(row, {"execution", "function", "lines", "outcome"})
+    if type(call["execution"]) is not int or not 0 <= call["execution"] < execution_count:
+        raise ModuleObservationError("UNLINKED_MODULE_CALL")
+    name, lines = call["function"], call["lines"]
+    if (
+        not isinstance(name, str)
+        or name not in functions
+        or call["outcome"] not in {"RETURN", "EXCEPTION"}
+    ):
+        raise ModuleObservationError("INVALID_MODULE_CALL")
+    if not isinstance(lines, list) or not lines or any(type(line) is not int for line in lines):
+        raise ModuleObservationError("INVALID_MODULE_CALL_LINES")
+    if lines != sorted(set(lines)) or not set(lines) <= set(functions[name]["lines"]):
+        raise ModuleObservationError("INVALID_MODULE_CALL_LINES")
+    return call
+
+
+def _module_coverage(
+    calls: list[dict[str, Any]],
+    functions: dict[str, dict[str, Any]],
+    executions: list[dict[str, Any]],
+) -> None:
+    for execution in executions:
+        roots = [
+            call
+            for call in calls
+            if call["execution"] == execution["id"] and call["function"] == execution["root"]
+        ]
+        if len(roots) != 1 or roots[0]["outcome"] != execution["outcome"]:
+            raise ModuleObservationError("UNWITNESSED_PRIMARY_EXECUTION")
+    for name, function in functions.items():
+        seen = {line for call in calls if call["function"] == name for line in call["lines"]}
+        if seen != set(function["lines"]):
+            raise ModuleObservationError("UNWITNESSED_FUNCTION_BODY:" + name)
+
+
+def verify_module_observation(
+    source: bytes,
+    path: str,
+    api: str,
+    value: object,
+    expected_cases: object,
+    expected_root_cases: object,
+) -> None:
+    """Reject any incomplete inventory, changed oracle or unlinked body witness."""
+    inventory = module_source_inventory(source, path)
+    if not isinstance(value, dict):
+        raise ModuleObservationError("INVALID_MODULE_WITNESS_SHAPE")
+    _module_primary(source, path, api, value.get("primary"), expected_cases)
+    verify_module_inventory_observation(
+        inventory, path, api, value, expected_cases, expected_root_cases
+    )
+
+
+def verify_module_inventory_observation(
+    inventory: dict[str, Any],
+    path: str,
+    api: str,
+    value: object,
+    expected_cases: object,
+    expected_root_cases: object,
+) -> None:
+    """Join the independently derived inventory to an authenticated collector row."""
+    row = _module_exact(
+        value,
+        {
+            "schema_version",
+            "path",
+            "api",
+            "source_sha256",
+            "inventory_sha256",
+            "functions",
+            "primary",
+            "roots",
+            "root_cases",
+            "executions",
+            "calls",
+        },
+    )
+    if row["schema_version"] != MODULE_WITNESS_SCHEMA or row["path"] != path or row["api"] != api:
+        raise ModuleObservationError("INVALID_MODULE_WITNESS_IDENTITY")
+    if any(row[key] != item for key, item in inventory.items()):
+        raise ModuleObservationError("STALE_MODULE_INVENTORY")
+    primary = row["primary"]
+    if (
+        not isinstance(primary, dict)
+        or primary.get("cases") != expected_cases
+        or not _module_meaningful(expected_cases)
+    ):
+        raise ModuleObservationError("INVALID_MODULE_ORACLE_CASES")
+    functions = {item["name"]: item for item in inventory["functions"]}
+    roots = module_public_roots(row["roots"], api, functions)
+    if not isinstance(row["executions"], list):
+        raise ModuleObservationError("INVALID_MODULE_EXECUTIONS")
+    root_cases = _module_root_cases(row["root_cases"], expected_root_cases, len(row["executions"]))
+    executions = _module_executions(row["executions"], primary, root_cases, roots)
+    if not isinstance(row["calls"], list) or not 1 <= len(row["calls"]) <= MODULE_MAX_CALLS:
+        raise ModuleObservationError("INVALID_MODULE_CALLS")
+    calls = [_module_call(item, functions, len(executions)) for item in row["calls"]]
+    _module_coverage(calls, functions, executions)
 
 
 def _parser() -> argparse.ArgumentParser:

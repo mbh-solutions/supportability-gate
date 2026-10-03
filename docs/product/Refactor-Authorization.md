@@ -58,6 +58,13 @@ See [Eight Gates](Eight-Gates.md#6-incremental-refactor) and [Boundaries and Lim
 
 ## Introduced Python API scope
 
+For a schema-4 module responsibility, the existing schema-3 introduction grant also includes
+`module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. They must exactly match the
+source-derived inventory and independently reviewed root oracle. Public roots consume the existing
+50-API quota. A grant cannot waive incomplete helper/body witnesses, changed normal outputs, absent
+independent review, copied source, retired targets or stale repository/base/head identities. Existing
+function-only grants retain their exact previous shape.
+
 Schema `3.0` retains every schema-2 field and adds `introductions`. This array is required for
 schema 3 and contains one exact grant for each Git-derived API birth in a schema-3 characterization
 manifest. A grant has exactly `api`, `scenario`, `source_sha256`, `driver_sha256`, `oracle_sha256`,

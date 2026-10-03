@@ -205,6 +205,43 @@ Implementation references: [contract schema](../../src/supportability_gate/contr
 
 ## Observed Python APIs and genuine introduction
 
+### Module responsibility witnesses (schema 4)
+
+Schema `4.0` preserves every schema-3 field and adds `module_roots` to each scenario. Use an
+empty array for ordinary or function-only rows. A module row supplies a sorted, unique list of
+public synchronous APIs from the same covered Python file, including its primary `api`. Each
+declared root counts toward the manifest's unchanged limit of 50 observed APIs;
+total scenarios remain limited to 64. This is not an additional quota.
+
+Retain a `$` behavior obligation targeting the primary API. A second `$` behavior obligation may
+target that exact source filepath. File coverage requires a complete source/function/code inventory
+and actual executable-body line witnesses linked to declared public-root executions. Calls outside
+those executions cannot supply coverage. Every declared function must be witnessed; unsupported
+async, generator, lambda or conditional function definitions fail closed. Body-line coverage is a
+bounded proxy, not proof of every branch combination or semantic fidelity.
+
+The ordinary `.golden.json` remains the primary normal-return oracle, requiring at least two
+distinct inputs and outputs. Add `<id>.module.golden.json` containing independently established root
+records with exact `root`, `input`, `arguments_after`, `outcome`, `output` and `exception` fields.
+Returned `None` and an exception are distinct outcomes. Void mutations use actual arguments before
+and after the call; exception-only roots cannot replace meaningful primary returns. The fixed
+`python-values-v1` codec remains unchanged, including exact bytes and source-bound dataclasses.
+Opaque receivers, callbacks and unsupported objects remain rejected. A plain public persistence
+API can witness its actual class helpers without serializing their receivers.
+
+Module review records use schema `2.0`, retaining all ordinary review fields and adding
+`module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. These bind the exact root
+panel, complete function inventory and raw module-oracle bytes. Authenticated introduction grants
+must bind those same three fields in addition to the existing source/driver/oracle/review pins.
+Existing whole-file birth, anti-copy, no-retirement, independent-review, exact-head authorization,
+golden preservation, resource and quality protections remain mandatory.
+
+The fixed producer returns capture/result schema `v4` for schema-4 manifests. Existing manifests
+and results retain their previous schemas and byte behavior. Deployment requires a separately
+qualified workflow-pin update; merging source alone does not update organization enforcement.
+
+### Function-only witnesses (schema 3)
+
 The fixed manifest capacity is 64 total scenarios, including at most 50 observed Python API
 scenarios. The Gate rejects larger manifests before target execution. Serialized results retain
 the same 64-scenario limit; observed API facts and owner introduction grants remain limited to
