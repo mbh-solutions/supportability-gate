@@ -203,6 +203,7 @@ def _s6(
     grants: list[dict[str, Any]] | None,
     *,
     trusted: bool = True,
+    authorization_version: str = "3.0",
 ) -> dict[str, Any]:
     repository, base_sha, head_sha, _, _ = fixture
     targets, _ = owner._derived_targets(repository, base_sha, head_sha)
@@ -210,7 +211,7 @@ def _s6(
     body = owner._authorization(base_sha, head_sha, scope, list(targets), broad=True)
     if grants is not None:
         payload = json.loads(body.removeprefix(refactor_policy.AUTHORIZATION_PREFIX))
-        payload.update(schema_version="3.0", introductions=grants)
+        payload.update(schema_version=authorization_version, introductions=grants)
         body = refactor_policy.AUTHORIZATION_PREFIX + json.dumps(payload)
     return owner._verify(
         repository,

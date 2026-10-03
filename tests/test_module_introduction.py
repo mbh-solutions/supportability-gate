@@ -18,7 +18,7 @@ import test_module_observation as witness
 
 from supportability_gate import characterization as gate
 from supportability_gate import characterization as module_observation
-from supportability_gate import git_changes
+from supportability_gate import git_changes, refactor_policy, standard_results
 
 RUN = """
 import json, sys
@@ -58,7 +58,13 @@ def _actual_witness(
 
 
 def _fixture(
-    tmp_path: Path, *, copied: bool = False, retired: bool = False, typed: bool = False
+    tmp_path: Path,
+    *,
+    copied: bool = False,
+    retired: bool = False,
+    typed: bool = False,
+    payload_size: int = 0,
+    root_count: int = 0,
 ) -> tuple:
     repository, base_sha, _, base, head = birth._fixture(tmp_path, copied=copied)
     source = birth.SOURCE if copied else witness.SOURCE
@@ -69,6 +75,27 @@ def _fixture(
         source = witness.TYPED_SOURCE
         primary_cases, oracle = witness.typed_oracles("src/introduced.py", "introduced")
         roots.append("src/introduced.py::function:plain")
+    if payload_size:
+        source = b"def identity(value):\n    return value\n\ndef calculate(value):\n    if not value:\n        raise ValueError('empty')\n    return identity(value)\n"
+        primary_cases, oracle = _large_oracles(payload_size)
+    if root_count:
+        source = b"def calculate(value):\n    return value * 2\n"
+        oracle = copy.deepcopy(witness.ROOT_CASES[:2])
+        for index in range(1, root_count):
+            name = f"root_{index:03}"
+            source += f"\ndef {name}(value):\n    return value + {index}\n".encode()
+            roots.append(f"src/introduced.py::function:{name}")
+            args = [{"name": "value", "value": {"type": "int", "value": 1}}]
+            oracle.append(
+                {
+                    "root": name,
+                    "input": args,
+                    "arguments_after": args,
+                    "outcome": "RETURN",
+                    "output": {"type": "int", "value": index + 1},
+                    "exception": None,
+                }
+            )
     legacy._write(repository / "src/introduced.py", source.decode())
     driver = repository / "tests/characterization/introduced.characterization.py"
     legacy._write(
@@ -79,6 +106,18 @@ def _fixture(
     if typed:
         legacy._write(driver, "import introduced as target\n" + witness.TYPED_DRIVER)
         birth._json(repository / "tests/characterization/introduced.golden.json", primary_cases)
+    if payload_size:
+        legacy._write(
+            driver,
+            f"from introduced import calculate\ncalculate('a' * {payload_size})\ncalculate('b' * {payload_size + 1})\n",
+        )
+        birth._json(repository / "tests/characterization/introduced.golden.json", primary_cases)
+    if root_count:
+        legacy._write(
+            driver,
+            "import introduced as target\ntarget.calculate(1)\ntarget.calculate(2)\n"
+            + "".join(f"target.root_{index:03}(1)\n" for index in range(1, root_count)),
+        )
     if retired:
         legacy._write(
             repository / "src/sample.py", "def replacement(value):\n    return value + 1\n"
@@ -140,6 +179,80 @@ def _fixture(
             )
         birth._fingerprint(capture)
     return repository, base_sha, head_sha, base, head
+
+
+def _large_oracles(size: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Literal expectations independent of target calls and collector output."""
+    cases = []
+    roots = []
+    for value in ("a" * size, "b" * (size + 1)):
+        encoded = {"type": "str", "value": value}
+        arguments = [{"name": "value", "value": encoded}]
+        cases.append({"input": arguments, "output": encoded})
+        roots.append(
+            {
+                "root": "calculate",
+                "input": arguments,
+                "arguments_after": arguments,
+                "outcome": "RETURN",
+                "output": encoded,
+                "exception": None,
+            }
+        )
+    return cases, roots
+
+
+def test_actual_large_module_receipt_keeps_individual_limits_and_all_joins(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path, payload_size=45000)
+    actual = birth._introduced(fixture[4])["api_observation"]["module_witness"]
+    assert 262144 < len(gate._canonical(actual)) < gate.MODULE_MAX_JSON_BYTES
+    assert max(len(gate._canonical(case["output"])) for case in actual["root_cases"]) < 262144
+    assert any(row["missing_lines"] for row in actual["body_coverage"])
+    result = birth._verify(tmp_path, fixture)
+    assert result["overall_result"] == "PASS", result["policy_blocks"]
+    legacy._validate_round_trip(result)
+    assert birth._s6(fixture, result, [_grant(result)])["overall_result"] == "PASS"
+
+
+def test_100_actual_roots_require_versioned_authorization_and_standard_join(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path, root_count=100)
+    receipt = birth._introduced(fixture[4])["api_observation"]["module_witness"]
+    assert len(receipt["roots"]) == 100
+    assert len({row["root"] for row in receipt["executions"]}) == 100
+    result = birth._verify(tmp_path, fixture)
+    assert result["overall_result"] == "PASS", result["policy_blocks"]
+    legacy._validate_round_trip(result)
+    grants = [_grant(result)]
+    authorized = birth._s6(fixture, result, grants, authorization_version="4.0")
+    assert authorized["overall_result"] == "PASS", authorized["policy_blocks"]
+    payload = json.loads(json.dumps(authorized["authorization"]))
+    assert payload["schema_version"] == "4.0"
+    assert (
+        standard_results._s02_refactor_authorization(
+            payload, authorized["authorization_comment_id"], "INVALID"
+        )
+        == payload
+    )
+    standard_results._s02_introduction_binding(authorized, payload, result)
+    assert birth._s6(fixture, result, grants)["overall_result"] == "BLOCK"
+    for version in ("3.0", "2.0", "unknown"):
+        with pytest.raises(refactor_policy.RefactorPolicyError):
+            refactor_policy.parse_introduction_grants(grants, version=version)
+    dropped = copy.deepcopy(payload)
+    del dropped["schema_version"]
+    with pytest.raises(standard_results.StandardResultsError):
+        standard_results._s02_refactor_authorization(
+            dropped, authorized["authorization_comment_id"], "INVALID"
+        )
+    overflow = copy.deepcopy(grants)
+    overflow[0]["module_roots"].append("src/introduced.py::function:root_100")
+    with pytest.raises(refactor_policy.RefactorPolicyError):
+        refactor_policy.parse_introduction_grants(overflow, version="4.0")
+    stale = copy.deepcopy(grants)
+    stale[0]["module_oracle_sha256"] = "0" * 64
+    assert refactor_policy.introduction_authorization_blocks(
+        result, stale, tuple(authorized["targets"]), authorization_version="4.0"
+    )
 
 
 def test_typed_module_codec2_actual_calls_pass_capture_result_and_owner_join(
@@ -226,7 +339,7 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
     typed_cases, typed_roots = witness.typed_oracles("src/introduced.py", "introduced")
     assert typed_observation["primary"]["cases"] == typed_cases
     assert typed_observation["root_cases"] == typed_roots
-    assert typed_observation["schema_version"] == "module-witness.v2"
+    assert typed_observation["schema_version"] == "module-witness.v3"
     assert typed_observation["primary"]["codec"] == "python-values-v2"
     assert typed_observation["root_cases"][-1]["exception"] == "builtins.ValueError"
     assert typed_observation["root_cases"][2]["exception"] == "builtins.TypeError"
@@ -255,6 +368,32 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
         gate._canonical({"schema_version": "1.0", "error": "OBSERVER_UNSUPPORTED_VALUE"}) + b"\n"
     )
     assert hook["stdout_sha256"] == birth._sha(expected_hook_stdout)
+    large_fixture = _fixture(tmp_path / "large-native-fixture", payload_size=45000)
+    large_repository, _, large_head, _, _ = large_fixture
+    large_scenario = next(
+        row for row in gate._manifest(large_repository, large_head, []).scenarios if row.api
+    )
+    large_capture = hosted._scenario_capture(
+        large_repository, large_repository, large_head, large_scenario, "python", []
+    )
+    assert large_capture["exit_code"] == 0 and large_capture["error"] is None
+    assert large_capture["deterministic"] is True
+    large_witness = large_capture["api_observation"]["module_witness"]
+    large_cases, large_roots = _large_oracles(45000)
+    large_source = (large_repository / "src/introduced.py").read_bytes()
+    gate.verify_module_observation(
+        large_source, "src/introduced.py", birth.API, large_witness, large_cases, large_roots
+    )
+    large_bytes = len(gate._canonical(large_witness)) + 1
+    assert 262144 < large_bytes <= gate.MODULE_MAX_JSON_BYTES
+    max_value_bytes = max(len(gate._canonical(case["output"])) for case in large_roots)
+    assert max_value_bytes <= 262144
+    tampered = copy.deepcopy(large_witness)
+    tampered["body_coverage"][0]["missing_lines"].append(999)
+    with pytest.raises(gate.ModuleObservationError, match="INVALID_MODULE_BODY_METRIC"):
+        gate.verify_module_observation(
+            large_source, "src/introduced.py", birth.API, tampered, large_cases, large_roots
+        )
     for source, error in (
         (
             b"def calculate(value):\n    values = (\n        value * 2\n        for _ in range(1)\n    )\n    return sum(values)\n",
@@ -295,6 +434,15 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
         "codec2_source_sha256": typed_observation["source_sha256"],
         "codec2_inventory_sha256": typed_observation["inventory_sha256"],
         "codec2_hook_rejection_stdout_sha256": hook["stdout_sha256"],
+        "large_actual_command": large_capture["command"],
+        "large_two_replays_equal": large_capture["deterministic"],
+        "large_witness_bytes": large_bytes,
+        "large_max_individual_value_bytes": max_value_bytes,
+        "large_source_sha256": large_witness["source_sha256"],
+        "large_inventory_sha256": large_witness["inventory_sha256"],
+        "large_witness_sha256": birth._sha(gate._canonical(large_witness)),
+        "large_stdout_sha256": large_capture["stdout_sha256"],
+        "large_metric_tamper_rejected": True,
         "verification_authentication": "synthetic unit wrapper; not authenticated adoption",
         "owner_authorization": "synthetic unit grant; not an owner attestation",
     }
@@ -409,11 +557,12 @@ def test_module_owner_grant_is_exact_and_cannot_waive_missing_witness(
     assert authorized["overall_result"] == "BLOCK"
 
 
-def test_module_panel_entries_count_against_existing_50_api_cap() -> None:
+@pytest.mark.parametrize("panel_size", [50, 51])
+def test_module_panel_entries_count_against_fixed_100_api_cap(panel_size: int) -> None:
     manifest = {"schema_version": "4.0", "scenarios": [], "obligations": [], "transitions": []}
     for index in (0, 1):
         identifier, path = f"panel-{index}", f"src/panel{index}.py"
-        roots = sorted(f"{path}::function:root{number}" for number in range(26))
+        roots = sorted(f"{path}::function:root{number}" for number in range(panel_size))
         manifest["scenarios"].append(
             {
                 "id": identifier,
@@ -432,8 +581,17 @@ def test_module_panel_entries_count_against_existing_50_api_cap() -> None:
                 "target": roots[0],
             }
         )
-    with pytest.raises(gate.CharacterizationError, match="MALFORMED_CHARACTERIZATION_MANIFEST"):
-        gate.parse_manifest(json.dumps(manifest).encode(), "0" * 40)
+    if panel_size == 50:
+        assert (
+            sum(
+                len(row.module_roots)
+                for row in gate.parse_manifest(json.dumps(manifest).encode(), "0" * 40).scenarios
+            )
+            == 100
+        )
+    else:
+        with pytest.raises(gate.CharacterizationError, match="MALFORMED_CHARACTERIZATION_MANIFEST"):
+            gate.parse_manifest(json.dumps(manifest).encode(), "0" * 40)
 
 
 def test_module_result_cannot_be_relabelled_as_old_schema(tmp_path: Path) -> None:

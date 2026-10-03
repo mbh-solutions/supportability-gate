@@ -97,6 +97,7 @@ class Authorization:
     targets: tuple[str, ...]
     sequence: Sequence
     introductions: tuple[dict[str, Any], ...] = ()
+    schema_version: str = AUTHORIZATION_SCHEMA
 
 
 @dataclass(frozen=True)
@@ -115,10 +116,12 @@ class PredecessorEvidence:
 def _read_json(path: Path, code: str) -> tuple[dict[str, Any], bytes]:
     try:
         content = path.read_bytes()
+        if not content or len(content) > MAX_JSON_BYTES:
+            raise RefactorPolicyError(code)
         value = json.loads(content, object_pairs_hook=_unique_object)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, _DuplicateKeyError) as error:
         raise RefactorPolicyError(code) from error
-    if not content or len(content) > MAX_JSON_BYTES or not isinstance(value, dict):
+    if not isinstance(value, dict):
         raise RefactorPolicyError(code)
     return value, content
 
@@ -200,7 +203,7 @@ def _parse_authorization(body: object) -> Authorization:
             "sequence",
             "targets",
         }
-        | ({"introductions"} if version == "3.0" else set()),
+        | ({"introductions"} if version in {"3.0", "4.0"} else set()),
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     sequence = _exact_keys(
@@ -209,7 +212,7 @@ def _parse_authorization(body: object) -> Authorization:
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     if (
-        row["schema_version"] not in {AUTHORIZATION_SCHEMA, "3.0"}
+        row["schema_version"] not in {AUTHORIZATION_SCHEMA, "3.0", "4.0"}
         or not isinstance(row["repository"], str)
         or not isinstance(row["base_sha"], str)
         or SHA.fullmatch(row["base_sha"]) is None
@@ -233,22 +236,57 @@ def _parse_authorization(body: object) -> Authorization:
         _path_list(row["scope"], "authorization.scope"),
         _target_list(row["targets"]),
         Sequence(sequence["step"], sequence["predecessor_sha"], sequence["series_id"]),
-        tuple(parse_introduction_grants(row["introductions"])) if version == "3.0" else (),
+        tuple(parse_introduction_grants(row["introductions"], version=version))
+        if version in {"3.0", "4.0"}
+        else (),
+        str(version),
     )
 
 
-def parse_introduction_grants(value: object) -> list[dict[str, Any]]:
+def parse_introduction_grants(value: object, *, version: str = "3.0") -> list[dict[str, Any]]:
     """Validate precise owner-reviewed intended-oracle grants, never waivers."""
-    if not isinstance(value, list) or len(value) > 50:
+    limit = 100 if version == "4.0" else 50
+    if version not in {"2.0", "3.0", "4.0"} or not isinstance(value, list) or len(value) > limit:
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
     rows = [_introduction_grant(item) for item in value]
     identities = [item["scenario"] for item in rows]
     if (
         identities != sorted(set(identities))
-        or sum(len(row.get("module_roots", [row["api"]])) for row in rows) > 50
+        or sum(len(row.get("module_roots", [row["api"]])) for row in rows) > limit
     ):
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
+    if version == "4.0":
+        roots = [root for row in rows for root in row.get("module_roots", [row["api"]])]
+        if len(roots) != len(set(roots)):
+            raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
     return rows
+
+
+def _read_characterization_result(
+    path: Path, repository: Path, event: dict[str, Any]
+) -> tuple[dict[str, Any], bytes]:
+    """Select the fixed result transport using the actual exact-head manifest."""
+    try:
+        value, content = _read_json(path, "MALFORMED_CHARACTERIZATION_RESULT")
+    except RefactorPolicyError as ordinary_error:
+        try:
+            with path.open("rb") as stream:
+                content = stream.read(characterization_evidence.MODULE_AGGREGATE_JSON_BYTES + 1)
+            value = characterization_evidence._read_module_aggregate(
+                content,
+                "MALFORMED_CHARACTERIZATION_RESULT",
+                characterization_evidence.MODULE_RESULT_SCHEMA,
+            )
+        except (OSError, characterization_evidence.CharacterizationError):
+            raise ordinary_error from None
+    else:
+        if value.get("schema_version") != characterization_evidence.MODULE_RESULT_SCHEMA:
+            return value, content
+    _, _, head_sha, _ = _event_values(event)
+    manifest = characterization_evidence._manifest(repository, head_sha, [])
+    if manifest.schema_version != "4.0":
+        raise RefactorPolicyError("MALFORMED_CHARACTERIZATION_RESULT")
+    return value, content
 
 
 def _introduction_grant(value: object) -> dict[str, Any]:
@@ -307,13 +345,22 @@ def _module_introduction_grant(row: dict[str, Any]) -> None:
 
 
 def introduction_authorization_blocks(
-    characterization: object, grants: object, targets: tuple[str, ...]
+    characterization: object,
+    grants: object,
+    targets: tuple[str, ...],
+    *,
+    authorization_version: str = "3.0",
 ) -> list[str]:
     """Join authenticated owner intent to every exact measured API birth."""
     if not isinstance(characterization, dict):
         return ["UNAUTHENTICATED_RUNNABILITY_EVIDENCE"]
+    if (
+        authorization_version == "4.0"
+        and characterization.get("schema_version") != characterization_evidence.MODULE_RESULT_SCHEMA
+    ):
+        return ["INTRODUCTION_AUTHORIZATION_MISMATCH:version"]
     try:
-        approved = parse_introduction_grants(grants)
+        approved = parse_introduction_grants(grants, version=authorization_version)
         facts = characterization_evidence._result_api_facts(
             characterization.get("api_observations", []),
             allow_module=characterization.get("schema_version")
@@ -630,9 +677,10 @@ def _authorization_payload(authorization: Authorization | None) -> dict[str, obj
         "targets": list(authorization.targets),
         **(
             {"introductions": list(authorization.introductions)}
-            if authorization.introductions
+            if authorization.introductions or authorization.schema_version == "4.0"
             else {}
         ),
+        **({"schema_version": "4.0"} if authorization.schema_version == "4.0" else {}),
     }
 
 
@@ -907,7 +955,10 @@ def verify_refactor(
         if authorization is not None:
             blocks.extend(
                 introduction_authorization_blocks(
-                    characterization, list(authorization.introductions), targets
+                    characterization,
+                    list(authorization.introductions),
+                    targets,
+                    authorization_version=authorization.schema_version,
                 )
             )
     unique_blocks = sorted(set(blocks))
@@ -962,8 +1013,8 @@ def main(argv: list[str] | None = None) -> int:
         ):
             raise RefactorPolicyError("UNAUTHENTICATED_HOSTED_CONTEXT")
         event, _ = _read_json(Path(arguments.event), "MALFORMED_GITHUB_EVENT")
-        characterization, _ = _read_json(
-            Path(arguments.characterization_result), "MALFORMED_CHARACTERIZATION_RESULT"
+        characterization, _ = _read_characterization_result(
+            Path(arguments.characterization_result), Path(arguments.repository), event
         )
         repository_name, _, _, pull_number = _event_values(event)
         token = os.environ.get("GITHUB_TOKEN")

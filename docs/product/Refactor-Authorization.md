@@ -58,15 +58,25 @@ See [Eight Gates](Eight-Gates.md#6-incremental-refactor) and [Boundaries and Lim
 
 ## Introduced Python API scope
 
-For a schema-4 module responsibility, the existing schema-3 introduction grant also includes
+For a schema-4 module responsibility, an introduction grant also includes
 `module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. They must exactly match the
-source-derived inventory and independently reviewed root oracle. Public roots consume the existing
-50-API quota. A grant cannot waive incomplete helper/body witnesses, changed normal outputs, absent
+source-derived inventory and independently reviewed root oracle. Authorization schema `4.0`
+admits at most 100 globally unique actual roots only when joined to characterization result `v4`.
+Its version is retained in measured authorization and checked again by the shared consumer.
+Older authorization versions retain their 50-root limits and previous serialized behavior.
+A grant cannot waive missing named-body executions, false hit/missing-line reports, changed normal outputs, absent
 independent review, copied source, retired targets or stale repository/base/head identities. Existing
 function-only grants retain their exact previous shape. The module inventory fingerprint also binds
 the fixed codec-2 literal enum declarations to the exact source hash, outside semantic oracle cases.
 Typed dictionary keys and literal enum capture add no owner option, grant field or authorization
 waiver; ordinary observations retain codec 1.
+
+The source-owned `named-body-execution.v1` metric in `module-witness.v3` requires a real linked
+call and nonempty body-line hits for every independently inventoried named body. Exact executable,
+hit and missing lines are all reported and independently recomputed; neither an owner grant nor
+the metric claims every line/path executed or semantic truth. Module witness/oracle JSON is
+bounded to 2,000,000 bytes and schema-4 capture/result transport to 32,000,000 bytes. Individual
+value, case, source, sandbox and replay bounds remain fixed; larger evidence fails closed.
 
 Schema `3.0` retains every schema-2 field and adds `introductions`. This array is required for
 schema 3 and contains one exact grant for each Git-derived API birth in a schema-3 characterization

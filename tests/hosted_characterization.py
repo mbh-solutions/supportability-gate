@@ -366,7 +366,11 @@ def _observed_behavior(
         return _module_observed_behavior(stdout, api, module_roots)
     try:
         value = characterization._exact_keys(
-            characterization._read_json_bytes(stdout, "MALFORMED_API_OBSERVATION"),
+            (
+                characterization._read_module_json
+                if codec == characterization.MODULE_CODEC
+                else characterization._read_json_bytes
+            )(stdout, "MALFORMED_API_OBSERVATION"),
             {
                 "schema_version",
                 "codec",
@@ -390,12 +394,13 @@ def _module_observed_behavior(
     stdout: bytes, api: str, roots: tuple[str, ...]
 ) -> tuple[object | None, str | None, dict[str, object] | None]:
     try:
-        value = characterization._read_json_bytes(stdout, "MALFORMED_MODULE_OBSERVATION")
+        value = characterization._read_module_json(stdout, "MALFORMED_MODULE_OBSERVATION")
         if (
             not isinstance(value, dict)
             or value.get("schema_version") != characterization.MODULE_WITNESS_SCHEMA
             or value.get("api") != api
             or value.get("roots") != list(roots)
+            or value.get("body_metric") != characterization.MODULE_BODY_METRIC
         ):
             raise characterization.CharacterizationError("MALFORMED_MODULE_OBSERVATION")
         cases, error, primary = _observed_behavior(

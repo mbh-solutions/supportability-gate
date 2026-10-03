@@ -269,7 +269,7 @@ def test_module_v2_real_typed_calls_and_integer_key_exception(tmp_path: Path) ->
         tmp_path, TYPED_SOURCE, TYPED_DRIVER, [API, "observed_fixture.py::function:plain"]
     )
     assert "error" not in row, row
-    assert row["schema_version"] == "module-witness.v2"
+    assert row["schema_version"] == "module-witness.v3"
     assert row["primary"]["codec"] == "python-values-v2"
     assert row["root_cases"][-1]["input"][0]["value"] == {
         "type": "dict-keyed",
@@ -561,25 +561,81 @@ def test_actual_void_and_exception_bodies_link_to_public_executions(tmp_path: Pa
     assert observe(tmp_path) == receipt
 
 
-def test_unexecuted_error_body_is_not_covered_by_normal_cases(tmp_path: Path) -> None:
+def test_executed_body_reports_unexecuted_error_lines_truthfully(tmp_path: Path) -> None:
     receipt = observe(tmp_path, driver="target.calculate(1)\ntarget.calculate(2)\n")
-    with pytest.raises(proof.ModuleObservationError, match="UNWITNESSED_FUNCTION_BODY:validate"):
-        verify(receipt)
+    verify(receipt)
+    validate = next(row for row in receipt["body_coverage"] if row["function"] == "validate")
+    assert validate["hit_lines"] == [2]
+    assert validate["missing_lines"] == [3]
+    assert receipt["body_metric"] == "named-body-execution.v1"
 
 
 def test_direct_helper_call_outside_public_execution_cannot_supply_coverage(tmp_path: Path) -> None:
+    source = SOURCE + b"\ndef unused(value):\n    return value + 10\n"
     receipt = observe(
         tmp_path,
-        driver="target.calculate(1)\ntarget.calculate(2)\ntry:\n    target.validate(-1)\nexcept ValueError:\n    pass\n",
+        source,
+        driver="target.calculate(1)\ntarget.calculate(2)\ntarget.unused(1)\n",
     )
-    with pytest.raises(proof.ModuleObservationError, match="UNWITNESSED_FUNCTION_BODY:validate"):
-        verify(receipt)
+    with pytest.raises(proof.ModuleObservationError, match="UNWITNESSED_FUNCTION_BODY:unused"):
+        verify(receipt, source)
 
 
 def test_unwitnessed_new_helper_refuses_module_scope(tmp_path: Path) -> None:
     source = SOURCE + b"\ndef unused(value):\n    return value + 10\n"
     with pytest.raises(proof.ModuleObservationError, match="UNWITNESSED_FUNCTION_BODY:unused"):
         verify(observe(tmp_path, source), source)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "metric",
+        "old_schema",
+        "missing_report",
+        "concealed_missing",
+        "false_hits",
+        "omitted_body",
+        "extra_body",
+    ],
+)
+def test_body_metric_cannot_relabel_or_conceal_actual_trace(tmp_path: Path, change: str) -> None:
+    row = observe(tmp_path, driver="target.calculate(1)\ntarget.calculate(2)\n")
+    if change == "metric":
+        row["body_metric"] = "complete-line-coverage"
+    elif change == "old_schema":
+        row["schema_version"] = "module-witness.v2"
+    elif change == "missing_report":
+        del row["body_coverage"]
+    elif change == "concealed_missing":
+        next(item for item in row["body_coverage"] if item["function"] == "validate")[
+            "missing_lines"
+        ] = []
+    elif change == "false_hits":
+        body = next(item for item in row["body_coverage"] if item["function"] == "validate")
+        body["hit_lines"] = body["executable_lines"]
+    elif change == "omitted_body":
+        row["body_coverage"].pop()
+    else:
+        row["body_coverage"].append(copy.deepcopy(row["body_coverage"][0]))
+    with pytest.raises(proof.ModuleObservationError):
+        verify(row)
+
+
+def test_declared_root_must_execute_as_root_not_merely_nested_helper(tmp_path: Path) -> None:
+    row = observe(tmp_path, roots=[API, "observed_fixture.py::function:double"])
+    with pytest.raises(proof.ModuleObservationError, match="UNLINKED_MODULE_EXECUTION"):
+        verify(row)
+
+
+def test_unicode_wire_bytes_and_typed_key_order_match_fixed_collector(tmp_path: Path) -> None:
+    encoded = collector._encode(
+        {1: None, "é": None, "z": None}, tmp_path, "observed_fixture.py", []
+    )
+    proof.module_validate_value(encoded, "observed_fixture.py", [])
+    emoji = collector._encode("😀" * 24000, tmp_path, "observed_fixture.py", [])
+    proof.module_validate_value(emoji, "observed_fixture.py", [])
+    assert len(ordinary.canonical_bytes(emoji)) < ordinary.MAX_BYTES
 
 
 @pytest.mark.parametrize(

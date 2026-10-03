@@ -210,13 +210,18 @@ Implementation references: [contract schema](../../src/supportability_gate/contr
 Schema `4.0` preserves every schema-3 field and adds `module_roots` to each scenario. Use an
 empty array for ordinary or function-only rows. A module row supplies a sorted, unique list of
 public synchronous APIs from the same covered Python file, including its primary `api`. Each
-declared root counts toward the manifest's unchanged limit of 50 observed APIs;
-total scenarios remain limited to 64. This is not an additional quota.
+declared root counts toward schema 4's fixed global limit of 100 observed APIs, including
+ordinary/function-only rows. Roots must be globally unique and each declared root must execute
+as an actual root. Schemas 1–3 retain their 50-API limit; total scenarios remain limited to 64.
 
 Retain a `$` behavior obligation targeting the primary API. A second `$` behavior obligation may
 target that exact source filepath. File coverage requires a complete source/function/code inventory
 and actual executable-body line witnesses linked to declared public-root executions. Calls outside
-those executions cannot supply coverage. Every declared function must be witnessed; unsupported
+those executions cannot supply coverage. Every independently inventoried named body must have
+a real linked call with nonempty canonical body-line hits. The fixed `named-body-execution.v1`
+metric records every body's exact executable, hit and missing lines and recomputes those sets
+from the authenticated traces. It does not require every line to execute or claim complete paths
+or semantic truth. Missing bodies, false reports and old witness relabelling fail closed. Unsupported
 async, generator, generator-expression, lambda, conditional function definitions or unaccounted
 separately compiled function bodies fail closed. Body-line coverage is a
 bounded proxy, not proof of every branch combination or semantic fidelity.
@@ -228,7 +233,7 @@ Returned `None` and an exception are distinct outcomes. Void mutations use actua
 and after the call; exception-only roots cannot replace meaningful primary returns. The fixed
 `python-values-v1` codec remains unchanged for ordinary and function-only observations, including
 exact bytes and source-bound dataclasses. Module rows always use fixed `python-values-v2` and
-`module-witness.v2`; repositories cannot choose a codec. Existing supported values retain their
+`module-witness.v3`; repositories cannot choose a codec. Existing supported values retain their
 exact codec-1 encoding. Module-only `dict-keyed` values admit exact boolean, integer and string keys
 when at least one key is not a string; canonical encoded-key ordering, Python key-equality collision
 rejection and the existing depth/node/item/byte limits remain mandatory. String-only dictionaries
@@ -249,12 +254,24 @@ Module review records use schema `2.0`, retaining all ordinary review fields and
 `module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. These bind the exact root
 panel, complete function/enum inventory and raw module-oracle bytes. Authenticated introduction grants
 must bind those same three fields in addition to the existing source/driver/oracle/review pins.
+Authorization schema `4.0` preserves these requirements and admits at most 100 actual roots
+only when joined to result `v4`. The measured authorization retains this version through both
+owner joins. Existing authorization versions retain their 50-root limits and byte behavior.
 Existing whole-file birth, anti-copy, no-retirement, independent-review, exact-head authorization,
 golden preservation, resource and quality protections remain mandatory.
 
 The fixed producer returns capture/result schema `v4` for schema-4 manifests. Existing manifests
 and results retain their previous schemas and byte behavior. Deployment requires a separately
 qualified workflow-pin update; merging source alone does not update organization enforcement.
+
+Module witnesses and module oracles each have a fixed 2,000,000-byte bound. Schema-4 captures
+and results have a fixed 32,000,000-byte bound through their matching producers/readers, including
+the emitted final newline. Individual encoded values remain limited to 262,144 UTF-8 canonical
+wire bytes, with depth 16, 4,096 nodes and 256 items. The 128 cases/executions, 4,096 calls and
+128 named bodies per module remain fixed. Wire sizing and typed-key ordering use UTF-8 canonical
+bytes; source inventory hashing retains its established canonical bytes. Ordinary observations,
+ordinary goldens, manifests, reviews, events and other JSON retain their previous bounds. Larger
+module evidence still fails closed; limits cannot be selected by a consumer repository.
 
 ### Function-only witnesses (schema 3)
 

@@ -38,6 +38,9 @@ SHA256 = re.compile(r"[0-9a-f]{64}")
 MAX_JSON_BYTES = 1_000_000
 MAX_SCENARIOS = 64
 MAX_OBSERVED_APIS = 50
+MODULE_MAX_OBSERVED_APIS = 100
+MODULE_MAX_JSON_BYTES = 2_000_000
+MODULE_AGGREGATE_JSON_BYTES = 32_000_000
 
 
 class CharacterizationError(ValueError):
@@ -154,6 +157,39 @@ def _read_json_bytes(content: bytes, code: str) -> Any:
         raise CharacterizationError(code) from error
 
 
+def _read_module_json(content: bytes, code: str) -> Any:
+    """Read only a fixed module witness/oracle, leaving ordinary JSON unchanged."""
+    if not content or len(content) > MODULE_MAX_JSON_BYTES:
+        raise CharacterizationError(code)
+    try:
+        return json.loads(content, object_pairs_hook=_module_json_object)
+    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+        raise CharacterizationError(code) from error
+
+
+def _module_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("DUPLICATE_MODULE_JSON_KEY")
+        result[key] = value
+    return result
+
+
+def _read_module_aggregate(content: bytes, code: str, schema: str) -> dict[str, Any]:
+    if not content or len(content) > MODULE_AGGREGATE_JSON_BYTES:
+        raise CharacterizationError(code)
+    try:
+        value = json.loads(content, object_pairs_hook=_module_json_object)
+    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+        raise CharacterizationError(code) from error
+    if schema not in {MODULE_CAPTURE_SCHEMA, MODULE_RESULT_SCHEMA} or not isinstance(value, dict):
+        raise CharacterizationError(code)
+    if value.get("schema_version") != schema:
+        raise CharacterizationError(code)
+    return value
+
+
 def _exact_keys(value: object, expected: set[str], code: str) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != expected:
         raise CharacterizationError(code)
@@ -197,14 +233,22 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
         len(parsed) != len({item.id for item in parsed})
         or len(parsed) > MAX_SCENARIOS
         or sum(max(1, len(item.module_roots)) for item in parsed if item.api is not None)
-        > MAX_OBSERVED_APIS
+        > (MODULE_MAX_OBSERVED_APIS if version == "4.0" else MAX_OBSERVED_APIS)
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
+    if version == "4.0":
+        actual_roots = [
+            root
+            for item in parsed
+            for root in (item.module_roots or ((item.api,) if item.api else ()))
+        ]
+        if len(actual_roots) != len(set(actual_roots)):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return tuple(sorted(parsed, key=lambda item: item.id))
 
 
 def _module_roots(value: object, api: str | None, covers: tuple[str, ...]) -> tuple[str, ...]:
-    if not isinstance(value, list) or len(value) > MAX_OBSERVED_APIS:
+    if not isinstance(value, list) or len(value) > MODULE_MAX_OBSERVED_APIS:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     if not value:
         return ()
@@ -609,11 +653,12 @@ def _module_binding(
     oracle = git_changes.read_regular_blob(
         repository, head_sha, f"{SCENARIO_ROOT}/{scenario.id}.module.golden.json", records
     ).content
-    cases = _read_json_bytes(oracle, "INVALID_MODULE_ORACLE")
+    cases = _read_module_json(oracle, "INVALID_MODULE_ORACLE")
     if not isinstance(cases, list) or not 2 <= len(cases) <= MODULE_MAX_EXECUTIONS:
         raise CharacterizationError("INVALID_MODULE_ORACLE")
     return {
         "roots": list(scenario.module_roots),
+        "metric": MODULE_BODY_METRIC,
         **inventories,
         "oracle_sha256": _sha256(oracle),
         "oracle_cases": cases,
@@ -778,10 +823,19 @@ def _module_capture_matches(row: dict[str, Any], fact: dict[str, Any], side: str
     return True
 
 
-def _load_capture(path: Path, missing_code: str) -> tuple[dict[str, Any] | None, str | None]:
+def _load_capture(
+    path: Path, missing_code: str, *, module: bool = False
+) -> tuple[dict[str, Any] | None, str | None]:
     try:
-        content = path.read_bytes()
-        value = _read_json_bytes(content, "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE")
+        if module:
+            with path.open("rb") as stream:
+                content = stream.read(MODULE_AGGREGATE_JSON_BYTES + 1)
+            value = _read_module_aggregate(
+                content, "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE", MODULE_CAPTURE_SCHEMA
+            )
+        else:
+            content = path.read_bytes()
+            value = _read_json_bytes(content, "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE")
     except FileNotFoundError:
         return None, missing_code
     except (OSError, CharacterizationError):
@@ -1611,16 +1665,24 @@ def _serialized_api_facts(
 
 
 def _result_api_facts(value: object, *, allow_module: bool = False) -> dict[str, dict[str, Any]]:
-    if not isinstance(value, list) or len(value) > MAX_OBSERVED_APIS:
+    limit = MODULE_MAX_OBSERVED_APIS if allow_module else MAX_OBSERVED_APIS
+    if not isinstance(value, list) or len(value) > limit:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     rows = [_result_api_fact(item, allow_module=allow_module) for item in value]
     names = [item["scenario"] for item in rows]
     if (
         names != sorted(set(names))
-        or sum(len(row["module"]["roots"]) if "module" in row else 1 for row in rows)
-        > MAX_OBSERVED_APIS
+        or sum(len(row["module"]["roots"]) if "module" in row else 1 for row in rows) > limit
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    if allow_module:
+        roots = [
+            root
+            for row in rows
+            for root in (row["module"]["roots"] if "module" in row else [row["api"]])
+        ]
+        if len(roots) != len(set(roots)):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return {item["scenario"]: item for item in rows}
 
 
@@ -1680,17 +1742,20 @@ def _result_api_fact(value: object, *, allow_module: bool = False) -> dict[str, 
 def _result_module_fact(fact: dict[str, Any]) -> None:
     row = _exact_keys(
         fact["module"],
-        {"roots", "base_inventory", "head_inventory", "oracle_sha256", "oracle_cases"},
+        {"roots", "metric", "base_inventory", "head_inventory", "oracle_sha256", "oracle_cases"},
         "MALFORMED_CHARACTERIZATION_RESULT",
     )
     _module_roots(row["roots"], fact["api"], (fact["api"].split("::", 1)[0],))
     if (
         not row["roots"]
+        or row["metric"] != MODULE_BODY_METRIC
         or not isinstance(row["oracle_sha256"], str)
         or SHA256.fullmatch(row["oracle_sha256"]) is None
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     try:
+        if len(_canonical(row["oracle_cases"])) > MODULE_MAX_JSON_BYTES:
+            raise ModuleObservationError("MODULE_ORACLE_VALUE_LIMIT")
         _module_root_cases(row["oracle_cases"], row["oracle_cases"], len(row["oracle_cases"]))
         if not 2 <= len(row["oracle_cases"]) <= MODULE_MAX_EXECUTIONS:
             raise ModuleObservationError("INVALID_MODULE_ORACLE")
@@ -2012,6 +2077,11 @@ def validate_result(
 ) -> list[str]:
     """Validate serialized Gate 5 facts without repository or target execution."""
     row = _result_shape(value)
+    if (
+        row["schema_version"] == MODULE_RESULT_SCHEMA
+        and len(_canonical(row)) > MODULE_AGGREGATE_JSON_BYTES
+    ):
+        raise CharacterizationError("MODULE_AGGREGATE_VALUE_LIMIT")
     schema_version = row["schema_version"]
     modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
     if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
@@ -2294,8 +2364,12 @@ def verify_evidence(
     api_facts, api_blocks = _api_bindings(
         repository, base_sha, head_sha, policy, manifest, changes, records
     )
-    base, base_error = _load_capture(base_path, "MISSING_BASELINE")
-    head, head_error = _load_capture(head_path, "INCOMPLETE_CHARACTERIZATION_EVIDENCE")
+    base, base_error = _load_capture(
+        base_path, "MISSING_BASELINE", module=manifest.schema_version == "4.0"
+    )
+    head, head_error = _load_capture(
+        head_path, "INCOMPLETE_CHARACTERIZATION_EVIDENCE", module=manifest.schema_version == "4.0"
+    )
     blocks = [item for item in (base_error, head_error) if item] + api_blocks
     if base is None and head is not None:
         blocks.append("HEAD_ONLY_CHARACTERIZATION_CLAIM")
@@ -2448,11 +2522,18 @@ def _verified_obligation_coverage(
 
 
 def _write_json(path: Path, value: object, *, compact: bool = False) -> bytes:
+    module = isinstance(value, dict) and value.get("schema_version") in {
+        MODULE_CAPTURE_SCHEMA,
+        MODULE_RESULT_SCHEMA,
+    }
     content = (
         _canonical(value)
-        if compact
+        if compact or module
         else json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True).encode()
     ) + b"\n"
+    if module:
+        if len(content) > MODULE_AGGREGATE_JSON_BYTES:
+            raise CharacterizationError("MODULE_AGGREGATE_VALUE_LIMIT")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
     return content
@@ -2461,7 +2542,8 @@ def _write_json(path: Path, value: object, *, compact: bool = False) -> bytes:
 MODULE_MAX_FUNCTIONS = 128
 MODULE_MAX_EXECUTIONS = 128
 MODULE_MAX_CALLS = 4096
-MODULE_WITNESS_SCHEMA = "module-witness.v2"
+MODULE_WITNESS_SCHEMA = "module-witness.v3"
+MODULE_BODY_METRIC = "named-body-execution.v1"
 MODULE_CODEC = "python-values-v2"
 
 
@@ -2706,7 +2788,7 @@ def _module_case_values(
 
 def module_validate_value(value: object, path: str, enums: list[dict[str, Any]]) -> None:
     """Validate the fixed module codec's bounded wire values without target execution."""
-    if len(_module_canonical(value)) > 262144:
+    if len(_canonical(value)) > 262144:
         raise ModuleObservationError("INVALID_MODULE_VALUE")
     _module_value(value, path, enums, 0, [0])
 
@@ -2769,7 +2851,7 @@ def _module_typed_keys(keys: list[Any]) -> None:
         if row["value"] in literals:
             raise ModuleObservationError("INVALID_MODULE_DICT_KEY")
         literals.append(row["value"])
-        encodings.append(_module_canonical(row))
+        encodings.append(_canonical(row))
     if not keys or all(key["type"] == "str" for key in keys) or encodings != sorted(encodings):
         raise ModuleObservationError("INVALID_MODULE_DICT_KEY")
 
@@ -2965,7 +3047,7 @@ def _module_executions(
         if case["root"] != row["root"] or case["outcome"] != row["outcome"]:
             raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
         expected_case = _module_primary_case_link(row, case, primary, expected_case)
-    if expected_case != len(primary["cases"]):
+    if expected_case != len(primary["cases"]) or {row["root"] for row in rows} != set(roots):
         raise ModuleObservationError("UNLINKED_MODULE_EXECUTION")
     return rows
 
@@ -3046,8 +3128,33 @@ def _module_coverage(
             raise ModuleObservationError("UNWITNESSED_PRIMARY_EXECUTION")
     for name, function in functions.items():
         seen = {line for call in calls if call["function"] == name for line in call["lines"]}
-        if seen != set(function["lines"]):
+        if not seen:
             raise ModuleObservationError("UNWITNESSED_FUNCTION_BODY:" + name)
+
+
+def module_body_report(
+    inventory: dict[str, Any], calls: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Report exact actual hit and missing lines for every independently inventoried body."""
+    rows = []
+    for function in inventory["functions"]:
+        hits = sorted(
+            {
+                line
+                for call in calls
+                if call["function"] == function["name"]
+                for line in call["lines"]
+            }
+        )
+        rows.append(
+            {
+                "function": function["name"],
+                "executable_lines": function["lines"],
+                "hit_lines": hits,
+                "missing_lines": sorted(set(function["lines"]) - set(hits)),
+            }
+        )
+    return rows
 
 
 def verify_module_observation(
@@ -3077,6 +3184,8 @@ def verify_module_inventory_observation(
     expected_root_cases: object,
 ) -> None:
     """Join the independently derived inventory to an authenticated collector row."""
+    if len(_canonical(value)) > MODULE_MAX_JSON_BYTES:
+        raise ModuleObservationError("MODULE_WITNESS_VALUE_LIMIT")
     row = _module_exact(
         value,
         {
@@ -3092,6 +3201,8 @@ def verify_module_inventory_observation(
             "root_cases",
             "executions",
             "calls",
+            "body_metric",
+            "body_coverage",
         },
     )
     if row["schema_version"] != MODULE_WITNESS_SCHEMA or row["path"] != path or row["api"] != api:
@@ -3117,6 +3228,10 @@ def verify_module_inventory_observation(
         raise ModuleObservationError("INVALID_MODULE_CALLS")
     calls = [_module_call(item, functions, len(executions)) for item in row["calls"]]
     _module_coverage(calls, functions, executions)
+    if row["body_metric"] != MODULE_BODY_METRIC or row["body_coverage"] != module_body_report(
+        inventory, calls
+    ):
+        raise ModuleObservationError("INVALID_MODULE_BODY_METRIC")
 
 
 def _parser() -> argparse.ArgumentParser:

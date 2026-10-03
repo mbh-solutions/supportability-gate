@@ -319,8 +319,12 @@ def observe_module(
         "root_cases": observer.root_cases,
         "executions": observer.executions,
         "calls": observer.witnesses,
+        "body_metric": module_observation.MODULE_BODY_METRIC,
+        "body_coverage": module_observation.module_body_report(
+            observer.inventory, observer.witnesses
+        ),
     }
-    if len(ordinary.canonical_bytes(result)) > ordinary.MAX_BYTES:
+    if len(ordinary.canonical_bytes(result)) + 1 > module_observation.MODULE_MAX_JSON_BYTES:
         raise ordinary.ObserverError("OBSERVER_VALUE_LIMIT")
     return result
 
