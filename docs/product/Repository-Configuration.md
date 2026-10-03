@@ -111,6 +111,19 @@ Schema `1.1` uses `languages` and a `complexity` table containing only `maximum`
 order and complete adapter sets must match the fixed parser. It does not permit arbitrary
 combinations of languages.
 
+Mixed adapter scope follows the admitted source language: Python adapters must cover changed
+and high-risk `.py`/`.pyi` files; TypeScript adapters must cover `.ts`, `.tsx`, `.mts`, and `.cts`
+files. Separate roots, such as Python `src` and TypeScript `web`, may therefore use corresponding
+adapter paths. Both old and new paths remain checked for renames and deletions. Files outside
+these admitted language suffixes retain the full declared coverage obligations; this does not
+exempt unsupported source or production assets. Candidate scope narrowing still blocks.
+
+The fixed TypeScript test manifest admits files under `tests` ending in `.test.js`, `.test.mjs`,
+`.test.cjs`, `.test.ts`, `.test.mts`, or `.test.cts`; Python admits `.py` and `.pyi` tests.
+Mixed command arguments select each language's exact source and test manifests. Evidence must
+match the executed arguments, including module tests; omitted, substituted, extra, or
+other-language test arguments fail binding validation.
+
 ## Base authority and supported transitions
 
 The evaluator reads the contract from the immutable **base** commit. Reading a head contract to

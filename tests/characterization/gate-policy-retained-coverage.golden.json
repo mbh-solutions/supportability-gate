@@ -1,0 +1,5 @@
+[
+  {"input": {"language": "python", "lint_scope": "src", "path": "src/sample.py"}, "output": []},
+  {"input": {"language": "python", "lint_scope": "other", "path": "src/sample.py"}, "output": ["CHANGED_FILE_GATE_COVERAGE:python.ruff-lint.v1:src/sample.py"]},
+  {"input": {"language": "mixed", "lint_scope": "src", "path": "src/sample.py"}, "output": []}
+]

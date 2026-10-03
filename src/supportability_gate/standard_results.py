@@ -2185,19 +2185,20 @@ def _s02_quality_argv(profile: dict[str, Any], provenance: dict[str, Any], code:
             if profile_language == "mixed"
             else profile_language
         )
-        suffixes = (
-            (".py", ".pyi")
-            if language == "python"
-            else (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx")
-        )
         files = files_by_language.setdefault(
             language,
             {
                 **profile,
                 "source_files": [
-                    path for path in profile["source_files"] if path.endswith(suffixes)
+                    path
+                    for path in profile["source_files"]
+                    if path.endswith(quality_profile.SOURCE_SUFFIXES[language])
                 ],
-                "test_files": [path for path in profile["test_files"] if path.endswith(suffixes)],
+                "test_files": [
+                    path
+                    for path in profile["test_files"]
+                    if path.endswith(quality_profile.TEST_SUFFIXES[language])
+                ],
             },
         )
         _s02_quality_command(

@@ -125,6 +125,16 @@ def _unassessed_source_paths(
     return tuple(sorted(paths))
 
 
+def _adapter_coverage_paths(
+    policy: Contract, adapter: str, paths: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Exclude only admitted other-language source from mixed adapter obligations."""
+    if policy.language != "mixed":
+        return paths
+    other_language = "typescript" if adapter.startswith("python.") else "python"
+    return tuple(path for path in paths if not path.endswith(_PROFILE_SUFFIXES[other_language]))
+
+
 def evaluate_contract(
     policy: Contract,
     assessments: tuple[ChangedFileAssessment, ...],
@@ -151,12 +161,14 @@ def evaluate_contract(
             continue
         blocks.extend(
             f"CHANGED_FILE_GATE_COVERAGE:{adapter}:{path}"
-            for path in _changed_production_paths(assessments)
+            for path in _adapter_coverage_paths(
+                policy, adapter, _changed_production_paths(assessments)
+            )
             if not gate.covers(path)
         )
         blocks.extend(
             f"HIGH_RISK_FILE_GATE_COVERAGE:{adapter}:{path}"
-            for path in policy.high_risk_paths
+            for path in _adapter_coverage_paths(policy, adapter, policy.high_risk_paths)
             if not gate.covers(path)
         )
     return tuple(sorted(blocks))

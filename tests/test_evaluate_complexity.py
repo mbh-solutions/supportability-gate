@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -1938,6 +1939,95 @@ def test_high_risk_file_gate_coverage_gap_blocks(tmp_path: Path) -> None:
     assert result["policy_blocks"] == [
         "HIGH_RISK_FILE_GATE_COVERAGE:python.ruff-lint.v1:src/risk.py"
     ]
+
+
+def _mixed_language_scope_policy() -> contract.Contract:
+    policy = contract.parse_contract(MIXED_TWO_ROOT_CONTRACT.encode())
+    return replace(
+        policy,
+        high_risk_paths=("src/sample.py", "web/sample.ts"),
+        gates=tuple(
+            replace(gate, paths=("src",) if gate.adapter.startswith("python.") else ("web",))
+            for gate in policy.gates
+        ),
+    )
+
+
+def _coverage_assessment(
+    old_path: str | None, new_path: str | None, status: str = "MODIFIED"
+) -> function_changes.ChangedFileAssessment:
+    return function_changes.ChangedFileAssessment(
+        git_changes.ChangedPath(status, old_path, new_path),
+        old_path is not None,
+        new_path is not None,
+        True,
+        (1,),
+    )
+
+
+@pytest.mark.parametrize("python_suffix", ["py", "pyi"])
+@pytest.mark.parametrize("typescript_suffix", ["ts", "tsx", "mts", "cts"])
+def test_mixed_adapter_coverage_accepts_language_scopes(
+    python_suffix: str, typescript_suffix: str
+) -> None:
+    paths = (f"src/sample.{python_suffix}", f"web/sample.{typescript_suffix}")
+    policy = replace(_mixed_language_scope_policy(), high_risk_paths=paths)
+    assessments = tuple(_coverage_assessment(path, path) for path in paths)
+
+    assert gate_policy.evaluate_contract(policy, assessments) == ()
+
+
+@pytest.mark.parametrize("adapter", gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE["mixed"])
+def test_mixed_adapter_coverage_rejects_own_language_gap(adapter: str) -> None:
+    policy = _mixed_language_scope_policy()
+    policy = replace(
+        policy,
+        gates=tuple(
+            replace(gate, paths=("other",)) if gate.adapter == adapter else gate
+            for gate in policy.gates
+        ),
+    )
+    path = "src/sample.py" if adapter.startswith("python.") else "web/sample.ts"
+
+    assert gate_policy.evaluate_contract(policy, (_coverage_assessment(path, path),)) == (
+        f"CHANGED_FILE_GATE_COVERAGE:{adapter}:{path}",
+        f"HIGH_RISK_FILE_GATE_COVERAGE:{adapter}:{path}",
+    )
+
+
+@pytest.mark.parametrize("status", ["DELETED", "RENAMED", "ADDED"])
+def test_mixed_adapter_coverage_checks_both_git_sides(status: str) -> None:
+    policy = replace(_mixed_language_scope_policy(), high_risk_paths=())
+    old = None if status == "ADDED" else "web/outside.py"
+    new = None if status == "DELETED" else "src/outside.ts"
+    blocks = gate_policy.evaluate_contract(policy, (_coverage_assessment(old, new, status),))
+    expected = []
+    if old is not None:
+        expected.extend(
+            f"CHANGED_FILE_GATE_COVERAGE:{adapter}:{old}"
+            for adapter in gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE["python"]
+        )
+    if new is not None:
+        expected.extend(
+            f"CHANGED_FILE_GATE_COVERAGE:{adapter}:{new}"
+            for adapter in gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE["typescript"]
+        )
+    assert blocks == tuple(sorted(expected))
+
+
+def test_mixed_adapter_coverage_does_not_exempt_unclassified_assets() -> None:
+    path = "assets/schema.json"
+    policy = replace(_mixed_language_scope_policy(), high_risk_paths=(path,))
+
+    blocks = gate_policy.evaluate_contract(policy, (_coverage_assessment(path, path),))
+
+    assert blocks == tuple(
+        sorted(
+            f"{kind}_FILE_GATE_COVERAGE:{adapter}:{path}"
+            for kind in ("CHANGED", "HIGH_RISK")
+            for adapter in gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE["mixed"]
+        )
+    )
 
 
 def test_threshold_weakening_blocks(tmp_path: Path) -> None:
