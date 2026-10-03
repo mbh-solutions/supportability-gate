@@ -71,6 +71,13 @@
       "target": "scenario:gate-policy-mixed-compatibility"
     },
     {
+      "category": "behavior",
+      "id": "gate-policy-retained-coverage",
+      "scenario": "gate-policy-mixed-compatibility",
+      "selector": "$",
+      "target": "src/supportability_gate/gate_policy.py"
+    },
+    {
       "category": "static",
       "id": "gate8-standard-results-boundary-v5",
       "scenario": "gate8-standard-results-boundary-v3",
