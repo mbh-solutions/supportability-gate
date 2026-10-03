@@ -9,13 +9,168 @@ from __future__ import annotations
 
 import argparse
 import dis
+import enum
+import inspect
+import sys
 from pathlib import Path
-from types import FrameType
+from types import FrameType, GetSetDescriptorType, ModuleType
 from typing import Any
 
 import characterization_observer as ordinary
 
 from supportability_gate import characterization as module_observation
+
+
+class _ModuleCodec(ordinary._Codec):
+    def __init__(self, root: Path, path: str, declarations: list[dict[str, Any]]) -> None:
+        super().__init__(root)
+        self.path = path
+        self.declarations = declarations
+
+    def _container(self, value: Any, depth: int) -> dict[str, object]:
+        if type(type(value)) is enum.EnumType:
+            return self._enum(value, depth)
+        if type(value) is not dict or all(type(key) is str for key in value):
+            return super()._container(value, depth)
+        if len(value) > ordinary.MAX_ITEMS or any(
+            type(key) not in {bool, int, str} for key in value
+        ):
+            raise ordinary.ObserverError("OBSERVER_UNSUPPORTED_VALUE")
+        items = [
+            [self.encode(key, depth + 1), self.encode(item, depth + 1)]
+            for key, item in value.items()
+        ]
+        items.sort(key=lambda pair: ordinary.canonical_bytes(pair[0]))
+        return {"type": "dict-keyed", "items": items}
+
+    def _enum_class(self, value: object) -> tuple[type, dict[str, Any], dict[str, Any]]:
+        cls = type(value)
+        namespace = vars(cls)
+        name, module_name = type.__getattribute__(cls, "__qualname__"), namespace.get("__module__")
+        module = sys.modules.get(module_name) if type(module_name) is str else None
+        filename = vars(module).get("__file__") if type(module) is ModuleType else None
+        declared = next((row for row in self.declarations if row["name"] == name), None)
+        if (
+            declared is None
+            or type(filename) is not str
+            or Path(filename).resolve() != (self.root / self.path).resolve()
+            or vars(module).get(name) is not cls
+            or cls.__bases__ != ({"Enum": enum.Enum, "StrEnum": enum.StrEnum}[declared["base"]],)
+        ):
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        _enum_namespace(namespace, declared)
+        _enum_hooks(namespace)
+        return cls, declared, namespace
+
+    def _enum(self, value: object, depth: int) -> dict[str, object]:
+        cls, declared, namespace = self._enum_class(value)
+        descriptor = next(
+            (vars(base)["__dict__"] for base in cls.__mro__ if "__dict__" in vars(base)), None
+        )
+        if type(descriptor) is not GetSetDescriptorType:
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        storage = object.__getattribute__(value, "__dict__")
+        members = namespace.get("_member_map_")
+        names = [row["name"] for row in declared["members"]]
+        if type(storage) is not dict or type(members) is not dict or list(members) != names:
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        if (
+            set(storage) != {"_value_", "_name_", "__objclass__", "_sort_order_"}
+            or storage["__objclass__"] is not cls
+        ):
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        name = storage.get("_name_")
+        if type(name) is not str:
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        literal = next((row["value"] for row in declared["members"] if row["name"] == name), None)
+        actual = storage.get("_value_")
+        if members.get(name) is not value or type(actual) is not type(literal) or actual != literal:
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+        return {
+            "type": "enum",
+            "source_path": self.path,
+            "module": namespace["__module__"],
+            "name": type.__getattribute__(cls, "__qualname__"),
+            "member": name,
+            "value": self.encode(actual, depth + 1),
+        }
+
+
+def _enum_hooks(namespace: Any) -> None:
+    trusted = (enum.Enum, enum.StrEnum, str, object)
+    for name in (
+        "__new__",
+        "__str__",
+        "__repr__",
+        "__format__",
+        "__getattribute__",
+        "__getattr__",
+        "__init__",
+        "_generate_next_value_",
+        "_new_member_",
+    ):
+        base_name = "__new__" if name == "_new_member_" else name
+        if name in namespace and not any(
+            _raw_hook(namespace[name]) is _raw_hook(vars(base).get(candidate))
+            for base in trusted
+            for candidate in {name, base_name}
+        ):
+            raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+
+
+def _enum_namespace(namespace: Any, declared: dict[str, Any]) -> None:
+    generated = {
+        "_generate_next_value_",
+        "__module__",
+        "_new_member_",
+        "_use_args_",
+        "_member_names_",
+        "_member_map_",
+        "_value2member_map_",
+        "_unhashable_values_",
+        "_member_type_",
+        "_value_repr_",
+        "__doc__",
+        "__new__",
+        "__str__",
+        "__format__",
+        "__dict__",
+        "__weakref__",
+    }
+    names = [member["name"] for member in declared["members"]]
+    if set(namespace) != generated.intersection(namespace) | set(names):
+        raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+    if type(namespace.get("_member_names_")) is not list or namespace["_member_names_"] != names:
+        raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+    if namespace.get("_member_type_") is not (str if declared["base"] == "StrEnum" else object):
+        raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+    if namespace.get("_value_repr_") is not (
+        str.__repr__ if declared["base"] == "StrEnum" else None
+    ):
+        raise ordinary.ObserverError("OBSERVER_ENUM_INVALID")
+
+
+def _raw_hook(value: object) -> object:
+    return object.__getattribute__(value, "__func__") if type(value) is staticmethod else value
+
+
+def _encode(
+    value: object, root: Path, path: str, declarations: list[dict[str, Any]]
+) -> dict[str, object]:
+    encoded = _ModuleCodec(root, path, declarations).encode(value)
+    if len(ordinary.canonical_bytes(encoded)) > ordinary.MAX_BYTES:
+        raise ordinary.ObserverError("OBSERVER_VALUE_LIMIT")
+    return encoded
+
+
+def _arguments(frame: FrameType, observer: _ModuleObserver) -> list[dict[str, object]]:
+    code = frame.f_code
+    count = code.co_argcount + code.co_kwonlyargcount
+    count += bool(code.co_flags & inspect.CO_VARARGS) + bool(code.co_flags & inspect.CO_VARKEYWORDS)
+    return [
+        {"name": name, "value": observer.encode(frame.f_locals[name])}
+        for name in code.co_varnames[:count]
+    ]
 
 
 class _ModuleObserver(ordinary._CallObserver):
@@ -38,6 +193,9 @@ class _ModuleObserver(ordinary._CallObserver):
         self.witnesses: list[dict[str, Any]] = []
         self.frames: dict[int, dict[str, Any]] = {}
         self.current: int | None = None
+
+    def encode(self, value: object) -> dict[str, object]:
+        return _encode(value, self.root, self.path, self.inventory["enum_declarations"])
 
     def trace(self, frame: FrameType, event: str, value: object) -> Any:
         if frame.f_code.co_filename != self.expected.co_filename:
@@ -82,7 +240,7 @@ class _ModuleObserver(ordinary._CallObserver):
                     "primary_case": None,
                 }
             )
-            self.calls[id(frame)] = ordinary._arguments(frame, self.root)
+            self.calls[id(frame)] = _arguments(frame, self)
         if self.current is not None:
             self.frames[id(frame)] = {
                 "execution": self.current,
@@ -113,15 +271,17 @@ class _ModuleObserver(ordinary._CallObserver):
                 {
                     "root": witness["function"],
                     "input": self.calls[id(frame)],
-                    "arguments_after": ordinary._arguments(frame, self.root),
+                    "arguments_after": _arguments(frame, self),
                     "outcome": witness["outcome"],
-                    "output": ordinary.encode_value(value, self.root) if returned else None,
+                    "output": self.encode(value) if returned else None,
                     "exception": None if returned else exception,
                 }
             )
             if returned and witness["function"] == self.expected.co_qualname:
                 execution["primary_case"] = len(self.cases)
-                self.returned(frame, value)
+                self.cases.append(
+                    {"input": self.calls.pop(id(frame)), "output": self.encode(value)}
+                )
             else:
                 self.calls.pop(id(frame), None)
             self.current = None
@@ -139,7 +299,7 @@ def observe_module(
         raise ordinary.ObserverError("OBSERVER_NO_NORMAL_RETURNS")
     primary = {
         "schema_version": "1.0",
-        "codec": ordinary.CODEC,
+        "codec": module_observation.MODULE_CODEC,
         **observer.identity,
         "cases": observer.cases,
     }

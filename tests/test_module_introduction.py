@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -26,12 +27,15 @@ sys.path.insert(0, sys.argv[1])
 sys.path.insert(0, sys.argv[2])
 sys.path.insert(0, str(Path(sys.argv[3]) / 'src'))
 import module_characterization_observer as collector
-result = collector.observe_module(Path(sys.argv[3]), sys.argv[5], Path(sys.argv[4]))
+roots = json.loads(sys.argv[6]) if len(sys.argv) > 6 else None
+result = collector.observe_module(Path(sys.argv[3]), sys.argv[5], Path(sys.argv[4]), roots)
 print(json.dumps(result, sort_keys=True))
 """
 
 
-def _actual_witness(repository: Path, driver: Path) -> dict[str, Any]:
+def _actual_witness(
+    repository: Path, driver: Path, roots: list[str] | None = None
+) -> dict[str, Any]:
     completed = subprocess.run(
         [
             sys.executable,
@@ -43,6 +47,7 @@ def _actual_witness(repository: Path, driver: Path) -> dict[str, Any]:
             str(repository),
             str(driver),
             birth.API,
+            *([json.dumps(roots)] if roots is not None else []),
         ],
         check=True,
         capture_output=True,
@@ -52,10 +57,18 @@ def _actual_witness(repository: Path, driver: Path) -> dict[str, Any]:
     return json.loads(completed.stdout)
 
 
-def _fixture(tmp_path: Path, *, copied: bool = False, retired: bool = False) -> tuple:
+def _fixture(
+    tmp_path: Path, *, copied: bool = False, retired: bool = False, typed: bool = False
+) -> tuple:
     repository, base_sha, _, base, head = birth._fixture(tmp_path, copied=copied)
     source = birth.SOURCE if copied else witness.SOURCE
     oracle = witness.ROOT_CASES[:2] if copied else witness.ROOT_CASES
+    primary_cases = witness.CASES
+    roots = [birth.API]
+    if typed:
+        source = witness.TYPED_SOURCE
+        primary_cases, oracle = witness.typed_oracles("src/introduced.py", "introduced")
+        roots.append("src/introduced.py::function:plain")
     legacy._write(repository / "src/introduced.py", source.decode())
     driver = repository / "tests/characterization/introduced.characterization.py"
     legacy._write(
@@ -63,6 +76,9 @@ def _fixture(tmp_path: Path, *, copied: bool = False, retired: bool = False) -> 
         "from introduced import calculate\ncalculate(1)\ncalculate(2)\n"
         + ("" if copied else "try:\n    calculate(-1)\nexcept ValueError:\n    pass\n"),
     )
+    if typed:
+        legacy._write(driver, "import introduced as target\n" + witness.TYPED_DRIVER)
+        birth._json(repository / "tests/characterization/introduced.golden.json", primary_cases)
     if retired:
         legacy._write(
             repository / "src/sample.py", "def replacement(value):\n    return value + 1\n"
@@ -70,7 +86,7 @@ def _fixture(tmp_path: Path, *, copied: bool = False, retired: bool = False) -> 
     manifest = json.loads((repository / gate.MANIFEST_PATH).read_text())
     manifest["schema_version"] = "4.0"
     for scenario in manifest["scenarios"]:
-        scenario["module_roots"] = [birth.API] if scenario["api"] else []
+        scenario["module_roots"] = roots if scenario["api"] else []
     manifest["obligations"].append(
         {
             "id": "module-introduced",
@@ -89,7 +105,7 @@ def _fixture(tmp_path: Path, *, copied: bool = False, retired: bool = False) -> 
     inventory = module_observation.module_source_inventory(source, "src/introduced.py")
     review.update(
         schema_version="2.0",
-        module_roots=[birth.API],
+        module_roots=roots,
         module_inventory_sha256=inventory["inventory_sha256"],
         module_oracle_sha256=birth._sha(oracle_path.read_bytes()),
     )
@@ -97,7 +113,8 @@ def _fixture(tmp_path: Path, *, copied: bool = False, retired: bool = False) -> 
     head_sha = legacy._commit(repository, "synthetic module observation introduction")
     definition = gate._manifest(repository, head_sha, [])
     scenario = next(row for row in definition.scenarios if row.api)
-    actual = _actual_witness(repository, driver)
+    actual = _actual_witness(repository, driver, roots)
+    assert actual["primary"]["cases"] == primary_cases
     assert actual["root_cases"] == oracle
     for side, capture in (("base", base), ("head", head)):
         capture["authentication"].update(base_sha=base_sha, head_sha=head_sha)
@@ -109,14 +126,33 @@ def _fixture(tmp_path: Path, *, copied: bool = False, retired: bool = False) -> 
         row["driver_blob_sha"] = git_changes.read_regular_blob(
             repository, head_sha, "tests/characterization/introduced.characterization.py", []
         ).object_sha
+        row["golden_blob_sha"] = git_changes.read_regular_blob(
+            repository, head_sha, "tests/characterization/introduced.golden.json", []
+        ).object_sha
+        row["golden_behavior_sha256"] = birth._sha(gate._canonical(primary_cases))
         if side == "head":
             row.update(
                 api_observation={**actual["primary"], "module_witness": actual},
+                behavior=primary_cases,
+                behavior_sha256=birth._sha(gate._canonical(primary_cases)),
                 command=gate.scenario_command(scenario, "python"),
                 stdout_sha256=birth._sha(gate._canonical(actual)),
             )
         birth._fingerprint(capture)
     return repository, base_sha, head_sha, base, head
+
+
+def test_typed_module_codec2_actual_calls_pass_capture_result_and_owner_join(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path, typed=True)
+    result = birth._verify(tmp_path, fixture)
+    assert result["overall_result"] == "PASS", result["policy_blocks"]
+    legacy._validate_round_trip(result)
+    assert birth._s6(fixture, result, [_grant(result)])["overall_result"] == "PASS"
+    grant = _grant(result)
+    grant["module_inventory_sha256"] = "0" * 64
+    assert birth._s6(fixture, result, [grant])["overall_result"] == "BLOCK"
 
 
 def _grant(result: dict[str, Any]) -> dict[str, Any]:
@@ -173,6 +209,52 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
     legacy._validate_round_trip(result)
     assert birth._s6(fixture, result, [_grant(result)])["overall_result"] == "PASS"
     rejected = []
+    typed_target = tmp_path / "typed-module-codec2"
+    legacy._write(typed_target / "src/introduced.py", witness.TYPED_SOURCE.decode())
+    typed_scenario = replace(
+        scenario, module_roots=(birth.API, "src/introduced.py::function:plain")
+    )
+    typed = hosted._run_driver(
+        typed_target,
+        repository,
+        typed_scenario,
+        "python",
+        ("import introduced as target\n" + witness.TYPED_DRIVER).encode(),
+    )
+    assert typed["exit_code"] == 0 and typed["error"] is None and typed["deterministic"] is True
+    typed_observation = typed["api_observation"]["module_witness"]
+    typed_cases, typed_roots = witness.typed_oracles("src/introduced.py", "introduced")
+    assert typed_observation["primary"]["cases"] == typed_cases
+    assert typed_observation["root_cases"] == typed_roots
+    assert typed_observation["schema_version"] == "module-witness.v2"
+    assert typed_observation["primary"]["codec"] == "python-values-v2"
+    assert typed_observation["root_cases"][-1]["exception"] == "builtins.ValueError"
+    assert typed_observation["root_cases"][2]["exception"] == "builtins.TypeError"
+    gate.verify_module_observation(
+        witness.TYPED_SOURCE,
+        "src/introduced.py",
+        birth.API,
+        typed_observation,
+        typed_cases,
+        typed_roots,
+    )
+    bad_typed = copy.deepcopy(typed_observation)
+    bad_typed["primary"]["codec"] = "python-values-v1"
+    assert (
+        hosted._observed_behavior(
+            gate._canonical(bad_typed), birth.API, typed_scenario.module_roots
+        )[1]
+        == "MALFORMED_MODULE_OBSERVATION"
+    )
+    hook_driver = "import introduced as target\nclass Hook:\n def __getattribute__(self, name):\n  raise AssertionError('TARGET_HOOK_INVOKED')\ntarget.calculate(Hook())\n"
+    hook = hosted._run_driver(
+        typed_target, repository, typed_scenario, "python", hook_driver.encode()
+    )
+    assert hook["exit_code"] == 2 and hook["behavior"] is None
+    expected_hook_stdout = (
+        gate._canonical({"schema_version": "1.0", "error": "OBSERVER_UNSUPPORTED_VALUE"}) + b"\n"
+    )
+    assert hook["stdout_sha256"] == birth._sha(expected_hook_stdout)
     for source, error in (
         (
             b"def calculate(value):\n    values = (\n        value * 2\n        for _ in range(1)\n    )\n    return sum(values)\n",
@@ -208,6 +290,11 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
         "command": actual_head["command"],
         "two_replays_equal": actual_head["deterministic"],
         "rejected_actual_unsupported_sources": rejected,
+        "codec2_actual_command": typed["command"],
+        "codec2_two_replays_equal": typed["deterministic"],
+        "codec2_source_sha256": typed_observation["source_sha256"],
+        "codec2_inventory_sha256": typed_observation["inventory_sha256"],
+        "codec2_hook_rejection_stdout_sha256": hook["stdout_sha256"],
         "verification_authentication": "synthetic unit wrapper; not authenticated adoption",
         "owner_authorization": "synthetic unit grant; not an owner attestation",
     }

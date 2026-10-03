@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import copy
+import importlib.util
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
+import characterization_observer as ordinary
+import module_characterization_observer as collector
 import pytest
 
 from supportability_gate import characterization as proof
@@ -116,6 +119,407 @@ def verify(value: dict, source: bytes = SOURCE, expected: object = CASES) -> Non
         expected,
         ROOT_CASES[: len(value.get("executions", []))],
     )
+
+
+TYPED_SOURCE = b"""from enum import Enum, StrEnum
+from dataclasses import dataclass
+
+class Exercise(StrEnum):
+    SALE = "sale"
+    CREATE = "create"
+
+class Wrong(StrEnum):
+    SALE = "sale"
+
+class Primitive(Enum):
+    FLAG = True
+    COUNT = 2
+    LABEL = "label"
+
+@dataclass(frozen=True)
+class Record:
+    exercise: Exercise
+    count: int
+
+def plain(value):
+    for key in value:
+        if type(key) is not str:
+            raise ValueError("key")
+    return value
+
+def calculate(record):
+    if type(record.exercise) is not Exercise:
+        raise TypeError("enum")
+    return record
+"""
+TYPED_DRIVER = """target.calculate(target.Record(target.Exercise.SALE, 1))
+target.calculate(target.Record(target.Exercise.CREATE, 2))
+try:
+    target.calculate(target.Record(target.Wrong.SALE, 1))
+except TypeError:
+    pass
+target.plain({"x": 1})
+target.plain({})
+try:
+    target.plain({1: "x"})
+except ValueError:
+    pass
+"""
+
+
+def typed_oracles(
+    path: str = "observed_fixture.py", module: str = "observed_fixture"
+) -> tuple[list, list]:
+    """Authored literal expected objects; do not derive answers from collector output."""
+
+    def record(exercise: str, count: int, enum_class: str = "Exercise") -> dict:
+        return {
+            "type": "dataclass",
+            "module": module,
+            "name": "Record",
+            "fields": [
+                [
+                    "exercise",
+                    {
+                        "type": "enum",
+                        "source_path": path,
+                        "module": module,
+                        "name": enum_class,
+                        "member": exercise,
+                        "value": {"type": "str", "value": exercise.lower()},
+                    },
+                ],
+                ["count", {"type": "int", "value": count}],
+            ],
+        }
+
+    def arguments(name: str, value: dict) -> list:
+        return [{"name": name, "value": value}]
+
+    primary = [
+        {"input": arguments("record", record(member, count)), "output": record(member, count)}
+        for member, count in (("SALE", 1), ("CREATE", 2))
+    ]
+    roots = [
+        {
+            "root": "calculate",
+            "input": case["input"],
+            "arguments_after": copy.deepcopy(case["input"]),
+            "outcome": "RETURN",
+            "output": case["output"],
+            "exception": None,
+        }
+        for case in primary
+    ]
+    wrong = arguments("record", record("SALE", 1, "Wrong"))
+    roots.append(
+        {
+            "root": "calculate",
+            "input": wrong,
+            "arguments_after": copy.deepcopy(wrong),
+            "outcome": "EXCEPTION",
+            "output": None,
+            "exception": "builtins.TypeError",
+        }
+    )
+    for value in (
+        {"type": "dict", "items": [["x", {"type": "int", "value": 1}]]},
+        {"type": "dict", "items": []},
+    ):
+        roots.append(
+            {
+                "root": "plain",
+                "input": arguments("value", value),
+                "arguments_after": arguments("value", copy.deepcopy(value)),
+                "outcome": "RETURN",
+                "output": value,
+                "exception": None,
+            }
+        )
+    invalid = {
+        "type": "dict-keyed",
+        "items": [[{"type": "int", "value": 1}, {"type": "str", "value": "x"}]],
+    }
+    roots.append(
+        {
+            "root": "plain",
+            "input": arguments("value", invalid),
+            "arguments_after": arguments("value", copy.deepcopy(invalid)),
+            "outcome": "EXCEPTION",
+            "output": None,
+            "exception": "builtins.ValueError",
+        }
+    )
+    return primary, roots
+
+
+def _typed_module(tmp_path: Path):
+    path = tmp_path / "observed_fixture.py"
+    path.write_bytes(TYPED_SOURCE)
+    specification = importlib.util.spec_from_file_location("observed_fixture", path)
+    assert specification is not None and specification.loader is not None
+    module = importlib.util.module_from_spec(specification)
+    sys.modules["observed_fixture"] = module
+    specification.loader.exec_module(module)
+    return module, proof.module_enum_declarations(TYPED_SOURCE)
+
+
+def test_module_v2_real_typed_calls_and_integer_key_exception(tmp_path: Path) -> None:
+    row = observe(
+        tmp_path, TYPED_SOURCE, TYPED_DRIVER, [API, "observed_fixture.py::function:plain"]
+    )
+    assert "error" not in row, row
+    assert row["schema_version"] == "module-witness.v2"
+    assert row["primary"]["codec"] == "python-values-v2"
+    assert row["root_cases"][-1]["input"][0]["value"] == {
+        "type": "dict-keyed",
+        "items": [[{"type": "int", "value": 1}, {"type": "str", "value": "x"}]],
+    }
+    assert row["root_cases"][-1]["exception"] == "builtins.ValueError"
+    assert row["root_cases"][2]["exception"] == "builtins.TypeError"
+    enum_value = row["primary"]["cases"][0]["output"]["fields"][0][1]
+    assert enum_value == {
+        "type": "enum",
+        "source_path": "observed_fixture.py",
+        "module": "observed_fixture",
+        "name": "Exercise",
+        "member": "SALE",
+        "value": {"type": "str", "value": "sale"},
+    }
+    primary, expected_roots = typed_oracles()
+    assert row["primary"]["cases"] == primary
+    assert row["root_cases"] == expected_roots
+    proof.verify_module_observation(
+        TYPED_SOURCE, "observed_fixture.py", API, row, primary, expected_roots
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, True, False, -3, "text", b"bytes", 1.25, [1, "x"], (1, False), {"b": [2], "a": 1}],
+)
+def test_module_v2_retains_legacy_value_bytes(tmp_path: Path, value: object) -> None:
+    assert ordinary.canonical_bytes(
+        collector._encode(value, tmp_path, "observed_fixture.py", [])
+    ) == ordinary.canonical_bytes(ordinary.encode_value(value, tmp_path))
+
+
+def test_module_v2_typed_keys_and_primitive_enum_values(tmp_path: Path) -> None:
+    module, declarations = _typed_module(tmp_path)
+    value = {2: "two", False: "flag", "text": "str"}
+    encoded = collector._encode(value, tmp_path, "observed_fixture.py", declarations)
+    proof.module_validate_value(encoded, "observed_fixture.py", declarations)
+    for member in module.Primitive:
+        encoded = collector._encode(member, tmp_path, "observed_fixture.py", declarations)
+        proof.module_validate_value(encoded, "observed_fixture.py", declarations)
+    with pytest.raises(ordinary.ObserverError, match="OBSERVER_UNSUPPORTED_VALUE"):
+        ordinary.encode_value({1: "x"}, tmp_path)
+
+
+@pytest.mark.parametrize("defect", ["alias", "auto", "method", "decorated", "mixed", "custom-meta"])
+def test_static_enum_declarations_reject_unsupported_forms(defect: str) -> None:
+    declarations = {
+        "alias": "class E(StrEnum):\n A='x'\n B='x'\n",
+        "auto": "class E(StrEnum):\n A=auto()\n",
+        "method": "class E(StrEnum):\n A='x'\n def __str__(self):\n  return 'x'\n",
+        "decorated": "@unique\nclass E(StrEnum):\n A='x'\n",
+        "mixed": "class E(str, Enum):\n A='x'\n",
+        "custom-meta": "class E(StrEnum, metaclass=Custom):\n A='x'\n",
+    }
+    with pytest.raises(proof.ModuleObservationError):
+        proof.module_enum_declarations(
+            ("from enum import Enum, StrEnum, auto, unique\n" + declarations[defect]).encode()
+        )
+
+
+def test_module_v2_unsupported_values_do_not_invoke_hooks(tmp_path: Path) -> None:
+    module, declarations = _typed_module(tmp_path)
+    calls = []
+
+    class Hook:
+        def __getattribute__(self, name):
+            calls.append(name)
+            raise AssertionError("hook")
+
+        def __repr__(self):
+            calls.append("repr")
+            raise AssertionError("hook")
+
+        def __str__(self):
+            calls.append("str")
+            raise AssertionError("hook")
+
+    for value in (Hook(), {module.Exercise.SALE: "x"}, {1.0: "x"}, {None: "x"}):
+        with pytest.raises(ordinary.ObserverError):
+            collector._encode(value, tmp_path, "observed_fixture.py", declarations)
+    module.Exercise.__str__ = Hook.__str__
+    with pytest.raises(ordinary.ObserverError, match="OBSERVER_ENUM_INVALID"):
+        collector._encode(module.Exercise.SALE, tmp_path, "observed_fixture.py", declarations)
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    "mutation", ["member", "literal", "unregistered", "method", "foreign-file"]
+)
+def test_module_v2_runtime_enum_declaration_mutation_rejected(
+    tmp_path: Path, mutation: str
+) -> None:
+    module, declarations = _typed_module(tmp_path)
+    member = module.Exercise.SALE
+    if mutation == "member":
+        vars(module.Exercise)["_member_map_"]["EXTRA"] = member
+    elif mutation == "literal":
+        object.__getattribute__(member, "__dict__")["_value_"] = "forged"
+    elif mutation == "unregistered":
+        module.Exercise = None
+    elif mutation == "method":
+        module.Exercise.callback = lambda: None
+    else:
+        module.__file__ = str(tmp_path / "foreign.py")
+    with pytest.raises(ordinary.ObserverError, match="OBSERVER_ENUM_INVALID"):
+        collector._encode(member, tmp_path, "observed_fixture.py", declarations)
+
+
+@pytest.mark.parametrize(
+    "defect",
+    [
+        "bool-int-collision",
+        "duplicate",
+        "order",
+        "string-only",
+        "unsupported",
+        "wrong-type",
+        "extra",
+        "relabel",
+    ],
+)
+def test_module_v2_key_tags_fail_closed(defect: str) -> None:
+    def key(kind, value):
+        return {"type": kind, "value": value}
+
+    items = {
+        "bool-int-collision": [
+            [key("bool", True), key("none", None)],
+            [key("int", 1), key("none", None)],
+        ],
+        "duplicate": [[key("int", 1), key("none", None)], [key("int", 1), key("none", None)]],
+        "order": [[key("int", 2), key("none", None)], [key("int", 1), key("none", None)]],
+        "string-only": [[key("str", "x"), key("none", None)]],
+        "unsupported": [[key("float", "0x1.0000000000000p+0"), key("none", None)]],
+        "wrong-type": [[key("int", True), key("none", None)]],
+        "extra": [[{"type": "int", "value": 1, "extra": True}, key("none", None)]],
+        "relabel": [[1, key("none", None)]],
+    }
+    with pytest.raises(proof.ModuleObservationError):
+        proof.module_validate_value(
+            {"type": "dict-keyed", "items": items[defect]}, "observed_fixture.py", []
+        )
+
+
+@pytest.mark.parametrize("field", ["source_path", "module", "name", "member", "value"])
+def test_module_v2_enum_tags_reject_forged_nominal_or_literal_identity(field: str) -> None:
+    primary, _ = typed_oracles()
+    value = primary[0]["output"]["fields"][0][1]
+    value[field] = {"type": "str", "value": "create"} if field == "value" else "forged"
+    with pytest.raises(proof.ModuleObservationError):
+        proof.module_validate_value(
+            value, "observed_fixture.py", proof.module_enum_declarations(TYPED_SOURCE)
+        )
+
+
+def test_module_v2_cycles_subclasses_and_key_node_limits_fail_closed(tmp_path: Path) -> None:
+    class Integer(int):
+        pass
+
+    class String(str):
+        pass
+
+    for key in (Integer(1), String("x")):
+        with pytest.raises(ordinary.ObserverError, match="OBSERVER_UNSUPPORTED_VALUE"):
+            collector._encode({key: "x"}, tmp_path, "observed_fixture.py", [])
+    cycle = {}
+    cycle[1] = cycle
+    with pytest.raises(ordinary.ObserverError, match="OBSERVER_VALUE_CYCLE"):
+        collector._encode(cycle, tmp_path, "observed_fixture.py", [])
+    string_keys = [{str(key): None for key in range(256)} for _ in range(8)]
+    ordinary.encode_value(string_keys, tmp_path)
+    typed_keys = [{key: None for key in range(256)} for _ in range(8)]
+    with pytest.raises(ordinary.ObserverError, match="OBSERVER_VALUE_LIMIT"):
+        collector._encode(typed_keys, tmp_path, "observed_fixture.py", [])
+
+
+def test_module_v2_plain_dataclass_legacy_bytes_remain_identical(tmp_path: Path) -> None:
+    module, declarations = _typed_module(tmp_path)
+    value = module.Record("sale", 1)
+    assert collector._encode(
+        value, tmp_path, "observed_fixture.py", declarations
+    ) == ordinary.encode_value(value, tmp_path)
+
+
+def test_fixed_hosted_parser_rejects_codec_or_schema_relabel(tmp_path: Path) -> None:
+    import hosted_characterization as hosted
+
+    row = observe(tmp_path)
+    assert hosted._observed_behavior(proof._canonical(row), API, (API,))[1] is None
+    assert (
+        hosted._observed_behavior(proof._canonical(row["primary"]), API)[1]
+        == "MALFORMED_API_OBSERVATION"
+    )
+    for container, key, value in (
+        (row, "schema_version", "module-witness.v1"),
+        (row["primary"], "codec", "python-values-v1"),
+    ):
+        original = container[key]
+        container[key] = value
+        assert (
+            hosted._observed_behavior(proof._canonical(row), API, (API,))[1]
+            == "MALFORMED_MODULE_OBSERVATION"
+        )
+        container[key] = original
+
+
+@pytest.mark.parametrize(
+    "defect",
+    [
+        "schema",
+        "codec",
+        "source",
+        "declaration",
+        "path",
+        "class",
+        "member",
+        "literal",
+        "exception",
+        "arguments",
+    ],
+)
+def test_module_v2_typed_capture_forgery_rejected(tmp_path: Path, defect: str) -> None:
+    roots = [API, "observed_fixture.py::function:plain"]
+    row = observe(tmp_path, TYPED_SOURCE, TYPED_DRIVER, roots)
+    assert "error" not in row, row
+    expected, root_expected = typed_oracles()
+    value = row["primary"]["cases"][0]["output"]["fields"][0][1]
+    if defect == "schema":
+        row["schema_version"] = "module-witness.v1"
+    elif defect == "codec":
+        row["primary"]["codec"] = "python-values-v1"
+    elif defect == "source":
+        row["source_sha256"] = "0" * 64
+    elif defect == "declaration":
+        row["enum_declarations"][0]["members"][0]["value"] = "forged"
+    elif defect in {"path", "class", "member", "literal"}:
+        field = {"path": "source_path", "class": "name", "member": "member", "literal": "value"}[
+            defect
+        ]
+        value[field] = {"type": "str", "value": "forged"} if defect == "literal" else "forged"
+    elif defect == "exception":
+        row["root_cases"][-1]["exception"] = "builtins.TypeError"
+    else:
+        row["root_cases"][-1]["arguments_after"] = []
+    with pytest.raises(proof.ModuleObservationError):
+        proof.verify_module_observation(
+            TYPED_SOURCE, "observed_fixture.py", API, row, expected, root_expected
+        )
 
 
 @pytest.mark.parametrize(

@@ -360,7 +360,7 @@ def _behavior(stdout: bytes, scenario_id: str) -> tuple[object | None, str | Non
 
 
 def _observed_behavior(
-    stdout: bytes, api: str, module_roots: tuple[str, ...] = ()
+    stdout: bytes, api: str, module_roots: tuple[str, ...] = (), *, codec: str = "python-values-v1"
 ) -> tuple[object | None, str | None, dict[str, object] | None]:
     if module_roots:
         return _module_observed_behavior(stdout, api, module_roots)
@@ -379,11 +379,7 @@ def _observed_behavior(
             },
             "MALFORMED_API_OBSERVATION",
         )
-        if (
-            value["schema_version"] != "1.0"
-            or value["codec"] != "python-values-v1"
-            or value["api"] != api
-        ):
+        if value["schema_version"] != "1.0" or value["codec"] != codec or value["api"] != api:
             raise characterization.CharacterizationError("MALFORMED_API_OBSERVATION")
     except characterization.CharacterizationError as error:
         return None, error.code, None
@@ -397,13 +393,15 @@ def _module_observed_behavior(
         value = characterization._read_json_bytes(stdout, "MALFORMED_MODULE_OBSERVATION")
         if (
             not isinstance(value, dict)
-            or value.get("schema_version") != "module-witness.v1"
+            or value.get("schema_version") != characterization.MODULE_WITNESS_SCHEMA
             or value.get("api") != api
             or value.get("roots") != list(roots)
         ):
             raise characterization.CharacterizationError("MALFORMED_MODULE_OBSERVATION")
         cases, error, primary = _observed_behavior(
-            characterization._canonical(value.get("primary")), api
+            characterization._canonical(value.get("primary")),
+            api,
+            codec=characterization.MODULE_CODEC,
         )
         if error is not None or primary is None:
             raise characterization.CharacterizationError("MALFORMED_MODULE_OBSERVATION")

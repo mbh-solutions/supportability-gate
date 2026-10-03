@@ -226,13 +226,28 @@ distinct inputs and outputs. Add `<id>.module.golden.json` containing independen
 records with exact `root`, `input`, `arguments_after`, `outcome`, `output` and `exception` fields.
 Returned `None` and an exception are distinct outcomes. Void mutations use actual arguments before
 and after the call; exception-only roots cannot replace meaningful primary returns. The fixed
-`python-values-v1` codec remains unchanged, including exact bytes and source-bound dataclasses.
+`python-values-v1` codec remains unchanged for ordinary and function-only observations, including
+exact bytes and source-bound dataclasses. Module rows always use fixed `python-values-v2` and
+`module-witness.v2`; repositories cannot choose a codec. Existing supported values retain their
+exact codec-1 encoding. Module-only `dict-keyed` values admit exact boolean, integer and string keys
+when at least one key is not a string; canonical encoded-key ordering, Python key-equality collision
+rejection and the existing depth/node/item/byte limits remain mandatory. String-only dictionaries
+retain their ordinary encoding. Enum dictionary keys remain unsupported.
+
+Module value capture additionally admits same-file, top-level, simple literal direct standard-library
+`Enum` or `StrEnum` members. Exact source SHA and static class/member declarations bind outside
+semantic cases and are included in the reviewed inventory fingerprint. Value tags preserve source
+path, module, class, member and typed literal identity. Only raw registered member storage is read;
+target constructors, serializer hooks, properties, `str` and `repr` are never used. Aliases, `auto`,
+factories, decorators, mixed bases, custom metaclasses and custom methods are unsupported. Forged,
+stale or relabelled codec/declaration evidence fails closed. This capture capability lets real
+invalid-input public calls reach retained guards; it does not relax those guards or body coverage.
 Opaque receivers, callbacks and unsupported objects remain rejected. A plain public persistence
 API can witness its actual class helpers without serializing their receivers.
 
 Module review records use schema `2.0`, retaining all ordinary review fields and adding
 `module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. These bind the exact root
-panel, complete function inventory and raw module-oracle bytes. Authenticated introduction grants
+panel, complete function/enum inventory and raw module-oracle bytes. Authenticated introduction grants
 must bind those same three fields in addition to the existing source/driver/oracle/review pins.
 Existing whole-file birth, anti-copy, no-retirement, independent-review, exact-head authorization,
 golden preservation, resource and quality protections remain mandatory.

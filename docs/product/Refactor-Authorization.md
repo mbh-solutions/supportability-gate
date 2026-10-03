@@ -63,7 +63,10 @@ For a schema-4 module responsibility, the existing schema-3 introduction grant a
 source-derived inventory and independently reviewed root oracle. Public roots consume the existing
 50-API quota. A grant cannot waive incomplete helper/body witnesses, changed normal outputs, absent
 independent review, copied source, retired targets or stale repository/base/head identities. Existing
-function-only grants retain their exact previous shape.
+function-only grants retain their exact previous shape. The module inventory fingerprint also binds
+the fixed codec-2 literal enum declarations to the exact source hash, outside semantic oracle cases.
+Typed dictionary keys and literal enum capture add no owner option, grant field or authorization
+waiver; ordinary observations retain codec 1.
 
 Schema `3.0` retains every schema-2 field and adds `introductions`. This array is required for
 schema 3 and contains one exact grant for each Git-derived API birth in a schema-3 characterization

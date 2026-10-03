@@ -10,6 +10,8 @@ import json
 import marshal
 import re
 from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from types import CodeType
 from typing import Any
@@ -736,7 +738,7 @@ def _api_capture_matches(row: dict[str, Any] | None, fact: dict[str, Any], side:
             "cases",
         }
         and observation["schema_version"] == "1.0"
-        and observation["codec"] == "python-values-v1"
+        and observation["codec"] == (MODULE_CODEC if "module" in fact else "python-values-v1")
         and observation["api"] == fact["api"]
         and all(observation[key] == value for key, value in source.items())
         and type(observation["start_line"]) is int
@@ -1702,6 +1704,11 @@ def _result_module_fact(fact: dict[str, Any]) -> None:
             module_public_roots(
                 row["roots"], fact["api"], {item["name"]: item for item in inventory["functions"]}
             )
+        _module_case_values(
+            row["oracle_cases"],
+            fact["api"].split("::", 1)[0],
+            row["head_inventory"]["enum_declarations"],
+        )
     except (ModuleObservationError, TypeError, ValueError, KeyError) as error:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT") from error
 
@@ -2454,7 +2461,8 @@ def _write_json(path: Path, value: object, *, compact: bool = False) -> bytes:
 MODULE_MAX_FUNCTIONS = 128
 MODULE_MAX_EXECUTIONS = 128
 MODULE_MAX_CALLS = 4096
-MODULE_WITNESS_SCHEMA = "module-witness.v1"
+MODULE_WITNESS_SCHEMA = "module-witness.v2"
+MODULE_CODEC = "python-values-v2"
 
 
 class ModuleObservationError(ValueError):
@@ -2462,7 +2470,9 @@ class ModuleObservationError(ValueError):
 
 
 def module_validate_inventory(value: object, source_sha256: str) -> dict[str, Any]:
-    inventory = _module_exact(value, {"source_sha256", "inventory_sha256", "functions"})
+    inventory = _module_exact(
+        value, {"source_sha256", "inventory_sha256", "functions", "enum_declarations"}
+    )
     rows = inventory["functions"]
     if not isinstance(rows, list) or not 1 <= len(rows) <= MODULE_MAX_FUNCTIONS:
         raise ModuleObservationError("INVALID_MODULE_INVENTORY")
@@ -2470,7 +2480,9 @@ def module_validate_inventory(value: object, source_sha256: str) -> dict[str, An
     names = [row["name"] for row in functions]
     if names != sorted(set(names)) or inventory["source_sha256"] != source_sha256:
         raise ModuleObservationError("INVALID_MODULE_INVENTORY")
-    if inventory["inventory_sha256"] != hashlib.sha256(_module_canonical(functions)).hexdigest():
+    _module_enum_rows(inventory["enum_declarations"])
+    binding = {"functions": functions, "enum_declarations": inventory["enum_declarations"]}
+    if inventory["inventory_sha256"] != hashlib.sha256(_module_canonical(binding)).hexdigest():
         raise ModuleObservationError("INVALID_MODULE_INVENTORY")
     return inventory
 
@@ -2561,11 +2573,275 @@ def module_source_inventory(source: bytes, path: str) -> dict[str, Any]:
         or len({row["name"] for row in rows}) != len(rows)
     ):
         raise ModuleObservationError("INVALID_MODULE_INVENTORY")
+    enums = module_enum_declarations(source)
     return {
         "source_sha256": hashlib.sha256(source).hexdigest(),
-        "inventory_sha256": hashlib.sha256(_module_canonical(rows)).hexdigest(),
+        "inventory_sha256": hashlib.sha256(
+            _module_canonical({"functions": rows, "enum_declarations": enums})
+        ).hexdigest(),
         "functions": rows,
+        "enum_declarations": enums,
     }
+
+
+def _module_enum_rows(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or len(value) > 256:
+        raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+    rows = [_module_exact(row, {"name", "base", "members"}) for row in value]
+    names = [row["name"] for row in rows]
+    if any(type(name) is not str or not name.isidentifier() for name in names):
+        raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+    if names != sorted(set(names)):
+        raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+    for row in rows:
+        _module_enum_members(row)
+    return rows
+
+
+def _module_enum_members(row: dict[str, Any]) -> None:
+    members = row["members"]
+    if row["base"] not in {"Enum", "StrEnum"} or not isinstance(members, list):
+        raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+    if not 1 <= len(members) <= 256:
+        raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+    names, literals = [], []
+    for member in members:
+        item = _module_exact(member, {"name", "value"})
+        name, literal = item["name"], item["value"]
+        if type(name) is not str or not name.isidentifier() or name.startswith("_"):
+            raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+        if type(literal) not in {bool, int, str} or literal in literals:
+            raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+        if row["base"] == "StrEnum" and type(literal) is not str:
+            raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+        if name in names:
+            raise ModuleObservationError("INVALID_MODULE_ENUM_DECLARATION")
+        names.append(name)
+        literals.append(literal)
+
+
+def _module_enum_imports(tree: ast.Module) -> dict[str, str]:
+    imports: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module == "enum" and node.level == 0:
+            for alias in node.names:
+                if alias.name in {"Enum", "StrEnum"}:
+                    imports[alias.asname or alias.name] = alias.name
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "enum":
+                    imports[alias.asname or "enum"] = "enum"
+    return imports
+
+
+def _module_enum_base(node: ast.expr, imports: dict[str, str]) -> str | None:
+    if isinstance(node, ast.Name) and imports.get(node.id) in {"Enum", "StrEnum"}:
+        return imports[node.id]
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and imports.get(node.value.id) == "enum"
+        and node.attr in {"Enum", "StrEnum"}
+    ):
+        return node.attr
+    return None
+
+
+def _module_enum_class(node: ast.ClassDef, base: str) -> dict[str, Any]:
+    if len(node.bases) != 1 or node.keywords or node.decorator_list:
+        raise ModuleObservationError("UNSUPPORTED_MODULE_ENUM_DECLARATION")
+    members = []
+    for statement in node.body:
+        if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant):
+            if type(statement.value.value) is str:
+                continue
+        if (
+            not isinstance(statement, ast.Assign)
+            or len(statement.targets) != 1
+            or not isinstance(statement.targets[0], ast.Name)
+            or not isinstance(statement.value, ast.Constant)
+        ):
+            raise ModuleObservationError("UNSUPPORTED_MODULE_ENUM_DECLARATION")
+        members.append({"name": statement.targets[0].id, "value": statement.value.value})
+    result = {"name": node.name, "base": base, "members": members}
+    _module_enum_members(result)
+    return result
+
+
+def module_enum_declarations(source: bytes) -> list[dict[str, Any]]:
+    """Read simple literal stdlib enum declarations without evaluating target code."""
+    tree = ast.parse(source)
+    imports = _module_enum_imports(tree)
+    rows = []
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            bases = [_module_enum_base(base, imports) for base in node.bases]
+            recognized = [base for base in bases if base is not None]
+            if recognized:
+                rows.append(_module_enum_class(node, recognized[0]))
+    rows.sort(key=lambda row: row["name"])
+    return _module_enum_rows(rows)
+
+
+def _module_case_values(
+    cases: list[dict[str, Any]], path: str, enums: list[dict[str, Any]]
+) -> None:
+    for row in cases:
+        for key in ("input", "arguments_after"):
+            arguments = row[key]
+            if not isinstance(arguments, list) or len(arguments) > 256:
+                raise ModuleObservationError("INVALID_MODULE_ARGUMENTS")
+            names = []
+            for argument in arguments:
+                item = _module_exact(argument, {"name", "value"})
+                if type(item["name"]) is not str or not item["name"].isidentifier():
+                    raise ModuleObservationError("INVALID_MODULE_ARGUMENTS")
+                names.append(item["name"])
+                module_validate_value(item["value"], path, enums)
+            if len(names) != len(set(names)):
+                raise ModuleObservationError("INVALID_MODULE_ARGUMENTS")
+        if row["outcome"] == "RETURN":
+            module_validate_value(row["output"], path, enums)
+
+
+def module_validate_value(value: object, path: str, enums: list[dict[str, Any]]) -> None:
+    """Validate the fixed module codec's bounded wire values without target execution."""
+    if len(_module_canonical(value)) > 262144:
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    _module_value(value, path, enums, 0, [0])
+
+
+def _module_value(
+    value: object, path: str, enums: list[dict[str, Any]], depth: int, nodes: list[int]
+) -> None:
+    nodes[0] += 1
+    if depth > 16 or nodes[0] > 4096 or not isinstance(value, dict):
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    kind = value.get("type")
+    if type(kind) is not str:
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    if kind in {"list", "tuple", "dict", "dict-keyed", "dataclass"}:
+        children = _module_value_children(value)
+        for child in children:
+            _module_value(child, path, enums, depth + 1, nodes)
+    elif kind == "enum":
+        _module_enum_value(value, path, enums)
+        _module_value(value["value"], path, enums, depth + 1, nodes)
+    else:
+        _module_primitive_value(value)
+
+
+def _module_value_children(row: dict[str, Any]) -> list[Any]:
+    kind = row["type"]
+    if kind == "dataclass":
+        _module_exact(row, {"type", "module", "name", "fields"})
+        if any(type(row[key]) is not str or not row[key] for key in ("module", "name")):
+            raise ModuleObservationError("INVALID_MODULE_VALUE")
+        items = row["fields"]
+    else:
+        _module_exact(row, {"type", "items"})
+        items = row["items"]
+    if not isinstance(items, list) or len(items) > 256:
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    if kind in {"list", "tuple"}:
+        return items
+    if any(not isinstance(pair, list) or len(pair) != 2 for pair in items):
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    keys = [pair[0] for pair in items]
+    if kind == "dict-keyed":
+        _module_typed_keys(keys)
+        return [item for pair in items for item in pair]
+    if any(type(key) is not str for key in keys) or len(keys) != len(set(keys)):
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    if kind == "dict" and keys != sorted(keys):
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    return [pair[1] for pair in items]
+
+
+def _module_typed_keys(keys: list[Any]) -> None:
+    literals = []
+    encodings = []
+    for key in keys:
+        row = _module_exact(key, {"type", "value"})
+        kinds = {"bool": bool, "int": int, "str": str}
+        if row["type"] not in kinds or type(row["value"]) is not kinds[row["type"]]:
+            raise ModuleObservationError("INVALID_MODULE_DICT_KEY")
+        if row["value"] in literals:
+            raise ModuleObservationError("INVALID_MODULE_DICT_KEY")
+        literals.append(row["value"])
+        encodings.append(_module_canonical(row))
+    if not keys or all(key["type"] == "str" for key in keys) or encodings != sorted(encodings):
+        raise ModuleObservationError("INVALID_MODULE_DICT_KEY")
+
+
+def _module_primitive_value(row: dict[str, Any]) -> None:
+    kind = row.get("type")
+    if type(kind) is not str:
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    _module_exact(row, {"type", "value", "fold"} if kind == "datetime" else {"type", "value"})
+    value: Any = row["value"]
+    kinds = {"none": type(None), "bool": bool, "str": str, "int": int}
+    if kind in kinds:
+        if type(value) is not kinds[kind]:
+            raise ModuleObservationError("INVALID_MODULE_VALUE")
+        if kind == "int" and isinstance(value, int) and value.bit_length() > 256:
+            raise ModuleObservationError("INVALID_MODULE_VALUE")
+        return
+    if type(value) is not str:
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+    _module_text_primitive(kind, value, row)
+
+
+def _module_text_primitive(kind: str, value: str, row: dict[str, Any]) -> None:
+    try:
+        if kind == "bytes":
+            valid = bytes.fromhex(value).hex() == value and len(value) <= 262144
+        elif kind == "float":
+            number = float.fromhex(value)
+            valid = (
+                number.hex() == value
+                and number not in {float("inf"), float("-inf")}
+                and number == number
+            )
+        elif kind == "decimal":
+            decimal = Decimal(value)
+            exponent = decimal.as_tuple().exponent
+            valid = (
+                decimal.is_finite()
+                and len(decimal.as_tuple().digits) <= 256
+                and isinstance(exponent, int)
+                and abs(exponent) <= 10000
+            )
+        elif kind == "datetime":
+            date = datetime.fromisoformat(value)
+            valid = (
+                date.tzinfo is not None
+                and date.isoformat(timespec="microseconds") == value
+                and type(row["fold"]) is int
+                and row["fold"] in {0, 1}
+            )
+        else:
+            valid = False
+    except (ValueError, InvalidOperation):
+        valid = False
+    if not valid:
+        raise ModuleObservationError("INVALID_MODULE_VALUE")
+
+
+def _module_enum_value(row: dict[str, Any], path: str, enums: list[dict[str, Any]]) -> None:
+    _module_exact(row, {"type", "source_path", "module", "name", "member", "value"})
+    declaration = next((item for item in enums if item["name"] == row["name"]), None)
+    module_path = (
+        path.removeprefix("src/").removesuffix(".py").removesuffix("/__init__").replace("/", ".")
+    )
+    if declaration is None or row["source_path"] != path or row["module"] != module_path:
+        raise ModuleObservationError("INVALID_MODULE_ENUM_VALUE")
+    literal = next((item for item in declaration["members"] if item["name"] == row["member"]), None)
+    if literal is None:
+        raise ModuleObservationError("INVALID_MODULE_ENUM_VALUE")
+    kinds = {bool: "bool", int: "int", str: "str"}
+    if row["value"] != {"type": kinds[type(literal["value"])], "value": literal["value"]}:
+        raise ModuleObservationError("INVALID_MODULE_ENUM_VALUE")
 
 
 def _module_accounted_codes(codes: list[CodeType], rows: list[dict[str, Any]]) -> None:
@@ -2631,7 +2907,7 @@ def _module_primary(
     selected = [code for code in codes if code.co_qualname == name]
     if len(selected) != 1:
         raise ModuleObservationError("INVALID_MODULE_PRIMARY")
-    if row["schema_version"] != "1.0" or row["codec"] != "python-values-v1" or row["api"] != api:
+    if row["schema_version"] != "1.0" or row["codec"] != MODULE_CODEC or row["api"] != api:
         raise ModuleObservationError("INVALID_MODULE_PRIMARY")
     if (
         row["source_sha256"] != hashlib.sha256(source).hexdigest()
@@ -2810,6 +3086,7 @@ def verify_module_inventory_observation(
             "source_sha256",
             "inventory_sha256",
             "functions",
+            "enum_declarations",
             "primary",
             "roots",
             "root_cases",
@@ -2824,6 +3101,7 @@ def verify_module_inventory_observation(
     primary = row["primary"]
     if (
         not isinstance(primary, dict)
+        or primary.get("codec") != MODULE_CODEC
         or primary.get("cases") != expected_cases
         or not _module_meaningful(expected_cases)
     ):
@@ -2833,6 +3111,7 @@ def verify_module_inventory_observation(
     if not isinstance(row["executions"], list):
         raise ModuleObservationError("INVALID_MODULE_EXECUTIONS")
     root_cases = _module_root_cases(row["root_cases"], expected_root_cases, len(row["executions"]))
+    _module_case_values(root_cases, path, inventory["enum_declarations"])
     executions = _module_executions(row["executions"], primary, root_cases, roots)
     if not isinstance(row["calls"], list) or not 1 <= len(row["calls"]) <= MODULE_MAX_CALLS:
         raise ModuleObservationError("INVALID_MODULE_CALLS")
