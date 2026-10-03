@@ -177,6 +177,9 @@ def main() -> int:
             raise ordinary.ObserverError("OBSERVER_DRIVER_INVALID")
         roots = ordinary.json.loads(arguments.module_roots)
         result = observe_module(Path("/target"), arguments.api, driver, roots)
+    except module_observation.ModuleObservationError as error:
+        print(ordinary.canonical_bytes({"schema_version": "1.0", "error": str(error)}).decode())
+        return 2
     except Exception as error:
         print(
             ordinary.canonical_bytes(

@@ -130,6 +130,91 @@ def _grant(result: dict[str, Any]) -> dict[str, Any]:
     return grant
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux"
+    or os.environ.get("GITHUB_ACTIONS") != "true"
+    or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="Actual schema-4 collector proof requires native Linux GitHub-hosted Actions.",
+)
+def test_native_hosted_module_collector_and_unaccounted_body_rejections(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Real trusted container route; unit result wrappers are not adoption attestations."""
+    hosted = legacy.hosted_characterization
+    hosted._require_hosted_runner()
+    image_id = hosted._prepare_container()
+    fixture = _fixture(tmp_path)
+    repository, base_sha, head_sha, base, head = fixture
+    baseline = tmp_path / "actual-absent-side"
+    legacy._git(repository, "worktree", "add", "--detach", str(baseline), base_sha)
+    scenario = next(row for row in gate._manifest(repository, head_sha, []).scenarios if row.api)
+    actual_base = hosted._scenario_capture(baseline, repository, head_sha, scenario, "python", [])
+    actual_head = hosted._scenario_capture(repository, repository, head_sha, scenario, "python", [])
+    assert actual_base["api_observation"] == {"api": birth.API, "state": "ABSENT"}
+    assert actual_head["exit_code"] == 0 and actual_head["error"] is None
+    assert actual_head["deterministic"] is True
+    assert actual_head["behavior"] == witness.CASES
+    observation = actual_head["api_observation"]["module_witness"]
+    gate.verify_module_observation(
+        witness.SOURCE,
+        "src/introduced.py",
+        birth.API,
+        observation,
+        witness.CASES,
+        witness.ROOT_CASES,
+    )
+    for capture, row in ((base, actual_base), (head, actual_head)):
+        capture["scenarios"] = [
+            row if current["id"] == scenario.id else current for current in capture["scenarios"]
+        ]
+        birth._fingerprint(capture)
+    result = birth._verify(tmp_path, fixture)
+    assert result["overall_result"] == "PASS", result["policy_blocks"]
+    legacy._validate_round_trip(result)
+    assert birth._s6(fixture, result, [_grant(result)])["overall_result"] == "PASS"
+    rejected = []
+    for source, error in (
+        (
+            b"def calculate(value):\n    values = (\n        value * 2\n        for _ in range(1)\n    )\n    return sum(values)\n",
+            "UNSUPPORTED_MODULE_GENERATOR_EXPRESSION",
+        ),
+        (
+            b"type Value = int\n\ndef calculate(value):\n    return value * 2\n",
+            "UNSUPPORTED_MODULE_COMPILED_FUNCTION",
+        ),
+    ):
+        target = tmp_path / error
+        legacy._write(target / "src/introduced.py", source.decode())
+        row = hosted._run_driver(
+            target,
+            repository,
+            scenario,
+            "python",
+            b"from introduced import calculate\ncalculate(1)\ncalculate(2)\n",
+        )
+        assert row["exit_code"] == 2 and row["behavior"] is None
+        expected_stdout = gate._canonical({"schema_version": "1.0", "error": error}) + b"\n"
+        assert row["stdout_sha256"] == birth._sha(expected_stdout)
+        rejected.append({"error": error, "stdout_sha256": row["stdout_sha256"]})
+    receipt = {
+        "schema_version": "native-hosted-module-witness-canary.v1",
+        "native_revision": os.environ.get("GITHUB_SHA"),
+        "native_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "container_image": hosted.quality_runner.CONTAINER_IMAGE,
+        "image_id": image_id,
+        "api": birth.API,
+        "source_sha256": observation["source_sha256"],
+        "inventory_sha256": observation["inventory_sha256"],
+        "command": actual_head["command"],
+        "two_replays_equal": actual_head["deterministic"],
+        "rejected_actual_unsupported_sources": rejected,
+        "verification_authentication": "synthetic unit wrapper; not authenticated adoption",
+        "owner_authorization": "synthetic unit grant; not an owner attestation",
+    }
+    with capsys.disabled():
+        print("NATIVE_HOSTED_MODULE_WITNESS_RECEIPT " + json.dumps(receipt, sort_keys=True))
+
+
 def test_real_synthetic_calls_pass_parser_capture_result_coverage_and_owner_join(
     tmp_path: Path,
 ) -> None:

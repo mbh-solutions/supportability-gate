@@ -2543,13 +2543,17 @@ def module_source_inventory(source: bytes, path: str) -> dict[str, Any]:
         raise ModuleObservationError("INVALID_MODULE_PATH")
     try:
         module = compile(source, "/target/" + path, "exec", dont_inherit=True, optimize=0)
-        declared = _module_functions(ast.parse(source).body)
-        if any(isinstance(node, ast.Lambda) for node in ast.walk(ast.parse(source))):
-            raise ModuleObservationError("UNSUPPORTED_MODULE_LAMBDA")
+        tree = ast.parse(source)
     except (SyntaxError, ValueError) as error:
         raise ModuleObservationError("INVALID_MODULE_SOURCE") from error
+    if any(isinstance(node, ast.GeneratorExp) for node in ast.walk(tree)):
+        raise ModuleObservationError("UNSUPPORTED_MODULE_GENERATOR_EXPRESSION")
+    if any(isinstance(node, ast.Lambda) for node in ast.walk(tree)):
+        raise ModuleObservationError("UNSUPPORTED_MODULE_LAMBDA")
+    declared = _module_functions(tree.body)
     codes = _module_codes(module)
     rows = [_module_function_row(name, node, codes) for name, node in declared]
+    _module_accounted_codes(codes, rows)
     rows.sort(key=lambda row: row["name"])
     if (
         not rows
@@ -2562,6 +2566,14 @@ def module_source_inventory(source: bytes, path: str) -> dict[str, Any]:
         "inventory_sha256": hashlib.sha256(_module_canonical(rows)).hexdigest(),
         "functions": rows,
     }
+
+
+def _module_accounted_codes(codes: list[CodeType], rows: list[dict[str, Any]]) -> None:
+    """Reject separately compiled executable function bodies absent from inventory."""
+    names = {row["name"] for row in rows}
+    # CO_NEWLOCALS distinguishes function bodies from module/class scaffolding.
+    if any(code.co_flags & 0x02 and code.co_qualname not in names for code in codes):
+        raise ModuleObservationError("UNSUPPORTED_MODULE_COMPILED_FUNCTION")
 
 
 def _module_function_row(name: str, node: ast.FunctionDef, codes: list[CodeType]) -> dict[str, Any]:

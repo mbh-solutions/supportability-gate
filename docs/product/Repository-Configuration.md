@@ -217,7 +217,8 @@ Retain a `$` behavior obligation targeting the primary API. A second `$` behavio
 target that exact source filepath. File coverage requires a complete source/function/code inventory
 and actual executable-body line witnesses linked to declared public-root executions. Calls outside
 those executions cannot supply coverage. Every declared function must be witnessed; unsupported
-async, generator, lambda or conditional function definitions fail closed. Body-line coverage is a
+async, generator, generator-expression, lambda, conditional function definitions or unaccounted
+separately compiled function bodies fail closed. Body-line coverage is a
 bounded proxy, not proof of every branch combination or semantic fidelity.
 
 The ordinary `.golden.json` remains the primary normal-return oracle, requiring at least two

@@ -118,6 +118,28 @@ def verify(value: dict, source: bytes = SOURCE, expected: object = CASES) -> Non
     )
 
 
+@pytest.mark.parametrize(
+    ("source", "error"),
+    [
+        (
+            b"def calculate(value):\n    values = (\n        value * 2\n        for _ in range(1)\n    )\n    return sum(values)\n",
+            "UNSUPPORTED_MODULE_GENERATOR_EXPRESSION",
+        ),
+        (
+            b"type Value = int\n\ndef calculate(value):\n    return value * 2\n",
+            "UNSUPPORTED_MODULE_COMPILED_FUNCTION",
+        ),
+    ],
+)
+def test_real_collector_rejects_unaccounted_executable_bodies(
+    tmp_path: Path, source: bytes, error: str
+) -> None:
+    receipt = observe(tmp_path, source, "target.calculate(1)\ntarget.calculate(2)\n")
+    assert receipt == {"error": error}
+    with pytest.raises(proof.ModuleObservationError, match=error):
+        proof.module_source_inventory(source, "observed_fixture.py")
+
+
 def test_actual_void_and_exception_bodies_link_to_public_executions(tmp_path: Path) -> None:
     receipt = observe(tmp_path)
     verify(receipt)
