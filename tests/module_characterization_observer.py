@@ -13,7 +13,7 @@ import enum
 import inspect
 import sys
 from pathlib import Path
-from types import FrameType, GetSetDescriptorType, ModuleType
+from types import CodeType, FrameType, GetSetDescriptorType, ModuleType
 from typing import Any
 
 import characterization_observer as ordinary
@@ -218,15 +218,73 @@ class _ModuleObserver(ordinary._CallObserver):
         self.witnesses: list[dict[str, Any]] = []
         self.frames: dict[int, dict[str, Any]] = {}
         self.current: int | None = None
+        self.dataclass_factory = ordinary.dataclasses._create_fn.__code__
+        self.dataclass_processor = ordinary.dataclasses._process_class.__code__
+        self.generated_codes: set[CodeType] = set()
 
     def encode(self, value: object) -> dict[str, object]:
         return _encode(value, self.root, self.path, self.inventory["enum_declarations"])
 
+    def _owns_frame(self, frame: FrameType) -> bool:
+        filename = frame.f_globals.get("__file__")
+        return (
+            frame.f_code.co_filename == self.expected.co_filename
+            or type(filename) is str
+            and filename == self.expected.co_filename
+        )
+
+    def _unaccounted_code(self) -> None:
+        self.failures.append("OBSERVER_UNACCOUNTED_CODE")
+        raise ordinary.ObserverError("OBSERVER_UNACCOUNTED_CODE")
+
+    def _declared_dataclass_factory(self, frame: FrameType) -> bool:
+        namespace = frame.f_locals.get("globals")
+        if type(namespace) is not dict or namespace.get("__file__") != self.expected.co_filename:
+            return False
+        caller = frame.f_back
+        while caller is not None and caller.f_code is not self.dataclass_processor:
+            caller = caller.f_back
+        cls = caller.f_locals.get("cls") if caller is not None else None
+        if type(cls) is not type:
+            return False
+        try:
+            ordinary._dataclass_field_names(self.source, type.__getattribute__(cls, "__qualname__"))
+        except ordinary.ObserverError:
+            return False
+        return True
+
+    def audit(self, event: str, arguments: tuple[object, ...]) -> None:
+        super().audit(event, arguments)
+        if not self.active or event not in {"compile", "exec", "code.__new__", "function.__new__"}:
+            return
+        caller = sys._getframe(1)
+        if (
+            event == "exec"
+            and caller.f_code is self.dataclass_factory
+            and self._declared_dataclass_factory(caller)
+            and type(arguments[0]) is CodeType
+        ):
+            self.generated_codes.update(ordinary._codes(arguments[0]))
+        if self._owns_frame(caller):
+            # Runtime target compilation is outside the source inventory, even
+            # with a foreign filename or an alias for the creation primitive.
+            # Standard-library dataclass generation has its own caller frame.
+            self._unaccounted_code()
+
     def trace(self, frame: FrameType, event: str, value: object) -> Any:
-        if frame.f_code.co_filename != self.expected.co_filename:
+        if not self._owns_frame(frame):
+            return None
+        if frame.f_code in self.generated_codes:
             return None
         name = frame.f_code.co_qualname
         if name not in self.functions:
+            # Only the exact compiled module/class scaffolding may be skipped.
+            # A precreated body assigned to the target namespace is also owned,
+            # including code whose filename differs from the target source.
+            if frame.f_code.co_flags & inspect.CO_NEWLOCALS or ordinary.code_sha256(
+                frame.f_code
+            ) != self.expected_codes.get(name):
+                self._unaccounted_code()
             return None
         if ordinary.code_sha256(frame.f_code) != self.expected_codes[name]:
             self.failures.append("OBSERVER_CODE_MISMATCH")

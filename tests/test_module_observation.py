@@ -631,6 +631,80 @@ def test_real_collector_rejects_unaccounted_executable_bodies(
         proof.module_source_inventory(source, "observed_fixture.py")
 
 
+def runtime_source(filename: str) -> bytes:
+    """The public answers are correct; a separately compiled body is invisible."""
+    return (
+        "def calculate(value):\n"
+        "    namespace = {}\n"
+        f"    code = compile('def hidden(item):\\n    return item * 2\\n', {filename}, 'exec')\n"
+        "    exec(code, namespace)\n"
+        "    return namespace['hidden'](value)\n"
+    ).encode()
+
+
+@pytest.mark.parametrize("filename", ["__file__", "'<string>'", "'generated.py'"])
+def test_target_runtime_compilation_cannot_hide_function_inventory(
+    tmp_path: Path, filename: str
+) -> None:
+    receipt = observe(
+        tmp_path, runtime_source(filename), "target.calculate(1)\ntarget.calculate(2)\n"
+    )
+    assert receipt == {"error": "OBSERVER_UNACCOUNTED_CODE"}
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "return eval('value * 2')",
+        "creator = compile; creator('value * 2', 'generated.py', 'eval'); return value * 2",
+        "exec('answer = value * 2'); return value * 2",
+        "return calculate.__code__.replace()",
+        "import dataclasses; return dataclasses._create_fn('hidden', ['item'], ['return item * 2'], globals=globals())(value)",
+    ],
+)
+def test_target_runtime_code_creation_fails_even_when_target_catches_error(
+    tmp_path: Path, statement: str
+) -> None:
+    source = (
+        "def calculate(value):\n"
+        "    try:\n"
+        f"        {statement}\n"
+        "    except Exception:\n"
+        "        return value * 2\n"
+    ).encode()
+    assert observe(tmp_path, source, "target.calculate(1)\ntarget.calculate(2)\n") == {
+        "error": "OBSERVER_UNACCOUNTED_CODE"
+    }
+
+
+@pytest.mark.parametrize("filename", ["target.__file__", "'generated.py'"])
+def test_precreated_uninventoried_target_code_cannot_be_ignored(
+    tmp_path: Path, filename: str
+) -> None:
+    source = b"def calculate(value):\n    return injected(value)\n"
+    driver = (
+        "import types\n"
+        f"code = compile('def hidden(item):\\n    return item * 2\\n', {filename}, 'exec')\n"
+        "body = next(item for item in code.co_consts if isinstance(item, types.CodeType))\n"
+        "target.injected = types.FunctionType(body, vars(target))\n"
+        "target.calculate(1)\ntarget.calculate(2)\n"
+    )
+    assert observe(tmp_path, source, driver) == {"error": "OBSERVER_UNACCOUNTED_CODE"}
+
+
+def test_standard_library_dataclass_generated_helpers_remain_supported(tmp_path: Path) -> None:
+    source = (
+        b"from dataclasses import dataclass\n"
+        b"@dataclass(frozen=True)\nclass Record:\n    value: int\n"
+        b"def calculate(value):\n    record = Record(value)\n    return record.value * 2\n"
+    )
+    receipt = observe(tmp_path, source, "target.calculate(1)\ntarget.calculate(2)\n")
+    proof.verify_module_observation(
+        source, "observed_fixture.py", API, receipt, CASES, ROOT_CASES[:2]
+    )
+    assert {call["function"] for call in receipt["calls"]} == {"calculate"}
+
+
 def test_actual_void_and_exception_bodies_link_to_public_executions(tmp_path: Path) -> None:
     receipt = observe(tmp_path)
     verify(receipt)
