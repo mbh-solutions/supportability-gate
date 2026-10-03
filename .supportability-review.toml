@@ -10,7 +10,7 @@ proof = "39 focused assertions cover all six TypeScript test suffixes in TypeScr
 
 [characterization]
 captured_behavior = "Before repair, 19 assertions fail: .mjs/.cjs evidence is rejected and mixed adapters falsely require other-language coverage. Twenty negative or compatible outcomes already hold."
-proof = "Retain pre-fix failures and all existing golden bytes. Strengthen the existing gate-policy driver with literal covered/uncovered expectations valid on both base/head, and add its required behavior obligation. Run complete source and protected characterization suites."
+proof = "Retain pre-fix failures and all existing characterization assets. Add a source-bound driver with three independently specified literal covered/uncovered outcomes valid on both base/head and its required behavior obligation. Run complete source and protected characterization suites."
 
 [separation_of_concerns]
 before = "The consumer duplicates a source-only suffix list for tests. The coverage policy applies every mixed adapter to both languages."
@@ -23,7 +23,7 @@ boundaries = [
 
 [architecture]
 dependency_direction = "Standard composition already depends on quality_profile. Gate policy retains its contract/source classification dependencies. Target execution remains inside fixed hosted runners."
-reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/gate_policy.py", "src/supportability_gate/standard_results.py", "tests/characterization/gate-policy-mixed-compatibility.characterization.py", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
+reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/gate_policy.py", "src/supportability_gate/standard_results.py", "tests/characterization/gate-policy-retained-coverage.characterization.py", "tests/characterization/gate-policy-retained-coverage.golden.json", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/gate_policy.py"

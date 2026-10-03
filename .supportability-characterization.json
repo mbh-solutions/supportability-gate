@@ -73,7 +73,7 @@
     {
       "category": "behavior",
       "id": "gate-policy-retained-coverage",
-      "scenario": "gate-policy-mixed-compatibility",
+      "scenario": "gate-policy-retained-coverage",
       "selector": "$",
       "target": "src/supportability_gate/gate_policy.py"
     },
@@ -248,6 +248,13 @@
         "src/supportability_gate/gate_policy.py"
       ],
       "id": "gate-policy-mixed-compatibility",
+      "kind": "regression"
+    },
+    {
+      "covers": [
+        "src/supportability_gate/gate_policy.py"
+      ],
+      "id": "gate-policy-retained-coverage",
       "kind": "regression"
     },
     {

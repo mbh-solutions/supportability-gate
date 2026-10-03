@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import replace
 
-from supportability_gate import contract, function_changes, gate_policy, git_changes
+from supportability_gate import contract, gate_policy
 
 PYTHON_POLICY = """schema_version = "1.0"
 language = "python"
@@ -54,32 +53,10 @@ maximum = 10""",
 
 def main() -> None:
     python = contract.parse_contract(PYTHON_POLICY.encode())
-    changed = function_changes.ChangedFileAssessment(
-        git_changes.ChangedPath("MODIFIED", "src/sample.py", "src/sample.py"),
-        True,
-        True,
-        True,
-        (1,),
-    )
-    if gate_policy.evaluate_contract(python, (changed,)):
-        raise RuntimeError("covered Python source was rejected")
-    uncovered = replace(
-        python,
-        gates=tuple(
-            replace(gate, paths=("other",)) if gate.adapter == "python.ruff-lint.v1" else gate
-            for gate in python.gates
-        ),
-    )
-    if gate_policy.evaluate_contract(uncovered, (changed,)) != (
-        "CHANGED_FILE_GATE_COVERAGE:python.ruff-lint.v1:src/sample.py",
-    ):
-        raise RuntimeError("uncovered Python source was accepted")
     if gate_policy.contract_change_blocks(python, python):
         raise RuntimeError("stable Python profile was narrowed")
     if "mixed" in gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE:
         mixed = contract.parse_contract(MIXED_POLICY.encode())
-        if gate_policy.evaluate_contract(mixed, (changed,)):
-            raise RuntimeError("covered mixed source was rejected")
         expected = set(gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE["python"]) | set(
             gate_policy.APPROVED_ADAPTERS_BY_LANGUAGE["typescript"]
         )
