@@ -334,7 +334,17 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
         "python",
         ("import introduced as target\n" + witness.TYPED_DRIVER).encode(),
     )
-    assert typed["exit_code"] == 0 and typed["error"] is None and typed["deterministic"] is True
+    typed_replay = hosted._run_driver(
+        typed_target,
+        repository,
+        typed_scenario,
+        "python",
+        ("import introduced as target\n" + witness.TYPED_DRIVER).encode(),
+    )
+    assert typed["exit_code"] == 0 and typed["error"] is None
+    assert typed_replay["exit_code"] == 0 and typed_replay["error"] is None
+    typed_replays_equal = typed == typed_replay
+    assert typed_replays_equal
     typed_observation = typed["api_observation"]["module_witness"]
     typed_cases, typed_roots = witness.typed_oracles("src/introduced.py", "introduced")
     assert typed_observation["primary"]["cases"] == typed_cases
@@ -430,7 +440,7 @@ def test_native_hosted_module_collector_and_unaccounted_body_rejections(
         "two_replays_equal": actual_head["deterministic"],
         "rejected_actual_unsupported_sources": rejected,
         "codec2_actual_command": typed["command"],
-        "codec2_two_replays_equal": typed["deterministic"],
+        "codec2_two_replays_equal": typed_replays_equal,
         "codec2_source_sha256": typed_observation["source_sha256"],
         "codec2_inventory_sha256": typed_observation["inventory_sha256"],
         "codec2_hook_rejection_stdout_sha256": hook["stdout_sha256"],
