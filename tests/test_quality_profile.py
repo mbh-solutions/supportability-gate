@@ -256,6 +256,15 @@ def test_missing_required_command_blocks() -> None:
     )
 
 
+def test_failed_fixed_command_prefix_does_not_report_unexecuted_suffix_as_missing() -> None:
+    commands = (_commands()[0], replace(_commands()[1], exit_code=1))
+
+    blocks = _blocks(_evidence(commands=commands))
+
+    assert "QUALITY_GATE_FAILED:python.ruff-format.v1" in blocks
+    assert not any(block.startswith("MISSING_QUALITY_COMMAND:") for block in blocks)
+
+
 def test_architecture_policy_exit_emits_gate_three_evidence() -> None:
     commands = tuple(
         replace(item, exit_code=1) if item.adapter == "python.import-linter.v1" else item

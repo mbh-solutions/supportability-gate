@@ -1496,13 +1496,30 @@ def _command_blocks(
     changed_paths: tuple[str, ...],
     high_risk_paths: tuple[str, ...],
 ) -> list[str]:
-    expected = dict(command_templates(policy.language))
+    templates = command_templates(policy.language)
+    expected = dict(templates)
     commands = {item.adapter: item for item in evidence.commands}
     if len(commands) != len(evidence.commands):
         raise QualityProfileError("DUPLICATE_QUALITY_COMMAND", "duplicate quality command")
-    blocks = [
-        f"MISSING_QUALITY_COMMAND:{adapter}" for adapter in expected if adapter not in commands
-    ]
+    expected_order = tuple(adapter for adapter, _arguments in templates)
+    observed_order = tuple(item.adapter for item in evidence.commands)
+    blocked_prefix = (
+        bool(evidence.commands)
+        and observed_order == expected_order[: len(observed_order)]
+        and contract.command_failed(
+            policy.language,
+            evidence.commands[-1].adapter,
+            evidence.commands[-1].executed,
+            evidence.commands[-1].exit_code,
+        )
+    )
+    blocks = (
+        []
+        if blocked_prefix
+        else [
+            f"MISSING_QUALITY_COMMAND:{adapter}" for adapter in expected if adapter not in commands
+        ]
+    )
     blocks.extend(
         f"UNAPPROVED_QUALITY_COMMAND:{adapter}" for adapter in sorted(set(commands) - set(expected))
     )

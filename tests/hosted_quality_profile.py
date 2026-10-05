@@ -15,6 +15,7 @@ import tempfile
 import tomllib
 import traceback
 import zipfile
+from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path, PurePosixPath
 
@@ -877,6 +878,23 @@ def _record_command_provenance(
     )
 
 
+def _run_until_required_command_fails(
+    language: str,
+    plans: tuple[tuple[quality_runner.CommandPlan, quality_runner.CommandPlan], ...],
+    execute: Callable[
+        [quality_runner.CommandPlan, quality_runner.CommandPlan], quality_profile.GateResult
+    ],
+) -> tuple[quality_profile.GateResult, ...]:
+    """Stop once the fixed profile has enough evidence to block Gate 7."""
+    results: list[quality_profile.GateResult] = []
+    for plan, public_plan in plans:
+        result = execute(plan, public_plan)
+        results.append(result)
+        if contract.command_failed(language, result.adapter, result.executed, result.exit_code):
+            break
+    return tuple(results)
+
+
 def _run_command(
     plan: quality_runner.CommandPlan,
     repository: Path,
@@ -1325,8 +1343,10 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         plans = quality_runner.command_plans(
             policy.language, execution_target, supervisor, test_files, source_files
         )
-        results = tuple(
-            _run_command(
+        results = _run_until_required_command_fails(
+            policy.language,
+            tuple(zip(plans, public_plans, strict=True)),
+            lambda plan, public_plan: _run_command(
                 plan,
                 target,
                 supervisor,
@@ -1339,8 +1359,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
                 execution_target,
                 public_plan,
                 runtime_targets,
-            )
-            for plan, public_plan in zip(plans, public_plans, strict=True)
+            ),
         )
         python_runtime, node_runtime, dependencies = _runtime_receipts(
             policy.language, execution_target, supervisor

@@ -19,7 +19,7 @@ flowchart TB
     A --> E
     E --> Z[Bundle build and offline restore]
     Z --> R[standard-results.v3 authoritative upload]
-    R --> L[Eight independently enforced rows]
+    R --> L[One publisher enforces eight named rows]
     L --> G[Organization ruleset protected merge]
     I[Independent Gate-source integrity guard] -. protects .-> P
 ```
@@ -37,8 +37,9 @@ flowchart TB
 4. **Authentication:** output becomes qualified evidence only through defined identity, provenance,
    receipt, coverage, and artifact validation. Raw target output is not self-authenticating.
 5. **Composition and enforcement:** one canonical result contains eight independently owned rows.
-   Separate jobs enforce each row against the exact artifact. GitHub owns branch protection and
-   the final protected merge path.
+   One trusted publisher job validates the exact artifact, enforces every row, and publishes eight
+   separately named required checks. GitHub owns branch protection and the final protected merge
+   path.
 6. **Source protection:** an independently pinned Source Integrity workflow protects the Gate's
    immutable inputs and source qualification controls. Candidate-controlled tests do not supply
    its trusted conformance fixture.

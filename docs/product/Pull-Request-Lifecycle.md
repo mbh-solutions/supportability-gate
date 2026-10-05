@@ -5,7 +5,7 @@ sequenceDiagram
     participant A as Author
     participant H as Hosted captures and quality
     participant E as Evidence composer
-    participant G as Eight required checks
+    participant G as Required-check publisher
     participant R as GitHub ruleset
     A->>H: Pull request with exact base and head
     H->>H: Capture base and head twice and run fixed checks
@@ -13,7 +13,8 @@ sequenceDiagram
     E->>E: Static evaluation and canonical composition
     E->>E: Build and restore offline evidence bundle
     E-->>G: Exact standard-results.v3 artifact
-    G-->>R: Independently enforced lane results
+    G->>G: Enforce all eight rows on one runner
+    G-->>R: Eight independently named lane results
     R-->>A: Permit merge when required checks and threads pass
 ```
 
@@ -35,8 +36,9 @@ sequenceDiagram
    The composer produces eight rows in `standard-results.v3` and a derived review handoff.
 6. **Retain a restorable bundle.** The evidence job builds a compact qualification bundle and
    validates restoration with networking disabled before authoritative upload succeeds.
-7. **Inspect each required lane.** Independent jobs enforce one row each from the authoritative
-   artifact. Read the owning violation or original technical cause rather than counting red checks.
+7. **Inspect each required lane.** One trusted publisher enforces every row from the authoritative
+   artifact and creates the eight independently named required checks. A blocking row makes the
+   publisher job fail after all eight results are posted, without allocating eight more runners.
 8. **Merge normally.** All required checks must bind to the final head and all actual inline
    conversations must satisfy GitHub's native resolution rule. Source-repository protections apply
    additionally when the change is to the Gate itself.
