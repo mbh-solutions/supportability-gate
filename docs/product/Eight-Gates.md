@@ -86,8 +86,10 @@ trusted-owner boundary are in [Refactor Authorization](Refactor-Authorization.md
 
 **Enforcement and evidence:** authenticated command outcomes, source/dependency receipts, observed
 coverage, and deterministic anti-weakening decisions. Python and TypeScript select closed quality
-profiles; mixed repositories run both. Required changed and high-risk responsibilities must have
-the specified proof. Supported blanket suppressions cannot silently create covered PASS.
+profiles; mixed repositories run both. The fixed command sequence stops after its first blocking
+command because later commands cannot restore PASS; the authenticated failed prefix remains the
+authoritative result. Required changed and high-risk responsibilities must have the specified
+proof. Supported blanket suppressions cannot silently create covered PASS.
 
 **Example failure:** tests pass while a high-risk responsibility remains unobserved, or contract
 scope is narrowed around changed code. **Limit:** this is the fixed admitted profile, not arbitrary

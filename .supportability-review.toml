@@ -1,45 +1,42 @@
 schema_version = "1.0"
 module_boundaries = [
-  { basis = "responsibility", justification = "Existing owner of fixed adapters, declared coverage and contract anti-weakening.", owner_path = "src/supportability_gate/gate_policy.py", path = "src/supportability_gate/gate_policy.py" },
-  { basis = "responsibility", justification = "Existing owner of authenticated Standard composition and exact quality argument binding.", owner_path = "src/supportability_gate/standard_results.py", path = "src/supportability_gate/standard_results.py" },
+  { basis = "responsibility", justification = "Existing owner of authenticated quality evidence and deterministic command-failure interpretation.", owner_path = "src/supportability_gate/quality_profile.py", path = "src/supportability_gate/quality_profile.py" },
 ]
 
 [behavior]
-intended_behavior = "Bind admitted TypeScript module tests to their actual commands and require mixed adapter coverage for its admitted source language. Preserve exact manifests, own-language coverage, unclassified file obligations, both Git sides and contract anti-weakening."
-proof = "39 focused assertions cover all six TypeScript test suffixes in TypeScript and mixed profiles, missing/extra/substituted/foreign test arguments, all seven mixed adapters, admitted source suffixes, renames/deletions and unclassified assets. Native qualification must confirm valid profiles pass and genuine defects remain BLOCK."
+intended_behavior = "Stop the fixed quality sequence after its first required command failure because Gate 7 is already blocked. Preserve the authenticated failed prefix, all complete-profile behavior on success, the eight independently named Standard results and fail-closed publication."
+proof = "Focused tests prove the runner stops at the first failure, a failed exact prefix reports its actual quality block without false missing-command noise, a successful incomplete prefix remains blocked, and each published check uses the exact fixed context and current head. Full source proof and hosted qualification must cover successful and failing consumers."
 
 [characterization]
-captured_behavior = "Before repair, 19 assertions fail: .mjs/.cjs evidence is rejected and mixed adapters falsely require other-language coverage. Twenty negative or compatible outcomes already hold."
-proof = "Retain pre-fix failures and all existing characterization assets. Add a source-bound driver with three independently specified literal covered/uncovered outcomes valid on both base/head and its required behavior obligation. Run complete source and protected characterization suites."
+captured_behavior = "The deployed profile runs every remaining command after an early required failure and then allocates eight runner jobs to enforce already-composed rows. Existing successful profiles execute the complete fixed sequence and each Standard retains independent result ownership."
+proof = "Extend the retained meaningful-behavior scenario with failed-prefix and successful-incomplete-prefix cases. Preserve all prior golden behavior and qualify exact published check identities on GitHub."
 
 [separation_of_concerns]
-before = "The consumer duplicates a source-only suffix list for tests. The coverage policy applies every mixed adapter to both languages."
-after = "Command binding uses existing source/test definitions. A responsibility-named selector excludes only admitted other-language source; coverage decisions and anti-weakening remain in the existing policy owner."
+before = "One quality collector gathers useful failure evidence but continues work that cannot restore PASS. Eight identical runner setups each download the same artifact to enforce one already-composed row."
+after = "The quality collector stops only after an authenticated required-command failure. One trusted publisher validates every row from the same artifact and emits the existing eight required contexts through the GitHub Checks API."
 boundaries = [
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "_adapter_coverage_paths", before = "Mixed adapters share unfiltered file obligations.", after = "Select applicable obligations; unknown files and single profiles retain prior scope." },
-  { path = "src/supportability_gate/gate_policy.py", kind = "function", symbol = "evaluate_contract", before = "Every adapter must cover every changed/high-risk file in either language.", after = "Apply unchanged coverage failures to each adapter's applicable source paths." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_quality_argv", before = "Local source suffixes discard admitted .mjs/.cjs tests.", after = "Reuse distinct fixed source/test suffixes with exact executed argument checks." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_command_blocks", before = "Every omitted adapter is reported missing even when an earlier required command already blocked the fixed sequence.", after = "Accept only an exact failed command prefix as sufficient blocking evidence; successful or non-prefix omissions remain missing-command failures." },
 ]
 
 [architecture]
-dependency_direction = "Standard composition already depends on quality_profile. Gate policy retains its contract/source classification dependencies. Target execution remains inside fixed hosted runners."
-reviewed_paths = [".supportability-characterization.json", ".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/gate_policy.py", "src/supportability_gate/standard_results.py", "tests/characterization/gate-policy-retained-coverage.characterization.py", "tests/characterization/gate-policy-retained-coverage.golden.json", "tests/test_evaluate_complexity.py", "tests/test_standard_results.py"]
+dependency_direction = "The hosted collector still depends on fixed quality policy and runner plans. The workflow-only publisher depends on the existing Standard result contexts and GitHub Checks API; production decision modules do not depend on hosted integration code."
+reviewed_paths = [".github/workflows/organization-required.yml", ".supportability-characterization.json", ".supportability-review.toml", "docs/product/Architecture.md", "docs/product/Eight-Gates.md", "docs/product/Pull-Request-Lifecycle.md", "src/supportability_gate/quality_profile.py", "tests/characterization/s05-meaningful-behavior.characterization.py", "tests/characterization/s05-meaningful-behavior.golden.json", "tests/hosted_check_publisher.py", "tests/hosted_quality_profile.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/gate_policy.py"
-owns = "Fixed adapter identity, applicable declared coverage and deterministic contract anti-weakening."
-does_not_own = "Target execution, command evidence generation, characterization, owner authorization or semantic certification."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Authenticated fixed quality evidence, exact command sequence validation and deterministic Gate 7 blocks."
+does_not_own = "GitHub runner allocation, check-run publication, characterization execution, owner authorization or semantic certification."
 
 [incremental_refactor]
-target = "Repair the two Gate 7 qualification failures independently of the runtime inventory repair."
-completed_step = "Align argument binding with admitted tests and mixed coverage with fixed language adapters, retaining meaningful positive/negative regressions and product documentation."
+target = "Remove avoidable latency after a required quality failure without weakening any Standard decision or required context."
+completed_step = "Short-circuit the fixed command suffix after a blocking command and consolidate eight row-enforcement runners into one trusted required-check publisher."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Adapter coverage paths names the exact selection responsibility; existing fixed profile definitions still own source/test suffixes."
-cohesion = "Coverage selection stays in gate_policy; argument binding stays in standard_results and reuses quality_profile."
-intended_behavior = "Admitted module tests and split language scopes pass. Missing/wrong arguments, own-language gaps, threshold changes and candidate narrowing still fail closed."
-reviewability = "Two small production edits with 39 focused assertions, retained pre-fix failures and preserved historical oracles; native qualification binds outcomes to actual execution."
+naming = "The failed-prefix helper and hosted check publisher name the two exact orchestration responsibilities."
+cohesion = "Quality decision semantics remain in quality_profile; hosted command control remains in the hosted collector; GitHub publication remains in a workflow-only hosted script."
+intended_behavior = "Known required-command failures become visible without running commands that cannot restore PASS. Clean profiles still run completely, and every protected Standard context remains independently published."
+reviewability = "One policy function, one hosted execution helper, one small publisher and one workflow fan-in replace redundant work with focused positive, negative and exact-context tests."

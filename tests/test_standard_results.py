@@ -6,7 +6,6 @@ import importlib.util
 import json
 import os
 import pkgutil
-import re
 import subprocess
 import sys
 from dataclasses import replace
@@ -4725,6 +4724,121 @@ def _hosted_quality_profile_module() -> Any:
     return module
 
 
+def _hosted_check_publisher_module() -> Any:
+    path = Path(__file__).with_name("hosted_check_publisher.py")
+    spec = importlib.util.spec_from_file_location("hosted_check_publisher", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_hosted_quality_profile_stops_after_first_required_command_failure() -> None:
+    hosted = _hosted_quality_profile_module()
+    plans = tuple(
+        quality_runner.CommandPlan(adapter, (adapter,), (adapter,), "explicit-source", ())
+        for adapter in (
+            "python.ruff-lint.v1",
+            "python.ruff-format.v1",
+            "python.c901-touched.v1",
+        )
+    )
+    executed: list[str] = []
+
+    def execute(
+        plan: quality_runner.CommandPlan, public_plan: quality_runner.CommandPlan
+    ) -> quality_profile.GateResult:
+        assert plan == public_plan
+        executed.append(plan.adapter)
+        return quality_profile.GateResult(
+            plan.adapter,
+            plan.evidence,
+            plan.proof_kind,
+            (),
+            (),
+            True,
+            int(plan.adapter == "python.ruff-format.v1"),
+            "a" * 64,
+            "b" * 64,
+            "c" * 64,
+            plan.actual,
+        )
+
+    results = hosted._run_until_required_command_fails(
+        "python", tuple((plan, plan) for plan in plans), execute
+    )
+
+    assert executed == ["python.ruff-lint.v1", "python.ruff-format.v1"]
+    assert [item.adapter for item in results] == executed
+
+
+def test_hosted_check_publisher_posts_exact_required_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hosted = _hosted_check_publisher_module()
+    summary = tmp_path / "result.json"
+    summary.write_text('{"result":"BLOCK"}\n', encoding="utf-8", newline="\n")
+    observed: dict[str, object] = {}
+
+    class Response:
+        status = 201
+
+        def __enter__(self) -> Response:
+            return self
+
+        def __exit__(self, *_arguments: object) -> None:
+            return None
+
+        def read(self, _amount: int = -1) -> bytes:
+            return b'{"id":12345}'
+
+    def open_request(request: object, timeout: int) -> Response:
+        observed["request"] = request
+        observed["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setattr(hosted.urllib.request, "urlopen", open_request)
+
+    assert (
+        hosted.main(
+            [
+                "--repository",
+                "example/repository",
+                "--head-sha",
+                "a" * 40,
+                "--run-id",
+                "456",
+                "--run-attempt",
+                "2",
+                "--standard",
+                "7",
+                "--result-exit-code",
+                "1",
+                "--summary",
+                str(summary),
+            ]
+        )
+        == 0
+    )
+    request: Any = observed["request"]
+    payload = json.loads(request.data)
+    assert request.full_url == "https://api.github.com/repos/example/repository/check-runs"
+    assert observed["timeout"] == 30
+    assert payload == {
+        "name": "Supportability 7 - Quality Gates",
+        "head_sha": "a" * 40,
+        "status": "completed",
+        "conclusion": "failure",
+        "external_id": "supportability:456:2:7",
+        "details_url": "https://github.com/example/repository/actions/runs/456",
+        "output": {
+            "title": "Supportability 7 - Quality Gates",
+            "summary": '{"result":"BLOCK"}\n',
+        },
+    }
+
+
 def _hosted_characterization_module() -> Any:
     path = Path(__file__).with_name("hosted_characterization.py")
     spec = importlib.util.spec_from_file_location("s01_hosted_characterization", path)
@@ -5179,8 +5293,7 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     ).read_text(encoding="utf-8")
     quality = _job("quality-profile", "deterministic-evidence")
     evidence = _job("deterministic-evidence", "standard-results")
-    matrix = _job("standard-results", "supportability-gate")
-    gate = _job("supportability-gate", None)
+    publisher = _job("standard-results", None)
     packaged_modules = {
         module.name for module in pkgutil.iter_modules(supportability_gate.__path__)
     }
@@ -5242,19 +5355,16 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     assert "@codex review" not in workflow
     assert "supportability_gate.codex_review" not in workflow
     assert {"codex_review", "focused_review"}.isdisjoint(packaged_modules)
-    rows = re.findall(r"(?m)^          - standard: ([1-8])\n            context: (.+)$", matrix)
-    assert rows == [
-        (str(standard), context)
-        for standard, context in enumerate(standard_results.CHECK_CONTEXTS, start=1)
-    ]
-    assert "fail-fast: false" in matrix
-    assert "python -P -m supportability_gate.standard_results_enforcer" in matrix
-    assert '--complexity-result "$RUNNER_TEMP/evidence/complexity-result.json"' in matrix
-    assert '--quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json"' in matrix
-    assert "if: always()" in matrix
-    assert "name: Supportability Gate" in gate
-    assert "standard-results" in gate
-    assert "STANDARD_RESULTS_RESULT: ${{ needs.standard-results.result }}" in gate
-    assert "OBSERVER_RESULT" not in gate
-    assert "COLLECTOR_RESULT" not in gate
-    assert "REVIEW_REQUIRED" not in gate
+    assert "name: Publish Supportability Results" in publisher
+    assert "checks: write" in publisher
+    assert "for standard in 1 2 3 4 5 6 7 8" in publisher
+    assert "python -P -m supportability_gate.standard_results_enforcer" in publisher
+    assert 'hosted_check_publisher.py"' in publisher
+    assert '--complexity-result "$RUNNER_TEMP/evidence/complexity-result.json"' in publisher
+    assert '--quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json"' in publisher
+    assert "if: always()" in publisher
+    assert "supportability-gate:" not in workflow
+    assert "matrix.context" not in workflow
+    assert "OBSERVER_RESULT" not in publisher
+    assert "COLLECTOR_RESULT" not in publisher
+    assert "REVIEW_REQUIRED" not in publisher

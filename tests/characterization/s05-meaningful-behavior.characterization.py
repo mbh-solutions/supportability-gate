@@ -5,6 +5,7 @@ import json
 import tempfile
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 from supportability_gate import (
     characterization,
@@ -62,6 +63,33 @@ def _bundle_restore_cases() -> list[dict[str, object]]:
             _case("archive without manifest", _restore_error(missing)),
             _case("archive with parent traversal", _restore_error(traversal)),
         ]
+
+
+def _quality_result(adapter: str, exit_code: int) -> quality_profile.GateResult:
+    arguments = dict(quality_profile.command_templates("python"))[adapter]
+    return quality_profile.GateResult(
+        adapter,
+        arguments,
+        quality_profile.expected_proof_kind(adapter),
+        (),
+        (),
+        True,
+        exit_code,
+        "a" * 64,
+        "b" * 64,
+        "c" * 64,
+        arguments,
+    )
+
+
+def _quality_prefix_blocks(exit_code: int) -> list[str]:
+    commands = (
+        _quality_result("python.ruff-lint.v1", 0),
+        _quality_result("python.ruff-format.v1", exit_code),
+    )
+    evidence = SimpleNamespace(commands=commands)
+    policy = SimpleNamespace(language="python", languages=("python",))
+    return quality_profile._command_blocks(evidence, policy, (), ())
 
 
 def main() -> None:
@@ -148,6 +176,10 @@ def main() -> None:
                 ["unstructured"],
                 list(quality_profile.suppression_policy_blocks(("unstructured",))),
             ),
+        ],
+        "quality-required-command-prefix": [
+            _case("failed fixed prefix", _quality_prefix_blocks(1)),
+            _case("successful incomplete prefix", _quality_prefix_blocks(0)),
         ],
         "result-identity": [
             _case(

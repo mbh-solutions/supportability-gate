@@ -579,31 +579,15 @@ jobs:
           exit "$status"
 
   standard-results:
-    name: ${{ matrix.context }}
+    name: Publish Supportability Results
     needs: deterministic-evidence
     if: always()
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - standard: 1
-            context: Supportability 1 - Cyclomatic Complexity
-          - standard: 2
-            context: Supportability 2 - Separation of Concerns
-          - standard: 3
-            context: Supportability 3 - Dependency Direction
-          - standard: 4
-            context: Supportability 4 - Domain Modularity
-          - standard: 5
-            context: Supportability 5 - Characterization
-          - standard: 6
-            context: Supportability 6 - Incremental Refactor
-          - standard: 7
-            context: Supportability 7 - Quality Gates
-          - standard: 8
-            context: Supportability 8 - Review Handoff
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      actions: read
+      checks: write
+      contents: read
     steps:
       - name: Check out exact gate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -620,61 +604,61 @@ jobs:
 
       - name: Download exact authoritative evidence artifact
         id: download
+        if: needs.deterministic-evidence.outputs.artifact-id != ''
         continue-on-error: true
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           artifact-ids: ${{ needs.deterministic-evidence.outputs.artifact-id }}
           path: ${{ runner.temp }}/evidence
 
-      - name: Enforce one Standard result
+      - name: Enforce and publish all Standard results
         if: always()
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PYTHONPATH: ${{ github.workspace }}/gate/src
-          STANDARD: ${{ matrix.standard }}
         run: |
-          if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
-            echo "MISSING_STANDARD_RESULTS_ARTIFACT"
-            printf '%s\n' '### Supportability result: TECHNICAL_FAILURE' '' \
-              '`MISSING_STANDARD_RESULTS_ARTIFACT`' \
-              'Diagnosis unavailable: the authoritative artifact could not be downloaded.' \
-              >> "$GITHUB_STEP_SUMMARY" || echo "Job summary unavailable." >&2
-            exit 2
-          fi
-          python -P -m supportability_gate.standard_results_enforcer \
-            --repository "$GITHUB_REPOSITORY" \
-            --repository-id "$GITHUB_REPOSITORY_ID" \
-            --base-sha "$BASE_SHA" \
-            --head-sha "$HEAD_SHA" \
-            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
-            --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --input "$RUNNER_TEMP/evidence/standard-results.json" \
-            --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
-            --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
-            --standard "$STANDARD" \
-            --github-summary
-
-  supportability-gate:
-    name: Supportability Gate
-    needs: [deterministic-evidence, standard-results]
-    if: always()
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Enforce deterministic lanes
-        env:
-          ARTIFACT_DIGEST: ${{ needs.deterministic-evidence.outputs.artifact-digest }}
-          ARTIFACT_ID: ${{ needs.deterministic-evidence.outputs.artifact-id }}
-          DETERMINISTIC_RESULT: ${{ needs.deterministic-evidence.result }}
-          STANDARD_RESULTS_RESULT: ${{ needs.standard-results.result }}
-        run: |
-          status=0
-          for result in "$DETERMINISTIC_RESULT" "$STANDARD_RESULTS_RESULT"; do
-            if [ "$result" != "success" ]; then status=1; fi
+          set +e
+          overall=0
+          mkdir -p "$RUNNER_TEMP/results"
+          for standard in 1 2 3 4 5 6 7 8; do
+            result="$RUNNER_TEMP/results/standard-$standard.txt"
+            if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
+              printf '%s\n' 'MISSING_STANDARD_RESULTS_ARTIFACT' > "$result"
+              result_status=2
+            else
+              python -P -m supportability_gate.standard_results_enforcer \
+                --repository "$GITHUB_REPOSITORY" \
+                --repository-id "$GITHUB_REPOSITORY_ID" \
+                --base-sha "$BASE_SHA" \
+                --head-sha "$HEAD_SHA" \
+                --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+                --run-id "$GITHUB_RUN_ID" \
+                --run-attempt "$GITHUB_RUN_ATTEMPT" \
+                --input "$RUNNER_TEMP/evidence/standard-results.json" \
+                --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
+                --quality-provenance "$RUNNER_TEMP/evidence/quality-provenance.json" \
+                --standard "$standard" \
+                --github-summary \
+                > "$result"
+              result_status=$?
+            fi
+            cat "$result"
+            python -P "$GITHUB_WORKSPACE/gate/tests/hosted_check_publisher.py" \
+              --repository "$GITHUB_REPOSITORY" \
+              --head-sha "$HEAD_SHA" \
+              --run-id "$GITHUB_RUN_ID" \
+              --run-attempt "$GITHUB_RUN_ATTEMPT" \
+              --standard "$standard" \
+              --result-exit-code "$result_status" \
+              --summary "$result"
+            publish_status=$?
+            if [ "$publish_status" -ne 0 ]; then
+              overall=2
+            elif [ "$result_status" -ne 0 ] && [ "$overall" -eq 0 ]; then
+              overall=1
+            fi
           done
-          if ! [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then status=1; fi
-          if ! [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]]; then status=1; fi
-          exit "$status"
+          exit "$overall"
