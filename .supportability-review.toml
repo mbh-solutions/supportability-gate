@@ -5,11 +5,11 @@ module_boundaries = [
 
 [behavior]
 intended_behavior = "Stop the fixed quality sequence after its first required command failure because Gate 7 is already blocked. Preserve the authenticated failed prefix, all complete-profile behavior on success, the eight independently named Standard results and fail-closed publication."
-proof = "Focused tests prove the runner stops at the first failure, a failed exact prefix reports its actual quality block without false missing-command noise, a successful incomplete prefix remains blocked, and each published check uses the exact fixed context and current head. Full source proof and hosted qualification must cover successful and failing consumers."
+proof = "Focused tests prove the runner stops at the first failure, a failed exact prefix reports its actual quality block without false missing-command noise, a successful incomplete prefix remains blocked, and each published check uses the exact fixed context and current head. Existing compatibility characterization remains unchanged; full source proof and hosted qualification must cover successful and failing consumers."
 
 [characterization]
 captured_behavior = "The deployed profile runs every remaining command after an early required failure and then allocates eight runner jobs to enforce already-composed rows. Existing successful profiles execute the complete fixed sequence and each Standard retains independent result ownership."
-proof = "Extend the retained meaningful-behavior scenario with failed-prefix and successful-incomplete-prefix cases. Preserve all prior golden behavior and qualify exact published check identities on GitHub."
+proof = "Preserve all existing characterization manifests, drivers and golden behavior unchanged. Use focused command-prefix tests for the authorized behavior change and qualify exact published check identities on GitHub."
 
 [separation_of_concerns]
 before = "One quality collector gathers useful failure evidence but continues work that cannot restore PASS. Eight identical runner setups each download the same artifact to enforce one already-composed row."
@@ -20,7 +20,7 @@ boundaries = [
 
 [architecture]
 dependency_direction = "The hosted collector still depends on fixed quality policy and runner plans. The workflow-only publisher depends on the existing Standard result contexts and GitHub Checks API; production decision modules do not depend on hosted integration code."
-reviewed_paths = [".github/workflows/organization-required.yml", ".supportability-characterization.json", ".supportability-review.toml", "docs/product/Architecture.md", "docs/product/Eight-Gates.md", "docs/product/Pull-Request-Lifecycle.md", "src/supportability_gate/quality_profile.py", "tests/characterization/s05-meaningful-behavior.characterization.py", "tests/characterization/s05-meaningful-behavior.golden.json", "tests/hosted_check_publisher.py", "tests/hosted_quality_profile.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
+reviewed_paths = [".github/workflows/organization-required.yml", ".supportability-review.toml", "docs/product/Architecture.md", "docs/product/Eight-Gates.md", "docs/product/Pull-Request-Lifecycle.md", "src/supportability_gate/quality_profile.py", "tests/hosted_check_publisher.py", "tests/hosted_quality_profile.py", "tests/test_quality_profile.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
 path = "src/supportability_gate/quality_profile.py"

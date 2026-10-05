@@ -104,24 +104,6 @@
       "output": "example.com/acme/two"
     }
   ],
-  "quality-required-command-prefix": [
-    {
-      "input": "failed fixed prefix",
-      "output": [
-        "QUALITY_GATE_FAILED:python.ruff-format.v1"
-      ]
-    },
-    {
-      "input": "successful incomplete prefix",
-      "output": [
-        "MISSING_QUALITY_COMMAND:python.c901-touched.v1",
-        "MISSING_QUALITY_COMMAND:python.mypy-strict.v1",
-        "MISSING_QUALITY_COMMAND:python.pytest.v1",
-        "MISSING_QUALITY_COMMAND:python.build-wheel.v1",
-        "MISSING_QUALITY_COMMAND:python.import-linter.v1"
-      ]
-    }
-  ],
   "quality-suppression": [
     {
       "input": [],

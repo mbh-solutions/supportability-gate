@@ -120,13 +120,6 @@
       "target": "src/supportability_gate/qualification_bundle.py"
     },
     {
-      "category": "behavior",
-      "id": "quality-required-command-prefix",
-      "scenario": "s05-meaningful-behavior",
-      "selector": "quality-required-command-prefix",
-      "target": "src/supportability_gate/quality_profile.py"
-    },
-    {
       "category": "static",
       "id": "quality-runner-boundary",
       "scenario": "quality-runner-boundary",
