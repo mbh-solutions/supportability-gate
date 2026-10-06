@@ -369,11 +369,18 @@ remains authoritative.
 
 The correction declaration and all oracle files are committed before production implementation.
 The later implementation commit may change production code but cannot modify any frozen oracle
-byte. The Gate verifies that the oracle commit descends from the pull-request base, is an ancestor
+byte. Every descendant commit on a path from the oracle to the final head must retain those
+bytes, including merged implementation branches; editing and later restoring an oracle still
+blocks. The Gate verifies that the oracle commit descends from the pull-request base, is an ancestor
 of the final head, changes no production path, and contains no undeclared file. The actual changed
 scenario, obligation and derived target sets must exactly equal the declaration. Head execution
 must match the frozen goldens and retain deterministic replay, API execution, coverage, quality
 and handoff evidence.
+
+A declared changed behavior obligation can prove coverage when both sides execute meaningful
+cases and the corrected head matches its frozen golden. Its raw compatibility result remains
+`BLOCK` until the correction receives exact owner authorization. Missing execution, replay drift,
+golden mismatch and every other technical block prevent correction coverage credit.
 
 The raw characterization blocks remain in retained evidence. Only the exact declared instances of
 `CHANGED_CHARACTERIZATION_DEFINITION`, `CHANGED_GOLDEN_OUTPUT` and

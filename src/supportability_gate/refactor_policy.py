@@ -1012,6 +1012,31 @@ def _correction_scope_blocks(
     return blocks
 
 
+def _correction_history_blocks(
+    repository: Path,
+    oracle_sha: str,
+    head_sha: str,
+    oracle_paths: set[str],
+    records: list[git_changes.CommandRecord],
+) -> list[str]:
+    try:
+        commits = git_changes.run_git(
+            repository, ("rev-list", "--ancestry-path", f"{oracle_sha}..{head_sha}"), records
+        )
+        paths = tuple(f":(literal){path}" for path in sorted(oracle_paths))
+        for commit in commits.decode("ascii").split():
+            changed = git_changes.run_git(
+                repository,
+                ("diff", "--name-only", "--no-renames", oracle_sha, commit, "--", *paths),
+                records,
+            )
+            if changed:
+                return ["MODIFIED_CORRECTION_ORACLE"]
+    except git_changes.GitError:
+        return ["CORRECTION_ORACLE_MISMATCH"]
+    return []
+
+
 def _correction_transaction_blocks(
     repository: Path,
     policy: contract.Contract,
@@ -1066,6 +1091,9 @@ def _correction_transaction_blocks(
     )
     blocks.extend(file_blocks)
     oracle_paths.add(characterization_evidence.MANIFEST_PATH)
+    blocks.extend(
+        _correction_history_blocks(repository, oracle_sha, head_sha, oracle_paths, records)
+    )
     blocks.extend(
         _correction_scope_blocks(repository, policy, base_sha, oracle_sha, oracle_paths, records)
     )

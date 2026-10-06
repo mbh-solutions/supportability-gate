@@ -1638,6 +1638,10 @@ def _obligation_evidence(
         if base is not None and head is not None and not compatible:
             blocks.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item.id}")
         meaningful = _obligation_meaningful(head_rows.get(item.scenario), item)
+        if any(item.id in correction.obligations for correction in manifest.corrections):
+            meaningful = meaningful and _obligation_meaningful(base_rows.get(item.scenario), item)
+            if not meaningful:
+                blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{item.id}")
         if fact is not None:
             meaningful = meaningful and (
                 fact["base_absent"] or _obligation_meaningful(base_rows.get(item.scenario), item)
@@ -2130,6 +2134,7 @@ def _result_coverage(
     obligations: list[dict[str, Any]],
     required_paths: tuple[str, ...] | None,
     required_targets: tuple[str, ...] | None,
+    correction_ids: frozenset[str] = frozenset(),
 ) -> list[str]:
     row = _exact_keys(
         value,
@@ -2156,15 +2161,8 @@ def _result_coverage(
     expected_covered = tuple(
         sorted({path for scenario in scenarios for path in scenario["covers"]})
     )
-    behavior_targets = {
-        str(item["target"])
-        for item in obligations
-        if item["category"] == "behavior" and item["compatibility"] == "PASS"
-    }
     expected_covered_obligations = tuple(
-        target
-        for target in required_obligations
-        if target in behavior_targets or target.split("::", 1)[0] in behavior_targets
+        _verified_obligation_coverage(list(required_obligations), obligations, correction_ids)
     )
     if (
         covered != expected_covered
@@ -2415,7 +2413,12 @@ def validate_result(
     if modern:
         derived.extend(
             _result_coverage(
-                row["coverage"], scenarios, obligations, required_paths, required_targets
+                row["coverage"],
+                scenarios,
+                obligations,
+                required_paths,
+                required_targets,
+                _correction_coverage_ids(row.get("correction"), blocks),
             )
         )
     else:
@@ -2964,15 +2967,6 @@ def verify_evidence(
     blocks.extend(compatibility_blocks)
     obligation_blocks, obligations = _obligation_evidence(manifest, base_rows, head_rows, api_facts)
     blocks.extend(obligation_blocks)
-    covered_obligations = _verified_obligation_coverage(required_obligations, obligations)
-    blocks.extend(
-        f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"
-        for target in required_obligations
-        if target not in covered_obligations
-    )
-    runnable = not target_derivation_failed and _logical_step_runnable(
-        manifest, base_rows, head_rows, responsibility_targets, policy.language, api_facts
-    )
     correction = _active_correction_evidence(
         manifest,
         base_manifest,
@@ -2980,6 +2974,17 @@ def verify_evidence(
         scenarios,
         obligations,
         responsibility_targets,
+    )
+    covered_obligations = _verified_obligation_coverage(
+        required_obligations, obligations, _correction_coverage_ids(correction, blocks)
+    )
+    blocks.extend(
+        f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"
+        for target in required_obligations
+        if target not in covered_obligations
+    )
+    runnable = not target_derivation_failed and _logical_step_runnable(
+        manifest, base_rows, head_rows, responsibility_targets, policy.language, api_facts
     )
     if correction is not None:
         blocks.extend(cast(list[str], correction["verification_blocks"]))
@@ -3032,13 +3037,32 @@ def verify_evidence(
     return result
 
 
+def _correction_coverage_ids(correction: object, blocks: list[str]) -> frozenset[str]:
+    if not isinstance(correction, dict) or correction["verification_blocks"]:
+        return frozenset()
+    if set(blocks) - set(correction["reconcilable_blocks"]):
+        return frozenset()
+    return frozenset(correction["obligations"])
+
+
 def _verified_obligation_coverage(
-    required: list[str], obligations: list[dict[str, object]]
+    required: list[str],
+    obligations: list[dict[str, object]],
+    correction_ids: frozenset[str] = frozenset(),
 ) -> list[str]:
     targets = {
         str(item["target"])
         for item in obligations
-        if item["category"] == "behavior" and item["compatibility"] == "PASS"
+        if item["category"] == "behavior"
+        and (
+            item["compatibility"] == "PASS"
+            or (
+                item["id"] in correction_ids
+                and item["meaningful"] is True
+                and item["base_assertion_sha256"] is not None
+                and item["head_assertion_sha256"] is not None
+            )
+        )
     }
     return [item for item in required if item in targets or item.split("::", 1)[0] in targets]
 
