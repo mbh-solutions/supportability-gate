@@ -172,7 +172,14 @@ def test_schema5_authorization_parses_exact_correction_identity() -> None:
     assert parsed.behavior_delta_sha256 == "2" * 64
 
 
-def test_correction_transaction_freezes_oracle_before_implementation(tmp_path: Path) -> None:
+@pytest.mark.parametrize("restore", ["none", "linear", "merged-branch"])
+@pytest.mark.parametrize(
+    "modified_path",
+    ["tests/characterization/pricing.golden.json", ".supportability-characterization.json"],
+)
+def test_correction_transaction_freezes_oracle_before_implementation(
+    tmp_path: Path, restore: str, modified_path: str
+) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
     oracle_rows = [
@@ -260,8 +267,23 @@ def test_correction_transaction_freezes_oracle_before_implementation(tmp_path: P
 
     assert blocks == []
 
-    _write(repository / "tests/characterization/pricing.golden.json", "changed\n")
+    original = (repository / modified_path).read_text(encoding="utf-8")
+    if restore == "merged-branch":
+        _git(repository, "checkout", "-b", "oracle-edit")
+    _write(repository / modified_path, "changed\n")
     modified_head = _commit(repository, "modify oracle")
+    if restore != "none":
+        _write(repository / modified_path, original)
+        modified_head = _commit(repository, "restore oracle")
+    if restore == "merged-branch":
+        _git(repository, "checkout", "main")
+        _write(
+            repository / "src/sample.py",
+            "def calculate(value: int) -> int:\n    return value + 3\n",
+        )
+        _commit(repository, "parallel implementation")
+        _git(repository, "merge", "--no-ff", "oracle-edit", "-m", "merge restored oracle")
+        modified_head = _git(repository, "rev-parse", "HEAD")
     authorization = refactor_policy.Authorization(
         **{**authorization.__dict__, "head_sha": modified_head}
     )
@@ -276,6 +298,17 @@ def test_correction_transaction_freezes_oracle_before_implementation(tmp_path: P
     )
 
     assert "MODIFIED_CORRECTION_ORACLE" in blocks
+
+
+def test_correction_history_git_failure_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
+    def unavailable(*args: object) -> bytes:
+        raise git_changes.GitError("GIT_COMMAND_FAILED", "history unavailable")
+
+    monkeypatch.setattr(git_changes, "run_git", unavailable)
+
+    assert refactor_policy._correction_history_blocks(
+        Path("."), "a" * 40, "b" * 40, {"oracle.json"}, []
+    ) == ["CORRECTION_ORACLE_MISMATCH"]
 
 
 def _event(base_sha: str, head_sha: str, body: str | None) -> dict[str, object]:

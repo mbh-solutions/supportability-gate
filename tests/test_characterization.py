@@ -456,6 +456,108 @@ def test_schema5_correction_is_adapter_agnostic(language: str, path: str) -> Non
     assert manifest.corrections[0].targets[0].startswith(path + "::")
 
 
+@pytest.mark.parametrize(
+    "technical_block",
+    [
+        None,
+        "CHARACTERIZATION_EXECUTION_FAILED:pricing",
+        "MISSING_API_EXECUTION:pricing",
+        "GOLDEN_BEHAVIOR_MISMATCH:pricing",
+        "CHARACTERIZATION_REPLAY_DRIFT:pricing",
+        "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+    ],
+)
+def test_correction_coverage_requires_verified_execution(technical_block: str | None) -> None:
+    target = "src/sample.py::function:calculate"
+    changed = "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:pricing-total"
+    blocks = [changed, *([technical_block] if technical_block else [])]
+    correction = {
+        "obligations": ["pricing-total"],
+        "reconcilable_blocks": [changed],
+        "verification_blocks": [],
+    }
+    obligations: list[dict[str, object]] = [
+        {
+            "base_assertion_sha256": "a" * 64,
+            "category": "behavior",
+            "compatibility": "BLOCK",
+            "head_assertion_sha256": "b" * 64,
+            "id": "pricing-total",
+            "meaningful": True,
+            "target": target,
+        }
+    ]
+    eligible = characterization._correction_coverage_ids(correction, blocks)
+    covered = characterization._verified_obligation_coverage([target], obligations, eligible)
+
+    assert covered == ([target] if technical_block is None else [])
+    assert obligations[0]["compatibility"] == "BLOCK"
+    assert characterization._verified_obligation_coverage([target], obligations) == []
+    coverage = {
+        "covered_obligations": covered,
+        "covered_paths": ["src/sample.py"],
+        "required_obligations": [target],
+        "required_paths": ["src/sample.py"],
+    }
+    assert characterization._result_coverage(
+        coverage,
+        [{"covers": ["src/sample.py"]}],
+        obligations,
+        ("src/sample.py",),
+        (target + ":1-2",),
+        eligible,
+    ) == (
+        []
+        if technical_block is None
+        else [f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"]
+    )
+
+
+def test_correction_coverage_rejects_absent_or_nonmeaningful_assertions() -> None:
+    target = "src/sample.py::function:calculate"
+    obligation: dict[str, object] = {
+        "base_assertion_sha256": "a" * 64,
+        "category": "behavior",
+        "compatibility": "BLOCK",
+        "head_assertion_sha256": "b" * 64,
+        "id": "pricing-total",
+        "meaningful": True,
+        "target": target,
+    }
+    for field, value in (
+        ("meaningful", False),
+        ("base_assertion_sha256", None),
+        ("head_assertion_sha256", None),
+    ):
+        assert (
+            characterization._verified_obligation_coverage(
+                [target], [{**obligation, field: value}], frozenset({"pricing-total"})
+            )
+            == []
+        )
+    assert (
+        characterization._correction_coverage_ids(
+            {"verification_blocks": ["UNDECLARED_CORRECTION_DELTA"]}, []
+        )
+        == frozenset()
+    )
+
+
+def test_correction_obligation_requires_meaningful_base_and_head() -> None:
+    manifest = characterization.parse_manifest(_schema5_manifest(), "a" * 40)
+    meaningful = [{"input": 1, "output": 2}, {"input": 2, "output": 3}]
+    constant = [{"input": 1, "output": 2}, {"input": 2, "output": 2}]
+    obligation = manifest.obligations[0]
+    selector = obligation.selector.removeprefix("$.")
+    blocks, rows = characterization._obligation_evidence(
+        manifest,
+        {"pricing": {"behavior": {selector: constant}}},
+        {"pricing": {"behavior": {selector: meaningful}}},
+    )
+    assert rows[0]["meaningful"] is False
+    assert "GOLDEN_BEHAVIOR_MISMATCH:obligation:pricing-total" in blocks
+
+
 def test_schema5_aggregate_round_trips_through_bounded_codec(tmp_path: Path) -> None:
     value = {
         "schema_version": characterization.CORRECTION_RESULT_SCHEMA,

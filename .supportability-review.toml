@@ -2,41 +2,46 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Verify each side of a schema-5 module correction against that side's frozen root oracle, including a newly introduced base-side case set declared in the authenticated oracle commit. Ordinary scenarios still use the protected-base module golden."
-proof = "Focused tests prove side-specific root-oracle selection and prove that only a declared correction golden activates the new base-side path. Ruff format, lint and C901 checks pass on the changed implementation and tests."
+intended_behavior = "Reject any oracle edit in implementation ancestry, including edits restored before final head, and credit actual meaningful corrected obligations while retaining raw compatibility changes."
+proof = "Focused history controls cover golden and manifest edits, restoration, merged branches and unavailable Git history. Correction coverage controls retain execution, API, replay, golden and authentication failures and reject absent or nonmeaningful assertions."
 
 [characterization]
-captured_behavior = "Existing module characterizations and corrections without a declared base-side golden retain protected-base lookup. A correction may declare one generic `<scenario>.base.module.golden.json`; verification then reads that frozen head-tree oracle for base execution while retaining the ordinary head module golden for corrected execution."
-proof = "The tests exercise distinct verifier inputs and the declaration predicate. Undeclared files cannot activate the path, while missing, malformed, modified or unauthenticated oracle bytes remain blocked by existing parsing and correction-transaction checks."
+captured_behavior = "Ordinary preservation and older schema coverage retain their existing compatibility predicate. Schema-5 correction evidence preserves raw incompatibility and requires exact owner reconciliation. Every implementation descendant must retain frozen oracle bytes."
+proof = "The existing valid transaction remains admitted before each history mutation; every mutated/restored variant blocks. Producer and result validation share coverage derivation; technical evidence failures prevent correction coverage credit."
 
 [separation_of_concerns]
-before = "Base-side module verification could read only the protected-base golden, so a correction that introduced a new execution case had no authenticated place to freeze that case's protected-base result."
-after = "A declared schema-5 correction may freeze a new base-side module case set in its oracle commit; every ordinary path still reads the protected-base golden, and public evidence shape is unchanged."
+before = "Endpoint-only oracle comparison missed intermediate edits; coverage confused expected corrected behavior with absence of observation."
+after = "Refactor policy independently verifies historical oracle immutability. Characterization derives observed coverage while preserving raw compatibility and owner authentication boundaries."
 boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_bindings", before = "Module binding received no correction declaration.", after = "Module binding receives the already parsed manifest so side-specific selection can be restricted to a declared correction oracle." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_binding", before = "Base verification always read the protected-base module golden.", after = "Base verification reads a declared correction base golden from the frozen head tree when present; otherwise it preserves protected-base lookup exactly." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_correction_base_module_oracle_path", before = "No correction-specific base-side module-golden identity existed.", after = "Return the fixed generic path only when the scenario and a golden-role file are both present in the correction declaration." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_obligation_evidence", before = "Unobserved obligations evaluated meaningfulness at head only.", after = "Declared corrections require meaningful selected assertions on both sides and retain a blocking mismatch if either is invalid." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_coverage", before = "Aggregate coverage required raw compatibility PASS for every obligation.", after = "Aggregate validation derives the same narrowly eligible correction coverage as the producer." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "validate_result", before = "The result consumer passed no correction coverage identity into validation.", after = "Pass only correction IDs whose declaration and technical evidence permit coverage; retain all independent result checks." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verify_evidence", before = "Coverage was finalized before active correction evidence could be considered.", after = "Compute active correction identity before coverage, retaining raw blocks and final authorization requirements." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_correction_coverage_ids", before = "No owner of provisional correction coverage eligibility existed.", after = "Return declared correction obligations only when the delta is valid and no unreconciled technical characterization block remains." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_verified_obligation_coverage", before = "A changed but executed obligation could not prove target coverage.", after = "Keep ordinary coverage unchanged and additionally credit eligible meaningful correction assertions observed on both sides." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_correction_history_blocks", before = "Only oracle and final-head bytes were compared.", after = "Compare frozen paths at every descendant commit on oracle-to-head ancestry, including merged branches, using literal Git path arguments." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_correction_transaction_blocks", before = "The transaction verified ancestry, scope and endpoint byte identity.", after = "Also require the complete implementation ancestry to preserve oracle bytes, failing closed when history cannot be inspected." },
 ]
 
 [architecture]
-dependency_direction = "The existing direction is preserved: characterization depends only on contract and Git facts; refactor policy consumes characterization evidence; standard results independently validates both; the producer and publisher remain above the deterministic decision layer."
-reviewed_paths = [".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/characterization.py", "tests/test_characterization.py"]
+dependency_direction = "Preserved: characterization owns capture and coverage facts; refactor policy owns Git transaction authentication; authoritative results revalidate retained facts above those layers."
+reviewed_paths = [".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/characterization.py", "src/supportability_gate/refactor_policy.py", "tests/test_characterization.py", "tests/test_refactor_policy.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/characterization.py"
-owns = "Generic correction declarations, declared side-specific module-oracle selection, authenticated base/head observations, canonical behavior deltas and frozen-oracle evidence identities."
-does_not_own = "Trusted-owner authentication, GitHub comments, quality execution, handoff evidence or semantic truth of source receipts."
+path = "src/supportability_gate/refactor_policy.py"
+owns = "Exact owner-authorized refactor and correction transactions, including immutable oracle ancestry."
+does_not_own = "Target-native execution, semantic truth of source receipts, quality commands, reviewer services or GitHub protection configuration."
 
 [incremental_refactor]
-target = "Make oracle-first module corrections prove complete API execution on both sides when the correction adds a new case."
-completed_step = "Permit one declared generic base-side module golden in the oracle commit while leaving protected-base lookup unchanged for every ordinary scenario."
+target = "Close two concrete transaction gaps while preserving existing protections."
+completed_step = "Enforce full oracle ancestry and admit proven declared correction coverage without suppressing technical failures or raw compatibility evidence."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Correction, oracle, observed delta and result-classification names describe exact policy facts rather than domain interpretation."
-cohesion = "Parsing and observation remain in characterization, authentication remains in refactor policy, and independent aggregate validation remains in standard results."
-intended_behavior = "Ordinary refactors remain behavior-preserving. A schema-5 correction may add a base-side case oracle only through the authenticated oracle-file declaration; undeclared or modified bytes cannot satisfy execution."
-reviewability = "The change is limited to one fixed path convention, selection inside module binding, focused regression coverage, documentation and this evidence update; workflow contexts, thresholds and bypass policy are unchanged."
+naming = "Oracle history, correction eligibility and obligation coverage describe the exact facts each function owns."
+cohesion = "History inspection stays in refactor policy and coverage derivation stays in characterization, with one shared derivation for producer and consumer."
+intended_behavior = "Frozen oracle bytes cannot change temporarily; corrected observations cover changed targets only with complete technical proof and separate exact authorization."
+reviewability = "Eight precise function boundaries, focused controls, and documentation; no workflow, required-context, timeout, threshold, scope or bypass changes."
