@@ -2,42 +2,48 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Accept schema-5 module characterization evidence through the exact-head manifest-selected transport and existing module authorization join, retaining all validation limits and exact identities."
-proof = "Focused generic module tests exercise large schema-4 and schema-5 results with actual native function observations through both readers. Negative controls reject wrong schema, duplicate keys, over-limit input, legacy-manifest substitution, absent grants and invalid inventories."
+intended_behavior = "Reduce fixed-profile overhead with bounded immutable Git batches and two isolated pytest workers, preserving complete test execution, branch coverage, fixed resource/time limits and all eight policy outcomes. Retain operational timings separately from authoritative evidence."
+proof = "Focused batch/path/mode/isolation and timing controls pass. A six-case Linux comparison preserves all collected cases, 2316 covered lines and 661 branch directions while reducing 37.268 seconds to 23.588 seconds. Missing completion/coverage controls block, and a hostile helper-name fixture proves absolute trusted worker bootstrap. Exact handoff command metadata is authorized as a frozen oracle-first correction."
 
 [characterization]
-captured_behavior = "Schema-4 module results keep their existing bounded path. Schema-5 module results now reach the same deterministic validators instead of being rejected by stale schema-4 dispatch."
-proof = "Positive transports preserve exact result bytes and public validation. The corresponding failure controls retain malformed-result and introduction-authorization blocks; no case changes execution or oracle checks."
+captured_behavior = "The complete test collection and merged source coverage are preserved while execution scheduling and immutable source-copy transport change. The oracle-first correction explicitly changes only recorded pytest argv and their derived validation hashes; every other existing assertion, fixed timeout, resource limit and policy context is preserved."
+proof = "Exact Git-byte inventories match old and new copies. The finite serial/two-worker witness retains six completed tests and identical line/branch coverage; two-worker completion guards reject missing workers, acknowledgements, phases and coverage suppression."
 
 [separation_of_concerns]
-before = "Two evidence readers and the introduction join retained schema-4-only dispatch after schema-5 correction support was added."
-after = "Readers derive result transport from authenticated Git manifest identity, and the existing authorization join admits both supported module evidence versions while retaining exact inventory and grant validation."
+before = "The hosted runner repeated per-file Git startup, executed independent tests serially, and retained no successful phase/adapter timing. Capture job outcomes were not exported to their downstream consumers."
+after = "Immutable batch transport stays in git_changes; fixed profile construction stays in quality_profile/quality_runner; read-only collector helpers own isolated worker startup and completion; non-authoritative diagnostics expose capture/quality timings; workflow outputs preserve actual capture status."
 boundaries = [
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_read_characterization_result", before = "Large schema-5 evidence was parsed as result v4 and rejected before refactor verification.", after = "Resolve the exact-head manifest before selecting the bounded result v4 or v5 reader; preserve ordinary result handling and fail closed on malformed evidence." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "introduction_authorization_blocks", before = "Schema-5 module facts were disallowed by a schema-4-only module dispatch predicate.", after = "Admit module fact parsing for both v4 and v5 while preserving every inventory, birth, grant and target check." },
-  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_module_characterization_head", before = "Manifest selection returned only a boolean and lost the selected schema version.", after = "Return the exact supported result schema derived from the fixed target checkout manifest." },
-  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_read_characterization", before = "The aggregate producer hardcoded result v4 despite accepting a schema-5 manifest.", after = "Use the manifest-derived result schema with the existing bounded duplicate-safe aggregate decoder." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "_blob_batches", before = "Source preparation invoked Git for every individual file.", after = "Group at most eight mebibytes of file contents per batch and handle oversized files alone at the prior one-file memory scale." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "_materialization_entries", before = "File sizes were not needed because every blob used separate Git processes.", after = "List validated regular paths, modes, object identities and byte sizes before forming bounded batches." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "_materialization_path", before = "Materialization assumed the literal Git file path could be joined to its output root.", after = "Reject absolute, noncanonical, traversal, metadata, and cross-platform separator paths before any materialized writes." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "_read_batch_blob", before = "Individual cat-file invocations provided the contents of each independently listed path.", after = "Validate batch object ID, type, bounded length, binary delimiter, and recomputed Git object hash for each listed tree entry." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "_validate_blob_content", before = "Individual Git reads supplied file bytes without a separate materializer hash check.", after = "Verify exact size and Git object hash incrementally without duplicating the file buffer for hashing." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "read_regular_blobs", before = "One tree listing plus two Git processes per file were needed for each source copy.", after = "Yield validated regular-file contents using one sized listing and bounded batch object processes; retain at most one batch or one oversized individual file." },
+  { path = "src/supportability_gate/git_changes.py", kind = "function", symbol = "run_git", before = "Fixed Git invocation captured output without supplying batch input.", after = "The same finite no-shell invocation boundary also accepts explicit trusted batch object IDs on standard input." },
+  { path = "src/supportability_gate/git_changes.py", kind = "module", symbol = "src/supportability_gate/git_changes.py", before = "Materialization had no bounded batch transport configuration.", after = "Declare the fixed byte/file bounds and imports used by validated immutable batch transport." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "module", symbol = "src/supportability_gate/quality_profile.py", before = "The Python test adapter ran the complete suite serially under coverage run.", after = "Run the same complete suite using a fixed read-only bootstrap and two isolated workers, merged branch coverage, and fail-closed completion guards." },
+  { path = "src/supportability_gate/quality_runner.py", kind = "function", symbol = "sandbox_command", before = "Python test execution inherited no explicit fixed worker plugin-autoload and coverage-file environment.", after = "Disable plugin autoload and bind the fixed coverage database path inside the existing immutable no-network resource boundary." },
 ]
 
 [architecture]
-dependency_direction = "Preserved: refactor policy and the result producer consume existing characterization manifest/codec functions; no target execution or policy authority moves into readers."
-reviewed_paths = [".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/refactor_policy.py", "src/supportability_gate/standard_results_producer.py", "tests/test_characterization_capacity.py", "tests/test_module_introduction.py"]
+dependency_direction = "Preserved: profile construction and immutable Git access remain in existing source modules; target execution and its worker guard remain in the trusted hosted collector. Diagnostics never feed policy decisions. Exact runtime pins permit protected bootstrap without target-controlled plugin loading."
+reviewed_paths = [".github/workflows/organization-required.yml", ".supportability-characterization.json", ".supportability-review.toml", "docs/product/Evidence-Model.md", "pyproject.toml", "requirements-dev.lock", "src/supportability_gate/git_changes.py", "src/supportability_gate/quality_profile.py", "src/supportability_gate/quality_runner.py", "tests/characterization/gate8-standard-results-boundary-v3.base.golden.json", "tests/characterization/gate8-standard-results-boundary-v3.characterization.py", "tests/characterization/gate8-standard-results-boundary-v3.golden.json", "tests/characterization/quality-capture-efficiency.expected-case.json", "tests/characterization/quality-capture-efficiency.review.json", "tests/characterization/quality-capture-efficiency.source-receipt.json", "tests/characterization/sandbox-command-boundary.characterization.py", "tests/characterization/sandbox-command-boundary.golden.json", "tests/characterization/standard-composer-source-boundary.base.golden.json", "tests/characterization/standard-composer-source-boundary.golden.json", "tests/hosted_characterization.py", "tests/hosted_quality_profile.py", "tests/quality_pytest_entry.py", "tests/quality_pytest_guard.py", "tests/test_characterization_capture_timing.py", "tests/test_quality_capture_timing.py", "tests/test_quality_materialization.py", "tests/test_quality_profile.py", "tests/test_quality_pytest_guard.py", "tests/test_standard_results.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results_producer.py"
-owns = "Authenticated-source selection, bounded evidence loading and assembly of the authoritative result."
-does_not_own = "Semantic truth, target-native execution, owner grants, production behavior changes or GitHub protection configuration."
+path = "src/supportability_gate/git_changes.py"
+owns = "Fixed no-shell Git access and exact immutable repository, tree, blob and diff identities."
+does_not_own = "Target code execution, quality policy, artifact publication, semantic truth or owner authorization."
 
 [incremental_refactor]
-target = "Complete schema-5 module evidence dispatch at the existing transport and authorization boundaries."
-completed_step = "Select the exact result schema from the actual manifest in both readers and admit v5 module facts through unchanged grant validation."
+target = "Reduce measured quality execution/setup overhead and expose remaining hosted stage costs without narrowing checks."
+completed_step = "Bounded immutable source materialization, independent build copy, fixed isolated two-worker pytest with complete coverage/worker guards, retained phase timings, and capture-outcome wiring."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Manifest-selected transport and module evidence retain established domain names and exact responsibilities."
-cohesion = "Reader selection remains in existing consumers; the canonical result schema mapping and module validators remain in characterization."
-intended_behavior = "Valid schema-5 module evidence reaches deterministic policy evaluation without allowing payload-controlled schema selection, expanded limits, or skipped authorization."
-reviewability = "Four exact production boundaries, focused large-module transport and grant controls, and one documentation addition; no workflow, threshold, limit, scope, context or bypass changes."
+naming = "Immutable blob batches, isolated worker bootstrap, completion receipts and phase timings name their specific responsibilities."
+cohesion = "Existing Git and profile modules retain transport/construction. Trusted collector entry and guard own worker startup and completeness. No product or consumer business logic changes."
+intended_behavior = "Preserve every test and coverage requirement, fixed resource/time limits and all eight contexts while parallelizing only fixed Python test execution and reducing source preparation overhead."
+reviewability = "One consolidated generic runner change with bounded old/new setup measurements, finite serial/parallel coverage comparison and focused negative controls. Local measurements do not claim an end-to-end hosted speedup."

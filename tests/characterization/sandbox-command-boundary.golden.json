@@ -1,0 +1,42 @@
+{
+  "cases": [
+    {
+      "input": {"adapter": "python.pytest.v1"},
+      "output": {
+        "network": "none",
+        "root_read_only": true,
+        "capabilities": "ALL",
+        "security": "no-new-privileges",
+        "pids": "256",
+        "memory": "2g",
+        "cpus": "2",
+        "tmpfs": "/tmp:rw,nosuid,nodev,noexec,size=256m",
+        "workdir": "/target",
+        "readonly_mounts": ["/target", "/trusted", "/collector", "/evidence", "/opt/hostedtoolcache"],
+        "writable_mounts": ["/work"],
+        "fixed_environment": {"CI": "true", "NO_COLOR": "1", "PYTHONHASHSEED": "0"},
+        "fixed_plan_preserved": true,
+        "explicit_source_arguments": []
+      }
+    },
+    {
+      "input": {"adapter": "python.ruff-lint.v1"},
+      "output": {
+        "network": "none",
+        "root_read_only": true,
+        "capabilities": "ALL",
+        "security": "no-new-privileges",
+        "pids": "256",
+        "memory": "2g",
+        "cpus": "2",
+        "tmpfs": "/tmp:rw,nosuid,nodev,noexec,size=256m",
+        "workdir": "/target",
+        "readonly_mounts": ["/target", "/trusted", "/collector", "/evidence", "/opt/hostedtoolcache"],
+        "writable_mounts": ["/work"],
+        "fixed_environment": {"CI": "true", "NO_COLOR": "1", "PYTHONHASHSEED": "0"},
+        "fixed_plan_preserved": true,
+        "explicit_source_arguments": ["/target/src/probe.py"]
+      }
+    }
+  ]
+}

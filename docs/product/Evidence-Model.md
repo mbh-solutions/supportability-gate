@@ -28,6 +28,22 @@ semantic proofs.
 | `standard-results.json` | Canonical `standard-results.v3` composition: applicability, eight owned rows, source outcomes, dependencies, and derived handoff. |
 | `qualification-bundle.zip` | Compact canonical evidence, diagnostics, file digests, and restore metadata; optional qualified release context. |
 
+The quality-profile artifact also retains `quality-timings.json`: bounded elapsed-time diagnostics
+for setup phases and each executed fixed adapter, including successful commands. Characterization
+artifacts retain `characterization-timings.json` for preparation and each executed scenario. Both
+emit concise progress logs. These operational measurements are separate from authoritative
+evidence and never affect a PASS/BLOCK decision.
+The runner materializes exact regular Git blobs in a validated batch and copies that verified
+source into a separate writable wheel-build directory; timings do not change command scope,
+timeouts, or the isolated execution boundary.
+
+The fixed Python test adapter runs the complete suite with two isolated workers and merged branch
+coverage. The read-only collector verifies matching collections, complete outcomes, isolated worker
+startup, and each worker's coverage acknowledgement. Missing completion or coverage, worker errors,
+and attempts to disable coverage fail the command. A sanitized completion receipt is retained as a
+diagnostic; authoritative coverage still comes through the existing source-bound coverage parser.
+The fixed 600-second command limit and container resource limits remain unchanged.
+
 Evidence binds repository name and numeric ID, full base/head SHAs, relevant Git blobs, pinned
 workflow SHA, run and attempt, job/artifact identity, digests, capture hashes, and source hashes.
 The full-process handoff also binds the base/head review blobs. Required missing, stale, malformed,

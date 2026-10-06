@@ -12,11 +12,14 @@ import subprocess
 import sys
 import sysconfig
 import tempfile
+import time
 import tomllib
 import traceback
 import zipfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
 from packaging.requirements import InvalidRequirement, Requirement
@@ -39,6 +42,77 @@ _CREDENTIAL = re.compile(
 )
 _SANDBOX_DENIALS = (b"Read-only file system", b"Errno 30", b"EROFS")
 _PROVENANCE_SCHEMA = "isolated-target-provenance.v1"
+_MAX_TIMING_RECORDS = 64
+
+
+class _QualityTiming:
+    """Retain bounded operational timings separately from authoritative evidence."""
+
+    def __init__(self, output: Path) -> None:
+        self.output = output / "quality-timings.json"
+        self.records: list[dict[str, object]] = []
+
+    def _log(self, event: str, kind: str, name: str, detail: str = "") -> None:
+        timestamp = datetime.now(UTC).isoformat(timespec="milliseconds")
+        try:
+            print(
+                f"{timestamp} QUALITY_TIMING {event} {kind} {name}{detail}",
+                file=sys.stderr,
+                flush=True,
+            )
+        except OSError:
+            pass
+
+    def _retain(self, record: dict[str, object]) -> None:
+        self.records.append(record)
+        try:
+            self.output.parent.mkdir(parents=True, exist_ok=True)
+            self.output.write_text(
+                json.dumps(
+                    {"schema_version": "quality-capture-timings.v1", "records": self.records},
+                    sort_keys=True,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            # Timing diagnostics must not change the independently evaluated result.
+            pass
+
+    @contextmanager
+    def measure(self, kind: str, name: str) -> Iterator[dict[str, object]]:
+        record: dict[str, object] = {"kind": kind, "name": name, "status": "completed"}
+        if len(self.records) >= _MAX_TIMING_RECORDS:
+            yield record
+            return
+        started = time.monotonic()
+        record["started_at"] = datetime.now(UTC).isoformat(timespec="milliseconds")
+        self._log("START", kind, name)
+        try:
+            yield record
+        except BaseException:
+            record["status"] = "failed"
+            raise
+        finally:
+            elapsed = round(max(0.0, time.monotonic() - started), 3)
+            record["wall_seconds"] = elapsed
+            self._retain(record)
+            self._log("END", kind, name, f" {record['status']} {elapsed:.3f}s")
+
+
+def _timed_command(
+    timings: _QualityTiming,
+    adapter: str,
+    execute: Callable[[], quality_profile.GateResult],
+) -> quality_profile.GateResult:
+    with timings.measure("command", adapter) as record:
+        result = execute()
+        record["executed"] = result.executed
+        record["exit_code"] = result.exit_code
+        if not result.executed or result.exit_code:
+            record["status"] = "failed"
+        return result
 
 
 def _container_failure(code: str, completed: subprocess.CompletedProcess[bytes]) -> None:
@@ -536,13 +610,18 @@ def _materialize_git_tree(
     destination: Path,
     records: list[git_changes.CommandRecord],
 ) -> tuple[str, ...]:
-    paths = git_changes.list_regular_blobs(repository, head_sha, (".",), records)
-    for item in paths:
-        blob = git_changes.read_regular_blob(repository, head_sha, item.path, records)
-        path = destination / item.path
+    blobs = git_changes.read_regular_blobs(repository, head_sha, (".",), records)
+    paths: list[str] = []
+    root = destination.resolve()
+    for name, blob in blobs:
+        path = destination / name
+        if path.resolve() != root / name or path.is_symlink():
+            raise git_changes.GitError("INVALID_TREE_PATH", "materialized path follows a symlink")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(blob.content)
-    return tuple(item.path for item in paths)
+        path.chmod(0o755 if blob.mode == "100755" else 0o644)
+        paths.append(name)
+    return tuple(paths)
 
 
 def _verify_materialized_source(
@@ -694,6 +773,32 @@ def _retain_diagnostic(
 def _manifest_proof(paths: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[str, ...], str]:
     raw = (json.dumps(list(paths), sort_keys=True) + "\n").encode()
     return paths, (), quality_profile._sha256(raw)
+
+
+def _retain_pytest_completion(
+    work: Path,
+    output: Path,
+    roots: tuple[Path, ...],
+    identity: dict[str, str] | None,
+) -> None:
+    """Retain the bounded worker completion receipt as a sanitized diagnostic only."""
+    path = work / "pytest-completion.json"
+    try:
+        if path.is_symlink() or not path.is_file():
+            return
+        with path.open("rb") as source:
+            content = source.read(4096)
+        _retain_diagnostic(
+            output,
+            stage="pytest-completion",
+            code="PYTEST_COMPLETION_RECEIPT",
+            adapter="python.pytest.v1",
+            stdout=content,
+            roots=roots,
+            identity=identity,
+        )
+    except OSError:
+        pass
 
 
 def _python_coverage_proof(
@@ -926,8 +1031,7 @@ def _run_command(
         sandbox_environment["TMPDIR"] = "/work/tmp"
     if plan.adapter == "python.build-wheel.v1":
         build_source = work / "source"
-        build_source.mkdir(parents=True, exist_ok=True)
-        _materialize_git_tree(repository, head_sha, build_source, records)
+        shutil.copytree(mounted_target, build_source)
         sandbox_workdir = "/work/source"
     actual = (
         quality_runner.provisioning_command(plan, output)
@@ -961,6 +1065,13 @@ def _run_command(
             timeout=quality_profile.TIMEOUT_SECONDS,
         )
         combined = completed.stdout + completed.stderr
+        if plan.adapter == "python.pytest.v1":
+            _retain_pytest_completion(
+                work,
+                diagnostic_output or output,
+                (repository, mounted_target, output),
+                identity,
+            )
         if sandboxed and any(marker in combined for marker in _SANDBOX_DENIALS):
             _retain_diagnostic(
                 diagnostic_output or output,
@@ -1235,84 +1346,90 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         raise quality_profile.QualityProfileError(
             "NON_HOSTED_TARGET_EXECUTION", "quality profiles require a GitHub-hosted runner"
         )
-    records: list[git_changes.CommandRecord] = []
-    target = git_changes.validate_repository(Path(arguments.repository), records)
-    identity = git_changes.inspect_repository(
-        target, str(arguments.base_ref), str(arguments.head_ref), records
-    )
-    workflow_sha = str(arguments.workflow_sha)
-    if (
-        workflow_sha.lower() != workflow_sha
-        or quality_profile._FULL_SHA.fullmatch(workflow_sha) is None
-    ):
-        raise quality_profile.QualityProfileError(
-            "INVALID_WORKFLOW_SHA", "workflow SHA must be immutable"
-        )
-    base_policy = contract.parse_contract(
-        git_changes.read_regular_blob(
-            target, identity.base_sha, ".supportability.toml", records
-        ).content
-    )
-    candidate_policy = contract.parse_contract(
-        git_changes.read_regular_blob(
-            target, identity.head_sha, ".supportability.toml", records
-        ).content
-    )
-    changes = git_changes.changed_paths(target, identity.base_sha, identity.head_sha, records)
-    policy = (
-        candidate_policy
-        if gate_policy.is_allowed_contract_transition(base_policy, candidate_policy, changes)
-        else base_policy
-    )
-    changed_paths = tuple(
-        sorted(
-            {
-                path
-                for change in changes
-                for path in (change.old_path, change.new_path)
-                if path and policy.is_production_path(path)
-            }
-        )
-    )
     output = Path(arguments.output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    production_files, source_files, test_files = quality_runner.profile_files(
-        target, identity.head_sha, policy, records
-    )
-    _, base_source_files, base_test_files = quality_runner.profile_files(
-        target, identity.base_sha, policy, records
-    )
-    suppressions = tuple(
-        sorted(
-            (
-                *quality_profile.collect_suppression_records(
-                    target,
-                    identity.base_sha,
-                    "base",
-                    base_source_files,
-                    base_test_files,
-                    records,
-                ),
-                *quality_profile.collect_suppression_records(
-                    target,
-                    identity.head_sha,
-                    "head",
-                    source_files,
-                    test_files,
-                    records,
-                ),
+    timings = _QualityTiming(output.parent)
+    with timings.measure("setup", "repository-policy"):
+        records: list[git_changes.CommandRecord] = []
+        target = git_changes.validate_repository(Path(arguments.repository), records)
+        identity = git_changes.inspect_repository(
+            target, str(arguments.base_ref), str(arguments.head_ref), records
+        )
+        workflow_sha = str(arguments.workflow_sha)
+        if (
+            workflow_sha.lower() != workflow_sha
+            or quality_profile._FULL_SHA.fullmatch(workflow_sha) is None
+        ):
+            raise quality_profile.QualityProfileError(
+                "INVALID_WORKFLOW_SHA", "workflow SHA must be immutable"
+            )
+        base_policy = contract.parse_contract(
+            git_changes.read_regular_blob(
+                target, identity.base_sha, ".supportability.toml", records
+            ).content
+        )
+        candidate_policy = contract.parse_contract(
+            git_changes.read_regular_blob(
+                target, identity.head_sha, ".supportability.toml", records
+            ).content
+        )
+        changes = git_changes.changed_paths(target, identity.base_sha, identity.head_sha, records)
+        policy = (
+            candidate_policy
+            if gate_policy.is_allowed_contract_transition(base_policy, candidate_policy, changes)
+            else base_policy
+        )
+        changed_paths = tuple(
+            sorted(
+                {
+                    path
+                    for change in changes
+                    for path in (change.old_path, change.new_path)
+                    if path and policy.is_production_path(path)
+                }
             )
         )
-    )
-    receipts = quality_profile.asset_receipts(
-        target, identity.head_sha, production_files, source_files, records
-    )
-    source_receipts = quality_profile.source_receipts(
-        target, identity.head_sha, source_files, records
-    )
-    runtime_targets = _runtime_test_targets(
-        target, identity, policy, changes, source_files, records
-    )
+        output.parent.mkdir(parents=True, exist_ok=True)
+    with timings.measure("setup", "profile-inventory"):
+        production_files, source_files, test_files = quality_runner.profile_files(
+            target, identity.head_sha, policy, records
+        )
+        _, base_source_files, base_test_files = quality_runner.profile_files(
+            target, identity.base_sha, policy, records
+        )
+    with timings.measure("setup", "suppression-records"):
+        suppressions = tuple(
+            sorted(
+                (
+                    *quality_profile.collect_suppression_records(
+                        target,
+                        identity.base_sha,
+                        "base",
+                        base_source_files,
+                        base_test_files,
+                        records,
+                    ),
+                    *quality_profile.collect_suppression_records(
+                        target,
+                        identity.head_sha,
+                        "head",
+                        source_files,
+                        test_files,
+                        records,
+                    ),
+                )
+            )
+        )
+    with timings.measure("setup", "source-receipts"):
+        receipts = quality_profile.asset_receipts(
+            target, identity.head_sha, production_files, source_files, records
+        )
+        source_receipts = quality_profile.source_receipts(
+            target, identity.head_sha, source_files, records
+        )
+    with timings.measure("setup", "runtime-targets"):
+        runtime_targets = _runtime_test_targets(
+            target, identity, policy, changes, source_files, records
+        )
     diagnostic_identity = {
         "base_sha": identity.base_sha,
         "head_sha": identity.head_sha,
@@ -1324,46 +1441,57 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         "workflow_sha": workflow_sha,
     }
     command_provenance: list[dict[str, object]] = []
-    public_plans = quality_runner.command_plans(
-        policy.language, target, output.parent, test_files, source_files
-    )
-    shutil.rmtree(quality_runner.trusted_directory(output.parent))
+    with timings.measure("setup", "public-command-plans"):
+        public_plans = quality_runner.command_plans(
+            policy.language, target, output.parent, test_files, source_files
+        )
+        shutil.rmtree(quality_runner.trusted_directory(output.parent))
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
         supervisor = Path(temporary) / "supervisor"
         trusted = quality_runner.trusted_directory(supervisor)
         execution_target = trusted / "target-source"
         execution_target.mkdir(parents=True)
-        _materialize_git_tree(target, identity.head_sha, execution_target, records)
-        _verify_materialized_source(execution_target, source_receipts)
+        with timings.measure("setup", "materialize-source"):
+            _materialize_git_tree(target, identity.head_sha, execution_target, records)
+            _verify_materialized_source(execution_target, source_receipts)
         if policy.language in {"typescript", "mixed"}:
-            _stage_node_target(target, identity.head_sha, supervisor, records)
-            (execution_target / "node_modules").mkdir()
-        _install_python_dependencies(execution_target, supervisor)
-        container_id = _prepare_container()
-        plans = quality_runner.command_plans(
-            policy.language, execution_target, supervisor, test_files, source_files
-        )
+            with timings.measure("setup", "node-target"):
+                _stage_node_target(target, identity.head_sha, supervisor, records)
+                (execution_target / "node_modules").mkdir()
+        with timings.measure("setup", "python-dependencies"):
+            _install_python_dependencies(execution_target, supervisor)
+        with timings.measure("setup", "prepare-container"):
+            container_id = _prepare_container()
+        with timings.measure("setup", "isolated-command-plans"):
+            plans = quality_runner.command_plans(
+                policy.language, execution_target, supervisor, test_files, source_files
+            )
         results = _run_until_required_command_fails(
             policy.language,
             tuple(zip(plans, public_plans, strict=True)),
-            lambda plan, public_plan: _run_command(
-                plan,
-                target,
-                supervisor,
-                source_receipts,
-                identity.head_sha,
-                records,
-                diagnostic_identity,
-                command_provenance,
-                output.parent,
-                execution_target,
-                public_plan,
-                runtime_targets,
+            lambda plan, public_plan: _timed_command(
+                timings,
+                plan.adapter,
+                lambda: _run_command(
+                    plan,
+                    target,
+                    supervisor,
+                    source_receipts,
+                    identity.head_sha,
+                    records,
+                    diagnostic_identity,
+                    command_provenance,
+                    output.parent,
+                    execution_target,
+                    public_plan,
+                    runtime_targets,
+                ),
             ),
         )
-        python_runtime, node_runtime, dependencies = _runtime_receipts(
-            policy.language, execution_target, supervisor
-        )
+        with timings.measure("setup", "runtime-receipts"):
+            python_runtime, node_runtime, dependencies = _runtime_receipts(
+                policy.language, execution_target, supervisor
+            )
     evidence = quality_profile.QualityEvidence(
         base_sha=identity.base_sha,
         changed_paths=changed_paths,

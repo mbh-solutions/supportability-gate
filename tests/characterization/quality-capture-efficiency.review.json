@@ -1,0 +1,33 @@
+{
+  "schema_version": "runner-oracle-review.v1",
+  "evidence_class": "author_declaration",
+  "scope": "Only the declared fixed two-worker pytest command vector and its derived review-handoff validation-command hash.",
+  "observed_scenarios": [
+    "gate8-standard-results-boundary-v3",
+    "standard-composer-source-boundary"
+  ],
+  "changed_obligations": [
+    "gate8-standard-results-boundary-v5",
+    "standard-composer-source-boundary"
+  ],
+  "changed_cases": [
+    "clean",
+    "short-task",
+    "shared-review-document",
+    "gate-3-policy"
+  ],
+  "allowed_fields": [
+    "review_handoff.validation.commands[4].arguments",
+    "review_handoff.validation.commands[4].executed_arguments",
+    "review_handoff.sources.validation.sha256"
+  ],
+  "invariants": [
+    "No production policy, producer, or enforcer is mocked.",
+    "No observed output is rewritten or filtered.",
+    "Original goldens are retained byte-for-byte as explicit base oracles.",
+    "Eight s07 focused regression obligation selectors retain identical values.",
+    "Source profile still verifies exact real argv, config binding, and forged argv rejection."
+  ],
+  "oracle_derivation": "Prewritten explicit fixed-worker argv; derive executed vector through fixture path bindings and validation SHA-256 from the canonical command list.",
+  "owner_authorization": "Required separately through exact-head authenticated correction comment; this declaration is not an owner attestation."
+}

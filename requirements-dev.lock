@@ -151,7 +151,15 @@ coverage==7.15.2 \
     --hash=sha256:eb6bcae8d1a9d305351ecb108232441d11c5cfe9de840a04388ba5d2db8d735c \
     --hash=sha256:f653e5d7248c1191ec988a85c72edeab46c3ff44f90639a4ed4874ec0be90243 \
     --hash=sha256:fe41909c9515c3bfdb5f02c4d1f857dba322d9a9a1178069b91eea77889df63a
-    # via supportability-gate (pyproject.toml)
+    # via
+    #   pytest-cov
+    #   supportability-gate (pyproject.toml)
+execnet==2.1.2 \
+    --hash=sha256:63d83bfdd9a23e35b9c6a3261412324f964c2ec8dcd8d3c6916ee9373e0befcd \
+    --hash=sha256:67fba928dd5a544b783f6056f449e5e3931a5c378b128bc18501f7ea79e296ec
+    # via
+    #   pytest-xdist
+    #   supportability-gate (pyproject.toml)
 grimp==3.15 \
     --hash=sha256:0012653561d80b4e4972ac246deb569051a1fbf3880d620a9475e7159722bbab \
     --hash=sha256:017e493fee9962d50db6f7a8b5d49ad2ae508484a06078d700adbef30f1ff1f0 \
@@ -432,7 +440,9 @@ pip-tools==7.6.0 \
 pluggy==1.6.0 \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
     --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
-    # via pytest
+    # via
+    #   pytest
+    #   pytest-cov
 pygments==2.20.0 \
     --hash=sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f \
     --hash=sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176
@@ -448,6 +458,17 @@ pyproject-hooks==1.2.0 \
 pytest==9.1.1 \
     --hash=sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313 \
     --hash=sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
+    # via
+    #   pytest-cov
+    #   pytest-xdist
+    #   supportability-gate (pyproject.toml)
+pytest-cov==7.1.0 \
+    --hash=sha256:30674f2b5f6351aa09702a9c8c364f6a01c27aae0c1366ae8016160d1efc56b2 \
+    --hash=sha256:a0461110b7865f9a271aa1b51e516c9a95de9d696734a2f71e3e78f46e1d4678
+    # via supportability-gate (pyproject.toml)
+pytest-xdist==3.8.0 \
+    --hash=sha256:202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88 \
+    --hash=sha256:7e578125ec9bc6050861aa93f2d59f1d8d085595d6551c2c90b6f4fad8d3a9f1
     # via supportability-gate (pyproject.toml)
 rich==15.0.0 \
     --hash=sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb \

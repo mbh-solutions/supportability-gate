@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import re
 import subprocess
+from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import urlparse
 
 GIT_TIMEOUT_SECONDS = 30
+_BLOB_BATCH_BYTES = 8 * 1024 * 1024
+_BLOB_BATCH_FILES = 1024
 _FULL_SHA = re.compile(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}")
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 _BASE_HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@")
@@ -93,6 +97,7 @@ def run_git(
     records: list[CommandRecord],
     *,
     normalized_stdout: bytes | None = None,
+    input_data: bytes | None = None,
 ) -> bytes:
     """Run one fixed Git argument vector without a shell."""
     try:
@@ -102,6 +107,7 @@ def run_git(
             check=False,
             capture_output=True,
             timeout=GIT_TIMEOUT_SECONDS,
+            input=input_data,
         )
     except subprocess.TimeoutExpired as error:
         _record(records, arguments, -1, error.stdout or b"", error.stderr or b"")
@@ -237,6 +243,117 @@ def list_regular_blobs(
         elif object_type == "blob":
             raise GitError("SYMLINK_OR_NONFILE", encoded_path.decode("utf-8"))
     return tuple(sorted(blobs, key=lambda item: item.path))
+
+
+def _materialization_path(path: str) -> None:
+    """Require a literal relative file path that stays within a materialized tree."""
+    parsed = PurePosixPath(path)
+    if (
+        not path
+        or parsed.is_absolute()
+        or parsed.as_posix() != path
+        or any(part.casefold() in {"", ".", "..", ".git"} for part in parsed.parts)
+        or "\\" in path
+        or ":" in path
+        or "\0" in path
+    ):
+        raise GitError("INVALID_TREE_PATH", "tree path is not a contained regular file")
+
+
+def _validate_blob_content(item: TreeBlob, size: int, content: bytes) -> GitBlob:
+    """Bind exact binary contents to the listed Git blob identity and length."""
+    algorithm = "sha1" if len(item.object_sha) == 40 else "sha256"
+    digest = hashlib.new(algorithm)
+    digest.update(b"blob " + str(size).encode() + b"\0")
+    digest.update(content)
+    if len(content) != size or digest.hexdigest() != item.object_sha:
+        raise GitError("INVALID_BATCH_BLOB", "blob content does not match the tree identity")
+    return GitBlob(item.object_sha, item.mode, content)
+
+
+def _read_batch_blob(stream: io.BytesIO, item: TreeBlob, size: int) -> GitBlob:
+    """Validate one binary cat-file record against its independently listed tree identity."""
+    header = stream.readline().rstrip(b"\n").split(b" ")
+    if (
+        len(header) != 3
+        or header[0] != item.object_sha.encode("ascii")
+        or header[1] != b"blob"
+        or header[2] != str(size).encode("ascii")
+    ):
+        raise GitError("INVALID_BATCH_BLOB", "batch response does not match the tree blob")
+    content = stream.read(size)
+    if stream.read(1) != b"\n":
+        raise GitError("INVALID_BATCH_BLOB", "batch response has an invalid binary delimiter")
+    return _validate_blob_content(item, size, content)
+
+
+def _materialization_entries(
+    repository: Path,
+    commit: str,
+    roots: tuple[str, ...],
+    records: list[CommandRecord],
+) -> tuple[tuple[TreeBlob, int], ...]:
+    """List regular file identities and sizes before bounded content capture."""
+    raw = run_git(repository, ("ls-tree", "-r", "-z", "-l", commit, "--", *roots), records)
+    entries: list[tuple[TreeBlob, int]] = []
+    for entry in raw.rstrip(b"\0").split(b"\0") if raw else ():
+        header, separator, path = entry.partition(b"\t")
+        parts = header.decode("ascii").split()
+        if not separator or len(parts) != 4:
+            raise GitError("INVALID_TREE_ENTRY", "invalid sized Git tree entry")
+        mode, kind, object_sha, size = parts
+        if kind != "blob":
+            continue
+        if mode not in {"100644", "100755"}:
+            raise GitError("SYMLINK_OR_NONFILE", path.decode("utf-8"))
+        name = path.decode("utf-8")
+        _materialization_path(name)
+        if not size.isdigit() or _FULL_SHA.fullmatch(object_sha) is None:
+            raise GitError("INVALID_TREE_ENTRY", "invalid sized Git blob identity")
+        entries.append((TreeBlob(name, object_sha.lower(), mode), int(size)))
+    return tuple(sorted(entries, key=lambda item: item[0].path))
+
+
+def _blob_batches(
+    entries: tuple[tuple[TreeBlob, int], ...],
+) -> Iterator[tuple[tuple[TreeBlob, int], ...]]:
+    """Bound retained batch bytes; an oversized file is handled alone."""
+    batch: list[tuple[TreeBlob, int]] = []
+    total = 0
+    for item, size in entries:
+        if batch and (total + size > _BLOB_BATCH_BYTES or len(batch) >= _BLOB_BATCH_FILES):
+            yield tuple(batch)
+            batch, total = [], 0
+        batch.append((item, size))
+        total += size
+    if batch:
+        yield tuple(batch)
+
+
+def read_regular_blobs(
+    repository: Path,
+    commit: str,
+    roots: tuple[str, ...],
+    records: list[CommandRecord],
+) -> Iterator[tuple[str, GitBlob]]:
+    """Yield validated regular blobs using bounded batches, without retaining the whole tree."""
+    entries = _materialization_entries(repository, commit, roots, records)
+    for batch in _blob_batches(entries):
+        if len(batch) == 1 and batch[0][1] > _BLOB_BATCH_BYTES:
+            item, size = batch[0]
+            content = run_git(repository, ("cat-file", "blob", item.object_sha), records)
+            yield item.path, _validate_blob_content(item, size, content)
+            del content
+            continue
+        requested = b"".join(item.object_sha.encode("ascii") + b"\n" for item, _ in batch)
+        stream = io.BytesIO(
+            run_git(repository, ("cat-file", "--batch"), records, input_data=requested)
+        )
+        blobs = tuple((item.path, _read_batch_blob(stream, item, size)) for item, size in batch)
+        if stream.read(1):
+            raise GitError("INVALID_BATCH_BLOB", "batch response has extra records")
+        yield from blobs
+        del blobs, stream
 
 
 def changed_paths(
