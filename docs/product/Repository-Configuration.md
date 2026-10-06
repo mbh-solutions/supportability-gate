@@ -391,3 +391,7 @@ authorization and missing handoff evidence are never reconciled.
 
 An unchanged schema-5 manifest has no active correction and follows the ordinary preservation
 path. Existing schema 1–4 manifests keep their existing decisions and wire formats.
+
+The refactor and final-result readers select the schema-4 or schema-5 aggregate transport from
+the exact-head Git manifest. The existing 32,000,000-byte limit and duplicate-key rejection apply
+to both; a payload label cannot select a different schema or enlarge the transport limit.

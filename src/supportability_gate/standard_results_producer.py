@@ -87,21 +87,26 @@ def _read_json(path: Path, missing: str, malformed: str) -> tuple[dict[str, Any]
     return value, None
 
 
-def _module_characterization_head(head_sha: str) -> bool:
+def _module_characterization_head(head_sha: str) -> str | None:
     """Select transport from the fixed workflow checkout, never a payload label."""
     repository = Path(os.environ.get("GITHUB_WORKSPACE", str(Path.cwd()))) / "target"
     try:
         manifest = characterization._manifest(repository, head_sha, [])
     except (characterization.CharacterizationError, git_changes.GitError, OSError):
-        return False
-    return manifest.schema_version in {"4.0", "5.0"}
+        return None
+    return (
+        characterization.result_schema(manifest.schema_version)
+        if manifest.schema_version in {"4.0", "5.0"}
+        else None
+    )
 
 
 def _read_characterization(
     path: Path, missing: str, malformed: str, head_sha: str
 ) -> tuple[dict[str, Any], str | None]:
-    """Bound only the actual module4 ingress; preserve other JSON readers."""
-    if not _module_characterization_head(head_sha):
+    """Select bounded module/correction ingress from the exact-head manifest."""
+    schema = _module_characterization_head(head_sha)
+    if schema is None:
         value, error = _read_json(path, missing, malformed)
         if value.get("schema_version") in {
             characterization.MODULE_RESULT_SCHEMA,
@@ -112,9 +117,7 @@ def _read_characterization(
     try:
         with path.open("rb") as stream:
             raw = stream.read(characterization.MODULE_AGGREGATE_JSON_BYTES + 1)
-        value = characterization._read_module_aggregate(
-            raw, malformed, characterization.MODULE_RESULT_SCHEMA
-        )
+        value = characterization._read_module_aggregate(raw, malformed, schema)
     except FileNotFoundError:
         return {}, missing
     except (OSError, characterization.CharacterizationError):

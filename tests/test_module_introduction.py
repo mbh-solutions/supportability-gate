@@ -257,6 +257,29 @@ def test_100_actual_roots_require_versioned_authorization_and_standard_join(tmp_
     )
 
 
+def test_schema5_module_facts_retain_exact_introduction_authorization(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    result = birth._verify(tmp_path, fixture)
+    result["schema_version"] = gate.CORRECTION_RESULT_SCHEMA
+    grant = _grant(result)
+    targets = tuple(result["refactor_runnability"]["targets"])
+
+    assert (
+        refactor_policy.introduction_authorization_blocks(
+            result, [grant], targets, authorization_version="5.0"
+        )
+        == []
+    )
+    assert refactor_policy.introduction_authorization_blocks(
+        result, [], targets, authorization_version="5.0"
+    ) == ["INTRODUCTION_AUTHORIZATION_MISMATCH"]
+    invalid = copy.deepcopy(result)
+    invalid["api_observations"][0]["module"]["head_inventory"]["inventory_sha256"] = "0" * 64
+    assert refactor_policy.introduction_authorization_blocks(
+        invalid, [grant], targets, authorization_version="5.0"
+    ) == ["MALFORMED_INTRODUCTION_AUTHORIZATION"]
+
+
 def test_typed_module_codec2_actual_calls_pass_capture_result_and_owner_join(
     tmp_path: Path,
 ) -> None:
