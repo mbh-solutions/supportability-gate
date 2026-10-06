@@ -69,7 +69,7 @@ def _capture_fixture(monkeypatch: pytest.MonkeyPatch) -> tuple[dict[str, str], l
     }, calls
 
 
-def test_capture_timings_preserve_authoritative_bytes_and_serial_results(
+def test_capture_timings_preserve_authoritative_bytes_and_manifest_order(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     arguments, calls = _capture_fixture(monkeypatch)
@@ -80,15 +80,14 @@ def test_capture_timings_preserve_authoritative_bytes_and_serial_results(
     second = runner.capture_evidence(tmp_path, tmp_path, diagnostics=tmp_path, **arguments)
 
     assert characterization._canonical(first) == characterization._canonical(second)
-    assert calls == ["first", "second", "first", "second"]
+    assert sorted(calls[:2]) == sorted(calls[2:]) == ["first", "second"]
+    assert [row["id"] for row in second[0]["scenarios"]] == ["first", "second"]
     payload = json.loads((tmp_path / "characterization-timings.json").read_text(encoding="utf-8"))
     assert payload["schema_version"] == "characterization-capture-timings.v1"
     records = payload["records"]
-    assert [row["name"] for row in records] == [
+    assert [row["name"] for row in records[:2]] == [
         "checkout-and-container",
         "dependencies-and-runtimes",
-        "first",
-        "second",
     ]
     assert [row["kind"] for row in records] == [
         "preparation",
@@ -96,15 +95,18 @@ def test_capture_timings_preserve_authoritative_bytes_and_serial_results(
         "scenario",
         "scenario",
     ]
-    assert [row["status"] for row in records] == ["completed", "completed", "completed", "failed"]
-    assert all(row["wall_seconds"] == 2.5 for row in records)
+    assert {row["name"]: row["status"] for row in records[2:]} == {
+        "first": "completed",
+        "second": "failed",
+    }
+    assert all(row["wall_seconds"] >= 2.5 for row in records)
     assert second[0]["scenarios"][1]["deterministic"] is False
     assert list(tmp_path.iterdir()) == [tmp_path / "characterization-timings.json"]
     streams = capsys.readouterr()
     assert streams.out == ""
     output = streams.err
     assert "CHARACTERIZATION_TIMING START scenario first" in output
-    assert "CHARACTERIZATION_TIMING END scenario second failed 2.500s" in output
+    assert "CHARACTERIZATION_TIMING END scenario second failed" in output
 
 
 @pytest.mark.parametrize("failure", ["preparation", "scenario"])
@@ -130,7 +132,10 @@ def test_capture_timings_retain_failures_without_exception_details(
     records = json.loads(text)["records"]
     assert records[-1]["kind"] == failure
     assert records[-1]["status"] == "failed"
-    assert len(records) == (1 if failure == "preparation" else 3)
+    assert len(records) == (1 if failure == "preparation" else 4)
+    if failure == "scenario":
+        assert {row["name"] for row in records[2:]} == {"first", "second"}
+        assert all(row["status"] == "failed" for row in records[2:])
     streams = capsys.readouterr()
     assert streams.out == ""
     output = streams.err
