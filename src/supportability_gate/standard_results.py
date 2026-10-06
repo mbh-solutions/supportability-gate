@@ -1467,13 +1467,7 @@ def _s02_characterization(
         raise StandardResultsError(code) from None
 
 
-def _s02_refactor_authorization(
-    value: object, comment_id: object, code: str
-) -> dict[str, Any] | None:
-    if value is None:
-        if comment_id is not None:
-            raise StandardResultsError(code)
-        return None
+def _s02_authorization_keys(value: object, code: str) -> set[str]:
     keys = {
         "base_sha",
         "broad",
@@ -1500,6 +1494,28 @@ def _s02_refactor_authorization(
                     "oracle_manifest_sha256",
                 }
             )
+    return keys
+
+
+def _s02_correction_authorization_invalid(row: dict[str, Any]) -> bool:
+    return row.get("schema_version") == "5.0" and (
+        not isinstance(row["correction_id"], str)
+        or characterization.SCENARIO_ID.fullmatch(row["correction_id"]) is None
+        or not _s02_sha(row["oracle_commit_sha"], _S02_SHA40)
+        or not _s02_sha(row["oracle_manifest_blob_sha"], _S02_SHA40)
+        or not _s02_sha(row["oracle_manifest_sha256"], _S02_SHA64)
+        or not _s02_sha(row["behavior_delta_sha256"], _S02_SHA64)
+    )
+
+
+def _s02_refactor_authorization(
+    value: object, comment_id: object, code: str
+) -> dict[str, Any] | None:
+    if value is None:
+        if comment_id is not None:
+            raise StandardResultsError(code)
+        return None
+    keys = _s02_authorization_keys(value, code)
     row = _s02_exact(value, keys, code)
     sequence = _s02_exact(row["sequence"], {"predecessor_sha", "series_id", "step"}, code)
     if (
@@ -1514,17 +1530,7 @@ def _s02_refactor_authorization(
         or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", sequence["series_id"]) is None
         or type(sequence["step"]) is not int
         or sequence["step"] < 1
-        or (
-            row.get("schema_version") == "5.0"
-            and (
-                not isinstance(row["correction_id"], str)
-                or characterization.SCENARIO_ID.fullmatch(row["correction_id"]) is None
-                or not _s02_sha(row["oracle_commit_sha"], _S02_SHA40)
-                or not _s02_sha(row["oracle_manifest_blob_sha"], _S02_SHA40)
-                or not _s02_sha(row["oracle_manifest_sha256"], _S02_SHA64)
-                or not _s02_sha(row["behavior_delta_sha256"], _S02_SHA64)
-            )
-        )
+        or _s02_correction_authorization_invalid(row)
     ):
         raise StandardResultsError(code)
     scope = _s02_strings(row["scope"], code, True)
@@ -1791,6 +1797,49 @@ def _s02_related_test_matches(path: str, target_path: str, language: str) -> boo
     return python_match or typescript_match
 
 
+def _s02_runnability_evidence(
+    value: object,
+) -> tuple[dict[str, Any], list[str], list[str], list[str]] | None:
+    keys = {
+        "base_sha",
+        "head_sha",
+        "repository",
+        "runnable",
+        "schema_version",
+        "targets",
+        "unbounded_paths",
+        "workflow_sha",
+    }
+    if not isinstance(value, dict) or set(value) != keys:
+        return None
+    targets = value["targets"]
+    unbounded = value["unbounded_paths"]
+    if (
+        value["schema_version"] != characterization.RUNNABILITY_SCHEMA
+        or type(value["runnable"]) is not bool
+        or not _s02_sha(value["base_sha"], _S02_SHA40)
+        or not _s02_sha(value["head_sha"], _S02_SHA40)
+        or not _s02_sha(value["workflow_sha"], _S02_SHA40)
+        or not isinstance(value["repository"], str)
+        or not isinstance(targets, list)
+        or any(not isinstance(item, str) for item in targets)
+        or targets != sorted(set(targets))
+        or not isinstance(unbounded, list)
+        or any(not isinstance(item, str) for item in unbounded)
+        or unbounded != sorted(set(unbounded))
+    ):
+        return None
+    try:
+        _s02_refactor_target_paths(targets)
+        normalized = [
+            contract.normalize_repository_path(path, "refactor_runnability.unbounded_paths")
+            for path in unbounded
+        ]
+    except (StandardResultsError, contract.ContractError):
+        return None
+    return value, targets, unbounded, normalized
+
+
 def _s02_refactor_runnability_blocks(
     characterization_result: object,
     identity: RunIdentity,
@@ -1804,44 +1853,10 @@ def _s02_refactor_runnability_blocks(
     authorized = _s02_authorized_correction(result_classification, correction)
     if characterization_result.get("overall_result") != "PASS" and not authorized:
         return set()
-    evidence = characterization_result.get("refactor_runnability")
-    keys = {
-        "base_sha",
-        "head_sha",
-        "repository",
-        "runnable",
-        "schema_version",
-        "targets",
-        "unbounded_paths",
-        "workflow_sha",
-    }
-    if not isinstance(evidence, dict) or set(evidence) != keys:
+    parsed = _s02_runnability_evidence(characterization_result.get("refactor_runnability"))
+    if parsed is None:
         return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
-    evidence_targets = evidence["targets"]
-    evidence_unbounded = evidence["unbounded_paths"]
-    if (
-        evidence["schema_version"] != characterization.RUNNABILITY_SCHEMA
-        or type(evidence["runnable"]) is not bool
-        or not _s02_sha(evidence["base_sha"], _S02_SHA40)
-        or not _s02_sha(evidence["head_sha"], _S02_SHA40)
-        or not _s02_sha(evidence["workflow_sha"], _S02_SHA40)
-        or not isinstance(evidence["repository"], str)
-        or not isinstance(evidence_targets, list)
-        or any(not isinstance(item, str) for item in evidence_targets)
-        or evidence_targets != sorted(set(evidence_targets))
-        or not isinstance(evidence_unbounded, list)
-        or any(not isinstance(item, str) for item in evidence_unbounded)
-        or evidence_unbounded != sorted(set(evidence_unbounded))
-    ):
-        return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
-    try:
-        _s02_refactor_target_paths(evidence_targets)
-        normalized_unbounded = [
-            contract.normalize_repository_path(path, "refactor_runnability.unbounded_paths")
-            for path in evidence_unbounded
-        ]
-    except (StandardResultsError, contract.ContractError):
-        return {"UNAUTHENTICATED_RUNNABILITY_EVIDENCE"}
+    evidence, evidence_targets, evidence_unbounded, normalized_unbounded = parsed
     if (
         evidence_targets != targets
         or evidence_unbounded != unbounded_paths

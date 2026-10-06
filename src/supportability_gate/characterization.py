@@ -2669,6 +2669,86 @@ def _verification_result(
     }
 
 
+def _effective_policy_and_changes(
+    repository: Path,
+    base_sha: str,
+    head_sha: str,
+    records: list[git_changes.CommandRecord],
+) -> tuple[contract.Contract, tuple[git_changes.ChangedPath, ...]]:
+    policy = contract.parse_contract(
+        git_changes.read_regular_blob(repository, base_sha, ".supportability.toml", records).content
+    )
+    candidate_policy = contract.parse_contract(
+        git_changes.read_regular_blob(repository, head_sha, ".supportability.toml", records).content
+    )
+    changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
+    exact_deleted_paths = {
+        item.old_path
+        for item in changes
+        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
+    }
+    if contract.is_profile_expansion(policy, candidate_policy) or contract.is_profile_retirement(
+        policy, candidate_policy, exact_deleted_paths
+    ):
+        policy = candidate_policy
+    return policy, changes
+
+
+def _responsibility_scope(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    changes: tuple[git_changes.ChangedPath, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[bool, tuple[str, ...], tuple[str, ...]]:
+    from supportability_gate import (
+        refactor_targets,
+    )  # local: keep result validator dependency-light
+
+    try:
+        targets, unbounded = refactor_targets.derive(repository, identity, policy, changes, records)
+    except git_changes.GitError:
+        return (
+            True,
+            (),
+            tuple(
+                sorted(
+                    {
+                        path
+                        for change in changes
+                        for path in (change.old_path, change.new_path)
+                        if path is not None and policy.is_production_path(path)
+                    }
+                )
+            ),
+        )
+    return False, targets, unbounded
+
+
+def _active_correction_evidence(
+    manifest: Manifest,
+    base_manifest: Manifest | None,
+    blocks: list[str],
+    scenarios: list[dict[str, object]],
+    obligations: list[dict[str, object]],
+    responsibility_targets: tuple[str, ...],
+) -> dict[str, object] | None:
+    if manifest.schema_version != "5.0":
+        return None
+    previous = {item.id: item for item in base_manifest.corrections} if base_manifest else {}
+    active = [item for item in manifest.corrections if previous.get(item.id) != item]
+    if not active:
+        return None
+    return _correction_evidence(
+        manifest,
+        base_manifest,
+        blocks,
+        scenarios,
+        obligations,
+        responsibility_targets,
+    )
+
+
 def verify_evidence(
     repository: Path,
     base_sha: str,
@@ -2692,46 +2772,10 @@ def verify_evidence(
     records: list[git_changes.CommandRecord] = []
     repository = git_changes.validate_repository(repository, records)
     identity = git_changes.inspect_repository(repository, base_sha, head_sha, records)
-    policy_blob = git_changes.read_regular_blob(
-        repository, base_sha, ".supportability.toml", records
+    policy, changes = _effective_policy_and_changes(repository, base_sha, head_sha, records)
+    target_derivation_failed, responsibility_targets, unbounded_paths = _responsibility_scope(
+        repository, identity, policy, changes, records
     )
-    policy = contract.parse_contract(policy_blob.content)
-    candidate_blob = git_changes.read_regular_blob(
-        repository, head_sha, ".supportability.toml", records
-    )
-    candidate_policy = contract.parse_contract(candidate_blob.content)
-    changes = git_changes.changed_paths(repository, base_sha, head_sha, records)
-    exact_deleted_paths = {
-        item.old_path
-        for item in changes
-        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
-    }
-    if contract.is_profile_expansion(policy, candidate_policy) or contract.is_profile_retirement(
-        policy, candidate_policy, exact_deleted_paths
-    ):
-        policy = candidate_policy
-    from supportability_gate import (
-        refactor_targets,
-    )  # local: keep result validator dependency-light
-
-    target_derivation_failed = False
-    try:
-        responsibility_targets, unbounded_paths = refactor_targets.derive(
-            repository, identity, policy, changes, records
-        )
-    except git_changes.GitError:
-        target_derivation_failed = True
-        responsibility_targets = ()
-        unbounded_paths = tuple(
-            sorted(
-                {
-                    path
-                    for change in changes
-                    for path in (change.old_path, change.new_path)
-                    if path is not None and policy.is_production_path(path)
-                }
-            )
-        )
     deleted_paths = {
         item.old_path
         for item in changes
@@ -2859,22 +2903,18 @@ def verify_evidence(
     runnable = not target_derivation_failed and _logical_step_runnable(
         manifest, base_rows, head_rows, responsibility_targets, policy.language, api_facts
     )
-    correction = None
-    if manifest.schema_version == "5.0":
-        previous = {item.id: item for item in base_manifest.corrections} if base_manifest else {}
-        active = [item for item in manifest.corrections if previous.get(item.id) != item]
-        if active:
-            correction = _correction_evidence(
-                manifest,
-                base_manifest,
-                blocks,
-                scenarios,
-                obligations,
-                responsibility_targets,
-            )
-            blocks.extend(cast(list[str], correction["verification_blocks"]))
-            remaining = set(blocks) - set(cast(list[str], correction["reconcilable_blocks"]))
-            runnable = not target_derivation_failed and not remaining
+    correction = _active_correction_evidence(
+        manifest,
+        base_manifest,
+        blocks,
+        scenarios,
+        obligations,
+        responsibility_targets,
+    )
+    if correction is not None:
+        blocks.extend(cast(list[str], correction["verification_blocks"]))
+        remaining = set(blocks) - set(cast(list[str], correction["reconcilable_blocks"]))
+        runnable = not target_derivation_failed and not remaining
     result = _verification_result(
         identity,
         manifest,
