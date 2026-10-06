@@ -94,7 +94,7 @@ def _module_characterization_head(head_sha: str) -> bool:
         manifest = characterization._manifest(repository, head_sha, [])
     except (characterization.CharacterizationError, git_changes.GitError, OSError):
         return False
-    return manifest.schema_version == "4.0"
+    return manifest.schema_version in {"4.0", "5.0"}
 
 
 def _read_characterization(
@@ -103,7 +103,10 @@ def _read_characterization(
     """Bound only the actual module4 ingress; preserve other JSON readers."""
     if not _module_characterization_head(head_sha):
         value, error = _read_json(path, missing, malformed)
-        if value.get("schema_version") == characterization.MODULE_RESULT_SCHEMA:
+        if value.get("schema_version") in {
+            characterization.MODULE_RESULT_SCHEMA,
+            characterization.CORRECTION_RESULT_SCHEMA,
+        }:
             return {}, malformed
         return value, error
     try:

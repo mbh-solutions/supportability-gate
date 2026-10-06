@@ -956,6 +956,126 @@ def test_current_refactor_schema_has_authenticated_applicability() -> None:
     assert _entry(payload, 6)["result"] == "PASS"
 
 
+def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> None:
+    inputs = _inputs()
+    characterization_result = inputs[1]
+    scenario = characterization_result["scenarios"][0]
+    scenario["head_behavior_sha256"] = "f" * 64
+    scenario["golden_behavior_sha256"] = "f" * 64
+    scenario["compatibility"] = "BLOCK"
+    characterization_result["behavior_fingerprint"] = hashlib.sha256(
+        _canonical(
+            {
+                "api_observations": [],
+                "obligations": [],
+                "scenarios": [["sample", "f" * 64]],
+            }
+        )
+    ).hexdigest()
+    block = "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample"
+    characterization_result.update(
+        {
+            "api_observations": [],
+            "correction": {
+                "behavior_delta": [
+                    {
+                        "base_sha256": "e" * 64,
+                        "head_sha256": "f" * 64,
+                        "id": "sample",
+                        "kind": "scenario",
+                    }
+                ],
+                "behavior_delta_sha256": hashlib.sha256(
+                    _canonical(
+                        [
+                            {
+                                "base_sha256": "e" * 64,
+                                "head_sha256": "f" * 64,
+                                "id": "sample",
+                                "kind": "scenario",
+                            }
+                        ]
+                    )
+                ).hexdigest(),
+                "id": "sample-fix",
+                "obligations": [],
+                "oracle_files": [
+                    {
+                        "kind": kind,
+                        "path": f"tests/characterization/{index}.json",
+                        "sha256": str(index) * 64,
+                    }
+                    for index, kind in enumerate(
+                        ("expected_case", "golden", "review", "source_receipt"), start=1
+                    )
+                ],
+                "oracle_manifest_blob_sha": "8" * 40,
+                "oracle_manifest_sha256": "9" * 64,
+                "reconcilable_blocks": [block],
+                "scenarios": ["sample"],
+                "targets": ["src/sample.py::module:src/sample.py:1-1"],
+                "verification_blocks": [],
+            },
+            "overall_result": "BLOCK",
+            "policy_blocks": [block],
+            "schema_version": characterization.CORRECTION_RESULT_SCHEMA,
+        }
+    )
+    refactor = inputs[2]
+    correction = characterization_result["correction"]
+    refactor["authorization"].update(
+        {
+            "behavior_delta_sha256": correction["behavior_delta_sha256"],
+            "correction_id": correction["id"],
+            "introductions": [],
+            "oracle_commit_sha": "a" * 40,
+            "oracle_manifest_blob_sha": correction["oracle_manifest_blob_sha"],
+            "oracle_manifest_sha256": correction["oracle_manifest_sha256"],
+            "schema_version": "5.0",
+        }
+    )
+    refactor["characterization_sha256"] = hashlib.sha256(
+        _canonical(characterization_result)
+    ).hexdigest()
+    refactor["result_classification"] = "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+
+    payload = _compose(
+        inputs,
+        source_outcomes={**SUCCESS_OUTCOMES, "characterization": "success"},
+    )
+
+    assert _results(payload) == ["PASS"] * 8, [
+        (item["standard"], item["policy_blocks"], item["technical_errors"])
+        for item in payload["entries"]
+    ]
+    assert payload["result_classification"] == "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+
+
+def test_schema5_without_active_correction_classifies_preserved_behavior() -> None:
+    inputs = _inputs()
+    characterization_result = inputs[1]
+    characterization_result["api_observations"] = []
+    characterization_result["behavior_fingerprint"] = hashlib.sha256(
+        _canonical(
+            {
+                "api_observations": [],
+                "obligations": [],
+                "scenarios": [["sample", "e" * 64]],
+            }
+        )
+    ).hexdigest()
+    characterization_result["schema_version"] = characterization.CORRECTION_RESULT_SCHEMA
+    inputs[2]["characterization_sha256"] = hashlib.sha256(
+        _canonical(characterization_result)
+    ).hexdigest()
+    inputs[2]["result_classification"] = "PASS_NO_BEHAVIOR_CHANGE"
+
+    payload = _compose(inputs)
+
+    assert _results(payload) == ["PASS"] * 8
+    assert payload["result_classification"] == "PASS_NO_BEHAVIOR_CHANGE"
+
+
 def test_gate_six_vocabulary_is_exact_and_ordered() -> None:
     assert standard_block_ownership.BLOCK_FAMILIES[5] == (
         "AUTHORIZATION_REPOSITORY_MISMATCH",
@@ -971,11 +1091,13 @@ def test_gate_six_vocabulary_is_exact_and_ordered() -> None:
         "MISSING_RUNNABILITY_COVERAGE",
         "NON_RUNNABLE_LOGICAL_STEP",
         "STALE_OWNER_AUTHORIZATION",
+        "STALE_CORRECTION_ORACLE",
         "STALE_RUNNABILITY_EVIDENCE",
         "UNAUTHENTICATED_OWNER_AUTHORIZATION",
         "UNAUTHENTICATED_RUNNABILITY_EVIDENCE",
         "UNFOCUSED_DIFF_SCOPE",
         "UNVERIFIABLE_BOUNDED_TARGET",
+        "UNAUTHORIZED_CORRECTION",
     )
 
 
@@ -2010,12 +2132,15 @@ def test_gate_five_vocabulary_is_exact_and_ordered() -> None:
         "CHARACTERIZATION_EXECUTION_FAILED:",
         "CHARACTERIZATION_FINGERPRINT_MISMATCH",
         "CHARACTERIZATION_REPLAY_DRIFT:",
+        "CORRECTION_ORACLE_MISMATCH",
         "GOLDEN_ARTIFACT_IDENTITY_MISMATCH:",
         "GOLDEN_BEHAVIOR_MISMATCH:",
         "HEAD_CAPTURE_DIGEST_MISMATCH",
         "HEAD_ONLY_CHARACTERIZATION_CLAIM",
         "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
         "INCOMPLETE_CHARACTERIZATION_EVIDENCE",
+        "MALFORMED_CORRECTION",
+        "MODIFIED_CORRECTION_ORACLE",
         "INVALID_ARTIFACT_IDENTITY",
         "INVALID_API_INTRODUCTION:",
         "INVALID_API_ORACLE_REVIEW:",
@@ -2026,6 +2151,8 @@ def test_gate_five_vocabulary_is_exact_and_ordered() -> None:
         "STALE_BASELINE_ARTIFACT",
         "STALE_POST_CHANGE_ARTIFACT",
         "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE",
+        "ABSENT_DECLARED_CORRECTION_DELTA",
+        "UNDECLARED_CORRECTION_DELTA",
     )
 
 

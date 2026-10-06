@@ -353,3 +353,29 @@ After merge, the same observed scenario runs twice at both base and head and mus
 observations. Existing scenario/obligation identities cannot be relabeled, and admitted driver,
 golden and review bytes remain protected. This mode adds birth proof without dropping legacy
 coverage, source integrity, quality commands, thresholds, or required native protections.
+
+## Oracle-first behavior corrections (schema 5)
+
+Schema `5.0` preserves schema 4 and adds a closed `corrections` collection. A correction has one
+stable ID and exact sorted scenario, obligation and production-target identities. Its
+`oracle_files` list contains every expected-case, golden, review and source-receipt path with the
+SHA-256 of its raw bytes. These four generic roles are required; repository- or domain-specific
+interpretation fields are not supported.
+
+The correction declaration and all oracle files are committed before production implementation.
+The later implementation commit may change production code but cannot modify any frozen oracle
+byte. The Gate verifies that the oracle commit descends from the pull-request base, is an ancestor
+of the final head, changes no production path, and contains no undeclared file. The actual changed
+scenario, obligation and derived target sets must exactly equal the declaration. Head execution
+must match the frozen goldens and retain deterministic replay, API execution, coverage, quality
+and handoff evidence.
+
+The raw characterization blocks remain in retained evidence. Only the exact declared instances of
+`CHANGED_CHARACTERIZATION_DEFINITION`, `CHANGED_GOLDEN_OUTPUT` and
+`INCOMPATIBLE_POST_CHANGE_BEHAVIOR` can be reconciled after schema-5 owner authorization joins the
+oracle commit, manifest blob/hash, final head and canonical observed-delta digest. Golden mismatch,
+execution failure, missing execution or coverage, quality failure, malformed evidence, stale
+authorization and missing handoff evidence are never reconciled.
+
+An unchanged schema-5 manifest has no active correction and follows the ordinary preservation
+path. Existing schema 1–4 manifests keep their existing decisions and wire formats.

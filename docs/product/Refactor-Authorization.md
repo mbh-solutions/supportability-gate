@@ -95,3 +95,19 @@ cannot relabel an existing scenario or obligation.
 
 Implementation references: [authorization parser and policy](../../src/supportability_gate/refactor_policy.py)
 and [derived targets](../../src/supportability_gate/refactor_targets.py).
+
+## Schema-5 correction authorization
+
+A behavior correction uses the same one-comment trusted-owner boundary and one review cycle. In
+addition to the complete existing scope, targets, related tests and sequence, schema `5.0` binds:
+
+- `correction_id` to the exact manifest declaration;
+- `oracle_commit_sha` to the non-production oracle commit;
+- `oracle_manifest_blob_sha` and `oracle_manifest_sha256` to the frozen manifest bytes;
+- `base_sha` and `head_sha` to the pull request's exact final comparison; and
+- `behavior_delta_sha256` to the canonical complete observed base-to-head delta.
+
+Authorization authenticates the transaction the owner chose; it does not certify the semantic
+truth of expected cases or source receipts. A stale head or oracle, modified oracle bytes,
+undeclared or absent delta, missing technical proof, or unrelated raw block still fails closed.
+No wildcard correction scope, waiver, administrator bypass or second reviewer loop exists.
