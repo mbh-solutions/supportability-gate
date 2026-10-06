@@ -18,6 +18,32 @@ semantic proofs.
 
 ## Canonical artifacts
 
+Python quality execution is partitioned across four independent hosted jobs. Each job
+collects the complete test list before selecting its fixed round-robin partition, uses two
+isolated coverage workers, and retains the full/selected lists, completion receipt and raw
+branch-coverage database. TypeScript-only profiles use one job. Every job still executes
+the complete fixed adapter sequence; the Python test command is the only partitioned work.
+
+The quality join downloads the exact native artifacts for the same repository, head,
+run and attempt and verifies their GitHub SHA-256 digests. It rejects missing or duplicate
+partitions, different full collections, missing/failed tests or subtests, absent worker
+coverage, differing command scope, runtimes, dependencies or sandbox controls. It combines
+raw coverage databases and reapplies the current changed/high-risk responsibility coverage
+requirements to the union. A partial capture has a distinct job identity and cannot satisfy
+the ordinary quality attestation directly. Failed partitions retain their evidence and block
+qualification; they are never republished as a complete passing profile.
+
+The joined quality capture retains each original invocation and identifies the derivation as
+`isolated-target-provenance.sharded.v1`. Combined Python stdout/stderr digests bind explicit
+manifests of the original stream digests. All sixteen mixed-profile adapter results, resource
+limits, timeouts and eight required contexts remain in force. Parallel jobs consume more
+concurrent compute and add planning/join overhead; full-suite timing is measured on the
+consumer rather than inferred from a small benchmark.
+
+Characterization executes at most two scenarios concurrently. Each scenario still performs
+two fresh disposable executions in sequence. Results retain manifest order, so behavior
+fingerprints and deterministic capture payloads are unchanged by completion order.
+
 | Artifact | Responsibility |
 |---|---|
 | `complexity-result.json` | Authoritative static evaluation, changed identities, contract policy, and source-bound review evidence. |

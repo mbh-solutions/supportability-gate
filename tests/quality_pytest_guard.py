@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -14,6 +15,8 @@ from _pytest.subtests import SubtestReport
 
 _WORKERS = ("gw0", "gw1")
 _CONTROLLER: CompletionGuard | None = None
+_SHARD_INDEX = int(os.environ.get("SUPPORTABILITY_QUALITY_SHARD_INDEX", "0"))
+_SHARD_COUNT = int(os.environ.get("SUPPORTABILITY_QUALITY_SHARD_COUNT", "1"))
 
 
 def require_trusted_startup(isolated: int, helper_file: str) -> None:
@@ -60,7 +63,11 @@ def _reject_coverage_suppression(item: Any) -> None:
 
 class CompletionGuard:
     def __init__(self, config: Any) -> None:
+        if _SHARD_COUNT not in {1, 4} or not 0 <= _SHARD_INDEX < _SHARD_COUNT:
+            raise pytest.UsageError("QUALITY_PYTEST_INVALID_PARTITION")
         self.config = config
+        self.full_collection: tuple[str, ...] = ()
+        self.full_collections: dict[str, tuple[str, ...]] = {}
         self.collections: dict[str, tuple[str, ...]] = {}
         self.workers: dict[str, dict[str, Any]] = {}
         self.reports: dict[str, dict[str, str]] = {}
@@ -81,6 +88,8 @@ class CompletionGuard:
             self.errors.add("DUPLICATE_WORKER_COMPLETION")
         output = getattr(node, "workeroutput", {})
         guard = output.get("quality_pytest_guard", {})
+        if _SHARD_COUNT != 1:
+            self.full_collections[identity] = tuple(guard.get("full_collection", ()))
         self.workers[identity] = {
             "id": identity,
             "completed": error is None,
@@ -90,9 +99,13 @@ class CompletionGuard:
             "branch_coverage": guard.get("branch_coverage") is True,
         }
 
+    @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self, items: list[Any]) -> None:
         for item in items:
             _reject_coverage_suppression(item)
+        self.full_collection = tuple(item.nodeid for item in items)
+        if _SHARD_COUNT != 1:
+            items[:] = items[_SHARD_INDEX::_SHARD_COUNT]
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_runtest_call(self, item: Any) -> None:
@@ -130,6 +143,7 @@ class CompletionGuard:
                 "trusted_helper": Path(__file__).resolve()
                 == Path("/collector/quality_pytest_guard.py").resolve(),
                 "branch_coverage": _branch_coverage(self.config),
+                **({"full_collection": self.full_collection} if _SHARD_COUNT != 1 else {}),
             }
         elif not self.receipt()["guard_passed"] and exitstatus == 0:
             session.exitstatus = pytest.ExitCode.TESTS_FAILED
@@ -138,7 +152,7 @@ class CompletionGuard:
         if set(self.collections) != set(_WORKERS):
             self.errors.add("MISSING_WORKER_COLLECTION")
         collection = self.collections.get("gw0", ())
-        if not collection or len(set(collection)) != len(collection):
+        if (_SHARD_COUNT == 1 and not collection) or len(set(collection)) != len(collection):
             self.errors.add("EMPTY_OR_DUPLICATE_COLLECTION")
         if self.collections.get("gw1") != collection:
             self.errors.add("WORKER_COLLECTION_MISMATCH")
@@ -157,6 +171,16 @@ class CompletionGuard:
 
     def receipt(self) -> dict[str, Any]:
         collection = self._collection()
+        if _SHARD_COUNT != 1:
+            full = self.full_collections.get("gw0", ())
+            if (
+                set(self.full_collections) != set(_WORKERS)
+                or not full
+                or len(set(full)) != len(full)
+                or self.full_collections.get("gw1") != full
+                or full[_SHARD_INDEX::_SHARD_COUNT] != collection
+            ):
+                self.errors.add("PARTITION_COLLECTION_MISMATCH")
         self._validate_workers()
         if set(self.reports) != set(collection) or not self.subtests.keys() <= self.reports.keys():
             self.errors.add("INCOMPLETE_TEST_EXECUTION")
@@ -200,7 +224,26 @@ def finish_controller(exit_code: int) -> int:
     if len(raw) >= 4096:
         raise RuntimeError("QUALITY_PYTEST_COMPLETION_RECEIPT_TOO_LARGE")
     Path("/work/pytest-completion.json").write_bytes(raw)
+    if _SHARD_COUNT != 1:
+        partition = {
+            "schema_version": "quality-pytest-partition.v1",
+            "index": _SHARD_INDEX,
+            "count": _SHARD_COUNT,
+            "full_collection": _CONTROLLER.full_collections.get("gw0", ()),
+            "selected_collection": _CONTROLLER.collections.get("gw0", ()),
+            "completion_sha256": hashlib.sha256(raw).hexdigest(),
+        }
+        encoded = json.dumps(partition, sort_keys=True).encode() + b"\n"
+        if len(encoded) > 8 * 1024 * 1024:
+            raise RuntimeError("QUALITY_PYTEST_PARTITION_TOO_LARGE")
+        Path("/work/pytest-partition.json").write_bytes(encoded)
     if not receipt["guard_passed"]:
         print("QUALITY_PYTEST_INCOMPLETE_EXECUTION", file=sys.stderr)
         return exit_code or 1
+    if (
+        exit_code == pytest.ExitCode.NO_TESTS_COLLECTED
+        and _SHARD_COUNT != 1
+        and not receipt["collected"]
+    ):
+        return 0
     return exit_code or int(receipt["outcomes"]["failed"] > 0)

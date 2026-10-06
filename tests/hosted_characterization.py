@@ -15,9 +15,11 @@ import time
 import tomllib
 import traceback
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Lock
 
 from packaging.requirements import Requirement
 
@@ -39,6 +41,7 @@ class _CharacterizationTiming:
     def __init__(self, output: Path | None) -> None:
         self.output = output / "characterization-timings.json" if output is not None else None
         self.records: list[dict[str, object]] = []
+        self.lock = Lock()
 
     def _log(self, event: str, kind: str, name: str, detail: str = "") -> None:
         timestamp = datetime.now(UTC).isoformat(timespec="milliseconds")
@@ -52,26 +55,27 @@ class _CharacterizationTiming:
             pass
 
     def _retain(self, record: dict[str, object]) -> None:
-        self.records.append(record)
-        if self.output is None:
-            return
-        try:
-            self.output.parent.mkdir(parents=True, exist_ok=True)
-            self.output.write_text(
-                json.dumps(
-                    {
-                        "schema_version": "characterization-capture-timings.v1",
-                        "records": self.records,
-                    },
-                    sort_keys=True,
-                    indent=2,
+        with self.lock:
+            self.records.append(record)
+            if self.output is None:
+                return
+            try:
+                self.output.parent.mkdir(parents=True, exist_ok=True)
+                self.output.write_text(
+                    json.dumps(
+                        {
+                            "schema_version": "characterization-capture-timings.v1",
+                            "records": self.records,
+                        },
+                        sort_keys=True,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
                 )
-                + "\n",
-                encoding="utf-8",
-            )
-        except OSError:
-            # Operational diagnostics must not change authoritative capture outcomes.
-            pass
+            except OSError:
+                # Operational diagnostics must not change authoritative capture outcomes.
+                pass
 
     @contextmanager
     def measure(self, kind: str, name: str) -> Iterator[dict[str, object]]:
@@ -499,7 +503,7 @@ def _run_driver(
         materialized.write_bytes(content)
         arguments, recorded = _command(language, relative_driver, materialized)
         container_driver = f"/driver/{materialized.name}"
-        inner = (
+        inner: tuple[str, ...] = (
             (arguments[0], "-P", container_driver)
             if language == "python"
             else (arguments[0], container_driver)
@@ -796,8 +800,9 @@ def capture_evidence(
                     diagnostic_identity,
                 )
             resolved_dependencies = _dependency_receipts(dependencies)
-        scenarios = []
-        for item in manifest.scenarios:
+
+        def capture(item: characterization.Scenario) -> dict[str, object]:
+            local_records: list[git_changes.CommandRecord] = []
             with timings.measure("scenario", item.id) as timing:
                 observed = _scenario_capture(
                     target,
@@ -805,7 +810,7 @@ def capture_evidence(
                     head_sha,
                     item,
                     policy.language,
-                    records,
+                    local_records,
                     dependencies,
                     diagnostics,
                     f"characterization-{side}",
@@ -815,11 +820,17 @@ def capture_evidence(
                 timing["deterministic"] = observed["deterministic"]
                 if observed["exit_code"] or observed["error"] or not observed["deterministic"]:
                     timing["status"] = "failed"
-                scenarios.append(observed)
+                records.extend(local_records)
+                return observed
+
+        # Ordered map preserves the semantic capture ordering and fingerprint.
+        # Each task still runs its two independent disposable containers in sequence.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            scenarios = list(executor.map(capture, manifest.scenarios))
     fingerprint = characterization._sha256(
         characterization._canonical([[item["id"], item["behavior_sha256"]] for item in scenarios])
     )
-    evidence = {
+    evidence: dict[str, object] = {
         "authentication": {
             "base_sha": base_sha,
             "head_sha": head_sha,
@@ -839,7 +850,7 @@ def capture_evidence(
         "schema_version": characterization.capture_schema(manifest.schema_version),
         "target_sha": target_sha,
     }
-    environment = {
+    environment: dict[str, object] = {
         "container_digest": quality_runner.CONTAINER_IMAGE.split("@", 1)[1],
         "container_id": container_id,
         "container_image": quality_runner.CONTAINER_IMAGE,

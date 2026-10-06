@@ -2,40 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Admit native pytest subtest reports without losing failed subtests or parent completeness. Preserve authentic failed command-prefix evidence when later dependencies were never installed."
-proof = "A real isolated two-worker reproduction preserves parent and subtest outcomes and exact coverage; an explicit failed subtest still fails. Focused installed-package controls and complete composer controls retain original BLOCK while rejecting unexplained missing commands and unverifiable completed installations."
+intended_behavior = "Execute the complete Python collection in four fixed partitions, verify native capture identity and complete worker execution, then combine branch data under the existing coverage rules. Run two characterization scenarios concurrently while preserving manifest order and both fresh executions."
+proof = "Twenty-one focused partition and failure controls pass. A real four-partition reproduction executes the same six existing expensive cases exactly once and preserves all raw lines and arcs plus the complete exported coverage report. Native protected source proof and a complete consumer timing run remain required."
 
 [characterization]
-captured_behavior = "Both existing source-bound composer witnesses preserve every frozen assertion on the deployed base and candidate. New controls exercise the failure path without changing successful command vectors, goldens, timeouts, resource limits or coverage requirements."
-proof = "Four real base/head witness executions match unchanged goldens and all ten selected meaningful obligation assertions. Native ordinary duplicate reports remain rejected; successful and failed subtests are counted separately from normal parent phases."
+captured_behavior = "The public fixed command vectors, production evaluator, witness definitions and frozen golden bytes are unchanged. Concurrency changes execution scheduling while each characterization scenario retains two fresh disposable executions and ordered semantic output."
+proof = "Focused capture controls verify unchanged authoritative bytes, manifest order, both concurrent failure records and bounded diagnostics without exposing exception details. Existing protected characterization captures remain the source-bound compatibility proof."
 
 [separation_of_concerns]
-before = "The collector treated native subtest phases as parent duplicates and inventoried dependencies before their provisioning command had run. The composer then misclassified a valid failed prefix as malformed evidence."
-after = "The trusted guard owns parent and subtest completion; the hosted collector inventories completed installations; the existing result composer authenticates the same failed-prefix semantics as the quality evaluator."
-boundaries = [
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_profile", before = "The composed profile required missing-command blocks for an intentionally stopped failed prefix.", after = "Use the same fixed-order failed-prefix interpretation as the quality evaluator while retaining the actual failed adapter and BLOCK result." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_missing_profile_commands", before = "No shared composer rule distinguished a known failed prefix from unexplained omissions.", after = "Only an exact required-order prefix ending in an observed mandatory failure omits redundant suffix-missing blocks; every other omission remains invalid." },
-]
+before = "One hosted quality job executes all Python tests with two isolated workers. Characterization executes all scenarios sequentially."
+after = "The trusted pytest guard records complete and selected collections; each hosted collector executes one fixed partition; the new hosted join authenticates native artifacts and recomputes combined coverage obligations. The characterization collector bounds concurrency at two scenarios."
+boundaries = []
 
 [architecture]
-dependency_direction = "Preserved: hosted execution remains isolated in the collector; standard_results consumes deterministic quality evidence and existing contract rules. No target runtime enters static evaluation and no new dependencies or execution options are introduced."
-reviewed_paths = [".supportability-review.toml", "docs/product/Evidence-Model.md", "src/supportability_gate/standard_results.py", "tests/hosted_quality_profile.py", "tests/quality_pytest_guard.py", "tests/test_quality_partial_evidence.py", "tests/test_quality_pytest_guard.py", "tests/test_standard_results.py"]
+dependency_direction = "Preserved: target execution stays within isolated hosted collectors; the join consumes native artifacts and existing contract and coverage rules. Static production policy modules and their dependency direction are unchanged."
+reviewed_paths = [".github/workflows/organization-required.yml", ".supportability-review.toml", "docs/product/Evidence-Model.md", "tests/hosted_characterization.py", "tests/hosted_quality_aggregate.py", "tests/hosted_quality_profile.py", "tests/quality_pytest_guard.py", "tests/test_characterization_capture_timing.py", "tests/test_quality_partitions.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results.py"
-owns = "Deterministic composition and authentication of existing canonical evidence into the eight required result rows."
-does_not_own = "Target execution, dependency installation, owner authorization, policy waivers or fabricated success for unexecuted commands."
+path = "tests/hosted_quality_aggregate.py"
+owns = "Authenticate fixed native quality partitions, require full exact-once test completion and worker branch receipts, combine raw coverage, and retain explicit provenance for the ordinary quality attestation."
+does_not_own = "Consumer business behavior, alternate policy decisions, test exclusions, changed thresholds, owner authorization or success for omitted execution."
 
 [incremental_refactor]
-target = "Correct native subtest completion and preserve the exact failed-run diagnosis through canonical composition."
-completed_step = "Separate native subtest reports, verify only completed dependency installations, and preserve an authenticated failed prefix as BLOCK with its unexecuted suffix unqualified."
+target = "Reduce fixed hosted capture latency without reducing required work or proof."
+completed_step = "Distribute complete Python execution across four native captures, join authenticated evidence, and execute characterization with bounded concurrency."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Subtest outcomes, provisioned Node receipts and missing profile commands name their bounded existing responsibilities."
-cohesion = "Each repair remains within its existing guard, collector or evidence-composition boundary; no consumer business source changes."
-intended_behavior = "A failed subtest or mandatory command remains a failure. Legitimate subtest reports do not counterfeit duplicate parent completion, and uninstalled dependencies cannot mask a retained earlier failure."
-reviewability = "One finite repair batch with real two-worker subtest reproduction, affected consumer-test replay, failed-subtest and missing-command negative controls, and unchanged source-bound witness goldens."
+naming = "Partition receipts, native captures, full collections and combined coverage name the concrete responsibilities."
+cohesion = "Scheduling and artifact joining stay in hosted helper boundaries. The authoritative production evaluator and consumer production code are unchanged."
+intended_behavior = "Missing, stale, duplicate or incomplete partition evidence blocks qualification. Existing policy exit classification and terminal command-failure evidence are preserved."
+reviewability = "One bounded performance change with retained before-and-after execution and coverage evidence, focused failure controls, exact protected delivery and a full consumer timing measurement."
