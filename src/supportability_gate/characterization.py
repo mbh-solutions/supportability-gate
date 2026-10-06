@@ -741,7 +741,7 @@ def _api_bindings(
         }
         if item.module_roots:
             facts[item.id]["module"] = _module_binding(
-                repository, base_sha, head_sha, item, records
+                repository, base_sha, head_sha, manifest, item, records
             )
         facts[item.id].update(
             _api_oracle_review(repository, head_sha, item, facts[item.id], records)
@@ -757,6 +757,7 @@ def _module_binding(
     repository: Path,
     base_sha: str,
     head_sha: str,
+    manifest: Manifest,
     scenario: Scenario,
     records: list[git_changes.CommandRecord],
 ) -> dict[str, Any]:
@@ -784,8 +785,13 @@ def _module_binding(
     oracle, cases = _module_oracle_cases(repository, head_sha, oracle_path, records)
     if oracle is None or cases is None:
         raise CharacterizationError("INVALID_MODULE_ORACLE")
+    correction_base_path = _correction_base_module_oracle_path(manifest, scenario)
     _, base_cases = _module_oracle_cases(
-        repository, base_sha, oracle_path, records, missing_allowed=True
+        repository,
+        head_sha if correction_base_path is not None else base_sha,
+        correction_base_path or oracle_path,
+        records,
+        missing_allowed=correction_base_path is None,
     )
     return {
         "roots": list(scenario.module_roots),
@@ -796,6 +802,19 @@ def _module_binding(
         # Verification-only input. It is removed before result serialization.
         "_base_oracle_cases": base_cases,
     }
+
+
+def _correction_base_module_oracle_path(manifest: Manifest, scenario: Scenario) -> str | None:
+    path = f"{SCENARIO_ROOT}/{scenario.id}.base.module.golden.json"
+    return (
+        path
+        if any(
+            scenario.id in correction.scenarios
+            and any(item.path == path and item.kind == "golden" for item in correction.oracle_files)
+            for correction in manifest.corrections
+        )
+        else None
+    )
 
 
 def _module_oracle_cases(
