@@ -780,19 +780,42 @@ def _module_binding(
         except ModuleObservationError as error:
             raise CharacterizationError("INVALID_MODULE_SOURCE", str(error)) from error
         inventories[side + "_inventory"] = inventory
-    oracle = git_changes.read_regular_blob(
-        repository, head_sha, f"{SCENARIO_ROOT}/{scenario.id}.module.golden.json", records
-    ).content
-    cases = _read_module_json(oracle, "INVALID_MODULE_ORACLE")
-    if not isinstance(cases, list) or not 2 <= len(cases) <= MODULE_MAX_EXECUTIONS:
+    oracle_path = f"{SCENARIO_ROOT}/{scenario.id}.module.golden.json"
+    oracle, cases = _module_oracle_cases(repository, head_sha, oracle_path, records)
+    if oracle is None or cases is None:
         raise CharacterizationError("INVALID_MODULE_ORACLE")
+    _, base_cases = _module_oracle_cases(
+        repository, base_sha, oracle_path, records, missing_allowed=True
+    )
     return {
         "roots": list(scenario.module_roots),
         "metric": MODULE_BODY_METRIC,
         **inventories,
         "oracle_sha256": _sha256(oracle),
         "oracle_cases": cases,
+        # Verification-only input. It is removed before result serialization.
+        "_base_oracle_cases": base_cases,
     }
+
+
+def _module_oracle_cases(
+    repository: Path,
+    commit_sha: str,
+    path: str,
+    records: list[git_changes.CommandRecord],
+    *,
+    missing_allowed: bool = False,
+) -> tuple[bytes | None, list[object] | None]:
+    try:
+        content = git_changes.read_regular_blob(repository, commit_sha, path, records).content
+    except git_changes.GitError as error:
+        if not missing_allowed or error.code != "MISSING_BLOB":
+            raise
+        return None, None
+    cases = _read_module_json(content, "INVALID_MODULE_ORACLE")
+    if not isinstance(cases, list) or not 2 <= len(cases) <= MODULE_MAX_EXECUTIONS:
+        raise CharacterizationError("INVALID_MODULE_ORACLE")
+    return content, cases
 
 
 def _api_review_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -940,13 +963,18 @@ def _module_capture_matches(row: dict[str, Any], fact: dict[str, Any], side: str
     if witness.get("primary") != primary:
         return False
     try:
+        expected_root_cases = (
+            module.get("_base_oracle_cases")
+            if side == "base" and module.get("_base_oracle_cases") is not None
+            else module["oracle_cases"]
+        )
         verify_module_inventory_observation(
             module[side + "_inventory"],
             fact["api"].split("::", 1)[0],
             fact["api"],
             witness,
             row.get("behavior"),
-            module["oracle_cases"],
+            expected_root_cases,
         )
     except (ModuleObservationError, TypeError, ValueError, KeyError):
         return False
@@ -1817,7 +1845,18 @@ def _serialized_api_facts(
 ) -> list[dict[str, Any]]:
     return [
         {
-            **fact,
+            **{
+                key: (
+                    {
+                        module_key: module_value
+                        for module_key, module_value in value.items()
+                        if not module_key.startswith("_")
+                    }
+                    if key == "module"
+                    else value
+                )
+                for key, value in fact.items()
+            },
             "base_execution_verified": _api_capture_matches(base_rows.get(key), fact, "base"),
             "head_execution_verified": _api_capture_matches(head_rows.get(key), fact, "head"),
             "head_cases_sha256": head_rows.get(key, {}).get("behavior_sha256"),
