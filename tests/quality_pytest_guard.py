@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from _pytest.subtests import SubtestReport
 
 _WORKERS = ("gw0", "gw1")
 _CONTROLLER: CompletionGuard | None = None
@@ -37,8 +38,8 @@ def _branch_coverage(config: Any) -> bool:
     )
 
 
-def _phase_outcome(phases: dict[str, str]) -> str:
-    if "failed" in phases.values():
+def _phase_outcome(phases: dict[str, str], subtest_failed: bool = False) -> str:
+    if subtest_failed or "failed" in phases.values():
         return "failed"
     return "skipped" if "skipped" in phases.values() else "passed"
 
@@ -63,6 +64,7 @@ class CompletionGuard:
         self.collections: dict[str, tuple[str, ...]] = {}
         self.workers: dict[str, dict[str, Any]] = {}
         self.reports: dict[str, dict[str, str]] = {}
+        self.subtests: dict[str, Counter[str]] = {}
         self.errors: set[str] = set()
 
     @pytest.hookimpl(optionalhook=True)
@@ -104,10 +106,21 @@ class CompletionGuard:
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         if hasattr(self.config, "workerinput"):
             return
+        # Pinned pytest preserves this concrete type across xdist serialization.
+        # Nested reports share the parent's call phase but cannot complete that phase.
+        if isinstance(report, SubtestReport):
+            self._record_subtest(report)
+            return
         phases = self.reports.setdefault(report.nodeid, {})
         if report.when in phases:
             self.errors.add("DUPLICATE_TEST_PHASE")
         phases[report.when] = report.outcome
+
+    def _record_subtest(self, report: SubtestReport) -> None:
+        if report.when != "call" or report.outcome not in {"passed", "skipped", "failed"}:
+            self.errors.add("INVALID_SUBTEST_REPORT")
+            return
+        self.subtests.setdefault(report.nodeid, Counter())[report.outcome] += 1
 
     @pytest.hookimpl(trylast=True)
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
@@ -145,11 +158,17 @@ class CompletionGuard:
     def receipt(self) -> dict[str, Any]:
         collection = self._collection()
         self._validate_workers()
-        if set(self.reports) != set(collection):
+        if set(self.reports) != set(collection) or not self.subtests.keys() <= self.reports.keys():
             self.errors.add("INCOMPLETE_TEST_EXECUTION")
         if not all(_complete_phases(phases) for phases in self.reports.values()):
             self.errors.add("INCOMPLETE_TEST_PHASES")
-        outcomes = Counter(_phase_outcome(phases) for phases in self.reports.values())
+        outcomes = Counter(
+            _phase_outcome(phases, self.subtests.get(nodeid, Counter())["failed"] > 0)
+            for nodeid, phases in self.reports.items()
+        )
+        subtest_outcomes: Counter[str] = Counter()
+        for nested in self.subtests.values():
+            subtest_outcomes.update(nested)
         return {
             "schema_version": "quality-pytest-completion.v1",
             "guard_passed": not self.errors,
@@ -157,6 +176,7 @@ class CompletionGuard:
             "completed": sum("teardown" in phases for phases in self.reports.values()),
             "collection_sha256": hashlib.sha256(json.dumps(collection).encode()).hexdigest(),
             "outcomes": {name: outcomes[name] for name in ("passed", "skipped", "failed")},
+            "subtests": {name: subtest_outcomes[name] for name in ("passed", "skipped", "failed")},
             "workers": [self.workers[name] for name in _WORKERS if name in self.workers],
             "errors": sorted(self.errors),
         }

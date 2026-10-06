@@ -42,7 +42,15 @@ coverage. The read-only collector verifies matching collections, complete outcom
 startup, and each worker's coverage acknowledgement. Missing completion or coverage, worker errors,
 and attempts to disable coverage fail the command. A sanitized completion receipt is retained as a
 diagnostic; authoritative coverage still comes through the existing source-bound coverage parser.
+Native pytest subtests are counted separately from their parent test phases. Any failed subtest
+fails the parent outcome, while duplicate ordinary phases remain a completion error.
 The fixed 600-second command limit and container resource limits remain unchanged.
+
+The collector stops after the first failed mandatory command and retains its executed prefix.
+Dependency receipts cover only completed installations, so staged but uninstalled dependencies
+cannot mask the original failure. A valid failed prefix remains BLOCK in the composed result;
+omitted mandatory commands are never treated as passed. An unexplained incomplete sequence still
+fails evidence validation.
 
 Evidence binds repository name and numeric ID, full base/head SHAs, relevant Git blobs, pinned
 workflow SHA, run and attempt, job/artifact identity, digests, capture hashes, and source hashes.

@@ -641,6 +641,7 @@ def _runtime_receipts(
     language: str,
     repository: Path,
     output: Path,
+    results: tuple[quality_profile.GateResult, ...],
 ) -> tuple[str, str, tuple[str, ...]]:
     python_version = _runtime_probe(sys.executable, repository, output, "python-runtime-probe")
     python_runtime = (
@@ -665,10 +666,25 @@ def _runtime_receipts(
     dependencies = (
         *_distribution_receipts(),
         *target_python_receipts,
-        *_node_lock_receipts(trusted / "quality-tools", "tool"),
-        *_node_lock_receipts(trusted / "target-dependencies", "target"),
+        *_provisioned_node_receipts(trusted, results),
     )
     return python_runtime, node_runtime, tuple(sorted(set(dependencies)))
+
+
+def _provisioned_node_receipts(
+    trusted: Path, results: tuple[quality_profile.GateResult, ...]
+) -> tuple[str, ...]:
+    """Inventory only Node installations completed before the first blocker."""
+    completed = {item.adapter for item in results if item.executed and item.exit_code == 0}
+    receipts: list[str] = []
+    for kind, directory in (("tool", "quality-tools"), ("target", "target-dependencies")):
+        if f"typescript.{kind}-install.v1" not in completed:
+            continue
+        installed = _node_lock_receipts(trusted / directory, kind)
+        if not installed:
+            raise _node_identity_error(f"missing provisioned {kind} package-lock")
+        receipts.extend(installed)
+    return tuple(receipts)
 
 
 def _sanitize_diagnostic(content: bytes, roots: tuple[Path, ...]) -> tuple[bytes, bool]:
@@ -1490,7 +1506,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         )
         with timings.measure("setup", "runtime-receipts"):
             python_runtime, node_runtime, dependencies = _runtime_receipts(
-                policy.language, execution_target, supervisor
+                policy.language, execution_target, supervisor, results
             )
     evidence = quality_profile.QualityEvidence(
         base_sha=identity.base_sha,
