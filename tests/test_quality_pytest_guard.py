@@ -8,6 +8,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
+from _pytest.subtests import SubtestContext, SubtestReport
 
 
 def _candidate_module(filename: str) -> ModuleType:
@@ -59,6 +60,74 @@ def test_complete_workers_preserve_pass_skip_and_failure_outcomes() -> None:
     receipt = observed.receipt()
     assert receipt["guard_passed"]
     assert receipt["outcomes"] == {"passed": 0, "skipped": 1, "failed": 1}
+
+
+def _subtest_report(nodeid: str, outcome: str = "passed") -> SubtestReport:
+    report = pytest.TestReport(
+        nodeid=nodeid,
+        location=("test_fixture.py", 0, "test_parent"),
+        keywords={},
+        outcome=outcome,
+        longrepr=None,
+        when="call",
+    )
+    nested = SubtestReport._new(report, SubtestContext(msg=None, kwargs={}), None, None)
+    # Exercise the same concrete report reconstruction used by xdist.
+    return SubtestReport._from_json(nested._to_json())
+
+
+@pytest.mark.parametrize("outcome", ["passed", "skipped", "failed"])
+def test_subtests_preserve_parent_accounting_and_failures(outcome: str) -> None:
+    observed = _completed_guard()
+    observed.reports["a"] = {"setup": "passed"}
+    # Repeated identical subtest contexts are legitimate, including empty contexts.
+    for _ in range(2):
+        observed.pytest_runtest_logreport(_subtest_report("a", outcome))
+    assert observed.reports["a"] == {"setup": "passed"}
+    for phase in ("call", "teardown"):
+        observed.pytest_runtest_logreport(SimpleNamespace(nodeid="a", when=phase, outcome="passed"))
+    receipt = observed.receipt()
+    assert receipt["guard_passed"]
+    assert receipt["collected"] == receipt["completed"] == 2
+    assert receipt["subtests"] == {
+        name: 2 if name == outcome else 0 for name in ("passed", "skipped", "failed")
+    }
+    failures = int(outcome == "failed")
+    assert receipt["outcomes"] == {"passed": 2 - failures, "skipped": 0, "failed": failures}
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        ("duplicate", "DUPLICATE_TEST_PHASE"),
+        ("missing_call", "INCOMPLETE_TEST_PHASES"),
+        ("unknown_parent", "INCOMPLETE_TEST_EXECUTION"),
+        ("wrong_phase", "INVALID_SUBTEST_REPORT"),
+    ],
+)
+def test_subtests_cannot_replace_or_duplicate_parent_execution(failure: str, expected: str) -> None:
+    observed = _completed_guard()
+    nested = _subtest_report("unknown" if failure == "unknown_parent" else "a")
+    if failure == "wrong_phase":
+        nested.when = "teardown"
+    observed.pytest_runtest_logreport(nested)
+    if failure == "missing_call":
+        observed.reports["a"].pop("call")
+    elif failure == "duplicate":
+        observed.pytest_runtest_logreport(
+            SimpleNamespace(nodeid="a", when="call", outcome="passed")
+        )
+    receipt = observed.receipt()
+    assert not receipt["guard_passed"]
+    assert expected in receipt["errors"]
+
+
+def test_failed_subtest_forces_nonzero_controller_exit(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed = _completed_guard()
+    observed.pytest_runtest_logreport(_subtest_report("a", "failed"))
+    monkeypatch.setattr(guard, "_CONTROLLER", observed)
+    monkeypatch.setattr(Path, "write_bytes", lambda _path, raw: len(raw))
+    assert guard.finish_controller(0) == 1
 
 
 @pytest.mark.parametrize(

@@ -3540,6 +3540,59 @@ def test_failed_quality_capture_authenticates_its_gate_seven_block() -> None:
     assert _technical_standards(payload) == set()
 
 
+@pytest.mark.parametrize("language", ["python", "mixed"])
+def test_failed_quality_prefix_preserves_original_block_and_unqualified_suffix(
+    language: str,
+) -> None:
+    inputs = _inputs()
+    inputs[0]["language"] = language
+    if language == "mixed":
+        inputs[0]["gate_coverage"].append(
+            {"adapter": "typescript.c901-equivalent-touched.v1", "paths": ["src"]}
+        )
+    _set_quality_commands(inputs, language, ("src/sample.py",))
+    block = "QUALITY_GATE_FAILED:python.pytest.v1"
+    commands = inputs[0]["quality_profile"]["commands"]
+    cutoff = next(
+        index for index, row in enumerate(commands) if row["adapter"] == "python.pytest.v1"
+    )
+    commands[cutoff]["exit_code"] = 1
+    del commands[cutoff + 1 :]
+    del inputs[3]["commands"][cutoff + 1 :]
+    inputs[0]["policy_blocks"] = [block]
+    inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _entry(payload, 7)["result"] == "BLOCK"
+    assert _entry(payload, 7)["policy_blocks"] == [block]
+    assert _technical_standards(payload) == set()
+    assert payload["shared_failures"] == []
+    retained = payload["review_handoff"]["validation"]["commands"]
+    assert [row["adapter"] for row in retained] == [row["adapter"] for row in commands]
+    assert standard_results.validate_payload(payload, IDENTITY) is None
+
+
+@pytest.mark.parametrize("omission", ["successful-prefix", "failed-nonprefix"])
+def test_unexplained_quality_omissions_still_reject_capture(omission: str) -> None:
+    inputs = _inputs()
+    commands = inputs[0]["quality_profile"]["commands"]
+    if omission == "successful-prefix":
+        del commands[2:]
+        del inputs[3]["commands"][2:]
+    else:
+        del commands[0]
+        del inputs[3]["commands"][0]
+        commands[-1]["exit_code"] = 2
+        inputs[0]["policy_blocks"] = [f"QUALITY_GATE_FAILED:{commands[-1]['adapter']}"]
+        inputs[0]["overall_result"] = "BLOCK"
+
+    payload = _compose(inputs)
+
+    assert _technical_standards(payload) == {4, 7, 8}
+    assert "COMPLEXITY_RESULT:MALFORMED_QUALITY_EVIDENCE" in _entry(payload, 7)["technical_errors"]
+
+
 def test_failed_quality_capture_without_gate_seven_block_is_malformed() -> None:
     inputs = _inputs()
     _quality_command(inputs, "python.pytest.v1")["exit_code"] = 1

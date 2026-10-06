@@ -649,7 +649,7 @@ def _s02_profile(
         )
         == 3
     )
-    missing = tuple(adapter for adapter in required_adapters if adapter not in adapters)
+    missing = _s02_missing_profile_commands(commands, adapters, required_adapters, language)
     try:
         suppression_blocks = frozenset(
             quality_profile.suppression_policy_blocks(tuple(row["exclusions"]))
@@ -665,6 +665,24 @@ def _s02_profile(
         _s02_asset_blocks(receipts),
         suppression_blocks,
     )
+
+
+def _s02_missing_profile_commands(
+    commands: list[dict[str, Any]],
+    adapters: tuple[str, ...],
+    required: tuple[str, ...],
+    language: str,
+) -> tuple[str, ...]:
+    """Keep an observed failed prefix distinct from an unexplained omitted command."""
+    if (
+        commands
+        and adapters == required[: len(adapters)]
+        and contract.command_failed(
+            language, commands[-1]["adapter"], commands[-1]["executed"], commands[-1]["exit_code"]
+        )
+    ):
+        return ()
+    return tuple(adapter for adapter in required if adapter not in adapters)
 
 
 def _s02_review_section(
