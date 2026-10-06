@@ -2,18 +2,21 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Preserve the schema-5 correction lane while recognizing a dependency-level behavior correction when a declared scenario has a changed characterization definition and both base and head execute successfully to the same non-null module hash. Missing execution, failed execution, undeclared changes and absent obligation deltas remain fail-closed."
-proof = "Three focused schema-5 evidence tests cover the ordinary delta, hidden or absent declarations, and the bounded stable-module-hash dependency case. Ruff formatting and lint remain clean."
+intended_behavior = "Verify each side of a schema-5 module correction against that side's frozen root oracle. A changed head oracle cannot invalidate authentic protected-base execution, and neither side may validate against the other's expected cases."
+proof = "A focused unit test supplies distinct frozen base and head root oracles, proves each capture receives only its matching oracle, and proves the verification-only base oracle is absent from serialized evidence. The existing schema-5 correction tests and Ruff checks pass."
 
 [characterization]
-captured_behavior = "Schemas 1-4 remain unchanged. Schema 5 now distinguishes an executed dependency-level scenario from an absent declaration: the scenario definition must change, both observations must be non-null and equal, and the definition change remains review-visible and reconcilable."
-proof = "The focused dependency test proves acceptance only with equal non-null base/head hashes and an exact CHANGED_CHARACTERIZATION_DEFINITION block; the existing hidden-delta test continues to block mismatched declarations."
+captured_behavior = "Existing unchanged module characterizations still use the same head oracle on both sides because the base and head bytes are identical. A correction with different frozen cases now reads the protected-base module golden for base verification and the oracle-commit golden for head verification."
+proof = "The test exercises both verifier calls with different case sets and checks that public result serialization remains schema-compatible. Missing or malformed base oracle files still fail closed through the existing Git and oracle parsers."
 
 [separation_of_concerns]
-before = "Schema 5 required every declared scenario identifier to have a changed module behavior hash, even when an executed scenario exposed changed dependency behavior through a changed frozen definition while its own module source hash stayed stable."
-after = "Characterization accepts that narrow dependency-level case only when the declared definition changed and both base and head executions produced the same non-null module hash; obligations and all other declared scenarios retain their existing delta requirements."
+before = "Module API verification compared both protected-base and corrected-head captures to the head module golden, so a legitimate oracle-first correction made authentic base execution appear missing."
+after = "Module API verification loads both immutable Git objects and checks each capture against its own side's root oracle, while serializing only the existing public module evidence shape."
 boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_correction_evidence", before = "A declared scenario was present only in actual_scenarios when its base and head module behavior hashes differed.", after = "A declared scenario is also satisfied when its definition changed and both executions produced the same non-null module hash; failed or missing execution and absent obligation deltas still block." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_binding", before = "Only the head module golden was loaded for API verification.", after = "The protected-base and corrected-head module goldens are loaded independently; a missing base blob is allowed only for a genuinely absent base scenario." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_oracle_cases", before = "Module-oracle loading and validation were embedded in the binding function.", after = "One bounded reader validates the fixed case count and permits a missing blob only when the caller explicitly identifies an absent base scenario." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_capture_matches", before = "Both sides were checked against the head root cases.", after = "Base uses frozen base root cases and head uses frozen head root cases; all inventory, source, execution and determinism checks remain unchanged." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_serialized_api_facts", before = "Every internal module-binding field was spread into result evidence.", after = "Verification-only private fields are removed so the public result schema and retained evidence remain byte-compatible." },
 ]
 
 [architecture]
@@ -22,12 +25,12 @@ reviewed_paths = [".supportability-review.toml", "src/supportability_gate/charac
 
 [responsibility_boundary]
 path = "src/supportability_gate/characterization.py"
-owns = "Generic correction declarations, authenticated base/head observations, canonical behavior deltas and frozen-oracle evidence identities."
+owns = "Generic correction declarations, side-specific frozen module oracles, authenticated base/head observations, canonical behavior deltas and frozen-oracle evidence identities."
 does_not_own = "Trusted-owner authentication, GitHub comments, quality execution, handoff evidence or semantic truth of source receipts."
 
 [incremental_refactor]
-target = "Represent dependency-level behavior corrections without forcing unrelated production-file edits or weakening execution evidence."
-completed_step = "Recognize one declared stable-module-hash scenario only when its frozen definition changed and both sides executed; preserve every obligation and unrelated-block requirement."
+target = "Make oracle-first module corrections prove complete API execution on both sides without comparing the base to corrected expectations."
+completed_step = "Bind base execution to the protected-base module golden and head execution to the corrected golden, then strip the private verifier input from public evidence."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
@@ -36,5 +39,5 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 [human_review]
 naming = "Correction, oracle, observed delta and result-classification names describe exact policy facts rather than domain interpretation."
 cohesion = "Parsing and observation remain in characterization, authentication remains in refactor policy, and independent aggregate validation remains in standard results."
-intended_behavior = "Ordinary refactors remain behavior-preserving. A schema-5 dependency correction requires a changed frozen definition plus successful base and head execution; it cannot substitute for a missing obligation delta."
-reviewability = "The change is one bounded branch in _correction_evidence, one focused regression test and this evidence update; workflow contexts, thresholds and bypass policy are unchanged."
+intended_behavior = "Ordinary refactors remain behavior-preserving. A schema-5 module correction must execute both sides against their independently frozen cases; it cannot satisfy base execution with head expectations."
+reviewability = "The change is limited to module-oracle loading, side selection, result serialization, one focused regression test and this evidence update; workflow contexts, thresholds and bypass policy are unchanged."

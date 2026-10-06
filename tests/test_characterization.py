@@ -322,6 +322,43 @@ def test_schema5_parses_generic_correction_and_canonical_delta() -> None:
     )
 
 
+def test_module_correction_uses_each_side_frozen_root_oracle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = "src/sample.py::function:calculate"
+    primary = {"api": root, "cases": []}
+    witness = {"roots": [root], "primary": primary}
+    row = {
+        "api_observation": {**primary, "module_witness": witness},
+        "behavior": [],
+    }
+    fact = {
+        "api": root,
+        "module": {
+            "roots": [root],
+            "base_inventory": {"side": "base"},
+            "head_inventory": {"side": "head"},
+            "oracle_cases": [{"side": "head"}],
+            "_base_oracle_cases": [{"side": "base"}],
+        },
+    }
+    observed: list[object] = []
+
+    monkeypatch.setattr(
+        characterization,
+        "verify_module_inventory_observation",
+        lambda *args: observed.append(args[-1]),
+    )
+
+    assert characterization._module_capture_matches(row, fact, "base")
+    assert characterization._module_capture_matches(row, fact, "head")
+    assert observed == [[{"side": "base"}], [{"side": "head"}]]
+
+    monkeypatch.setattr(characterization, "_api_capture_matches", lambda *args: True)
+    serialized = characterization._serialized_api_facts({"sample": fact}, {}, {})[0]
+    assert "_base_oracle_cases" not in serialized["module"]
+
+
 def test_schema5_hidden_delta_and_absent_declaration_block() -> None:
     manifest = characterization.parse_manifest(_schema5_manifest(), "a" * 40)
     scenarios = [
