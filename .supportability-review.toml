@@ -2,46 +2,42 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Reject any oracle edit in implementation ancestry, including edits restored before final head, and credit actual meaningful corrected obligations while retaining raw compatibility changes."
-proof = "Focused history controls cover golden and manifest edits, restoration, merged branches and unavailable Git history. Correction coverage controls retain execution, API, replay, golden and authentication failures and reject absent or nonmeaningful assertions."
+intended_behavior = "Accept schema-5 module characterization evidence through the exact-head manifest-selected transport and existing module authorization join, retaining all validation limits and exact identities."
+proof = "Focused generic module tests exercise large schema-4 and schema-5 results with actual native function observations through both readers. Negative controls reject wrong schema, duplicate keys, over-limit input, legacy-manifest substitution, absent grants and invalid inventories."
 
 [characterization]
-captured_behavior = "Ordinary preservation and older schema coverage retain their existing compatibility predicate. Schema-5 correction evidence preserves raw incompatibility and requires exact owner reconciliation. Every implementation descendant must retain frozen oracle bytes."
-proof = "The existing valid transaction remains admitted before each history mutation; every mutated/restored variant blocks. Producer and result validation share coverage derivation; technical evidence failures prevent correction coverage credit."
+captured_behavior = "Schema-4 module results keep their existing bounded path. Schema-5 module results now reach the same deterministic validators instead of being rejected by stale schema-4 dispatch."
+proof = "Positive transports preserve exact result bytes and public validation. The corresponding failure controls retain malformed-result and introduction-authorization blocks; no case changes execution or oracle checks."
 
 [separation_of_concerns]
-before = "Endpoint-only oracle comparison missed intermediate edits; coverage confused expected corrected behavior with absence of observation."
-after = "Refactor policy independently verifies historical oracle immutability. Characterization derives observed coverage while preserving raw compatibility and owner authentication boundaries."
+before = "Two evidence readers and the introduction join retained schema-4-only dispatch after schema-5 correction support was added."
+after = "Readers derive result transport from authenticated Git manifest identity, and the existing authorization join admits both supported module evidence versions while retaining exact inventory and grant validation."
 boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_obligation_evidence", before = "Unobserved obligations evaluated meaningfulness at head only.", after = "Declared corrections require meaningful selected assertions on both sides and retain a blocking mismatch if either is invalid." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_coverage", before = "Aggregate coverage required raw compatibility PASS for every obligation.", after = "Aggregate validation derives the same narrowly eligible correction coverage as the producer." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "validate_result", before = "The result consumer passed no correction coverage identity into validation.", after = "Pass only correction IDs whose declaration and technical evidence permit coverage; retain all independent result checks." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verify_evidence", before = "Coverage was finalized before active correction evidence could be considered.", after = "Compute active correction identity before coverage, retaining raw blocks and final authorization requirements." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_correction_coverage_ids", before = "No owner of provisional correction coverage eligibility existed.", after = "Return declared correction obligations only when the delta is valid and no unreconciled technical characterization block remains." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_verified_obligation_coverage", before = "A changed but executed obligation could not prove target coverage.", after = "Keep ordinary coverage unchanged and additionally credit eligible meaningful correction assertions observed on both sides." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_correction_history_blocks", before = "Only oracle and final-head bytes were compared.", after = "Compare frozen paths at every descendant commit on oracle-to-head ancestry, including merged branches, using literal Git path arguments." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_correction_transaction_blocks", before = "The transaction verified ancestry, scope and endpoint byte identity.", after = "Also require the complete implementation ancestry to preserve oracle bytes, failing closed when history cannot be inspected." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_read_characterization_result", before = "Large schema-5 evidence was parsed as result v4 and rejected before refactor verification.", after = "Resolve the exact-head manifest before selecting the bounded result v4 or v5 reader; preserve ordinary result handling and fail closed on malformed evidence." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "introduction_authorization_blocks", before = "Schema-5 module facts were disallowed by a schema-4-only module dispatch predicate.", after = "Admit module fact parsing for both v4 and v5 while preserving every inventory, birth, grant and target check." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_module_characterization_head", before = "Manifest selection returned only a boolean and lost the selected schema version.", after = "Return the exact supported result schema derived from the fixed target checkout manifest." },
+  { path = "src/supportability_gate/standard_results_producer.py", kind = "function", symbol = "_read_characterization", before = "The aggregate producer hardcoded result v4 despite accepting a schema-5 manifest.", after = "Use the manifest-derived result schema with the existing bounded duplicate-safe aggregate decoder." },
 ]
 
 [architecture]
-dependency_direction = "Preserved: characterization owns capture and coverage facts; refactor policy owns Git transaction authentication; authoritative results revalidate retained facts above those layers."
-reviewed_paths = [".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/characterization.py", "src/supportability_gate/refactor_policy.py", "tests/test_characterization.py", "tests/test_refactor_policy.py"]
+dependency_direction = "Preserved: refactor policy and the result producer consume existing characterization manifest/codec functions; no target execution or policy authority moves into readers."
+reviewed_paths = [".supportability-review.toml", "docs/product/Repository-Configuration.md", "src/supportability_gate/refactor_policy.py", "src/supportability_gate/standard_results_producer.py", "tests/test_characterization_capacity.py", "tests/test_module_introduction.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/refactor_policy.py"
-owns = "Exact owner-authorized refactor and correction transactions, including immutable oracle ancestry."
-does_not_own = "Target-native execution, semantic truth of source receipts, quality commands, reviewer services or GitHub protection configuration."
+path = "src/supportability_gate/standard_results_producer.py"
+owns = "Authenticated-source selection, bounded evidence loading and assembly of the authoritative result."
+does_not_own = "Semantic truth, target-native execution, owner grants, production behavior changes or GitHub protection configuration."
 
 [incremental_refactor]
-target = "Close two concrete transaction gaps while preserving existing protections."
-completed_step = "Enforce full oracle ancestry and admit proven declared correction coverage without suppressing technical failures or raw compatibility evidence."
+target = "Complete schema-5 module evidence dispatch at the existing transport and authorization boundaries."
+completed_step = "Select the exact result schema from the actual manifest in both readers and admit v5 module facts through unchanged grant validation."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Oracle history, correction eligibility and obligation coverage describe the exact facts each function owns."
-cohesion = "History inspection stays in refactor policy and coverage derivation stays in characterization, with one shared derivation for producer and consumer."
-intended_behavior = "Frozen oracle bytes cannot change temporarily; corrected observations cover changed targets only with complete technical proof and separate exact authorization."
-reviewability = "Eight precise function boundaries, focused controls, and documentation; no workflow, required-context, timeout, threshold, scope or bypass changes."
+naming = "Manifest-selected transport and module evidence retain established domain names and exact responsibilities."
+cohesion = "Reader selection remains in existing consumers; the canonical result schema mapping and module validators remain in characterization."
+intended_behavior = "Valid schema-5 module evidence reaches deterministic policy evaluation without allowing payload-controlled schema selection, expanded limits, or skipped authorization."
+reviewability = "Four exact production boundaries, focused large-module transport and grant controls, and one documentation addition; no workflow, threshold, limit, scope, context or bypass changes."

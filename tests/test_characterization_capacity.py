@@ -411,6 +411,71 @@ def _standard_transport_endpoints(
     assert ("MALFORMED_CHARACTERIZATION_RESULT" in json.dumps(composed)) is overflow
 
 
+@pytest.mark.parametrize("version", ["4.0", "5.0"])
+def test_large_module_result_readers_select_exact_manifest_schema(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    fixture = module_birth._fixture(workspace, payload_size=10)
+    target = workspace / "target"
+    fixture[0].rename(target)
+    fixture = (target, *fixture[1:])
+    template = birth._verify(tmp_path, fixture)
+    documents = _transport_documents(template, fixture[4], size=4000)
+    result, _, manifest, _ = documents
+    manifest["schema_version"] = version
+    result["schema_version"] = characterization.result_schema(version)
+    if version == "5.0":
+        manifest["corrections"] = []
+    event = _commit_transport_manifest(fixture, documents)
+    _verify_actual_transport_calls(target, documents[1])
+    path = tmp_path / "module-result.json"
+    raw = characterization._write_json(path, result)
+    assert refactor_policy.MAX_JSON_BYTES < len(raw) < characterization.MODULE_AGGREGATE_JSON_BYTES
+    assert refactor_policy._read_characterization_result(path, target, event) == (result, raw)
+    _standard_transport_endpoints(path, result, target, event, monkeypatch)
+
+    other_schema = characterization.result_schema("4.0" if version == "5.0" else "5.0")
+    invalid_payloads = [
+        characterization._canonical({**result, "schema_version": other_schema}),
+        b'{"schema_version":"duplicate","schema_version":"duplicate"}',
+        b" " * (characterization.MODULE_AGGREGATE_JSON_BYTES + 1),
+    ]
+    for invalid in invalid_payloads:
+        path.write_bytes(invalid)
+        with pytest.raises(
+            refactor_policy.RefactorPolicyError, match="MALFORMED_CHARACTERIZATION_RESULT"
+        ):
+            refactor_policy._read_characterization_result(path, target, event)
+        assert composer._read_characterization(
+            path, "MISSING", "MALFORMED", result["head_sha"]
+        ) == (
+            {},
+            "MALFORMED",
+        )
+
+    path.write_bytes(raw)
+    legacy_manifest = copy.deepcopy(manifest)
+    legacy_manifest["schema_version"] = "3.0"
+    legacy_manifest.pop("corrections", None)
+    for scenario in legacy_manifest["scenarios"]:
+        scenario.pop("module_roots")
+    (target / characterization.MANIFEST_PATH).write_bytes(
+        characterization._canonical(legacy_manifest)
+    )
+    legacy_head = legacy._commit(target, "legacy manifest cannot authorize module result transport")
+    event["pull_request"]["head"]["sha"] = legacy_head
+    with pytest.raises(
+        refactor_policy.RefactorPolicyError, match="MALFORMED_CHARACTERIZATION_RESULT"
+    ):
+        refactor_policy._read_characterization_result(path, target, event)
+    assert composer._read_characterization(path, "MISSING", "MALFORMED", legacy_head) == (
+        {},
+        "MALFORMED",
+    )
+
+
 def test_schema4_result_exact_32m_transport_endpoints(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

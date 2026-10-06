@@ -309,24 +309,28 @@ def _read_characterization_result(
     """Select the fixed result transport using the actual exact-head manifest."""
     try:
         value, content = _read_json(path, "MALFORMED_CHARACTERIZATION_RESULT")
-    except RefactorPolicyError as ordinary_error:
-        try:
-            with path.open("rb") as stream:
-                content = stream.read(characterization_evidence.MODULE_AGGREGATE_JSON_BYTES + 1)
-            value = characterization_evidence._read_module_aggregate(
-                content,
-                "MALFORMED_CHARACTERIZATION_RESULT",
-                characterization_evidence.MODULE_RESULT_SCHEMA,
-            )
-        except (OSError, characterization_evidence.CharacterizationError):
-            raise ordinary_error from None
+    except RefactorPolicyError:
+        pass
     else:
-        if value.get("schema_version") != characterization_evidence.MODULE_RESULT_SCHEMA:
+        if value.get("schema_version") not in {
+            characterization_evidence.MODULE_RESULT_SCHEMA,
+            characterization_evidence.CORRECTION_RESULT_SCHEMA,
+        }:
             return value, content
     _, _, head_sha, _ = _event_values(event)
-    manifest = characterization_evidence._manifest(repository, head_sha, [])
-    if manifest.schema_version != "4.0":
-        raise RefactorPolicyError("MALFORMED_CHARACTERIZATION_RESULT")
+    try:
+        manifest = characterization_evidence._manifest(repository, head_sha, [])
+        if manifest.schema_version not in {"4.0", "5.0"}:
+            raise RefactorPolicyError("MALFORMED_CHARACTERIZATION_RESULT")
+        with path.open("rb") as stream:
+            content = stream.read(characterization_evidence.MODULE_AGGREGATE_JSON_BYTES + 1)
+        value = characterization_evidence._read_module_aggregate(
+            content,
+            "MALFORMED_CHARACTERIZATION_RESULT",
+            characterization_evidence.result_schema(manifest.schema_version),
+        )
+    except (OSError, git_changes.GitError, characterization_evidence.CharacterizationError):
+        raise RefactorPolicyError("MALFORMED_CHARACTERIZATION_RESULT") from None
     return value, content
 
 
@@ -405,7 +409,10 @@ def introduction_authorization_blocks(
         facts = characterization_evidence._result_api_facts(
             characterization.get("api_observations", []),
             allow_module=characterization.get("schema_version")
-            == characterization_evidence.MODULE_RESULT_SCHEMA,
+            in {
+                characterization_evidence.MODULE_RESULT_SCHEMA,
+                characterization_evidence.CORRECTION_RESULT_SCHEMA,
+            },
         )
     except (RefactorPolicyError, characterization_evidence.CharacterizationError):
         return ["MALFORMED_INTRODUCTION_AUTHORIZATION"]
