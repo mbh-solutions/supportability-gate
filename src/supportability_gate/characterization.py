@@ -14,7 +14,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from types import CodeType
-from typing import Any
+from typing import Any, cast
 
 from supportability_gate import contract, git_changes
 
@@ -28,6 +28,8 @@ OBSERVED_RESULT_SCHEMA = "characterization-result.v3"
 OBSERVED_CAPTURE_SCHEMA = "characterization-capture.v3"
 MODULE_RESULT_SCHEMA = "characterization-result.v4"
 MODULE_CAPTURE_SCHEMA = "characterization-capture.v4"
+CORRECTION_RESULT_SCHEMA = "characterization-result.v5"
+CORRECTION_CAPTURE_SCHEMA = "characterization-capture.v5"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
 KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
 OBLIGATION_CATEGORIES = frozenset({"behavior", "cli_help", "static"})
@@ -83,6 +85,26 @@ class Transition:
 
 
 @dataclass(frozen=True)
+class OracleFile:
+    """One byte-frozen correction oracle file."""
+
+    path: str
+    sha256: str
+    kind: str
+
+
+@dataclass(frozen=True)
+class Correction:
+    """One repository-agnostic, oracle-first behavior correction."""
+
+    id: str
+    scenarios: tuple[str, ...]
+    obligations: tuple[str, ...]
+    targets: tuple[str, ...]
+    oracle_files: tuple[OracleFile, ...]
+
+
+@dataclass(frozen=True)
 class Manifest:
     """Validated scenario manifest at one immutable commit."""
 
@@ -91,6 +113,7 @@ class Manifest:
     sha256: str
     obligations: tuple[Obligation, ...] = ()
     transitions: tuple[Transition, ...] = ()
+    corrections: tuple[Correction, ...] = ()
     schema_version: str = "1.0"
 
 
@@ -102,10 +125,10 @@ def _manifest_payload(manifest: Manifest) -> dict[str, object]:
                 "covers": list(item.covers),
                 "id": item.id,
                 "kind": item.kind,
-                **({"api": item.api} if manifest.schema_version in {"3.0", "4.0"} else {}),
+                **({"api": item.api} if manifest.schema_version in {"3.0", "4.0", "5.0"} else {}),
                 **(
                     {"module_roots": list(item.module_roots)}
-                    if manifest.schema_version == "4.0"
+                    if manifest.schema_version in {"4.0", "5.0"}
                     else {}
                 ),
             }
@@ -113,7 +136,7 @@ def _manifest_payload(manifest: Manifest) -> dict[str, object]:
         ],
         "sha256": manifest.sha256,
     }
-    if manifest.schema_version in {"2.0", "3.0", "4.0"}:
+    if manifest.schema_version in {"2.0", "3.0", "4.0", "5.0"}:
         payload.update(
             {
                 "obligations": [
@@ -137,6 +160,20 @@ def _manifest_payload(manifest: Manifest) -> dict[str, object]:
                 ],
             }
         )
+    if manifest.schema_version == "5.0":
+        payload["corrections"] = [
+            {
+                "id": item.id,
+                "obligations": list(item.obligations),
+                "oracle_files": [
+                    {"kind": file.kind, "path": file.path, "sha256": file.sha256}
+                    for file in item.oracle_files
+                ],
+                "scenarios": list(item.scenarios),
+                "targets": list(item.targets),
+            }
+            for item in manifest.corrections
+        ]
     return payload
 
 
@@ -183,7 +220,12 @@ def _read_module_aggregate(content: bytes, code: str, schema: str) -> dict[str, 
         value = json.loads(content, object_pairs_hook=_module_json_object)
     except (UnicodeDecodeError, ValueError, RecursionError) as error:
         raise CharacterizationError(code) from error
-    if schema not in {MODULE_CAPTURE_SCHEMA, MODULE_RESULT_SCHEMA} or not isinstance(value, dict):
+    if schema not in {
+        MODULE_CAPTURE_SCHEMA,
+        MODULE_RESULT_SCHEMA,
+        CORRECTION_CAPTURE_SCHEMA,
+        CORRECTION_RESULT_SCHEMA,
+    } or not isinstance(value, dict):
         raise CharacterizationError(code)
     if value.get("schema_version") != schema:
         raise CharacterizationError(code)
@@ -214,8 +256,8 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
         row = _exact_keys(
             item,
             keys
-            | ({"api"} if version in {"3.0", "4.0"} else set())
-            | ({"module_roots"} if version == "4.0" else set()),
+            | ({"api"} if version in {"3.0", "4.0", "5.0"} else set())
+            | ({"module_roots"} if version in {"4.0", "5.0"} else set()),
             "MALFORMED_CHARACTERIZATION_MANIFEST",
         )
         identifier, kind = row["id"], row["kind"]
@@ -233,10 +275,10 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
         len(parsed) != len({item.id for item in parsed})
         or len(parsed) > MAX_SCENARIOS
         or sum(max(1, len(item.module_roots)) for item in parsed if item.api is not None)
-        > (MODULE_MAX_OBSERVED_APIS if version == "4.0" else MAX_OBSERVED_APIS)
+        > (MODULE_MAX_OBSERVED_APIS if version in {"4.0", "5.0"} else MAX_OBSERVED_APIS)
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
-    if version == "4.0":
+    if version in {"4.0", "5.0"}:
         actual_roots = [
             root
             for item in parsed
@@ -350,6 +392,88 @@ def _transition_rows(value: object) -> tuple[Transition, ...]:
     return tuple(parsed)
 
 
+def _correction_ids(value: object, field: str, allowed: set[str]) -> tuple[str, ...]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(item, str) or item not in allowed for item in value)
+        or value != sorted(set(value))
+    ):
+        raise CharacterizationError("MALFORMED_CORRECTION", field)
+    return tuple(value)
+
+
+def _correction_targets(value: object) -> tuple[str, ...]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(item, str) or "::" not in item for item in value)
+        or value != sorted(set(value))
+    ):
+        raise CharacterizationError("MALFORMED_CORRECTION", "targets")
+    for item in value:
+        contract.normalize_repository_path(item.split("::", 1)[0], "corrections.targets")
+    return tuple(value)
+
+
+def _oracle_files(value: object) -> tuple[OracleFile, ...]:
+    kinds = {"expected_case", "golden", "review", "source_receipt"}
+    if not isinstance(value, list) or not value:
+        raise CharacterizationError("MALFORMED_CORRECTION", "oracle_files")
+    rows: list[OracleFile] = []
+    for item in value:
+        row = _exact_keys(item, {"kind", "path", "sha256"}, "MALFORMED_CORRECTION")
+        try:
+            path = contract.normalize_repository_path(row["path"], "corrections.oracle_files")
+        except contract.ContractError as error:
+            raise CharacterizationError("MALFORMED_CORRECTION", "oracle_files") from error
+        if (
+            row["kind"] not in kinds
+            or not isinstance(row["sha256"], str)
+            or SHA256.fullmatch(row["sha256"]) is None
+        ):
+            raise CharacterizationError("MALFORMED_CORRECTION", "oracle_files")
+        rows.append(OracleFile(path, row["sha256"], row["kind"]))
+    if rows != sorted(rows, key=lambda item: (item.path, item.kind)):
+        raise CharacterizationError("MALFORMED_CORRECTION", "oracle_files")
+    if len({item.path for item in rows}) != len(rows) or {item.kind for item in rows} != kinds:
+        raise CharacterizationError("MALFORMED_CORRECTION", "oracle_files")
+    return tuple(rows)
+
+
+def _correction_rows(
+    value: object, scenarios: tuple[Scenario, ...], obligations: tuple[Obligation, ...]
+) -> tuple[Correction, ...]:
+    if not isinstance(value, list):
+        raise CharacterizationError("MALFORMED_CORRECTION")
+    scenario_ids = {item.id for item in scenarios}
+    obligation_ids = {item.id for item in obligations}
+    rows: list[Correction] = []
+    for item in value:
+        row = _exact_keys(
+            item,
+            {"id", "obligations", "oracle_files", "scenarios", "targets"},
+            "MALFORMED_CORRECTION",
+        )
+        identifier = row["id"]
+        if not isinstance(identifier, str) or SCENARIO_ID.fullmatch(identifier) is None:
+            raise CharacterizationError("MALFORMED_CORRECTION", "id")
+        rows.append(
+            Correction(
+                identifier,
+                _correction_ids(row["scenarios"], "scenarios", scenario_ids),
+                _correction_ids(row["obligations"], "obligations", obligation_ids),
+                _correction_targets(row["targets"]),
+                _oracle_files(row["oracle_files"]),
+            )
+        )
+    if rows != sorted(rows, key=lambda item: item.id) or len({item.id for item in rows}) != len(
+        rows
+    ):
+        raise CharacterizationError("MALFORMED_CORRECTION")
+    return tuple(rows)
+
+
 def _observed_obligations_valid(scenario: Scenario, obligations: tuple[Obligation, ...]) -> bool:
     behavior = [
         item for item in obligations if item.scenario == scenario.id and item.category == "behavior"
@@ -372,18 +496,24 @@ def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
         {"schema_version", "scenarios"}
         if version == "1.0"
         else {"schema_version", "scenarios", "obligations", "transitions"}
+        | ({"corrections"} if version == "5.0" else set())
     )
     data = _exact_keys(raw, expected, "MALFORMED_CHARACTERIZATION_MANIFEST")
     scenarios = data["scenarios"]
-    if version not in {"1.0", "2.0", "3.0", "4.0"}:
+    if version not in {"1.0", "2.0", "3.0", "4.0", "5.0"}:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     parsed = _scenario_rows(scenarios, version)
     obligations = _obligation_rows(data["obligations"], parsed) if version != "1.0" else ()
     transitions = _transition_rows(data["transitions"]) if version != "1.0" else ()
+    corrections = (
+        _correction_rows(data["corrections"], parsed, obligations) if version == "5.0" else ()
+    )
     for scenario in parsed:
         if scenario.api is not None and not _observed_obligations_valid(scenario, obligations):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
-    return Manifest(parsed, blob_sha, _sha256(content), obligations, transitions, version)
+    return Manifest(
+        parsed, blob_sha, _sha256(content), obligations, transitions, corrections, version
+    )
 
 
 def _manifest(
@@ -824,14 +954,20 @@ def _module_capture_matches(row: dict[str, Any], fact: dict[str, Any], side: str
 
 
 def _load_capture(
-    path: Path, missing_code: str, *, module: bool = False
+    path: Path,
+    missing_code: str,
+    *,
+    module: bool = False,
+    aggregate_schema: str | None = None,
 ) -> tuple[dict[str, Any] | None, str | None]:
     try:
-        if module:
+        if module and aggregate_schema is None:
+            aggregate_schema = MODULE_CAPTURE_SCHEMA
+        if aggregate_schema is not None:
             with path.open("rb") as stream:
                 content = stream.read(MODULE_AGGREGATE_JSON_BYTES + 1)
             value = _read_module_aggregate(
-                content, "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE", MODULE_CAPTURE_SCHEMA
+                content, "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE", aggregate_schema
             )
         else:
             content = path.read_bytes()
@@ -879,6 +1015,7 @@ def _authentication_blocks(
         CAPTURE_SCHEMA,
         OBSERVED_CAPTURE_SCHEMA,
         MODULE_CAPTURE_SCHEMA,
+        CORRECTION_CAPTURE_SCHEMA,
     }:
         return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"]
     authentication = artifact.get("authentication")
@@ -961,7 +1098,7 @@ def _stable_environment(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _effective_obligations(manifest: Manifest) -> tuple[Obligation, ...]:
-    if manifest.schema_version in {"2.0", "3.0", "4.0"}:
+    if manifest.schema_version in {"2.0", "3.0", "4.0", "5.0"}:
         return manifest.obligations
     return tuple(
         Obligation(item.id, "static", item.id, "$", f"scenario:{item.id}")
@@ -1163,6 +1300,7 @@ def _capture_blocks(
     artifact: dict[str, Any],
     manifest: Manifest,
     language: str,
+    side: str,
     absent_scenarios: frozenset[str] = frozenset(),
 ) -> tuple[list[str], dict[str, dict[str, Any]]]:
     blocks: list[str] = []
@@ -1182,8 +1320,22 @@ def _capture_blocks(
         return ["INCOMPLETE_CHARACTERIZATION_EVIDENCE"], {}
     for scenario in manifest.scenarios:
         row = by_id[scenario.id]
-        blocks.extend(_scenario_row_blocks(scenario, row, scenario.id in absent_scenarios))
-    blocks.extend(_obligation_capture_blocks(manifest, by_id, absent_scenarios))
+        blocks.extend(
+            _scenario_row_blocks(
+                scenario,
+                row,
+                scenario.id in absent_scenarios,
+                correction_base=manifest.schema_version == "5.0" and side == "base",
+            )
+        )
+    blocks.extend(
+        _obligation_capture_blocks(
+            manifest,
+            by_id,
+            absent_scenarios,
+            correction_base=manifest.schema_version == "5.0" and side == "base",
+        )
+    )
     expected_fingerprint = _sha256(
         _canonical(
             [[item.id, by_id[item.id].get("behavior_sha256")] for item in manifest.scenarios]
@@ -1195,7 +1347,11 @@ def _capture_blocks(
 
 
 def _scenario_row_blocks(
-    scenario: Scenario, row: dict[str, Any], absent: bool = False
+    scenario: Scenario,
+    row: dict[str, Any],
+    absent: bool = False,
+    *,
+    correction_base: bool = False,
 ) -> list[str]:
     blocks: list[str] = []
     if row.get("kind") != scenario.kind or row.get("covers") != list(scenario.covers):
@@ -1204,7 +1360,11 @@ def _scenario_row_blocks(
         blocks.append(f"CHARACTERIZATION_EXECUTION_FAILED:{scenario.id}")
     if row.get("deterministic") is not True:
         blocks.append(f"CHARACTERIZATION_REPLAY_DRIFT:{scenario.id}")
-    if not absent and row.get("behavior_sha256") != row.get("golden_behavior_sha256"):
+    if (
+        not absent
+        and not correction_base
+        and row.get("behavior_sha256") != row.get("golden_behavior_sha256")
+    ):
         blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:{scenario.id}")
     return blocks
 
@@ -1235,6 +1395,8 @@ def _obligation_capture_blocks(
     manifest: Manifest,
     rows: dict[str, dict[str, Any]],
     absent_scenarios: frozenset[str] = frozenset(),
+    *,
+    correction_base: bool = False,
 ) -> list[str]:
     blocks: list[str] = []
     for obligation in manifest.obligations:
@@ -1246,7 +1408,7 @@ def _obligation_capture_blocks(
         except CharacterizationError:
             blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{obligation.id}")
             continue
-        if not _valid_obligation_assertion(obligation.category, selected):
+        if not correction_base and not _valid_obligation_assertion(obligation.category, selected):
             blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{obligation.id}")
     return blocks
 
@@ -1341,7 +1503,7 @@ def _verified_capture_rows(
     absent = frozenset(
         key for key, value in facts.items() if side == "base" and value["base_absent"]
     )
-    capture_blocks, rows = _capture_blocks(artifact, manifest, policy.language, absent)
+    capture_blocks, rows = _capture_blocks(artifact, manifest, policy.language, side, absent)
     blocks.extend(capture_blocks)
     blocks.extend(
         _artifact_identity_blocks(repository, head_sha, policy.language, manifest, rows, records)
@@ -1780,7 +1942,9 @@ def _result_module_fact(fact: dict[str, Any]) -> None:
 
 def capture_schema(version: str) -> str:
     return (
-        MODULE_CAPTURE_SCHEMA
+        CORRECTION_CAPTURE_SCHEMA
+        if version == "5.0"
+        else MODULE_CAPTURE_SCHEMA
         if version == "4.0"
         else OBSERVED_CAPTURE_SCHEMA
         if version == "3.0"
@@ -1790,7 +1954,9 @@ def capture_schema(version: str) -> str:
 
 def result_schema(version: str) -> str:
     return (
-        MODULE_RESULT_SCHEMA
+        CORRECTION_RESULT_SCHEMA
+        if version == "5.0"
+        else MODULE_RESULT_SCHEMA
         if version == "4.0"
         else OBSERVED_RESULT_SCHEMA
         if version == "3.0"
@@ -1987,6 +2153,8 @@ def _result_scenario_blocks(
     rows: list[dict[str, Any]],
     blocks: list[str],
     api_facts: dict[str, dict[str, Any]] | None = None,
+    *,
+    correction: bool = False,
 ) -> list[str]:
     derived: list[str] = []
     incomplete = any(
@@ -2019,7 +2187,7 @@ def _result_scenario_blocks(
             derived.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:{identifier}")
         behavior_mismatch = golden is not None and any(
             behavior is not None and behavior != golden
-            for behavior in ((head,) if birth else (base, head))
+            for behavior in ((head,) if birth or correction else (base, head))
         )
         if golden is not None and execution_failed and (base is None or head is None):
             behavior_mismatch = True
@@ -2047,18 +2215,32 @@ def _result_shape(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     schema_version = value.get("schema_version")
-    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
-    keys = {*common_keys, "obligations"} if modern else common_keys
-    if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}:
-        keys.add("api_observations")
-    if schema_version not in {
-        LEGACY_RESULT_SCHEMA,
+    modern = schema_version in {
         RESULT_SCHEMA,
         OBSERVED_RESULT_SCHEMA,
         MODULE_RESULT_SCHEMA,
-    } or set(value) not in (
-        keys,
-        {*keys, "refactor_runnability"},
+        CORRECTION_RESULT_SCHEMA,
+    }
+    keys = {*common_keys, "obligations"} if modern else common_keys
+    if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA, CORRECTION_RESULT_SCHEMA}:
+        keys.add("api_observations")
+    allowed_shapes: tuple[set[str], ...] = (keys, {*keys, "refactor_runnability"})
+    if schema_version == CORRECTION_RESULT_SCHEMA:
+        allowed_shapes = (
+            *allowed_shapes,
+            {*keys, "correction"},
+            {*keys, "correction", "refactor_runnability"},
+        )
+    if (
+        schema_version
+        not in {
+            LEGACY_RESULT_SCHEMA,
+            RESULT_SCHEMA,
+            OBSERVED_RESULT_SCHEMA,
+            MODULE_RESULT_SCHEMA,
+            CORRECTION_RESULT_SCHEMA,
+        }
+        or set(value) not in allowed_shapes
     ):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     return value
@@ -2078,12 +2260,17 @@ def validate_result(
     """Validate serialized Gate 5 facts without repository or target execution."""
     row = _result_shape(value)
     if (
-        row["schema_version"] == MODULE_RESULT_SCHEMA
+        row["schema_version"] in {MODULE_RESULT_SCHEMA, CORRECTION_RESULT_SCHEMA}
         and len(_canonical(row)) + 1 > MODULE_AGGREGATE_JSON_BYTES
     ):
         raise CharacterizationError("MODULE_AGGREGATE_VALUE_LIMIT")
     schema_version = row["schema_version"]
-    modern = schema_version in {RESULT_SCHEMA, OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
+    modern = schema_version in {
+        RESULT_SCHEMA,
+        OBSERVED_RESULT_SCHEMA,
+        MODULE_RESULT_SCHEMA,
+        CORRECTION_RESULT_SCHEMA,
+    }
     if (row["repository"], row["base_sha"], row["head_sha"], row["workflow_sha"]) != (
         repository,
         base_sha,
@@ -2116,21 +2303,28 @@ def validate_result(
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     api_facts = (
         _result_api_facts(
-            row["api_observations"], allow_module=schema_version == MODULE_RESULT_SCHEMA
+            row["api_observations"],
+            allow_module=schema_version in {MODULE_RESULT_SCHEMA, CORRECTION_RESULT_SCHEMA},
         )
-        if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
+        if schema_version
+        in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA, CORRECTION_RESULT_SCHEMA}
         else {}
     )
     scenarios = _result_scenarios(row["scenarios"], api_facts)
     derived.extend(_result_api_blocks(api_facts, scenarios))
     obligations = _result_obligations(row["obligations"], scenarios, api_facts) if modern else []
+    if schema_version == CORRECTION_RESULT_SCHEMA and "correction" in row:
+        _validate_result_correction(
+            row["correction"], blocks, scenarios, obligations, required_targets
+        )
     fingerprint_payload: object = (
         {
             "obligations": [[item["id"], item["head_assertion_sha256"]] for item in obligations],
             "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
             **(
                 {"api_observations": list(api_facts.values())}
-                if schema_version in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA}
+                if schema_version
+                in {OBSERVED_RESULT_SCHEMA, MODULE_RESULT_SCHEMA, CORRECTION_RESULT_SCHEMA}
                 else {}
             ),
         }
@@ -2140,7 +2334,14 @@ def validate_result(
     fingerprint = _sha256(_canonical(fingerprint_payload))
     if row["behavior_fingerprint"] != fingerprint:
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
-    derived.extend(_result_scenario_blocks(scenarios, blocks, api_facts))
+    derived.extend(
+        _result_scenario_blocks(
+            scenarios,
+            blocks,
+            api_facts,
+            correction=schema_version == CORRECTION_RESULT_SCHEMA and "correction" in row,
+        )
+    )
     derived.extend(
         f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item['id']}"
         for item in obligations
@@ -2206,6 +2407,180 @@ def _result_api_blocks(
     return blocks
 
 
+def _delta_ids(rows: list[dict[str, object]], prefix: str) -> set[str]:
+    return {
+        str(item["id"])
+        for item in rows
+        if item.get(f"base_{prefix}_sha256") is not None
+        and item.get(f"head_{prefix}_sha256") is not None
+        and item[f"base_{prefix}_sha256"] != item[f"head_{prefix}_sha256"]
+    }
+
+
+def _correction_delta(
+    scenarios: list[dict[str, object]], obligations: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    rows = [
+        {
+            "base_sha256": item["base_behavior_sha256"],
+            "head_sha256": item["head_behavior_sha256"],
+            "id": item["id"],
+            "kind": "scenario",
+        }
+        for item in scenarios
+        if item["base_behavior_sha256"] is not None
+        and item["head_behavior_sha256"] is not None
+        and item["base_behavior_sha256"] != item["head_behavior_sha256"]
+    ]
+    rows.extend(
+        {
+            "base_sha256": item["base_assertion_sha256"],
+            "head_sha256": item["head_assertion_sha256"],
+            "id": item["id"],
+            "kind": "obligation",
+        }
+        for item in obligations
+        if item["base_assertion_sha256"] is not None
+        and item["head_assertion_sha256"] is not None
+        and item["base_assertion_sha256"] != item["head_assertion_sha256"]
+    )
+    return sorted(rows, key=lambda item: (str(item["kind"]), str(item["id"])))
+
+
+def _reconcilable_block(block: str, correction: Correction) -> bool:
+    allowed = set(correction.scenarios)
+    obligation_allowed = set(correction.obligations)
+    families = (
+        "CHANGED_CHARACTERIZATION_DEFINITION:",
+        "CHANGED_GOLDEN_OUTPUT:",
+        "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
+    )
+    if not block.startswith(families):
+        return False
+    suffix = block.split(":", 1)[1]
+    if suffix.startswith("obligation:"):
+        return suffix.removeprefix("obligation:") in obligation_allowed
+    if suffix.startswith("review:"):
+        return suffix.removeprefix("review:") in allowed
+    return suffix in allowed
+
+
+def _correction_evidence(
+    manifest: Manifest,
+    base_manifest: Manifest | None,
+    blocks: list[str],
+    scenarios: list[dict[str, object]],
+    obligations: list[dict[str, object]],
+    targets: tuple[str, ...],
+) -> dict[str, object]:
+    previous = {item.id: item for item in base_manifest.corrections} if base_manifest else {}
+    active = [item for item in manifest.corrections if previous.get(item.id) != item]
+    if manifest.schema_version != "5.0" or len(active) != 1:
+        raise CharacterizationError("MALFORMED_CORRECTION")
+    correction = active[0]
+    delta = _correction_delta(scenarios, obligations)
+    actual_scenarios = _delta_ids(scenarios, "behavior")
+    actual_obligations = _delta_ids(obligations, "assertion")
+    verification_blocks: list[str] = []
+    if actual_scenarios - set(correction.scenarios) or actual_obligations - set(
+        correction.obligations
+    ):
+        verification_blocks.append("UNDECLARED_CORRECTION_DELTA")
+    if (
+        set(correction.scenarios) - actual_scenarios
+        or set(correction.obligations) - actual_obligations
+    ):
+        verification_blocks.append("ABSENT_DECLARED_CORRECTION_DELTA")
+    if correction.targets != targets:
+        verification_blocks.append("UNDECLARED_CORRECTION_DELTA")
+    behavior_blocks = [
+        item
+        for item in blocks
+        if item.startswith(
+            (
+                "CHANGED_CHARACTERIZATION_DEFINITION:",
+                "CHANGED_GOLDEN_OUTPUT:",
+                "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:",
+            )
+        )
+    ]
+    reconciled = sorted(item for item in behavior_blocks if _reconcilable_block(item, correction))
+    if len(reconciled) != len(behavior_blocks):
+        verification_blocks.append("UNDECLARED_CORRECTION_DELTA")
+    return {
+        "behavior_delta": delta,
+        "behavior_delta_sha256": _sha256(_canonical(delta)),
+        "id": correction.id,
+        "obligations": list(correction.obligations),
+        "oracle_files": [
+            {"kind": item.kind, "path": item.path, "sha256": item.sha256}
+            for item in correction.oracle_files
+        ],
+        "oracle_manifest_blob_sha": manifest.blob_sha,
+        "oracle_manifest_sha256": manifest.sha256,
+        "reconcilable_blocks": reconciled,
+        "scenarios": list(correction.scenarios),
+        "targets": list(correction.targets),
+        "verification_blocks": sorted(set(verification_blocks)),
+    }
+
+
+def _validate_result_correction(
+    value: object,
+    blocks: list[str],
+    scenarios: list[dict[str, Any]],
+    obligations: list[dict[str, Any]],
+    required_targets: tuple[str, ...] | None,
+) -> None:
+    expected = {
+        "behavior_delta",
+        "behavior_delta_sha256",
+        "id",
+        "obligations",
+        "oracle_files",
+        "oracle_manifest_blob_sha",
+        "oracle_manifest_sha256",
+        "reconcilable_blocks",
+        "scenarios",
+        "targets",
+        "verification_blocks",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    delta = _correction_delta(scenarios, obligations)
+    if value["behavior_delta"] != delta or value["behavior_delta_sha256"] != _sha256(
+        _canonical(delta)
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    if (
+        not isinstance(value["id"], str)
+        or SCENARIO_ID.fullmatch(value["id"]) is None
+        or not isinstance(value["oracle_manifest_blob_sha"], str)
+        or SHA.fullmatch(value["oracle_manifest_blob_sha"]) is None
+        or not isinstance(value["oracle_manifest_sha256"], str)
+        or SHA256.fullmatch(value["oracle_manifest_sha256"]) is None
+        or value["targets"] != list(required_targets or ())
+        or value["reconcilable_blocks"] != sorted(set(value["reconcilable_blocks"]))
+        or any(item not in blocks for item in value["reconcilable_blocks"])
+        or value["verification_blocks"] != sorted(set(value["verification_blocks"]))
+    ):
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    for field, allowed in (
+        ("scenarios", {item["id"] for item in scenarios}),
+        ("obligations", {item["id"] for item in obligations}),
+    ):
+        if (
+            not isinstance(value[field], list)
+            or value[field] != sorted(set(value[field]))
+            or any(item not in allowed for item in value[field])
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
+    try:
+        _oracle_files(value["oracle_files"])
+    except CharacterizationError as error:
+        raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT") from error
+
+
 def _verification_result(
     identity: git_changes.RepositoryIdentity,
     manifest: Manifest,
@@ -2227,6 +2602,7 @@ def _verification_result(
     head_artifact_id: str,
     head_artifact_digest: str,
     api_observations: list[dict[str, Any]] | None = None,
+    correction: dict[str, object] | None = None,
 ) -> dict[str, object]:
     unique_blocks = sorted(set(blocks))
     return {
@@ -2252,7 +2628,7 @@ def _verification_result(
                     "scenarios": [[item["id"], item["head_behavior_sha256"]] for item in scenarios],
                     **(
                         {"api_observations": api_observations or []}
-                        if manifest.schema_version in {"3.0", "4.0"}
+                        if manifest.schema_version in {"3.0", "4.0", "5.0"}
                         else {}
                     ),
                 }
@@ -2285,10 +2661,11 @@ def _verification_result(
         "schema_version": result_schema(manifest.schema_version),
         **(
             {"api_observations": api_observations or []}
-            if manifest.schema_version in {"3.0", "4.0"}
+            if manifest.schema_version in {"3.0", "4.0", "5.0"}
             else {}
         ),
         "workflow_sha": workflow_sha,
+        **({"correction": correction} if correction is not None else {}),
     }
 
 
@@ -2361,14 +2738,32 @@ def verify_evidence(
         if item.old_path and item.new_path is None and policy.is_production_path(item.old_path)
     }
     manifest = _manifest(repository, head_sha, records)
+    try:
+        base_manifest = _manifest(repository, base_sha, records)
+    except git_changes.GitError as error:
+        if error.code != "MISSING_BLOB":
+            raise
+        base_manifest = None
     api_facts, api_blocks = _api_bindings(
         repository, base_sha, head_sha, policy, manifest, changes, records
     )
     base, base_error = _load_capture(
-        base_path, "MISSING_BASELINE", module=manifest.schema_version == "4.0"
+        base_path,
+        "MISSING_BASELINE",
+        aggregate_schema=(
+            capture_schema(manifest.schema_version)
+            if manifest.schema_version in {"4.0", "5.0"}
+            else None
+        ),
     )
     head, head_error = _load_capture(
-        head_path, "INCOMPLETE_CHARACTERIZATION_EVIDENCE", module=manifest.schema_version == "4.0"
+        head_path,
+        "INCOMPLETE_CHARACTERIZATION_EVIDENCE",
+        aggregate_schema=(
+            capture_schema(manifest.schema_version)
+            if manifest.schema_version in {"4.0", "5.0"}
+            else None
+        ),
     )
     blocks = [item for item in (base_error, head_error) if item] + api_blocks
     if base is None and head is not None:
@@ -2464,6 +2859,22 @@ def verify_evidence(
     runnable = not target_derivation_failed and _logical_step_runnable(
         manifest, base_rows, head_rows, responsibility_targets, policy.language, api_facts
     )
+    correction = None
+    if manifest.schema_version == "5.0":
+        previous = {item.id: item for item in base_manifest.corrections} if base_manifest else {}
+        active = [item for item in manifest.corrections if previous.get(item.id) != item]
+        if active:
+            correction = _correction_evidence(
+                manifest,
+                base_manifest,
+                blocks,
+                scenarios,
+                obligations,
+                responsibility_targets,
+            )
+            blocks.extend(cast(list[str], correction["verification_blocks"]))
+            remaining = set(blocks) - set(cast(list[str], correction["reconcilable_blocks"]))
+            runnable = not target_derivation_failed and not remaining
     result = _verification_result(
         identity,
         manifest,
@@ -2485,6 +2896,7 @@ def verify_evidence(
         head_artifact_id,
         head_artifact_digest,
         _serialized_api_facts(api_facts, base_rows, head_rows),
+        correction,
     )
     validate_result(
         result,
@@ -2525,6 +2937,8 @@ def _write_json(path: Path, value: object, *, compact: bool = False) -> bytes:
     module = isinstance(value, dict) and value.get("schema_version") in {
         MODULE_CAPTURE_SCHEMA,
         MODULE_RESULT_SCHEMA,
+        CORRECTION_CAPTURE_SCHEMA,
+        CORRECTION_RESULT_SCHEMA,
     }
     content = (
         _canonical(value)
@@ -3286,7 +3700,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     overall = str(result.get("overall_result", "PASS"))
     print(overall)
-    return 1 if overall == "BLOCK" else 0
+    correction = result.get("correction")
+    correction_ready = bool(
+        isinstance(correction, dict)
+        and not correction["verification_blocks"]
+        and set(cast(list[str], result.get("policy_blocks", [])))
+        <= set(cast(list[str], correction["reconcilable_blocks"]))
+    )
+    return 1 if overall == "BLOCK" and not correction_ready else 0
 
 
 if __name__ == "__main__":

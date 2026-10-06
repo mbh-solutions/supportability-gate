@@ -36,6 +36,7 @@ COMPATIBLE_CHARACTERIZATION_SCHEMAS = frozenset(
         CHARACTERIZATION_SCHEMA,
         characterization_evidence.OBSERVED_RESULT_SCHEMA,
         characterization_evidence.MODULE_RESULT_SCHEMA,
+        characterization_evidence.CORRECTION_RESULT_SCHEMA,
     }
 )
 RUNNABILITY_SCHEMA = characterization_evidence.RUNNABILITY_SCHEMA
@@ -98,6 +99,11 @@ class Authorization:
     sequence: Sequence
     introductions: tuple[dict[str, Any], ...] = ()
     schema_version: str = AUTHORIZATION_SCHEMA
+    correction_id: str | None = None
+    oracle_commit_sha: str | None = None
+    oracle_manifest_blob_sha: str | None = None
+    oracle_manifest_sha256: str | None = None
+    behavior_delta_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -203,7 +209,18 @@ def _parse_authorization(body: object) -> Authorization:
             "sequence",
             "targets",
         }
-        | ({"introductions"} if version in {"3.0", "4.0"} else set()),
+        | ({"introductions"} if version in {"3.0", "4.0", "5.0"} else set())
+        | (
+            {
+                "behavior_delta_sha256",
+                "correction_id",
+                "oracle_commit_sha",
+                "oracle_manifest_blob_sha",
+                "oracle_manifest_sha256",
+            }
+            if version == "5.0"
+            else set()
+        ),
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     sequence = _exact_keys(
@@ -212,7 +229,7 @@ def _parse_authorization(body: object) -> Authorization:
         "MALFORMED_OWNER_AUTHORIZATION",
     )
     if (
-        row["schema_version"] not in {AUTHORIZATION_SCHEMA, "3.0", "4.0"}
+        row["schema_version"] not in {AUTHORIZATION_SCHEMA, "3.0", "4.0", "5.0"}
         or not isinstance(row["repository"], str)
         or not isinstance(row["base_sha"], str)
         or SHA.fullmatch(row["base_sha"]) is None
@@ -225,6 +242,21 @@ def _parse_authorization(body: object) -> Authorization:
         or SERIES_ID.fullmatch(sequence["series_id"]) is None
         or not isinstance(sequence["predecessor_sha"], str)
         or SHA.fullmatch(sequence["predecessor_sha"]) is None
+        or (
+            version == "5.0"
+            and (
+                not isinstance(row["correction_id"], str)
+                or characterization_evidence.SCENARIO_ID.fullmatch(row["correction_id"]) is None
+                or not isinstance(row["oracle_commit_sha"], str)
+                or SHA.fullmatch(row["oracle_commit_sha"]) is None
+                or not isinstance(row["oracle_manifest_blob_sha"], str)
+                or SHA.fullmatch(row["oracle_manifest_blob_sha"]) is None
+                or not isinstance(row["oracle_manifest_sha256"], str)
+                or characterization_evidence.SHA256.fullmatch(row["oracle_manifest_sha256"]) is None
+                or not isinstance(row["behavior_delta_sha256"], str)
+                or characterization_evidence.SHA256.fullmatch(row["behavior_delta_sha256"]) is None
+            )
+        )
     ):
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
     return Authorization(
@@ -237,16 +269,25 @@ def _parse_authorization(body: object) -> Authorization:
         _target_list(row["targets"]),
         Sequence(sequence["step"], sequence["predecessor_sha"], sequence["series_id"]),
         tuple(parse_introduction_grants(row["introductions"], version=version))
-        if version in {"3.0", "4.0"}
+        if version in {"3.0", "4.0", "5.0"}
         else (),
         str(version),
+        str(row["correction_id"]) if version == "5.0" else None,
+        str(row["oracle_commit_sha"]) if version == "5.0" else None,
+        str(row["oracle_manifest_blob_sha"]) if version == "5.0" else None,
+        str(row["oracle_manifest_sha256"]) if version == "5.0" else None,
+        str(row["behavior_delta_sha256"]) if version == "5.0" else None,
     )
 
 
 def parse_introduction_grants(value: object, *, version: str = "3.0") -> list[dict[str, Any]]:
     """Validate precise owner-reviewed intended-oracle grants, never waivers."""
-    limit = 100 if version == "4.0" else 50
-    if version not in {"2.0", "3.0", "4.0"} or not isinstance(value, list) or len(value) > limit:
+    limit = 100 if version in {"4.0", "5.0"} else 50
+    if (
+        version not in {"2.0", "3.0", "4.0", "5.0"}
+        or not isinstance(value, list)
+        or len(value) > limit
+    ):
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
     rows = [_introduction_grant(item) for item in value]
     identities = [item["scenario"] for item in rows]
@@ -255,7 +296,7 @@ def parse_introduction_grants(value: object, *, version: str = "3.0") -> list[di
         or sum(len(row.get("module_roots", [row["api"]])) for row in rows) > limit
     ):
         raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
-    if version == "4.0":
+    if version in {"4.0", "5.0"}:
         roots = [root for row in rows for root in row.get("module_roots", [row["api"]])]
         if len(roots) != len(set(roots)):
             raise RefactorPolicyError("MALFORMED_OWNER_AUTHORIZATION")
@@ -354,10 +395,10 @@ def introduction_authorization_blocks(
     """Join authenticated owner intent to every exact measured API birth."""
     if not isinstance(characterization, dict):
         return ["UNAUTHENTICATED_RUNNABILITY_EVIDENCE"]
-    if (
-        authorization_version == "4.0"
-        and characterization.get("schema_version") != characterization_evidence.MODULE_RESULT_SCHEMA
-    ):
+    if authorization_version in {"4.0", "5.0"} and characterization.get("schema_version") not in {
+        characterization_evidence.MODULE_RESULT_SCHEMA,
+        characterization_evidence.CORRECTION_RESULT_SCHEMA,
+    }:
         return ["INTRODUCTION_AUTHORIZATION_MISMATCH:version"]
     try:
         approved = parse_introduction_grants(grants, version=authorization_version)
@@ -677,10 +718,25 @@ def _authorization_payload(authorization: Authorization | None) -> dict[str, obj
         "targets": list(authorization.targets),
         **(
             {"introductions": list(authorization.introductions)}
-            if authorization.introductions or authorization.schema_version == "4.0"
+            if authorization.introductions or authorization.schema_version in {"4.0", "5.0"}
             else {}
         ),
-        **({"schema_version": "4.0"} if authorization.schema_version == "4.0" else {}),
+        **(
+            {
+                "behavior_delta_sha256": authorization.behavior_delta_sha256,
+                "correction_id": authorization.correction_id,
+                "oracle_commit_sha": authorization.oracle_commit_sha,
+                "oracle_manifest_blob_sha": authorization.oracle_manifest_blob_sha,
+                "oracle_manifest_sha256": authorization.oracle_manifest_sha256,
+            }
+            if authorization.schema_version == "5.0"
+            else {}
+        ),
+        **(
+            {"schema_version": authorization.schema_version}
+            if authorization.schema_version in {"4.0", "5.0"}
+            else {}
+        ),
     }
 
 
@@ -777,6 +833,8 @@ def _runnability_blocks(
     head_sha: str,
     targets: tuple[str, ...],
     unbounded_paths: tuple[str, ...],
+    reconciled_blocks: frozenset[str] = frozenset(),
+    corrected_scenarios: frozenset[str] = frozenset(),
 ) -> list[str]:
     evidence = value.get("refactor_runnability")
     keys = {
@@ -855,9 +913,163 @@ def _runnability_blocks(
         blocks.append("MISSING_RUNNABILITY_COVERAGE")
     elif not evidence["runnable"]:
         blocks.append("NON_RUNNABLE_LOGICAL_STEP")
-    if value.get("policy_blocks") or any(item["compatibility"] != "PASS" for item in scenarios):
+    remaining = set(value.get("policy_blocks", [])) - reconciled_blocks
+    incompatible = {str(item.get("id")) for item in scenarios if item["compatibility"] != "PASS"}
+    if remaining or incompatible - corrected_scenarios:
         blocks.append("NON_RUNNABLE_LOGICAL_STEP")
     return blocks
+
+
+def _git_ancestor(
+    repository: Path,
+    ancestor: str,
+    descendant: str,
+    records: list[git_changes.CommandRecord],
+) -> bool:
+    try:
+        git_changes.run_git(
+            repository, ("merge-base", "--is-ancestor", ancestor, descendant), records
+        )
+    except git_changes.GitError:
+        return False
+    return True
+
+
+def _correction_manifest_blocks(
+    repository: Path,
+    oracle_sha: str,
+    head_sha: str,
+    correction: dict[str, Any],
+    records: list[git_changes.CommandRecord],
+) -> list[str]:
+    try:
+        oracle = git_changes.read_regular_blob(
+            repository, oracle_sha, characterization_evidence.MANIFEST_PATH, records
+        )
+        head = git_changes.read_regular_blob(
+            repository, head_sha, characterization_evidence.MANIFEST_PATH, records
+        )
+    except git_changes.GitError:
+        return ["CORRECTION_ORACLE_MISMATCH"]
+    mismatch = (
+        oracle.object_sha != correction["oracle_manifest_blob_sha"]
+        or hashlib.sha256(oracle.content).hexdigest() != correction["oracle_manifest_sha256"]
+        or oracle.content != head.content
+    )
+    return ["MODIFIED_CORRECTION_ORACLE"] if mismatch else []
+
+
+def _correction_file_blocks(
+    repository: Path,
+    oracle_sha: str,
+    head_sha: str,
+    value: object,
+    records: list[git_changes.CommandRecord],
+) -> tuple[list[str], set[str]]:
+    if not isinstance(value, list):
+        return ["MALFORMED_CORRECTION"], set()
+    blocks: list[str] = []
+    paths: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"kind", "path", "sha256"}:
+            blocks.append("MALFORMED_CORRECTION")
+            continue
+        path = str(item["path"])
+        paths.add(path)
+        try:
+            oracle = git_changes.read_regular_blob(repository, oracle_sha, path, records)
+            head = git_changes.read_regular_blob(repository, head_sha, path, records)
+        except git_changes.GitError:
+            blocks.append("CORRECTION_ORACLE_MISMATCH")
+            continue
+        if (
+            hashlib.sha256(oracle.content).hexdigest() != item["sha256"]
+            or oracle.content != head.content
+        ):
+            blocks.append("MODIFIED_CORRECTION_ORACLE")
+    return blocks, paths
+
+
+def _correction_scope_blocks(
+    repository: Path,
+    policy: contract.Contract,
+    base_sha: str,
+    oracle_sha: str,
+    oracle_paths: set[str],
+    records: list[git_changes.CommandRecord],
+) -> list[str]:
+    changes = git_changes.changed_paths(repository, base_sha, oracle_sha, records)
+    changed = {
+        path for item in changes for path in (item.old_path, item.new_path) if path is not None
+    }
+    blocks = (
+        ["CORRECTION_ORACLE_MISMATCH"]
+        if any(policy.is_production_path(path) for path in changed)
+        else []
+    )
+    if changed - oracle_paths:
+        blocks.append("UNDECLARED_CORRECTION_DELTA")
+    return blocks
+
+
+def _correction_transaction_blocks(
+    repository: Path,
+    policy: contract.Contract,
+    base_sha: str,
+    head_sha: str,
+    authorization: Authorization | None,
+    value: dict[str, Any],
+    records: list[git_changes.CommandRecord],
+) -> tuple[list[str], frozenset[str], frozenset[str]]:
+    correction = value.get("correction")
+    if not isinstance(correction, dict):
+        return ["MALFORMED_CORRECTION"], frozenset(), frozenset()
+    required = {
+        "behavior_delta",
+        "behavior_delta_sha256",
+        "id",
+        "obligations",
+        "oracle_files",
+        "oracle_manifest_blob_sha",
+        "oracle_manifest_sha256",
+        "reconcilable_blocks",
+        "scenarios",
+        "targets",
+        "verification_blocks",
+    }
+    if set(correction) != required:
+        return ["MALFORMED_CORRECTION"], frozenset(), frozenset()
+    reconciled = frozenset(str(item) for item in correction["reconcilable_blocks"])
+    scenarios = frozenset(str(item) for item in correction["scenarios"])
+    blocks = [str(item) for item in correction["verification_blocks"]]
+    if authorization is None or authorization.schema_version != "5.0":
+        return [*blocks, "UNAUTHORIZED_CORRECTION"], reconciled, scenarios
+    if (
+        authorization.correction_id != correction["id"]
+        or authorization.oracle_manifest_blob_sha != correction["oracle_manifest_blob_sha"]
+        or authorization.oracle_manifest_sha256 != correction["oracle_manifest_sha256"]
+        or authorization.behavior_delta_sha256 != correction["behavior_delta_sha256"]
+    ):
+        blocks.append("UNAUTHORIZED_CORRECTION")
+    oracle_sha = authorization.oracle_commit_sha
+    if (
+        oracle_sha is None
+        or not _git_ancestor(repository, base_sha, oracle_sha, records)
+        or not _git_ancestor(repository, oracle_sha, head_sha, records)
+    ):
+        return [*blocks, "STALE_CORRECTION_ORACLE"], reconciled, scenarios
+    blocks.extend(
+        _correction_manifest_blocks(repository, oracle_sha, head_sha, correction, records)
+    )
+    file_blocks, oracle_paths = _correction_file_blocks(
+        repository, oracle_sha, head_sha, correction["oracle_files"], records
+    )
+    blocks.extend(file_blocks)
+    oracle_paths.add(characterization_evidence.MANIFEST_PATH)
+    blocks.extend(
+        _correction_scope_blocks(repository, policy, base_sha, oracle_sha, oracle_paths, records)
+    )
+    return sorted(set(blocks)), reconciled, scenarios
 
 
 def _characterization_blocks(
@@ -867,6 +1079,10 @@ def _characterization_blocks(
     head_sha: str,
     targets: tuple[str, ...],
     unbounded_paths: tuple[str, ...],
+    repository_path: Path,
+    policy: contract.Contract,
+    authorization: Authorization | None,
+    records: list[git_changes.CommandRecord],
 ) -> list[str]:
     blocks: list[str] = []
     if value.get("schema_version") not in COMPATIBLE_CHARACTERIZATION_SCHEMAS:
@@ -877,6 +1093,35 @@ def _characterization_blocks(
         or value.get("head_sha") != head_sha
     ):
         blocks.append("STALE_RUNNABILITY_EVIDENCE")
+    if value.get("schema_version") == characterization_evidence.CORRECTION_RESULT_SCHEMA:
+        if "correction" not in value:
+            if value.get("overall_result") != "PASS":
+                return [*blocks, *[str(item) for item in value.get("policy_blocks", [])]]
+            return [
+                *blocks,
+                *_runnability_blocks(
+                    value, repository, base_sha, head_sha, targets, unbounded_paths
+                ),
+            ]
+        correction_blocks, reconciled, scenarios = _correction_transaction_blocks(
+            repository_path, policy, base_sha, head_sha, authorization, value, records
+        )
+        remaining = set(value.get("policy_blocks", [])) - reconciled
+        return [
+            *blocks,
+            *correction_blocks,
+            *sorted(remaining),
+            *_runnability_blocks(
+                value,
+                repository,
+                base_sha,
+                head_sha,
+                targets,
+                unbounded_paths,
+                reconciled,
+                scenarios,
+            ),
+        ]
     if value.get("overall_result") != "PASS":
         return blocks
     return [
@@ -950,6 +1195,10 @@ def verify_refactor(
                 head_sha,
                 targets,
                 unbounded,
+                repository,
+                policy,
+                authorization,
+                records,
             )
         )
         if authorization is not None:
@@ -984,6 +1233,20 @@ def verify_refactor(
         "schema_version": RESULT_SCHEMA,
         "targets": list(targets),
         "unbounded_paths": list(unbounded),
+        **(
+            {
+                "result_classification": (
+                    "BLOCK"
+                    if unique_blocks
+                    else "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+                    if "correction" in characterization
+                    else "PASS_NO_BEHAVIOR_CHANGE"
+                )
+            }
+            if characterization.get("schema_version")
+            == characterization_evidence.CORRECTION_RESULT_SCHEMA
+            else {}
+        ),
     }
 
 

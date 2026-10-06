@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import http.client
 import json
 import subprocess
@@ -136,6 +137,145 @@ def _authorization(
         "targets": sorted(targets),
     }
     return refactor_policy.AUTHORIZATION_PREFIX + json.dumps(value, separators=(",", ":"))
+
+
+def test_schema5_authorization_parses_exact_correction_identity() -> None:
+    value = {
+        "base_sha": "1" * 40,
+        "behavior_delta_sha256": "2" * 64,
+        "broad": True,
+        "correction_id": "pricing-fix",
+        "head_sha": "3" * 40,
+        "introductions": [],
+        "oracle_commit_sha": "4" * 40,
+        "oracle_manifest_blob_sha": "5" * 40,
+        "oracle_manifest_sha256": "6" * 64,
+        "related_tests": [],
+        "repository": "example/fixture",
+        "schema_version": "5.0",
+        "scope": ["src/sample.py"],
+        "sequence": {
+            "predecessor_sha": "1" * 40,
+            "series_id": "pricing-fix",
+            "step": 1,
+        },
+        "targets": ["src/sample.py::function:calculate:1-2"],
+    }
+
+    parsed = refactor_policy._parse_authorization(
+        refactor_policy.AUTHORIZATION_PREFIX + json.dumps(value, separators=(",", ":"))
+    )
+
+    assert parsed.schema_version == "5.0"
+    assert parsed.correction_id == "pricing-fix"
+    assert parsed.oracle_commit_sha == "4" * 40
+    assert parsed.behavior_delta_sha256 == "2" * 64
+
+
+def test_correction_transaction_freezes_oracle_before_implementation(tmp_path: Path) -> None:
+    repository, base_sha, _ = _repository(tmp_path)
+    _git(repository, "reset", "--hard", base_sha)
+    oracle_rows = [
+        ("expected_case", "tests/characterization/pricing.cases.json", "cases\n"),
+        ("golden", "tests/characterization/pricing.golden.json", "golden\n"),
+        ("review", "tests/characterization/pricing.review.json", "review\n"),
+        ("source_receipt", "tests/characterization/pricing.source.json", "source\n"),
+    ]
+    oracle_files = []
+    for kind, path, content in oracle_rows:
+        _write(repository / path, content)
+        oracle_files.append(
+            {
+                "kind": kind,
+                "path": path,
+                "sha256": hashlib.sha256((repository / path).read_bytes()).hexdigest(),
+            }
+        )
+    manifest = (
+        json.dumps(
+            {
+                "corrections": [],
+                "obligations": [],
+                "scenarios": [],
+                "schema_version": "5.0",
+                "transitions": [],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    _write(repository / ".supportability-characterization.json", manifest)
+    oracle_sha = _commit(repository, "oracle")
+    _write(
+        repository / "src/sample.py", "def calculate(value: int) -> int:\n    return value + 2\n"
+    )
+    head_sha = _commit(repository, "implementation")
+    manifest_blob = _git(
+        repository, "rev-parse", f"{oracle_sha}:.supportability-characterization.json"
+    )
+    correction = {
+        "behavior_delta": [],
+        "behavior_delta_sha256": hashlib.sha256(b"[]").hexdigest(),
+        "id": "pricing-fix",
+        "obligations": ["pricing-total"],
+        "oracle_files": oracle_files,
+        "oracle_manifest_blob_sha": manifest_blob,
+        "oracle_manifest_sha256": hashlib.sha256(
+            (repository / ".supportability-characterization.json").read_bytes()
+        ).hexdigest(),
+        "reconcilable_blocks": [],
+        "scenarios": ["pricing"],
+        "targets": ["src/sample.py::function:calculate:1-2"],
+        "verification_blocks": [],
+    }
+    authorization = refactor_policy.Authorization(
+        "example/fixture",
+        base_sha,
+        head_sha,
+        True,
+        (),
+        (".supportability-characterization.json", "src/sample.py"),
+        ("src/sample.py::function:calculate:1-2",),
+        refactor_policy.Sequence(1, base_sha, "pricing-fix"),
+        (),
+        "5.0",
+        "pricing-fix",
+        oracle_sha,
+        manifest_blob,
+        correction["oracle_manifest_sha256"],
+        correction["behavior_delta_sha256"],
+    )
+    policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
+    records: list[git_changes.CommandRecord] = []
+
+    blocks, _, _ = refactor_policy._correction_transaction_blocks(
+        repository,
+        policy,
+        base_sha,
+        head_sha,
+        authorization,
+        {"correction": correction},
+        records,
+    )
+
+    assert blocks == []
+
+    _write(repository / "tests/characterization/pricing.golden.json", "changed\n")
+    modified_head = _commit(repository, "modify oracle")
+    authorization = refactor_policy.Authorization(
+        **{**authorization.__dict__, "head_sha": modified_head}
+    )
+    blocks, _, _ = refactor_policy._correction_transaction_blocks(
+        repository,
+        policy,
+        base_sha,
+        modified_head,
+        authorization,
+        {"correction": correction},
+        records,
+    )
+
+    assert "MODIFIED_CORRECTION_ORACLE" in blocks
 
 
 def _event(base_sha: str, head_sha: str, body: str | None) -> dict[str, object]:

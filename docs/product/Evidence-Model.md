@@ -33,6 +33,13 @@ workflow SHA, run and attempt, job/artifact identity, digests, capture hashes, a
 The full-process handoff also binds the base/head review blobs. Required missing, stale, malformed,
 or mismatched evidence fails closed according to its defined policy/technical ownership.
 
+For a schema-5 correction, characterization evidence additionally retains the raw behavior-change
+blocks, frozen oracle file identities, exact declared scenario/obligation/target sets, the complete
+canonical observed delta and its SHA-256. Refactor evidence records the authenticated correction
+join. The authoritative result classifies the outcome as `PASS_NO_BEHAVIOR_CHANGE` or
+`PASS_AUTHORIZED_BEHAVIOR_CORRECTION`; focused correction failures remain named blocks. This
+classification does not replace any of the eight rows or convert technical failures into PASS.
+
 For schema-3 observed Python APIs, the collector records actual call arguments and ordinary
 returns with a closed tagged value codec. Static compilation binds the traced function's code
 to the exact source blob and span. Git-derived whole-file absence is a measured fact rather

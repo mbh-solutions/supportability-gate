@@ -49,6 +49,16 @@ A new head creates a new evidence identity. Refresh source-bound declarations an
 owner authorization; obtain fresh captures and checks. Earlier green results, archived bundles,
 or local runs cannot qualify the new head.
 
+## Preservation and correction lanes
+
+A refactor remains the default lane: base and head behavior must be identical. A correction stays
+inside the same pull request and review cycle but has two Git stages. First commit the schema-5
+declaration and all expected cases, goldens, reviews and source receipts without production-code
+changes. Then commit the implementation without altering those oracle bytes. After the final head
+exists, the trusted owner posts one schema-5 exact-head authorization binding both commits and the
+complete observed delta. The existing workflow and eight contexts enforce both lanes; no new check
+or external semantic service is involved.
+
 ## Short tasks and advisory review
 
 Only the exact narrow [short-task classifier](Boundaries-and-Limitations.md#short-task-classification)

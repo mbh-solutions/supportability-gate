@@ -65,6 +65,11 @@ intended oracle. The absence row records no executed command. Once merged, the s
 requires real compatible base/head execution. Supported schema-2 and schema-3 obligations keep
 assertion identities stable when scenario packaging changes.
 
+Schema 5 adds one explicit exception to preservation: an authenticated correction may reconcile
+only its declared changed definitions, goldens and incompatible observations. The oracle commit
+must precede production implementation and remain byte-frozen. Head outputs, deterministic replay,
+API execution, coverage and every other Gate remain mandatory.
+
 **Example failure:** an observable result changes unexpectedly, or a scenario replacement drops
 an existing obligation. **Limit:** defined scenarios provide bounded proof, not exhaustive intended
 behavior. Help-only, constant-output, or import-only observations cannot substitute for required
@@ -77,6 +82,9 @@ Where authorization is required, an authenticated owner attestation binds the ex
 base/head, changed scope, targets, and refactor series. Related tests have exact source associations.
 Introduced API proof additionally requires the same owner's exact feature and reviewed-oracle
 grant, joined to the measured source, driver, oracle, and review digests.
+
+A correction authorization additionally binds the oracle commit and manifest, correction ID,
+final head and canonical complete observed-delta digest. It authenticates scope, not semantic truth.
 
 **Example failure:** an authorization names an earlier head or skips a predecessor step.
 **Limit:** path and span bounds do not establish semantic smallness or quality. The format and

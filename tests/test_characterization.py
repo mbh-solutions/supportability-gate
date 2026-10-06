@@ -221,6 +221,145 @@ def _obligation(identifier: str, scenario: str, target: str) -> dict[str, object
     }
 
 
+def _schema5_manifest() -> bytes:
+    return (
+        json.dumps(
+            {
+                "corrections": [
+                    {
+                        "id": "pricing-fix",
+                        "obligations": ["pricing-total"],
+                        "oracle_files": [
+                            {
+                                "kind": "expected_case",
+                                "path": "tests/characterization/pricing.cases.json",
+                                "sha256": "1" * 64,
+                            },
+                            {
+                                "kind": "golden",
+                                "path": "tests/characterization/pricing.golden.json",
+                                "sha256": "2" * 64,
+                            },
+                            {
+                                "kind": "review",
+                                "path": "tests/characterization/pricing.review.json",
+                                "sha256": "3" * 64,
+                            },
+                            {
+                                "kind": "source_receipt",
+                                "path": "tests/characterization/pricing.source.json",
+                                "sha256": "4" * 64,
+                            },
+                        ],
+                        "scenarios": ["pricing"],
+                        "targets": ["src/sample.py::function:calculate:1-2"],
+                    }
+                ],
+                "obligations": [
+                    {
+                        "category": "behavior",
+                        "id": "pricing-total",
+                        "scenario": "pricing",
+                        "selector": "pricing-total",
+                        "target": "src/sample.py",
+                    }
+                ],
+                "scenarios": [
+                    {
+                        "api": None,
+                        "covers": ["src/sample.py"],
+                        "id": "pricing",
+                        "kind": "regression",
+                        "module_roots": [],
+                    }
+                ],
+                "schema_version": "5.0",
+                "transitions": [],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode()
+
+
+def test_schema5_parses_generic_correction_and_canonical_delta() -> None:
+    manifest = characterization.parse_manifest(_schema5_manifest(), "a" * 40)
+    scenarios = [
+        {
+            "base_behavior_sha256": "5" * 64,
+            "head_behavior_sha256": "6" * 64,
+            "id": "pricing",
+        }
+    ]
+    obligations = [
+        {
+            "base_assertion_sha256": "7" * 64,
+            "head_assertion_sha256": "8" * 64,
+            "id": "pricing-total",
+        }
+    ]
+    raw = [
+        "CHANGED_GOLDEN_OUTPUT:obligation:pricing-total",
+        "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:pricing",
+        "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:pricing-total",
+    ]
+
+    evidence = characterization._correction_evidence(
+        manifest,
+        None,
+        raw,
+        scenarios,
+        obligations,
+        ("src/sample.py::function:calculate:1-2",),
+    )
+
+    assert evidence["id"] == "pricing-fix"
+    assert evidence["verification_blocks"] == []
+    assert evidence["reconcilable_blocks"] == sorted(raw)
+    assert (
+        evidence["behavior_delta_sha256"]
+        == hashlib.sha256(characterization._canonical(evidence["behavior_delta"])).hexdigest()
+    )
+
+
+def test_schema5_hidden_delta_and_absent_declaration_block() -> None:
+    manifest = characterization.parse_manifest(_schema5_manifest(), "a" * 40)
+    scenarios = [
+        {
+            "base_behavior_sha256": "5" * 64,
+            "head_behavior_sha256": "6" * 64,
+            "id": "different",
+        }
+    ]
+    obligations: list[dict[str, object]] = []
+
+    evidence = characterization._correction_evidence(
+        manifest,
+        None,
+        ["INCOMPATIBLE_POST_CHANGE_BEHAVIOR:different"],
+        scenarios,
+        obligations,
+        ("src/sample.py::function:calculate:1-2",),
+    )
+
+    assert evidence["verification_blocks"] == [
+        "ABSENT_DECLARED_CORRECTION_DELTA",
+        "UNDECLARED_CORRECTION_DELTA",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("language", "path"),
+    [("python", "src/sample.py"), ("typescript", "src/sample.ts")],
+)
+def test_schema5_correction_is_adapter_agnostic(language: str, path: str) -> None:
+    raw = _schema5_manifest().replace(b"src/sample.py", path.encode())
+    manifest = characterization.parse_manifest(raw, "a" * 40)
+
+    assert characterization.scenario_language(manifest.scenarios[0], language) == language
+    assert manifest.corrections[0].targets[0].startswith(path + "::")
+
+
 def _behavior(identifier: str, offset: int = 1) -> dict[str, object]:
     return {
         identifier: [

@@ -1488,8 +1488,18 @@ def _s02_refactor_authorization(
         keys.add("introductions")
     if isinstance(value, dict) and "schema_version" in value:
         keys.add("schema_version")
-        if value["schema_version"] != "4.0" or "introductions" not in value:
+        if value["schema_version"] not in {"4.0", "5.0"} or "introductions" not in value:
             raise StandardResultsError(code)
+        if value["schema_version"] == "5.0":
+            keys.update(
+                {
+                    "behavior_delta_sha256",
+                    "correction_id",
+                    "oracle_commit_sha",
+                    "oracle_manifest_blob_sha",
+                    "oracle_manifest_sha256",
+                }
+            )
     row = _s02_exact(value, keys, code)
     sequence = _s02_exact(row["sequence"], {"predecessor_sha", "series_id", "step"}, code)
     if (
@@ -1504,6 +1514,17 @@ def _s02_refactor_authorization(
         or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", sequence["series_id"]) is None
         or type(sequence["step"]) is not int
         or sequence["step"] < 1
+        or (
+            row.get("schema_version") == "5.0"
+            and (
+                not isinstance(row["correction_id"], str)
+                or characterization.SCENARIO_ID.fullmatch(row["correction_id"]) is None
+                or not _s02_sha(row["oracle_commit_sha"], _S02_SHA40)
+                or not _s02_sha(row["oracle_manifest_blob_sha"], _S02_SHA40)
+                or not _s02_sha(row["oracle_manifest_sha256"], _S02_SHA64)
+                or not _s02_sha(row["behavior_delta_sha256"], _S02_SHA64)
+            )
+        )
     ):
         raise StandardResultsError(code)
     scope = _s02_strings(row["scope"], code, True)
@@ -1775,11 +1796,13 @@ def _s02_refactor_runnability_blocks(
     identity: RunIdentity,
     targets: list[str],
     unbounded_paths: list[str],
+    result_classification: str | None = None,
 ) -> set[str]:
-    if (
-        not isinstance(characterization_result, dict)
-        or characterization_result.get("overall_result") != "PASS"
-    ):
+    if not isinstance(characterization_result, dict):
+        return set()
+    correction = characterization_result.get("correction")
+    authorized = _s02_authorized_correction(result_classification, correction)
+    if characterization_result.get("overall_result") != "PASS" and not authorized:
         return set()
     evidence = characterization_result.get("refactor_runnability")
     keys = {
@@ -1838,9 +1861,50 @@ def _s02_refactor_runnability_blocks(
         blocks.add("MISSING_RUNNABILITY_COVERAGE")
     elif not evidence["runnable"]:
         blocks.add("NON_RUNNABLE_LOGICAL_STEP")
-    if characterization_result["policy_blocks"]:
+    if _s02_unreconciled_blocks(characterization_result, authorized, correction):
         blocks.add("NON_RUNNABLE_LOGICAL_STEP")
     return blocks
+
+
+def _s02_authorized_correction(classification: str | None, value: object) -> bool:
+    return classification == "PASS_AUTHORIZED_BEHAVIOR_CORRECTION" and isinstance(value, dict)
+
+
+def _s02_unreconciled_blocks(value: dict[str, Any], authorized: bool, correction: object) -> bool:
+    remaining = set(value["policy_blocks"])
+    if authorized and isinstance(correction, dict):
+        remaining -= set(correction["reconcilable_blocks"])
+    return bool(remaining)
+
+
+def _s02_correction_binding(
+    classification: object,
+    correction: object,
+    authorization: dict[str, Any] | None,
+    blocks: list[str],
+    code: str,
+) -> None:
+    expected = (
+        "BLOCK"
+        if blocks
+        else "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+        if isinstance(correction, dict)
+        else "PASS_NO_BEHAVIOR_CHANGE"
+    )
+    if classification is not None and classification != expected:
+        raise StandardResultsError(code)
+    if not isinstance(correction, dict) or blocks:
+        return
+    if (
+        classification != "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+        or authorization is None
+        or authorization.get("schema_version") != "5.0"
+        or authorization["correction_id"] != correction["id"]
+        or authorization["oracle_manifest_blob_sha"] != correction["oracle_manifest_blob_sha"]
+        or authorization["oracle_manifest_sha256"] != correction["oracle_manifest_sha256"]
+        or authorization["behavior_delta_sha256"] != correction["behavior_delta_sha256"]
+    ):
+        raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
 
 
 def _s02_refactor_shape(
@@ -1959,7 +2023,10 @@ def _s02_refactor(
     complexity: _S02Complexity | None,
 ) -> list[str]:
     code = "MALFORMED_REFACTOR_RESULT"
-    row = _s02_exact(value, _S02_REFACTOR_KEYS, code)
+    keys = set(_S02_REFACTOR_KEYS)
+    if isinstance(value, dict) and "result_classification" in value:
+        keys.add("result_classification")
+    row = _s02_exact(value, keys, code)
     if tuple(row[name] for name in ("repository", "base_sha", "head_sha")) != (
         identity.repository,
         identity.base_sha,
@@ -1981,6 +2048,9 @@ def _s02_refactor(
     authorization = _s02_refactor_authorization(
         row["authorization"], row["authorization_comment_id"], code
     )
+    classification = row.get("result_classification")
+    correction = characterization.get("correction") if isinstance(characterization, dict) else None
+    _s02_correction_binding(classification, correction, authorization, blocks, code)
     predecessor, predecessor_block = _s02_refactor_predecessor(row["predecessor"], identity, code)
     if complexity is not None:
         targets_unavailable = "REFACTOR_TARGET_DERIVATION_FAILURE" in complexity.technical
@@ -1998,7 +2068,11 @@ def _s02_refactor(
     expected = hashlib.sha256(_canonical(characterization)).hexdigest()
     expected_runnability = (
         _s02_refactor_runnability_blocks(
-            characterization, identity, row["targets"], row["unbounded_paths"]
+            characterization,
+            identity,
+            row["targets"],
+            row["unbounded_paths"],
+            classification,
         )
         if row["applicable"]
         else set()
@@ -2467,7 +2541,14 @@ def _s02_add_behavior(
     if "gate_install" in errors or short:
         return
     if not _s02_add_characterization(
-        state, characterization, identity, data, expected_artifacts, errors, outcomes
+        state,
+        characterization,
+        refactor,
+        identity,
+        data,
+        expected_artifacts,
+        errors,
+        outcomes,
     ):
         return
     _s02_add_refactor(state, refactor, characterization, identity, data, errors, outcomes)
@@ -2476,6 +2557,7 @@ def _s02_add_behavior(
 def _s02_add_characterization(
     state: _S02State,
     characterization: object,
+    refactor: object,
     identity: RunIdentity,
     data: _S02Complexity | None,
     expected_artifacts: object,
@@ -2497,10 +2579,24 @@ def _s02_add_characterization(
     except StandardResultsError as error:
         _s02_source_failure(state, "characterization", error.code)
         return False
-    if not _s02_outcome_matches(outcomes["characterization"], "BLOCK" if blocks else "PASS"):
+    reconciled: set[str] = set()
+    if (
+        isinstance(characterization, dict)
+        and isinstance(characterization.get("correction"), dict)
+        and isinstance(refactor, dict)
+        and refactor.get("result_classification") == "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+    ):
+        try:
+            if not _s02_refactor(refactor, characterization, identity, data):
+                reconciled = set(characterization["correction"]["reconcilable_blocks"])
+        except StandardResultsError:
+            reconciled = set()
+    retained = [block for block in blocks if block not in reconciled]
+    expected = "BLOCK" if retained else "PASS"
+    if not _s02_outcome_matches(outcomes["characterization"], expected):
         _s02_source_failure(state, "characterization", "MALFORMED_CHARACTERIZATION_RESULT")
         return False
-    for block in blocks:
+    for block in retained:
         _s02_apply_block(state, block, "characterization-result")
     return True
 
@@ -2892,6 +2988,11 @@ def compose_results(
         "source_outcomes": outcomes,
         "standard_sha256": clause_inventory.STANDARD_SHA256,
         "workflow_sha": identity.workflow_sha,
+        **(
+            {"result_classification": refactor["result_classification"]}
+            if isinstance(refactor, dict) and "result_classification" in refactor
+            else {}
+        ),
     }
     validate_payload(payload, identity)
     return payload
@@ -3250,13 +3351,16 @@ def _s02_validate_handoff(
         _s02_handoff_payload(row["review_handoff"], row["review_handoff_sha256"], row, entries)
 
 
-def validate_payload(
-    value: object,
-    identity: RunIdentity | None = None,
-    *,
-    standard: int | None = None,
-) -> None:
-    """Validate exact identity, applicability, ownership, and provenance bindings."""
+def _s02_result_classification(row: dict[str, Any]) -> None:
+    if "result_classification" in row and row["result_classification"] not in {
+        "BLOCK",
+        "PASS_AUTHORIZED_BEHAVIOR_CORRECTION",
+        "PASS_NO_BEHAVIOR_CHANGE",
+    }:
+        raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
+
+
+def _s02_payload_keys(value: object) -> set[str]:
     keys = {
         "applicability_evidence",
         "base_sha",
@@ -3276,7 +3380,21 @@ def validate_payload(
         "standard_sha256",
         "workflow_sha",
     }
-    row = _s02_exact(value, keys, "MALFORMED_STANDARD_RESULTS_ARTIFACT")
+    return keys | (
+        {"result_classification"}
+        if isinstance(value, dict) and "result_classification" in value
+        else set()
+    )
+
+
+def validate_payload(
+    value: object,
+    identity: RunIdentity | None = None,
+    *,
+    standard: int | None = None,
+) -> None:
+    """Validate exact identity, applicability, ownership, and provenance bindings."""
+    row = _s02_exact(value, _s02_payload_keys(value), "MALFORMED_STANDARD_RESULTS_ARTIFACT")
     actual = RunIdentity(
         row["repository"],
         row["repository_id"],
@@ -3295,6 +3413,7 @@ def validate_payload(
         or type(row["short_task"]) is not bool
     ):
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")
+    _s02_result_classification(row)
     outcomes = _s02_outcomes(row["source_outcomes"])
     eligible_short, inapplicable_source = _s02_applicability(
         row["applicability_evidence"], row["short_task"], actual
