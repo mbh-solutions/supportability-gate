@@ -1,4 +1,85 @@
 {
+  "corrections": [
+    {
+      "id": "quality-capture-efficiency",
+      "obligations": [
+        "gate8-standard-results-boundary-v5",
+        "standard-composer-source-boundary"
+      ],
+      "oracle_files": [
+        {
+          "kind": "golden",
+          "path": "tests/characterization/gate8-standard-results-boundary-v3.base.golden.json",
+          "sha256": "b8f462de16abda41cccf84a5a7f619c090b5b5c44c57072b6221ad6f0bf87327"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/gate8-standard-results-boundary-v3.characterization.py",
+          "sha256": "31bd9762ce40ee347a9960c82411aa188b6b61fb9bc30c11f6408942fee11123"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/gate8-standard-results-boundary-v3.golden.json",
+          "sha256": "755ae048c18de6ae786350dc23aed00b721550d45739a2daec320a188b5561f0"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/quality-capture-efficiency.expected-case.json",
+          "sha256": "14d207c74c23622f42dcb3f5b0ab9e3c9993f9f62c8326d4537edf6b198bbeef"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/quality-capture-efficiency.review.json",
+          "sha256": "aafcf46ae1a25674a5012843f4dc70d9a72d9ad3c59dc6d5255720aff1af2c53"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/quality-capture-efficiency.source-receipt.json",
+          "sha256": "165136507b755fba8c2132c62350e97f2e883be1a5d80e101dd9672de077a25d"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/sandbox-command-boundary.characterization.py",
+          "sha256": "a25d6266542c35296da0184f504b5cb5a562ae3ae14a3304792decc349656117"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/sandbox-command-boundary.golden.json",
+          "sha256": "ea0fef40a3538cd18ea97645dbd0d8a2e9397aa3f4e7d4b0b0f41259b38da54a"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/standard-composer-source-boundary.base.golden.json",
+          "sha256": "3202d1047d92117dc46f4ff4935412eb2c52fd4130bbd038794f581d91c7a79e"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/standard-composer-source-boundary.golden.json",
+          "sha256": "a2c5e5021450fe529e7d7865fcfba691872cdcb7a14f70bd3163225005abba7d"
+        }
+      ],
+      "scenarios": [
+        "gate8-standard-results-boundary-v3",
+        "standard-composer-source-boundary"
+      ],
+      "targets": [
+        "src/supportability_gate/git_changes.py::function:_blob_batches:317-330",
+        "src/supportability_gate/git_changes.py::function:_materialization_entries:290-314",
+        "src/supportability_gate/git_changes.py::function:_materialization_path:248-260",
+        "src/supportability_gate/git_changes.py::function:_read_batch_blob:274-287",
+        "src/supportability_gate/git_changes.py::function:_validate_blob_content:263-271",
+        "src/supportability_gate/git_changes.py::function:read_regular_blobs:333-356",
+        "src/supportability_gate/git_changes.py::function:run_git:94-124",
+        "src/supportability_gate/git_changes.py::module:src/supportability_gate/git_changes.py:11-11",
+        "src/supportability_gate/git_changes.py::module:src/supportability_gate/git_changes.py:15-16",
+        "src/supportability_gate/git_changes.py::module:src/supportability_gate/git_changes.py:6-6",
+        "src/supportability_gate/git_changes.py::module:src/supportability_gate/git_changes.py:9-9",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:163-171",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:163-176",
+        "src/supportability_gate/quality_runner.py::function:sandbox_command:111-233"
+      ]
+    }
+  ],
   "obligations": [
     {
       "category": "static",
@@ -211,8 +292,15 @@
       "target": "src/supportability_gate/refactor_policy.py::function:_target_identities"
     },
     {
-      "id": "standard-composer-source-boundary",
       "category": "behavior",
+      "id": "sandbox-command-boundary",
+      "scenario": "sandbox-command-boundary",
+      "selector": "cases",
+      "target": "src/supportability_gate/quality_runner.py::function:sandbox_command"
+    },
+    {
+      "category": "behavior",
+      "id": "standard-composer-source-boundary",
       "scenario": "standard-composer-source-boundary",
       "selector": "cases",
       "target": "src/supportability_gate/standard_results_producer.py"
@@ -220,13 +308,16 @@
   ],
   "scenarios": [
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/cli.py"
       ],
       "id": "gate-cli",
-      "kind": "cli"
+      "kind": "cli",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/codex_review.py",
         "src/supportability_gate/focused_review.py",
@@ -241,66 +332,93 @@
         "src/supportability_gate/standard_results_producer.py"
       ],
       "id": "gate8-standard-results-boundary-v3",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/gate_policy.py"
       ],
       "id": "gate-policy-mixed-compatibility",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/gate_policy.py"
       ],
       "id": "gate-policy-retained-coverage",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/refactor_targets.py"
       ],
       "id": "refactor-assets",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/cli.py"
       ],
       "id": "m9-quality-profile",
-      "kind": "cli"
+      "kind": "cli",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/quality_runner.py"
       ],
       "id": "quality-runner-boundary",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/quality_runner.py"
+      ],
+      "id": "sandbox-command-boundary",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
       "covers": [
         "src/supportability_gate/clause_inventory.py"
       ],
       "id": "clause-inventory-baseline",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/architecture_policy.py",
         "src/supportability_gate/modularity_policy.py"
       ],
       "id": "architecture-modularity-baseline",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/__init__.py"
       ],
       "id": "package-version",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/characterization.py",
         "src/supportability_gate/cli.py",
@@ -312,30 +430,37 @@
         "src/supportability_gate/standard_results.py"
       ],
       "id": "s05-meaningful-behavior",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/function_changes.py"
       ],
       "id": "s06-language-features",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
+      "api": null,
       "covers": [
         "src/supportability_gate/refactor_policy.py"
       ],
       "id": "gate-api-proof-legacy-compatibility",
-      "kind": "regression"
+      "kind": "regression",
+      "module_roots": []
     },
     {
-      "id": "standard-composer-source-boundary",
-      "kind": "regression",
+      "api": null,
       "covers": [
         "src/supportability_gate/standard_results_producer.py"
-      ]
+      ],
+      "id": "standard-composer-source-boundary",
+      "kind": "regression",
+      "module_roots": []
     }
   ],
-  "schema_version": "2.0",
+  "schema_version": "5.0",
   "transitions": []
 }

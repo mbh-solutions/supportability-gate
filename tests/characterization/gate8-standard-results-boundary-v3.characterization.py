@@ -405,10 +405,14 @@ def _gate_seven_probe(
             item for item in typescript_plans if item.adapter == "typescript.prettier.v1"
         )
         config = python_output / "coverage.ini"
-        rcfile_bound = any(
-            item.startswith("--rcfile=") and Path(item.removeprefix("--rcfile=")) == config
-            for item in pytest_plan.actual
+        config_option = (
+            "--cov-config=" if "pytest_cov.plugin" in pytest_plan.actual else "--rcfile="
         )
+        rcfile_bound = [
+            Path(item.removeprefix(config_option))
+            for item in pytest_plan.actual
+            if item.startswith(config_option)
+        ] == [config]
         if argv_current:
             config.write_bytes(b"[report]\nexclude_lines =\n    .+\n")
             restored = quality_runner._write_coverage_config(python_output)

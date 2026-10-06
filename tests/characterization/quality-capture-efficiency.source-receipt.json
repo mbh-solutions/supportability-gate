@@ -1,0 +1,26 @@
+{
+  "schema_version": "runner-oracle-source-receipt.v1",
+  "base_sha": "73b9a98412d323b958d9df67932c3bf1ae666209",
+  "source_files": [
+    {
+      "path": "src/supportability_gate/quality_profile.py",
+      "sha256": "371e63c9551081a4e160c645001c72b4b33cb207ba0139c05effc326b5042aa1"
+    },
+    {
+      "path": "src/supportability_gate/quality_runner.py",
+      "sha256": "23a7aba0c8174f26e45d5b8a372bf345f5894aecf774c41375247735b687768b"
+    },
+    {
+      "path": "tests/quality_pytest_entry.py",
+      "sha256": "0436187d1ea4d4acb6a1b08b7c155cf6b30cabde65f1f5315ef3bb81bddf3d6b"
+    },
+    {
+      "path": "tests/quality_pytest_guard.py",
+      "sha256": "ca312c1ee8d522f9863df0bb617e0382e9bd97be323faecbe5ecdb3641e70702"
+    }
+  ],
+  "oracle_delta_sha256": "14d207c74c23622f42dcb3f5b0ab9e3c9993f9f62c8326d4537edf6b198bbeef",
+  "review": "Exactly four case identities per scenario; only pytest declared/executed argv and canonical validation-command hash change. Original goldens are preserved byte-for-byte as explicit base oracles. No production validator or observed output rewriting.",
+  "expected_case_path": "tests/characterization/quality-capture-efficiency.expected-case.json",
+  "expected_case_sha256": "14d207c74c23622f42dcb3f5b0ab9e3c9993f9f62c8326d4537edf6b198bbeef"
+}
