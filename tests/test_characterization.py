@@ -348,6 +348,36 @@ def test_schema5_hidden_delta_and_absent_declaration_block() -> None:
     ]
 
 
+def test_schema5_accepts_executed_dependency_delta_with_stable_module_hash() -> None:
+    manifest = characterization.parse_manifest(_schema5_manifest(), "a" * 40)
+    scenarios = [
+        {
+            "base_behavior_sha256": "5" * 64,
+            "head_behavior_sha256": "5" * 64,
+            "id": "pricing",
+        }
+    ]
+    obligations = [
+        {
+            "base_assertion_sha256": "7" * 64,
+            "head_assertion_sha256": "8" * 64,
+            "id": "pricing-total",
+        }
+    ]
+
+    evidence = characterization._correction_evidence(
+        manifest,
+        None,
+        ["CHANGED_CHARACTERIZATION_DEFINITION:pricing"],
+        scenarios,
+        obligations,
+        ("src/sample.py::function:calculate:1-2",),
+    )
+
+    assert evidence["verification_blocks"] == []
+    assert evidence["reconcilable_blocks"] == ["CHANGED_CHARACTERIZATION_DEFINITION:pricing"]
+
+
 @pytest.mark.parametrize(
     ("language", "path"),
     [("python", "src/sample.py"), ("typescript", "src/sample.ts")],
