@@ -20,6 +20,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path, PurePosixPath
 
 from packaging.requirements import InvalidRequirement, Requirement
@@ -1016,6 +1017,20 @@ def _run_until_required_command_fails(
     return tuple(results)
 
 
+def _retain_python_shard(work: Path, output: Path, required_targets: tuple[str, ...]) -> None:
+    """Retain raw branch data and complete partition identity for the trusted join."""
+    destination = output / "python-shard"
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in (".coverage", "coverage.json", "pytest-completion.json", "pytest-partition.json"):
+        source = work / name
+        if not source.is_file() or source.is_symlink():
+            raise quality_profile.QualityProfileError("MISSING_QUALITY_PARTITION_PROOF", name)
+        shutil.copyfile(source, destination / name)
+    (destination / "required-targets.json").write_text(
+        json.dumps(required_targets) + "\n", encoding="utf-8", newline="\n"
+    )
+
+
 def _run_command(
     plan: quality_runner.CommandPlan,
     repository: Path,
@@ -1029,6 +1044,8 @@ def _run_command(
     execution_target: Path | None = None,
     evidence_plan: quality_runner.CommandPlan | None = None,
     required_targets: tuple[str, ...] = (),
+    pytest_shard_index: int | None = None,
+    pytest_shard_count: int = 4,
 ) -> quality_profile.GateResult:
     records = records or []
     work = quality_runner.command_work_directory(output, plan.adapter)
@@ -1045,6 +1062,11 @@ def _run_command(
     if plan.adapter == "python.pytest.v1":
         (work / "tmp").mkdir(parents=True, exist_ok=True)
         sandbox_environment["TMPDIR"] = "/work/tmp"
+        if pytest_shard_index is not None:
+            sandbox_environment.update(
+                SUPPORTABILITY_QUALITY_SHARD_INDEX=str(pytest_shard_index),
+                SUPPORTABILITY_QUALITY_SHARD_COUNT=str(pytest_shard_count),
+            )
     if plan.adapter == "python.build-wheel.v1":
         build_source = work / "source"
         shutil.copytree(mounted_target, build_source)
@@ -1110,8 +1132,12 @@ def _run_command(
             source_receipts,
             head_sha,
             records,
-            required_targets,
+            ()
+            if plan.adapter == "python.pytest.v1" and pytest_shard_index is not None
+            else required_targets,
         )
+        if plan.adapter == "python.pytest.v1" and pytest_shard_index is not None:
+            _retain_python_shard(work, diagnostic_output or output, required_targets)
         exit_code = completed.returncode or proof_exit
         if exit_code:
             _retain_diagnostic(
@@ -1363,6 +1389,20 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
             "NON_HOSTED_TARGET_EXECUTION", "quality profiles require a GitHub-hosted runner"
         )
     output = Path(arguments.output)
+    shard_index = getattr(arguments, "pytest_shard_index", None)
+    shard_count = getattr(arguments, "pytest_shard_count", 4)
+    if shard_count not in {1, 4} or (
+        shard_index is not None and shard_index not in range(shard_count)
+    ):
+        raise quality_profile.QualityProfileError(
+            "INVALID_QUALITY_PARTITION", "four shards required"
+        )
+    job = "quality-profile" if shard_index is None else f"quality-profile-shard-{shard_index}"
+    run_command = (
+        _run_command
+        if shard_index is None
+        else partial(_run_command, pytest_shard_index=shard_index, pytest_shard_count=shard_count)
+    )
     timings = _QualityTiming(output.parent)
     with timings.measure("setup", "repository-policy"):
         records: list[git_changes.CommandRecord] = []
@@ -1449,7 +1489,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
     diagnostic_identity = {
         "base_sha": identity.base_sha,
         "head_sha": identity.head_sha,
-        "job": "quality-profile",
+        "job": job,
         "repository": str(arguments.repository_name),
         "repository_id": str(arguments.repository_id),
         "run_attempt": str(arguments.run_attempt),
@@ -1488,7 +1528,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
             lambda plan, public_plan: _timed_command(
                 timings,
                 plan.adapter,
-                lambda: _run_command(
+                lambda: run_command(
                     plan,
                     target,
                     supervisor,
@@ -1530,7 +1570,7 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
         runner_environment="github-hosted",
         schema_version=quality_profile.SCHEMA_VERSION,
         workflow_sha=workflow_sha,
-        job="quality-profile",
+        job=job,
         artifact_id="",
         artifact_digest="",
         capture_sha256="",
@@ -1559,6 +1599,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--run-attempt", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--pytest-shard-index", type=int, choices=range(4))
+    parser.add_argument("--pytest-shard-count", type=int, choices=(1, 4), default=4)
     return parser
 
 
