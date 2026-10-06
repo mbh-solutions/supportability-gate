@@ -17,6 +17,7 @@ jobs:
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      capture-outcome: ${{ steps.capture.outcome }}
       capture-sha256: ${{ steps.capture.outputs.sha256 }}
     steps:
       - name: Check out characterization definitions
@@ -102,6 +103,7 @@ jobs:
     outputs:
       artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      capture-outcome: ${{ steps.capture.outcome }}
       capture-sha256: ${{ steps.capture.outputs.sha256 }}
     steps:
       - name: Check out characterization definitions

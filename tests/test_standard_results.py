@@ -43,7 +43,7 @@ SUCCESS_OUTCOMES = {
     "quality": "success",
 }
 EXPECTED_QUALITY_ARTIFACT = {
-    "capture_sha256": "54a168bb3fe0cb5640dfaa0e5ec96862fa3ff98b42702e9d6c71a0845c42d753",
+    "capture_sha256": "69acedca5c9a387d14c9fbf16847d14ce43959a3ac54871b67f6d223cfde5199",
     "digest": "d" * 64,
     "id": "789",
 }
@@ -397,7 +397,7 @@ def _quality() -> dict[str, Any]:
     return {
         "artifact_digest": "d" * 64,
         "artifact_id": "789",
-        "capture_sha256": "54a168bb3fe0cb5640dfaa0e5ec96862fa3ff98b42702e9d6c71a0845c42d753",
+        "capture_sha256": EXPECTED_QUALITY_ARTIFACT["capture_sha256"],
         "commands": _provenance_commands("python", ("src/sample.py",)),
         "job": "quality-profile",
         "repository": IDENTITY.repository,
@@ -1146,6 +1146,30 @@ def test_archived_actual_module_oracle_mismatch_blocks_only_gate_six() -> None:
         tuple(sources["refactor"]["targets"]),
         authorization_version="4.0",
     ) == [block]
+    # Preserve the checked native archive above. This working copy exercises the same
+    # ownership join with the current fixed command profile; it is synthetic replay evidence.
+    sources = copy.deepcopy(sources)
+    inputs = tuple(
+        sources[name] for name in ("complexity", "characterization", "refactor", "quality")
+    )
+    command = _quality_command(inputs, "python.pytest.v1")
+    proof = next(
+        item for item in sources["quality"]["commands"] if item["adapter"] == "python.pytest.v1"
+    )
+    previous = proof["executed_arguments"]
+    replacements = {
+        "$PYTHON": previous[0],
+        "$OUTPUT": previous[previous.index("-c") + 1].rsplit("/", 1)[0],
+        "$REPOSITORY": previous[previous.index("--rootdir") + 1],
+    }
+    command["arguments"] = list(
+        dict(quality_profile.command_templates("python"))[command["adapter"]]
+    )
+    executed = list(command["arguments"])
+    for token, value in replacements.items():
+        executed = [argument.replace(token, value) for argument in executed]
+    proof["executed_arguments"] = executed
+    expected_quality_artifact = _bind_quality(inputs)
     payload = standard_results.compose_results(
         sources["complexity"],
         sources["characterization"],
@@ -1153,7 +1177,7 @@ def test_archived_actual_module_oracle_mismatch_blocks_only_gate_six() -> None:
         sources["quality"],
         standard_results.RunIdentity(**fixture["identity"]),
         expected_characterization_artifacts=fixture["expected_characterization_artifacts"],
-        expected_quality_artifact=fixture["expected_quality_artifact"],
+        expected_quality_artifact=expected_quality_artifact,
         source_outcomes=fixture["source_outcomes"],
     )
     assert _results(payload) == expected

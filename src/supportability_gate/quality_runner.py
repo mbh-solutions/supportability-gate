@@ -183,6 +183,14 @@ def sandbox_command(
         "--env",
         f"PATH={':'.join(sorted(executable_paths))}",
     )
+    if plan.adapter == "python.pytest.v1":
+        environment = (
+            *environment,
+            "--env",
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
+            "--env",
+            "COVERAGE_FILE=/work/.coverage",
+        )
     for name, value in sorted((extra_environment or {}).items()):
         environment = (*environment, "--env", f"{name}={value}")
     container_workdir = workdir or (

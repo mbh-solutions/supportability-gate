@@ -11,8 +11,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 import traceback
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from packaging.requirements import Requirement
@@ -26,6 +30,68 @@ _CREDENTIAL = re.compile(
     r"(?i)\b(token|password|secret|authorization)\s*[:=]\s*(?:(?:bearer|basic)\s+)?[^\s]+"
 )
 _SANDBOX_DENIALS = (b"Read-only file system", b"Errno 30", b"EROFS")
+_MAX_TIMING_RECORDS = characterization.MAX_SCENARIOS + 2
+
+
+class _CharacterizationTiming:
+    """Retain bounded operational timings outside deterministic capture evidence."""
+
+    def __init__(self, output: Path | None) -> None:
+        self.output = output / "characterization-timings.json" if output is not None else None
+        self.records: list[dict[str, object]] = []
+
+    def _log(self, event: str, kind: str, name: str, detail: str = "") -> None:
+        timestamp = datetime.now(UTC).isoformat(timespec="milliseconds")
+        try:
+            print(
+                f"{timestamp} CHARACTERIZATION_TIMING {event} {kind} {name}{detail}",
+                file=sys.stderr,
+                flush=True,
+            )
+        except OSError:
+            pass
+
+    def _retain(self, record: dict[str, object]) -> None:
+        self.records.append(record)
+        if self.output is None:
+            return
+        try:
+            self.output.parent.mkdir(parents=True, exist_ok=True)
+            self.output.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "characterization-capture-timings.v1",
+                        "records": self.records,
+                    },
+                    sort_keys=True,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            # Operational diagnostics must not change authoritative capture outcomes.
+            pass
+
+    @contextmanager
+    def measure(self, kind: str, name: str) -> Iterator[dict[str, object]]:
+        record: dict[str, object] = {"kind": kind, "name": name, "status": "completed"}
+        if len(self.records) >= _MAX_TIMING_RECORDS:
+            yield record
+            return
+        started = time.monotonic()
+        record["started_at"] = datetime.now(UTC).isoformat(timespec="milliseconds")
+        self._log("START", kind, name)
+        try:
+            yield record
+        except BaseException:
+            record["status"] = "failed"
+            raise
+        finally:
+            elapsed = round(max(0.0, time.monotonic() - started), 3)
+            record["wall_seconds"] = elapsed
+            self._retain(record)
+            self._log("END", kind, name, f" {record['status']} {elapsed:.3f}s")
 
 
 def _prepare_container() -> str:
@@ -658,23 +724,29 @@ def capture_evidence(
     diagnostics: Path | None = None,
 ) -> tuple[dict[str, object], dict[str, object]]:
     """Execute fixed-convention scenarios only on a GitHub-hosted runner."""
-    _require_hosted_runner()
-    records: list[git_changes.CommandRecord] = []
-    target = git_changes.validate_repository(target, records)
-    definition = git_changes.validate_repository(definition, records)
-    target_sha = git_changes.run_git(target, ("rev-parse", "HEAD"), records).decode().strip()
-    definition_sha = (
-        git_changes.run_git(definition, ("rev-parse", "HEAD"), records).decode().strip()
-    )
-    expected_target = base_sha if side == "base" else head_sha
-    if side not in {"base", "head"} or target_sha != expected_target or definition_sha != head_sha:
-        raise characterization.CharacterizationError("STALE_CHARACTERIZATION_CHECKOUT")
-    policy_blob = git_changes.read_regular_blob(
-        definition, head_sha, ".supportability.toml", records
-    )
-    policy = contract.parse_contract(policy_blob.content)
-    manifest = characterization._manifest(definition, head_sha, records)
-    container_id = _prepare_container()
+    timings = _CharacterizationTiming(diagnostics)
+    with timings.measure("preparation", "checkout-and-container"):
+        _require_hosted_runner()
+        records: list[git_changes.CommandRecord] = []
+        target = git_changes.validate_repository(target, records)
+        definition = git_changes.validate_repository(definition, records)
+        target_sha = git_changes.run_git(target, ("rev-parse", "HEAD"), records).decode().strip()
+        definition_sha = (
+            git_changes.run_git(definition, ("rev-parse", "HEAD"), records).decode().strip()
+        )
+        expected_target = base_sha if side == "base" else head_sha
+        if (
+            side not in {"base", "head"}
+            or target_sha != expected_target
+            or definition_sha != head_sha
+        ):
+            raise characterization.CharacterizationError("STALE_CHARACTERIZATION_CHECKOUT")
+        policy_blob = git_changes.read_regular_blob(
+            definition, head_sha, ".supportability.toml", records
+        )
+        policy = contract.parse_contract(policy_blob.content)
+        manifest = characterization._manifest(definition, head_sha, records)
+        container_id = _prepare_container()
     diagnostic_identity = {
         "base_sha": base_sha,
         "head_sha": head_sha,
@@ -686,57 +758,64 @@ def capture_evidence(
         "workflow_sha": workflow_sha,
     }
     with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as temporary:
-        supervisor_output = Path(temporary) / "supervisor"
-        dependencies = (
-            quality_runner.trusted_directory(supervisor_output) / "characterization-dependencies"
-        )
-        dependencies.mkdir(parents=True, exist_ok=True)
-        if policy.language in {"python", "mixed"}:
-            _install_python_dependencies(
-                definition,
-                head_sha,
-                dependencies,
-                records,
-                diagnostics,
-                f"characterization-{side}",
-                diagnostic_identity,
+        with timings.measure("preparation", "dependencies-and-runtimes"):
+            supervisor_output = Path(temporary) / "supervisor"
+            dependencies = (
+                quality_runner.trusted_directory(supervisor_output)
+                / "characterization-dependencies"
             )
-        python_runtime = _runtime_probe(
-            target,
-            supervisor_output,
-            sys.executable,
-            "characterization-python-runtime",
-            diagnostics,
-            f"characterization-{side}-runtime",
-            diagnostic_identity,
-        )
-        node_runtime = ""
-        if policy.language in {"typescript", "mixed"}:
-            node_runtime = _runtime_probe(
+            dependencies.mkdir(parents=True, exist_ok=True)
+            if policy.language in {"python", "mixed"}:
+                _install_python_dependencies(
+                    definition,
+                    head_sha,
+                    dependencies,
+                    records,
+                    diagnostics,
+                    f"characterization-{side}",
+                    diagnostic_identity,
+                )
+            python_runtime = _runtime_probe(
                 target,
                 supervisor_output,
-                "node",
-                "characterization-node-runtime",
+                sys.executable,
+                "characterization-python-runtime",
                 diagnostics,
                 f"characterization-{side}-runtime",
                 diagnostic_identity,
             )
-        resolved_dependencies = _dependency_receipts(dependencies)
-        scenarios = [
-            _scenario_capture(
-                target,
-                definition,
-                head_sha,
-                item,
-                policy.language,
-                records,
-                dependencies,
-                diagnostics,
-                f"characterization-{side}",
-                diagnostic_identity,
-            )
-            for item in manifest.scenarios
-        ]
+            node_runtime = ""
+            if policy.language in {"typescript", "mixed"}:
+                node_runtime = _runtime_probe(
+                    target,
+                    supervisor_output,
+                    "node",
+                    "characterization-node-runtime",
+                    diagnostics,
+                    f"characterization-{side}-runtime",
+                    diagnostic_identity,
+                )
+            resolved_dependencies = _dependency_receipts(dependencies)
+        scenarios = []
+        for item in manifest.scenarios:
+            with timings.measure("scenario", item.id) as timing:
+                observed = _scenario_capture(
+                    target,
+                    definition,
+                    head_sha,
+                    item,
+                    policy.language,
+                    records,
+                    dependencies,
+                    diagnostics,
+                    f"characterization-{side}",
+                    diagnostic_identity,
+                )
+                timing["exit_code"] = observed["exit_code"]
+                timing["deterministic"] = observed["deterministic"]
+                if observed["exit_code"] or observed["error"] or not observed["deterministic"]:
+                    timing["status"] = "failed"
+                scenarios.append(observed)
     fingerprint = characterization._sha256(
         characterization._canonical([[item["id"], item["behavior_sha256"]] for item in scenarios])
     )

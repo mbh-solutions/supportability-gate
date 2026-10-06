@@ -998,9 +998,9 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
     assert Path(plans[-1].actual[0]).is_absolute()
     assert pytest_plan.actual[-2:] == ("--rootdir", str(repository))
     rcfile = next(
-        item.removeprefix("--rcfile=")
+        item.removeprefix("--cov-config=")
         for item in pytest_plan.actual
-        if item.startswith("--rcfile=")
+        if item.startswith("--cov-config=")
     )
     trusted = output / "trusted"
     assert Path(rcfile) == output / "coverage.ini"
@@ -1011,7 +1011,18 @@ def test_fixed_python_tools_use_isolation_and_generated_source_paths(tmp_path: P
         collector=Path(__file__).parent,
     )
     assert sandbox[-2:] == ("--rootdir", "/target")
-    assert "--rcfile=/work/coverage.ini" in sandbox
+    assert "--cov-config=/work/coverage.ini" in sandbox
+    assert pytest_plan.actual[2] == "/collector/quality_pytest_entry.py"
+    assert (
+        "--tx=2*popen//python="
+        + sys.executable
+        + " -I -u /collector/quality_pytest_entry.py --worker"
+    ) in pytest_plan.actual
+    assert {"--dist=load", "--max-worker-restart=0", "--cov=src", "--cov-branch"}.issubset(
+        pytest_plan.actual
+    )
+    assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in sandbox
+    assert "COVERAGE_FILE=/work/.coverage" in sandbox
     assert (output / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
     assert (trusted / "coverage.ini").read_text() == "[report]\nexclude_lines =\n"
     (trusted / "coverage.ini").write_text("[report]\nexclude_lines =\n    .+\n")
