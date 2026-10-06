@@ -360,6 +360,84 @@ def test_schema5_correction_is_adapter_agnostic(language: str, path: str) -> Non
     assert manifest.corrections[0].targets[0].startswith(path + "::")
 
 
+def test_schema5_aggregate_round_trips_through_bounded_codec(tmp_path: Path) -> None:
+    value = {
+        "schema_version": characterization.CORRECTION_RESULT_SCHEMA,
+        "result_classification": "PASS_NO_BEHAVIOR_CHANGE",
+    }
+    content = characterization._write_json(tmp_path / "result.json", value)
+
+    assert content == characterization._canonical(value) + b"\n"
+    assert (
+        characterization._read_module_aggregate(
+            content,
+            "MALFORMED_CHARACTERIZATION_RESULT",
+            characterization.CORRECTION_RESULT_SCHEMA,
+        )
+        == value
+    )
+
+
+def test_schema5_cli_accepts_structurally_ready_correction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    result = {
+        "correction": {
+            "reconcilable_blocks": ["CHANGED_GOLDEN_OUTPUT:sample"],
+            "verification_blocks": [],
+        },
+        "overall_result": "BLOCK",
+        "policy_blocks": ["CHANGED_GOLDEN_OUTPUT:sample"],
+        "schema_version": characterization.CORRECTION_RESULT_SCHEMA,
+    }
+    monkeypatch.setattr(characterization, "verify_evidence", lambda *args, **kwargs: result)
+    output = tmp_path / "result.json"
+
+    exit_code = characterization.main(
+        [
+            "verify",
+            "--repository",
+            str(tmp_path),
+            "--repository-name",
+            "example/fixture",
+            "--repository-id",
+            "1",
+            "--base-ref",
+            "a" * 40,
+            "--head-ref",
+            "b" * 40,
+            "--workflow-sha",
+            "c" * 40,
+            "--run-id",
+            "1",
+            "--run-attempt",
+            "1",
+            "--base-evidence",
+            str(tmp_path / "base.json"),
+            "--head-evidence",
+            str(tmp_path / "head.json"),
+            "--base-artifact-id",
+            "1",
+            "--base-artifact-digest",
+            "d" * 64,
+            "--base-capture-sha256",
+            "e" * 64,
+            "--head-artifact-id",
+            "2",
+            "--head-artifact-digest",
+            "f" * 64,
+            "--head-capture-sha256",
+            "0" * 64,
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    assert capsys.readouterr().out == "BLOCK\n"
+    assert json.loads(output.read_bytes()) == result
+
+
 def _behavior(identifier: str, offset: int = 1) -> dict[str, object]:
     return {
         identifier: [
