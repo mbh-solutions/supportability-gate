@@ -359,6 +359,35 @@ def test_module_correction_uses_each_side_frozen_root_oracle(
     assert "_base_oracle_cases" not in serialized["module"]
 
 
+def test_correction_may_freeze_new_base_side_module_cases() -> None:
+    scenario = characterization.Scenario(
+        "pricing",
+        "golden",
+        ("src/sample.py",),
+        "src/sample.py::function:calculate",
+        ("src/sample.py::function:calculate",),
+    )
+    path = "tests/characterization/pricing.base.module.golden.json"
+    correction = characterization.Correction(
+        "pricing-fix",
+        ("pricing",),
+        (),
+        ("src/sample.py::function:calculate:1-2",),
+        (characterization.OracleFile(path, "a" * 64, "golden"),),
+    )
+    manifest = characterization.Manifest(
+        (scenario,),
+        "b" * 40,
+        "c" * 64,
+        corrections=(correction,),
+        schema_version="5.0",
+    )
+
+    assert characterization._correction_base_module_oracle_path(manifest, scenario) == path
+    undeclared = characterization.Manifest((scenario,), "b" * 40, "c" * 64, schema_version="5.0")
+    assert characterization._correction_base_module_oracle_path(undeclared, scenario) is None
+
+
 def test_schema5_hidden_delta_and_absent_declaration_block() -> None:
     manifest = characterization.parse_manifest(_schema5_manifest(), "a" * 40)
     scenarios = [

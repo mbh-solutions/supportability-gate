@@ -362,6 +362,11 @@ stable ID and exact sorted scenario, obligation and production-target identities
 SHA-256 of its raw bytes. These four generic roles are required; repository- or domain-specific
 interpretation fields are not supported.
 
+When a corrected module scenario adds or changes the base-side execution cases, the oracle commit
+may freeze them in `tests/characterization/<scenario-id>.base.module.golden.json`. The file must be
+declared with the generic `golden` role; otherwise the ordinary protected-base module golden
+remains authoritative.
+
 The correction declaration and all oracle files are committed before production implementation.
 The later implementation commit may change production code but cannot modify any frozen oracle
 byte. The Gate verifies that the oracle commit descends from the pull-request base, is an ancestor
