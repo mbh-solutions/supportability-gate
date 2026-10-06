@@ -2481,13 +2481,25 @@ def _correction_evidence(
     delta = _correction_delta(scenarios, obligations)
     actual_scenarios = _delta_ids(scenarios, "behavior")
     actual_obligations = _delta_ids(obligations, "assertion")
+    # A module can expose changed behavior through a changed dependency while
+    # its observer-level module hash remains stable. Accept that declared
+    # scenario only when its definition changed and both sides executed to the
+    # same non-null observer hash. The changed definition remains a reconciled,
+    # review-visible policy block; absent or failed execution is never accepted.
+    definition_only_scenarios = {
+        str(item["id"])
+        for item in scenarios
+        if item["base_behavior_sha256"] is not None
+        and item["base_behavior_sha256"] == item["head_behavior_sha256"]
+        and f"CHANGED_CHARACTERIZATION_DEFINITION:{item['id']}" in blocks
+    }
     verification_blocks: list[str] = []
     if actual_scenarios - set(correction.scenarios) or actual_obligations - set(
         correction.obligations
     ):
         verification_blocks.append("UNDECLARED_CORRECTION_DELTA")
     if (
-        set(correction.scenarios) - actual_scenarios
+        set(correction.scenarios) - actual_scenarios - definition_only_scenarios
         or set(correction.obligations) - actual_obligations
     ):
         verification_blocks.append("ABSENT_DECLARED_CORRECTION_DELTA")
