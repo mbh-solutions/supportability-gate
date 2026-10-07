@@ -30,12 +30,7 @@ def related_test_matches(path: str, target_path: str, language: str) -> bool:
 
 
 def _profile_source(path: str, language: str) -> bool:
-    suffixes = {
-        "python": (".py", ".pyi"),
-        "typescript": (".cts", ".mts", ".ts", ".tsx"),
-        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
-    }[language]
-    return path.endswith(suffixes)
+    return path.endswith(contract.SOURCE_SUFFIXES[language])
 
 
 def _production_change_path(

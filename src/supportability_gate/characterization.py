@@ -538,8 +538,10 @@ def scenario_language(scenario: Scenario, language: str) -> str:
     profiles = {
         "python" if path.endswith((".py", ".pyi")) else "typescript"
         for path in scenario.covers
-        if path.endswith((".py", ".pyi", ".cts", ".mts", ".ts", ".tsx"))
+        if path.endswith(contract.SOURCE_SUFFIXES["mixed"])
     }
+    if not profiles:
+        return "python"
     if len(profiles) != 1:
         raise CharacterizationError("MIXED_PROFILE_CHARACTERIZATION_SCENARIO")
     return profiles.pop()

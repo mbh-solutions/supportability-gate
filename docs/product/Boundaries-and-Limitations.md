@@ -16,6 +16,20 @@ Outside-profile code, unclassified/dynamic architecture, subjective cohesion, na
 exhaustive intended behavior are not certified. The Gate is not a general security scanner,
 deployment approval system, or replacement for product-specific acceptance testing.
 
+The frontend profile includes JavaScript `.js` and `.jsx`. Mixed-project scenarios covering only
+frontend source use the fixed Node `.characterization.mjs` driver; scenarios covering only assets
+use the fixed Python `.characterization.py` driver. A single scenario mixing Python and frontend
+source remains ambiguous and blocked. The ordinary snapshot/behavior scenario path is separate
+from the observed Python API introduction mode described below; JavaScript does not gain that
+Python-specific observation protocol. New behavior still requires the applicable exact oracle,
+coverage and owner authorization, rather than an invented unchanged baseline.
+
+HTML admission is limited to explicit balanced markup with assessed repository-local external
+scripts. It does not admit inline executable code or embedded documents as unchecked assets.
+ICO admission supports PNG-backed entries with bounded, contiguous directory ranges. JSON, CSS,
+Markdown and PNG retain their existing validators; every production asset remains in exact-byte
+quality receipts and applicable characterization scope.
+
 ## Short-task classification
 
 The exception requires **exactly one newly added non-production file**, named `README.md` or under

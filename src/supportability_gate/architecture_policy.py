@@ -11,7 +11,7 @@ from pathlib import PurePosixPath
 import tree_sitter_typescript
 from tree_sitter import Language, Node, Parser
 
-from supportability_gate.contract import Contract, GateAdapter
+from supportability_gate.contract import SOURCE_SUFFIXES, Contract, GateAdapter
 from supportability_gate.function_changes import PythonSourceError, _decode_python
 
 ARCHITECTURE_ADAPTERS = {
@@ -33,7 +33,7 @@ _LAYERS = {
     "ui": "presentation",
     "api": "presentation",
 }
-_TYPESCRIPT_SUFFIXES = (".cts", ".mts", ".ts", ".tsx")
+_TYPESCRIPT_SUFFIXES = SOURCE_SUFFIXES["typescript"]
 _DOMAIN_PYTHON_IMPORTS = frozenset(
     {
         "__future__",
@@ -120,7 +120,7 @@ def source_imports(path: str, content: bytes) -> tuple[tuple[int, str], ...]:
         return tuple(sorted(imports))
     language = (
         tree_sitter_typescript.language_tsx()
-        if path.endswith(".tsx")
+        if path.endswith((".jsx", ".tsx"))
         else tree_sitter_typescript.language_typescript()
     )
     syntax_tree = Parser(Language(language)).parse(content)
@@ -265,7 +265,8 @@ def _typescript_config(content: bytes | None) -> _TypeScriptConfig:
 def _typescript_candidates(stem: str) -> tuple[str, ...]:
     suffix = PurePosixPath(stem).suffix
     rewrites = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
-    base, candidates = (stem[: -len(suffix)], []) if suffix in rewrites else (stem, [stem])
+    base = stem[: -len(suffix)] if suffix in rewrites else stem
+    candidates = [stem]
     candidates.extend(f"{base}{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
     candidates.extend(f"{base}/index{item}" for item in rewrites.get(suffix, _TYPESCRIPT_SUFFIXES))
     return tuple(candidates)
@@ -335,7 +336,7 @@ def _typescript_edges(
 ) -> tuple[list[ImportEdge], list[str]]:
     language = (
         tree_sitter_typescript.language_tsx()
-        if path.endswith(".tsx")
+        if path.endswith((".jsx", ".tsx"))
         else tree_sitter_typescript.language_typescript()
     )
     tree = Parser(Language(language)).parse(content)

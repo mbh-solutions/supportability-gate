@@ -21,6 +21,11 @@ POLICY_EXIT_STANDARDS = {
     },
 }
 SUPPORTED_LANGUAGES = ("python", "typescript")
+SOURCE_SUFFIXES = {
+    "python": (".py", ".pyi"),
+    "typescript": (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx"),
+    "mixed": (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx"),
+}
 FIXED_ADAPTERS_BY_LANGUAGE = {
     "python": (
         "python.c901-touched.v1",

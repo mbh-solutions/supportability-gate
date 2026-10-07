@@ -78,6 +78,20 @@ def test_valid_layered_python_graph_passes() -> None:
     assert len(result.edges) == 3
 
 
+def test_javascript_imports_preserve_dependency_and_cycle_enforcement() -> None:
+    result = _evaluate(
+        {
+            "src/domain/grade.js": "import { render } from '../presentation/view.js'; export const grade = render;\n",
+            "src/presentation/view.js": "import { grade } from '../domain/grade.js'; export const render = grade;\n",
+        },
+        "typescript",
+    )
+    assert len(result.edges) == 2
+    assert all(edge.internal for edge in result.edges)
+    assert any("DEPENDENCY_INVERSION" in block for block in result.blocks)
+    assert any("IMPORT_CYCLE" in block for block in result.blocks)
+
+
 def test_python_aliases_preserve_canonical_targets() -> None:
     result = _evaluate(
         {
