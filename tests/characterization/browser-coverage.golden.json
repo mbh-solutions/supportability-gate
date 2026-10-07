@@ -1,0 +1,60 @@
+[
+  {
+    "input": "asset-scenario",
+    "output": [
+      "python3.12",
+      "-P",
+      "tests/characterization/probe.characterization.py"
+    ]
+  },
+  {
+    "input": "html-event",
+    "output": "MALFORMED"
+  },
+  {
+    "input": "html-external",
+    "output": "PASS"
+  },
+  {
+    "input": "html-inline",
+    "output": "MALFORMED"
+  },
+  {
+    "input": "icon-truncated",
+    "output": "MALFORMED"
+  },
+  {
+    "input": "icon-valid",
+    "output": "PASS"
+  },
+  {
+    "input": "javascript-classification",
+    "output": {
+      "complexity": true,
+      "quality": true,
+      "refactor": true
+    }
+  },
+  {
+    "input": "javascript-complexity",
+    "output": [
+      11
+    ]
+  },
+  {
+    "input": "javascript-dependencies",
+    "output": [
+      "DEPENDENCY_INVERSION:src/domain/grade.js:1:../presentation/view.js",
+      "FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/grade.js:1:../presentation/view.js",
+      "IMPORT_CYCLE:src/domain/grade.js:1:../presentation/view.js",
+      "IMPORT_CYCLE:src/presentation/view.js:1:../domain/grade.js"
+    ]
+  },
+  {
+    "input": "javascript-scenario",
+    "output": [
+      "node",
+      "tests/characterization/probe.characterization.mjs"
+    ]
+  }
+]

@@ -1,6 +1,88 @@
 {
   "corrections": [
     {
+      "id": "browser-source-coverage",
+      "obligations": [
+        "browser-coverage-architecture-policy",
+        "browser-coverage-characterization",
+        "browser-coverage-cli",
+        "browser-coverage-contract",
+        "browser-coverage-function-changes",
+        "browser-coverage-gate-policy",
+        "browser-coverage-quality-profile",
+        "browser-coverage-refactor-targets",
+        "browser-coverage-standard-results"
+      ],
+      "oracle_files": [
+        {
+          "kind": "golden",
+          "path": "tests/characterization/browser-coverage.base.golden.json",
+          "sha256": "3cffc849f85304fa8fb1dbbb960a5c1fa530e0b013f5ad2d174101187c02183b"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/browser-coverage.characterization.py",
+          "sha256": "f29e1c48f94136b54eaca079dfbbcc33a3315e235f4a5c2dfb147ee4d41ca4dc"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/browser-coverage.golden.json",
+          "sha256": "ae17728124556576e26952c3ae7a58bf7f7e4ee41d22ab0f5aa1f467cfb946f0"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/browser-coverage.review.json",
+          "sha256": "22a730175d25a45cfe97d1ec4f4fa7a015db238ee7fc4904d025b6e1b28d8e55"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/browser-coverage.source-receipt.json",
+          "sha256": "6d26fbde8a0eb2918405107e22bc18fa10abaae6524cf2729cd3b2892bc1a831"
+        }
+      ],
+      "scenarios": [
+        "browser-coverage"
+      ],
+      "targets": [
+        "src/supportability_gate/architecture_policy.py::function:_typescript_candidates:265-272",
+        "src/supportability_gate/architecture_policy.py::function:_typescript_edges:331-352",
+        "src/supportability_gate/architecture_policy.py::function:source_imports:100-129",
+        "src/supportability_gate/architecture_policy.py::module:src/supportability_gate/architecture_policy.py:14-14",
+        "src/supportability_gate/architecture_policy.py::module:src/supportability_gate/architecture_policy.py:36-36",
+        "src/supportability_gate/characterization.py::function:scenario_language:534-547",
+        "src/supportability_gate/cli.py::function:_is_profile_source:34-37",
+        "src/supportability_gate/contract.py::module:src/supportability_gate/contract.py:24-28",
+        "src/supportability_gate/function_changes.py::function:parse_typescript_file:339-356",
+        "src/supportability_gate/gate_policy.py::module:src/supportability_gate/gate_policy.py:77-78",
+        "src/supportability_gate/gate_policy.py::module:src/supportability_gate/gate_policy.py:77-82",
+        "src/supportability_gate/quality_profile.py::function:_HtmlAssetParser.__init__:782-787",
+        "src/supportability_gate/quality_profile.py::function:_HtmlAssetParser.handle_data:816-818",
+        "src/supportability_gate/quality_profile.py::function:_HtmlAssetParser.handle_endtag:805-809",
+        "src/supportability_gate/quality_profile.py::function:_HtmlAssetParser.handle_startendtag:811-814",
+        "src/supportability_gate/quality_profile.py::function:_HtmlAssetParser.handle_starttag:789-803",
+        "src/supportability_gate/quality_profile.py::function:_HtmlAssetParser.unknown_decl:820-821",
+        "src/supportability_gate/quality_profile.py::function:_asset_result:924-933",
+        "src/supportability_gate/quality_profile.py::function:_html_asset:824-834",
+        "src/supportability_gate/quality_profile.py::function:_html_attributes_valid:767-776",
+        "src/supportability_gate/quality_profile.py::function:_html_sources_covered:841-852",
+        "src/supportability_gate/quality_profile.py::function:_valid_html:837-838",
+        "src/supportability_gate/quality_profile.py::function:_valid_ico:905-921",
+        "src/supportability_gate/quality_profile.py::function:_valid_icon_entry:893-902",
+        "src/supportability_gate/quality_profile.py::function:asset_receipts:936-959",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:14-14",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:17-17",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:51-55",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:54-54",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:71-72",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:746-764",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:779-780",
+        "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:9-9",
+        "src/supportability_gate/refactor_targets.py::function:_profile_source:32-33",
+        "src/supportability_gate/standard_results.py::function:_s02_function_bindings:1108-1156",
+        "src/supportability_gate/standard_results.py::function:_s02_refactor_change_paths:1637-1669"
+      ]
+    },
+    {
       "id": "quality-capture-efficiency",
       "obligations": [
         "gate8-standard-results-boundary-v5",
@@ -100,6 +182,69 @@
       "id": "boundary-ownership",
       "scenario": "s05-meaningful-behavior",
       "selector": "boundary-ownership",
+      "target": "src/supportability_gate/standard_results.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-architecture-policy",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/architecture_policy.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-characterization",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/characterization.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-cli",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/cli.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-contract",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/contract.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-function-changes",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/function_changes.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-gate-policy",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/gate_policy.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-quality-profile",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/quality_profile.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-refactor-targets",
+      "scenario": "browser-coverage",
+      "selector": "$",
+      "target": "src/supportability_gate/refactor_targets.py"
+    },
+    {
+      "category": "behavior",
+      "id": "browser-coverage-standard-results",
+      "scenario": "browser-coverage",
+      "selector": "$",
       "target": "src/supportability_gate/standard_results.py"
     },
     {
@@ -310,10 +455,73 @@
     {
       "api": null,
       "covers": [
+        "src/supportability_gate/architecture_policy.py",
+        "src/supportability_gate/modularity_policy.py"
+      ],
+      "id": "architecture-modularity-baseline",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/architecture_policy.py",
+        "src/supportability_gate/characterization.py",
+        "src/supportability_gate/cli.py",
+        "src/supportability_gate/contract.py",
+        "src/supportability_gate/function_changes.py",
+        "src/supportability_gate/gate_policy.py",
+        "src/supportability_gate/quality_profile.py",
+        "src/supportability_gate/refactor_targets.py",
+        "src/supportability_gate/standard_results.py"
+      ],
+      "id": "browser-coverage",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/clause_inventory.py"
+      ],
+      "id": "clause-inventory-baseline",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/refactor_policy.py"
+      ],
+      "id": "gate-api-proof-legacy-compatibility",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
         "src/supportability_gate/cli.py"
       ],
       "id": "gate-cli",
       "kind": "cli",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/gate_policy.py"
+      ],
+      "id": "gate-policy-mixed-compatibility",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/gate_policy.py"
+      ],
+      "id": "gate-policy-retained-coverage",
+      "kind": "regression",
       "module_roots": []
     },
     {
@@ -338,37 +546,19 @@
     {
       "api": null,
       "covers": [
-        "src/supportability_gate/gate_policy.py"
-      ],
-      "id": "gate-policy-mixed-compatibility",
-      "kind": "regression",
-      "module_roots": []
-    },
-    {
-      "api": null,
-      "covers": [
-        "src/supportability_gate/gate_policy.py"
-      ],
-      "id": "gate-policy-retained-coverage",
-      "kind": "regression",
-      "module_roots": []
-    },
-    {
-      "api": null,
-      "covers": [
-        "src/supportability_gate/refactor_targets.py"
-      ],
-      "id": "refactor-assets",
-      "kind": "regression",
-      "module_roots": []
-    },
-    {
-      "api": null,
-      "covers": [
         "src/supportability_gate/cli.py"
       ],
       "id": "m9-quality-profile",
       "kind": "cli",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/__init__.py"
+      ],
+      "id": "package-version",
+      "kind": "regression",
       "module_roots": []
     },
     {
@@ -383,37 +573,9 @@
     {
       "api": null,
       "covers": [
-        "src/supportability_gate/quality_runner.py"
+        "src/supportability_gate/refactor_targets.py"
       ],
-      "id": "sandbox-command-boundary",
-      "kind": "regression",
-      "module_roots": []
-    },
-    {
-      "api": null,
-      "covers": [
-        "src/supportability_gate/clause_inventory.py"
-      ],
-      "id": "clause-inventory-baseline",
-      "kind": "regression",
-      "module_roots": []
-    },
-    {
-      "api": null,
-      "covers": [
-        "src/supportability_gate/architecture_policy.py",
-        "src/supportability_gate/modularity_policy.py"
-      ],
-      "id": "architecture-modularity-baseline",
-      "kind": "regression",
-      "module_roots": []
-    },
-    {
-      "api": null,
-      "covers": [
-        "src/supportability_gate/__init__.py"
-      ],
-      "id": "package-version",
+      "id": "refactor-assets",
       "kind": "regression",
       "module_roots": []
     },
@@ -445,9 +607,9 @@
     {
       "api": null,
       "covers": [
-        "src/supportability_gate/refactor_policy.py"
+        "src/supportability_gate/quality_runner.py"
       ],
-      "id": "gate-api-proof-legacy-compatibility",
+      "id": "sandbox-command-boundary",
       "kind": "regression",
       "module_roots": []
     },

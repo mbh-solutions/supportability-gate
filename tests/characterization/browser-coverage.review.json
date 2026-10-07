@@ -1,0 +1,14 @@
+{
+  "evidence_class": "author_declaration",
+  "expected_behavior": "Head expectations are specified from the approved capability and negative controls. Base oracle records the exact deployed implementation. The scenario reports actual native results without mocks or output rewriting.",
+  "invariants": [
+    "All production roots and required gates remain in scope.",
+    "Maximum complexity stays 10; the over-limit JavaScript case measures 11.",
+    "Dependency inversions and cycles remain blocked.",
+    "Inline script, event handler and truncated icon cases remain blocked.",
+    "Fixed commands, exact-byte receipts, runtime coverage, owner authentication and all eight contexts are unchanged."
+  ],
+  "owner_authorization": "Required separately through the exact-head correction grant; this file is not an owner attestation.",
+  "schema_version": "browser-coverage-review.v1",
+  "scope": "Admit JavaScript through all existing frontend analyses; select fixed drivers for browser and asset scenarios; validate external-script HTML and PNG-backed ICO assets."
+}

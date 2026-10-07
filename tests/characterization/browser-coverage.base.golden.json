@@ -1,0 +1,50 @@
+[
+  {
+    "input": "asset-scenario",
+    "output": "MIXED_PROFILE_CHARACTERIZATION_SCENARIO"
+  },
+  {
+    "input": "html-event",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "html-external",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "html-inline",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "icon-truncated",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "icon-valid",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "javascript-classification",
+    "output": {
+      "complexity": false,
+      "quality": true,
+      "refactor": false
+    }
+  },
+  {
+    "input": "javascript-complexity",
+    "output": [
+      11
+    ]
+  },
+  {
+    "input": "javascript-dependencies",
+    "output": [
+      "FORBIDDEN_DOMAIN_DEPENDENCY:src/domain/grade.js:1:../presentation/view.js"
+    ]
+  },
+  {
+    "input": "javascript-scenario",
+    "output": "MIXED_PROFILE_CHARACTERIZATION_SCENARIO"
+  }
+]
