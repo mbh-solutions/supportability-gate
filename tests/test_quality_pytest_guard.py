@@ -27,6 +27,8 @@ guard = _candidate_module("quality_pytest_guard.py")
 
 def _completed_guard() -> guard.CompletionGuard:
     observed = guard.CompletionGuard(SimpleNamespace())
+    full_collection = [f"other-{index}" for index in range(2 * guard._SHARD_COUNT)]
+    full_collection[guard._SHARD_INDEX :: guard._SHARD_COUNT] = ["a", "b"]
     for identity in ("gw0", "gw1"):
         node = SimpleNamespace(
             gateway=SimpleNamespace(id=identity),
@@ -36,6 +38,7 @@ def _completed_guard() -> guard.CompletionGuard:
                     "isolated": True,
                     "trusted_helper": True,
                     "branch_coverage": True,
+                    "full_collection": full_collection,
                 },
             },
         )
