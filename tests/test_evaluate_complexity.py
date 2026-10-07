@@ -1521,6 +1521,13 @@ def test_javascript_is_assessed_and_over_limit_code_blocks(
     assert exit_code == (1 if branches == 10 else 0), result["policy_blocks"]
 
 
+def test_jsx_function_body_is_parsed_for_complexity() -> None:
+    source = b"export function render(show) { return show ? <div>ready</div> : null; }"
+    parsed = function_changes.parse_typescript_file("src/view.jsx", source)
+    metrics = complexity_metrics.measure_definitions(parsed.functions, "typescript")
+    assert [(item.span.qualified_name, item.complexity) for item in metrics] == [("render", 2)]
+
+
 def test_typescript_threshold_weakening_blocks(tmp_path: Path) -> None:
     repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
     base_sha = _commit(repository, "base")

@@ -1256,8 +1256,13 @@ def _png_with_ihdr(ihdr: bytes) -> bytes:
         (b'<html><button onclick="run()">Go</button></html>', "MALFORMED"),
         (b'<html><a href="java&#115;cript:run()">Go</a></html>', "MALFORMED"),
         (b'<html><iframe srcdoc="unchecked"></iframe></html>', "MALFORMED"),
+        (b'<html><script src="app.js" src="hidden.js"></script></html>', "MALFORMED"),
+        (b'<html><script src="app.js" /></html>', "MALFORMED"),
+        (b"<html><br/></html>", "PASS"),
+        (b"<html><![CDATA[unchecked]]></html>", "MALFORMED"),
         (b"<html><body></html>", "MALFORMED"),
         (b"<html>\x00</html>", "MALFORMED"),
+        (b"<html>\xff</html>", "MALFORMED"),
     ],
 )
 def test_html_receipts_reject_unassessed_embedded_code(content: bytes, expected: str) -> None:
