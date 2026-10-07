@@ -1114,11 +1114,7 @@ def _s02_function_bindings(
     language: str,
     code: str,
 ) -> tuple[dict[str, Any], ...]:
-    suffixes = {
-        "python": (".py", ".pyi"),
-        "typescript": (".cts", ".mts", ".ts", ".tsx"),
-        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
-    }[language]
+    suffixes = contract.SOURCE_SUFFIXES[language]
     base_identities: set[tuple[str, str]] = set()
     head_identities: set[tuple[str, str]] = set()
     heads: list[dict[str, Any]] = []
@@ -1641,11 +1637,7 @@ def _s02_refactor_predecessor(
 def _s02_refactor_change_paths(
     changed: tuple[dict[str, Any], ...], language: str
 ) -> tuple[list[str], list[tuple[str, ...]], list[str]]:
-    suffixes = {
-        "python": (".py", ".pyi"),
-        "typescript": (".cts", ".mts", ".ts", ".tsx"),
-        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
-    }[language]
+    suffixes = contract.SOURCE_SUFFIXES[language]
     scope = sorted({path for row in changed for path in (row["old_path"], row["new_path"]) if path})
     required = [
         tuple(

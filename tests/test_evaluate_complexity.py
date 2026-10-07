@@ -513,7 +513,7 @@ def _evaluate(
                 quality_profile.expected_proof_kind(adapter),
                 ()
                 if quality_profile.expected_proof_kind(adapter) == "provisioning"
-                else source_files,
+                else quality_profile.source_files(source_files, adapter.split(".", 1)[0]),
                 (),
                 True,
                 complexity_exit_code
@@ -523,7 +523,11 @@ def _evaluate(
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
                 hashlib.sha256(b"").hexdigest(),
-                _executed_quality_arguments(arguments, source_files, test_files),
+                _executed_quality_arguments(
+                    arguments,
+                    quality_profile.source_files(source_files, adapter.split(".", 1)[0]),
+                    test_files,
+                ),
             )
             for adapter, arguments in quality_profile.command_templates(policy.language)
         )
@@ -1491,16 +1495,37 @@ export function outer(value: number): number {
     assert [(item.span.qualified_name, item.complexity) for item in metrics] == [("outer", 2)]
 
 
-def test_typescript_profile_mismatch_blocks_instead_of_skipping(tmp_path: Path) -> None:
-    repository = _initialize_repository(tmp_path, TYPESCRIPT_CONTRACT)
+@pytest.mark.parametrize("policy", [TYPESCRIPT_CONTRACT, MIXED_TWO_ROOT_CONTRACT])
+@pytest.mark.parametrize("branches", [1, 10])
+def test_javascript_is_assessed_and_over_limit_code_blocks(
+    tmp_path: Path, policy: str, branches: int
+) -> None:
+    repository = _initialize_repository(tmp_path, policy)
+    _write(repository / "src" / "owner.ts", "export const OWNER = true;\n")
     base_sha = _commit(repository, "base")
-    _write(repository / "src" / "sample.js", "export function skipped() { return 1; }\n")
+    body = "\n".join(f"  if (value === {index}) return {index};" for index in range(branches))
+    _write(
+        repository / "src" / "sample.js",
+        f"export function grade(value) {{\n{body}\n  return -1;\n}}\n",
+    )
+    _write(
+        repository / ".supportability-review.toml", _review_evidence_for_new_path("src/sample.js")
+    )
     head_sha = _commit(repository, "head")
 
     exit_code, result = _evaluate(repository, base_sha, head_sha, tmp_path / "result")
 
-    assert exit_code == 1
-    assert result["policy_blocks"] == ["PROFILE_SOURCE_MISMATCH:src/sample.js"]
+    assert "PROFILE_SOURCE_MISMATCH:src/sample.js" not in result["policy_blocks"]
+    assert result["functions"][0]["ending_complexity"] == branches + 1
+    assert result["functions"][0]["decision"] == ("BLOCK" if branches == 10 else "PASS")
+    assert exit_code == (1 if branches == 10 else 0), result["policy_blocks"]
+
+
+def test_jsx_function_body_is_parsed_for_complexity() -> None:
+    source = b"export function render(show) { return show ? <div>ready</div> : null; }"
+    parsed = function_changes.parse_typescript_file("src/view.jsx", source)
+    metrics = complexity_metrics.measure_definitions(parsed.functions, "typescript")
+    assert [(item.span.qualified_name, item.complexity) for item in metrics] == [("render", 2)]
 
 
 def test_typescript_threshold_weakening_blocks(tmp_path: Path) -> None:

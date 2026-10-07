@@ -67,6 +67,22 @@ maximum = 10
 The TypeScript contract lists two policy adapters; the hosted profile also provides its fixed
 format, lint, type, test, build, and asset-validation responsibilities.
 
+The same profile admits `.js` and `.jsx` source alongside `.ts`, `.tsx`, `.mts` and `.cts`.
+JavaScript remains subject to the fixed strict type checker (`allowJs` and `checkJs`), lint,
+complexity, import boundaries, runtime test coverage, build evidence and behavior obligations.
+A separate TypeScript rewrite or application build step is not required by source admission;
+the Gate still performs its own fixed quality commands. Keep browser source in production scope.
+Explicit JavaScript imports resolve to a committed matching file first; the existing TypeScript
+extension rewrite applies when that file is absent.
+
+HTML assets must be UTF-8 with explicit balanced element tags. Executable code belongs in external
+scripts that resolve to assessed production source in the same repository. Inline scripts, event
+handlers, executable URLs, embedded documents, foreign markup and base-URL redirection fail the
+bounded asset validator. This is an admission boundary, not full browser rendering or security
+certification. ICO admission validates a contiguous directory of PNG-backed images, their bounds,
+dimensions and PNG checksums; other ICO encodings remain unsupported. Asset receipts bind exact
+committed bytes and do not replace behavior evidence.
+
 ### Mixed contract
 
 ```toml

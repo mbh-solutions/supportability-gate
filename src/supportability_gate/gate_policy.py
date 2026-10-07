@@ -74,12 +74,8 @@ def is_allowed_contract_transition(
 
 
 MAXIMUM_COMPLEXITY = 10
-_SOURCE_SUFFIXES = (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx")
-_PROFILE_SUFFIXES = {
-    "python": (".py", ".pyi"),
-    "typescript": (".cts", ".mts", ".ts", ".tsx"),
-    "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
-}
+_SOURCE_SUFFIXES = contract.SOURCE_SUFFIXES["mixed"]
+_PROFILE_SUFFIXES = contract.SOURCE_SUFFIXES
 
 
 def _gate_map(policy: Contract) -> dict[str, GateAdapter]:

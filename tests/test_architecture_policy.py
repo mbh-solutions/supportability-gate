@@ -5,8 +5,34 @@ from dataclasses import asdict
 
 import pytest
 
-from supportability_gate.architecture_policy import _layer, evaluate_architecture
+from supportability_gate.architecture_policy import _layer, evaluate_architecture, source_imports
 from supportability_gate.contract import GateAdapter, parse_contract
+from supportability_gate.function_changes import PythonSourceError
+
+
+@pytest.mark.parametrize("suffix", ["js", "jsx", "ts", "tsx"])
+def test_source_imports_extracts_browser_dependencies(suffix: str) -> None:
+    source = b"import { model } from './model.js';\nexport { view } from './view.js';\n"
+    if suffix in {"jsx", "tsx"}:
+        source += b"export const page = <main>{model}</main>;\n"
+    assert source_imports(f"web/page.{suffix}", source) == (
+        (1, "./model.js"),
+        (2, "./view.js"),
+    )
+
+
+@pytest.mark.parametrize("suffix", ["js", "jsx", "py"])
+def test_source_imports_rejects_malformed_source(suffix: str) -> None:
+    with pytest.raises(PythonSourceError, match="syntax error in production file"):
+        source_imports(f"src/broken.{suffix}", b"import {\n")
+
+
+def test_source_imports_preserves_python_relative_import_locations() -> None:
+    assert source_imports("src/model.py", b"import os, sys\nfrom . import helper\n") == (
+        (1, "os"),
+        (1, "sys"),
+        (2, "."),
+    )
 
 
 def _policy(language: str = "python"):
@@ -76,6 +102,20 @@ def test_valid_layered_python_graph_passes() -> None:
     assert result.executed is True
     assert result.blocks == ()
     assert len(result.edges) == 3
+
+
+def test_javascript_imports_preserve_dependency_and_cycle_enforcement() -> None:
+    result = _evaluate(
+        {
+            "src/domain/grade.js": "import { render } from '../presentation/view.js'; export const grade = render;\n",
+            "src/presentation/view.js": "import { grade } from '../domain/grade.js'; export const render = grade;\n",
+        },
+        "typescript",
+    )
+    assert len(result.edges) == 2
+    assert all(edge.internal for edge in result.edges)
+    assert any("DEPENDENCY_INVERSION" in block for block in result.blocks)
+    assert any("IMPORT_CYCLE" in block for block in result.blocks)
 
 
 def test_python_aliases_preserve_canonical_targets() -> None:

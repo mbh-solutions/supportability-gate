@@ -1,0 +1,52 @@
+{
+  "base_sha": "6c20a52063461f1bfce610039e9730d1b58493aa",
+  "intent": "Repair the longstanding July 2026 frontend source-admission mismatch and bounded asset/scenario gaps, preserving blocking controls.",
+  "schema_version": "browser-coverage-source-receipt.v1",
+  "source_files": [
+    {
+      "base_sha256": "d27c36b614ac2fe617b50d8046c8fee81c2ab7d7979589d7860fc92348f6db76",
+      "candidate_sha256": "dd464055b5c96795fd8af3df2fbec3893bb10d7a892f980d4f88b32873f59b22",
+      "path": "src/supportability_gate/architecture_policy.py"
+    },
+    {
+      "base_sha256": "0dfee1780e8e2749aa0d614f37872b689cf397c4eb1cb417d0ce8a2f5142ee4a",
+      "candidate_sha256": "e19c2be9d365783321299c9b474b70fe0c505932dc5cae12f42a34c4e5d4ba4b",
+      "path": "src/supportability_gate/characterization.py"
+    },
+    {
+      "base_sha256": "0e9dc322272279f8eea1ff363e550e9e5cdeb3df88b8041a7a91be374340439d",
+      "candidate_sha256": "c128494136ca9ce11f9a7942a0f5d92cf0e08060995383705bd8cf73837e29b2",
+      "path": "src/supportability_gate/cli.py"
+    },
+    {
+      "base_sha256": "a9db01469dcc6588fbd4a84c5aff10f72a1460cb4727c8b9fa59d32e72e361b8",
+      "candidate_sha256": "5ad8195b87dd0f153416410fdb215481d19664f7baecc12043a48b8c68ed94cf",
+      "path": "src/supportability_gate/contract.py"
+    },
+    {
+      "base_sha256": "acb3e6654366929a769258eac1202564717e716537af6bbfacd8baebaf826173",
+      "candidate_sha256": "cae229f0e93d17bfcfa3e25589e7cbfa25236ad0e591a3beba6ff0c941b781ee",
+      "path": "src/supportability_gate/function_changes.py"
+    },
+    {
+      "base_sha256": "dd14ffbcb773fabe513b8cab2ffc3c8ab9d71a712a50275d4e413cf17daa60f8",
+      "candidate_sha256": "312e1821fbd3961b11b23a99144a833796259b1dcafde2e2c39184d2da63a9f2",
+      "path": "src/supportability_gate/gate_policy.py"
+    },
+    {
+      "base_sha256": "371e63c9551081a4e160c645001c72b4b33cb207ba0139c05effc326b5042aa1",
+      "candidate_sha256": "8e5ff4045a69cbea4c5406564d3bdcee3586acbfe0a13730cf88de80402830e1",
+      "path": "src/supportability_gate/quality_profile.py"
+    },
+    {
+      "base_sha256": "29e195247e53e62542a944a7328eb06215a4b8f2ea67e85d28d6e19afd1f9c40",
+      "candidate_sha256": "a6bc16381ddc0074009d33aadd797580296144bff2b62300474b71755e19ec26",
+      "path": "src/supportability_gate/refactor_targets.py"
+    },
+    {
+      "base_sha256": "6c34f205c8c920a5a4c2d6077566dc1a56c85d108c86c129ecb10caf919cb163",
+      "candidate_sha256": "dcd74b07c2264d1d70cb1eff5d02bcd7e5a0b518a2994b972ff033e36a2fb926",
+      "path": "src/supportability_gate/standard_results.py"
+    }
+  ]
+}

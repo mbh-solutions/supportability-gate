@@ -1248,6 +1248,58 @@ def _png_with_ihdr(ihdr: bytes) -> bytes:
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IEND", b"")
 
 
+@pytest.mark.parametrize(
+    "content,expected",
+    [
+        (b'<!doctype html><html><body><script src="app.js"></script></body></html>', "PASS"),
+        (b"<html><script>runUncheckedCode()</script></html>", "MALFORMED"),
+        (b'<html><button onclick="run()">Go</button></html>', "MALFORMED"),
+        (b'<html><a href="java&#115;cript:run()">Go</a></html>', "MALFORMED"),
+        (b'<html><iframe srcdoc="unchecked"></iframe></html>', "MALFORMED"),
+        (b'<html><script src="app.js" src="hidden.js"></script></html>', "MALFORMED"),
+        (b'<html><script src="app.js" /></html>', "MALFORMED"),
+        (b"<html><br/></html>", "PASS"),
+        (b"<html><![CDATA[unchecked]]></html>", "MALFORMED"),
+        (b"<html><body></html>", "MALFORMED"),
+        (b"<html>\x00</html>", "MALFORMED"),
+        (b"<html>\xff</html>", "MALFORMED"),
+    ],
+)
+def test_html_receipts_reject_unassessed_embedded_code(content: bytes, expected: str) -> None:
+    assert quality_profile._asset_result("html.external-script.v1", content) == expected
+
+
+def test_icon_receipts_validate_directory_and_png_payload() -> None:
+    png = _png_with_ihdr(b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00")
+    header = b"\x00\x00\x01\x00\x01\x00"
+    entry = (
+        b"\x01\x01\x00\x00\x01\x00\x20\x00"
+        + len(png).to_bytes(4, "little")
+        + (22).to_bytes(4, "little")
+    )
+    icon = header + entry + png
+    assert quality_profile._asset_result("ico.png-directory.v1", icon) == "PASS"
+    for malformed in (
+        icon[:-1],
+        icon + b"trailing",
+        icon[:18] + b"\x00" * 4 + png,
+        icon[:-1] + b"x",
+    ):
+        assert quality_profile._asset_result("ico.png-directory.v1", malformed) == "MALFORMED"
+
+
+@pytest.mark.parametrize(
+    "reference",
+    ["missing.js", "../outside.js", "https://example.invalid/app.js", "data:text/javascript,run()"],
+)
+def test_html_external_script_must_be_in_assessed_source_manifest(reference: str) -> None:
+    content = f'<html><script src="{reference}"></script></html>'.encode()
+    assert not quality_profile._html_sources_covered("web/index.html", content, ("web/app.js",))
+    assert quality_profile._html_sources_covered(
+        "web/index.html", b'<html><script src="app.js?v=1"></script></html>', ("web/app.js",)
+    )
+
+
 def test_mixed_production_assets_are_attested_without_entering_source_manifest(
     tmp_path: Path,
 ) -> None:
@@ -1264,6 +1316,10 @@ def test_mixed_production_assets_are_attested_without_entering_source_manifest(
     source = repository / "src"
     source.mkdir()
     (source / "index.ts").write_text("export const ready = true;\n", encoding="utf-8")
+    (source / "app.js").write_text("export const ready = true;\n", encoding="utf-8")
+    (source / "index.html").write_text(
+        '<!doctype html><html><script src="app.js"></script></html>', encoding="utf-8"
+    )
     (source / "index.css").write_text("body { color: black; }\n", encoding="utf-8")
     (source / "manifest.json").write_text('{"name":"plugin"}\n', encoding="utf-8")
     (source / "README.md").write_text("# Plugin\n", encoding="utf-8")
@@ -1285,17 +1341,20 @@ def test_mixed_production_assets_are_attested_without_entering_source_manifest(
 
     assert production == (
         "src/README.md",
+        "src/app.js",
         "src/icon.png",
         "src/index.css",
+        "src/index.html",
         "src/index.ts",
         "src/manifest.json",
     )
-    assert source_files == ("src/index.ts",)
+    assert source_files == ("src/app.js", "src/index.ts")
     assert tests == ()
     assert tuple(receipt.path for receipt in receipts) == (
         "src/README.md",
         "src/icon.png",
         "src/index.css",
+        "src/index.html",
         "src/manifest.json",
     )
     assert all(receipt.result == "PASS" for receipt in receipts)

@@ -6,12 +6,15 @@ import ast
 import hashlib
 import io
 import json
+import posixpath
 import re
 import tokenize
 import zlib
 from dataclasses import asdict, dataclass, replace
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import unquote, urlsplit
 
 from supportability_gate import contract, git_changes
 
@@ -48,11 +51,7 @@ _TYPESCRIPT_NO_CHECK = re.compile(r"(?i)^//\s*@ts-nocheck\s*$")
 _TYPESCRIPT_LINE_IGNORE = re.compile(r"(?i)^//\s*@ts-(?:ignore|expect-error)(?:\s.*)?$")
 _ESLINT_DISABLE_NEXT = re.compile(r"eslint-disable-(?:next-)?line\b")
 _ESLINT_DISABLE_REGION = re.compile(r"eslint-disable(?!-(?:next-)?line)\b")
-SOURCE_SUFFIXES = {
-    "python": (".py", ".pyi"),
-    "typescript": (".cts", ".js", ".jsx", ".mts", ".ts", ".tsx"),
-    "mixed": (".cts", ".js", ".jsx", ".mts", ".py", ".pyi", ".ts", ".tsx"),
-}
+SOURCE_SUFFIXES = contract.SOURCE_SUFFIXES
 TEST_SUFFIXES = {
     "python": (".py", ".pyi"),
     "typescript": (".test.js", ".test.mjs", ".test.cjs", ".test.ts", ".test.mts", ".test.cts"),
@@ -69,6 +68,8 @@ TEST_SUFFIXES = {
 }
 ASSET_VALIDATORS = {
     ".css": ("css", "css.utf8.v1"),
+    ".html": ("html", "html.external-script.v1"),
+    ".ico": ("ico", "ico.png-directory.v1"),
     ".json": ("json", "json.stdlib.v1"),
     ".md": ("markdown", "markdown.utf8.v1"),
     ".png": ("png", "png.crc.v1"),
@@ -742,6 +743,115 @@ def _valid_utf8_text(content: bytes) -> bool:
         return False
 
 
+_HTML_VOID_TAGS = frozenset(
+    {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
+)
+_HTML_UNASSESSED_TAGS = frozenset({"base", "embed", "iframe", "object", "svg", "math"})
+
+
+def _html_attributes_valid(attributes: list[tuple[str, str | None]]) -> bool:
+    if len(dict(attributes)) != len(attributes):
+        return False
+    for name, value in attributes:
+        if name.startswith("on") or name == "srcdoc":
+            return False
+        normalized = "".join((value or "").split()).lower()
+        if normalized.startswith(("javascript:", "vbscript:", "data:text/html")):
+            return False
+    return True
+
+
+class _HtmlAssetParser(HTMLParser):
+    """Validate explicit HTML structure without admitting embedded executable code."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.valid = True
+        self.tags: list[str] = []
+        self.scripts: list[str] = []
+        self.saw_element = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.saw_element = True
+        self.valid = (
+            self.valid and tag not in _HTML_UNASSESSED_TAGS and _html_attributes_valid(attrs)
+        )
+        values = dict(attrs)
+        if tag == "script":
+            source = values.get("src")
+            self.valid = self.valid and bool(source)
+            if source:
+                self.scripts.append(source)
+        if tag == "meta" and (values.get("http-equiv") or "").lower() == "refresh":
+            self.valid = False
+        if tag not in _HTML_VOID_TAGS:
+            self.tags.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self.tags or self.tags[-1] != tag:
+            self.valid = False
+        else:
+            self.tags.pop()
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag not in _HTML_VOID_TAGS:
+            self.valid = False
+
+    def handle_data(self, data: str) -> None:
+        if self.tags and self.tags[-1] == "script" and data.strip():
+            self.valid = False
+
+    def unknown_decl(self, data: str) -> None:
+        self.valid = False
+
+
+def _html_asset(content: bytes) -> _HtmlAssetParser:
+    parser = _HtmlAssetParser()
+    try:
+        parser.feed(content.decode("utf-8"))
+        parser.close()
+    except (UnicodeDecodeError, ValueError, AssertionError):
+        parser.valid = False
+    parser.valid = (
+        parser.valid and _valid_utf8_text(content) and parser.saw_element and not parser.tags
+    )
+    return parser
+
+
+def _valid_html(content: bytes) -> bool:
+    return _html_asset(content).valid
+
+
+def _html_sources_covered(path: str, content: bytes, sources: tuple[str, ...]) -> bool:
+    for reference in _html_asset(content).scripts:
+        try:
+            parsed = urlsplit(reference)
+        except ValueError:
+            return False
+        if parsed.scheme or parsed.netloc or parsed.path.startswith("/"):
+            return False
+        resolved = posixpath.normpath(posixpath.join(posixpath.dirname(path), unquote(parsed.path)))
+        if resolved not in sources or not resolved.endswith(SOURCE_SUFFIXES["typescript"]):
+            return False
+    return True
+
+
 def _valid_ihdr(data: bytes) -> bool:
     return (
         len(data) == 13
@@ -780,9 +890,42 @@ def _valid_png(content: bytes) -> bool:
     return False
 
 
+def _valid_icon_entry(entry: bytes, payload: bytes) -> bool:
+    width, height = entry[0] or 256, entry[1] or 256
+    return (
+        entry[2:4] == b"\0\0"
+        and int.from_bytes(entry[4:6], "little") in {0, 1}
+        and int.from_bytes(entry[6:8], "little") in {0, 1, 4, 8, 16, 24, 32}
+        and _valid_png(payload)
+        and int.from_bytes(payload[16:20], "big") == width
+        and int.from_bytes(payload[20:24], "big") == height
+    )
+
+
+def _valid_ico(content: bytes) -> bool:
+    if len(content) < 6 or content[:4] != b"\0\0\x01\0":
+        return False
+    count = int.from_bytes(content[4:6], "little")
+    end = 6 + 16 * count
+    if not count or end > len(content):
+        return False
+    for offset in range(6, 6 + 16 * count, 16):
+        entry = content[offset : offset + 16]
+        size = int.from_bytes(entry[8:12], "little")
+        start = int.from_bytes(entry[12:16], "little")
+        if start != end or not size or start + size > len(content):
+            return False
+        end = start + size
+        if not _valid_icon_entry(entry, content[start:end]):
+            return False
+    return end == len(content)
+
+
 def _asset_result(validator: str, content: bytes) -> str:
     validators = {
         "css.utf8.v1": _valid_utf8_text,
+        "html.external-script.v1": _valid_html,
+        "ico.png-directory.v1": _valid_ico,
         "json.stdlib.v1": _valid_json,
         "markdown.utf8.v1": _valid_utf8_text,
         "png.crc.v1": _valid_png,
@@ -810,6 +953,8 @@ def asset_receipts(
             if identity == UNSUPPORTED_ASSET_IDENTITY
             else _asset_result(validator, blob.content)
         )
+        if kind == "html" and not _html_sources_covered(path, blob.content, sources):
+            result = "MALFORMED"
         receipts.append(AssetReceipt(path, kind, validator, _sha256(blob.content), result))
     return tuple(receipts)
 

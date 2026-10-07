@@ -40,6 +40,23 @@ def test_retained_quality_runner_has_characterization() -> None:
     assert "src/supportability_gate/quality_runner.py" in covered
 
 
+def test_mixed_javascript_characterization_uses_fixed_node_driver() -> None:
+    scenario = characterization.Scenario("browser-grade", "regression", ("web/grade.js",))
+    assert characterization.scenario_command(scenario, "mixed") == [
+        "node",
+        "tests/characterization/browser-grade.characterization.mjs",
+    ]
+
+
+def test_mixed_asset_characterization_uses_fixed_python_driver() -> None:
+    scenario = characterization.Scenario("course-data", "snapshot", ("content/course.json",))
+    assert characterization.scenario_command(scenario, "mixed") == [
+        "python3.12",
+        "-P",
+        "tests/characterization/course-data.characterization.py",
+    ]
+
+
 def test_s05_live_driver_matches_golden(capsys: pytest.CaptureFixture[str]) -> None:
     root = Path(__file__).parents[1]
     driver_path = root / "tests/characterization/s05-meaningful-behavior.characterization.py"

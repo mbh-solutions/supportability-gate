@@ -34,12 +34,7 @@ class _AnalyzedChanges:
 def _is_profile_source(path: str | None, language: str) -> bool:
     if path is None:
         return False
-    suffixes = {
-        "python": (".py", ".pyi"),
-        "typescript": (".cts", ".mts", ".ts", ".tsx"),
-        "mixed": (".cts", ".mts", ".py", ".pyi", ".ts", ".tsx"),
-    }
-    return path.endswith(suffixes[language])
+    return path.endswith(contract.SOURCE_SUFFIXES[language])
 
 
 def _source_language(path: str) -> str:

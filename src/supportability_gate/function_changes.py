@@ -340,7 +340,7 @@ def parse_typescript_file(path: str, content: bytes) -> ParsedSourceFile:
     """Parse TypeScript or TSX without importing or executing it."""
     language = (
         tree_sitter_typescript.language_tsx()
-        if path.endswith(".tsx")
+        if path.endswith((".jsx", ".tsx"))
         else tree_sitter_typescript.language_typescript()
     )
     tree = Parser(Language(language)).parse(content)
