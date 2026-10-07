@@ -5,8 +5,34 @@ from dataclasses import asdict
 
 import pytest
 
-from supportability_gate.architecture_policy import _layer, evaluate_architecture
+from supportability_gate.architecture_policy import _layer, evaluate_architecture, source_imports
 from supportability_gate.contract import GateAdapter, parse_contract
+from supportability_gate.function_changes import PythonSourceError
+
+
+@pytest.mark.parametrize("suffix", ["js", "jsx", "ts", "tsx"])
+def test_source_imports_extracts_browser_dependencies(suffix: str) -> None:
+    source = b"import { model } from './model.js';\nexport { view } from './view.js';\n"
+    if suffix in {"jsx", "tsx"}:
+        source += b"export const page = <main>{model}</main>;\n"
+    assert source_imports(f"web/page.{suffix}", source) == (
+        (1, "./model.js"),
+        (2, "./view.js"),
+    )
+
+
+@pytest.mark.parametrize("suffix", ["js", "jsx", "py"])
+def test_source_imports_rejects_malformed_source(suffix: str) -> None:
+    with pytest.raises(PythonSourceError, match="syntax error in production file"):
+        source_imports(f"src/broken.{suffix}", b"import {\n")
+
+
+def test_source_imports_preserves_python_relative_import_locations() -> None:
+    assert source_imports("src/model.py", b"import os, sys\nfrom . import helper\n") == (
+        (1, "os"),
+        (1, "sys"),
+        (2, "."),
+    )
 
 
 def _policy(language: str = "python"):
