@@ -1,69 +1,38 @@
 schema_version = "1.0"
-module_boundaries = [{ path = "src/supportability_gate/baseline_evidence.py", owner_path = "src/supportability_gate/characterization.py", basis = "responsibility", justification = "The existing characterization package owns behavior evidence. This small lower-level module validates static execution witnesses and complete asset inventories without invoking target code, keeping runtime observation in the hosted collectors." }]
+module_boundaries = []
 
 [behavior]
-intended_behavior = "Establish a first application baseline only from Git-derived production absence, frozen expected cases, source-bound Python/V8 body execution, complete asset snapshots and exact schema-5 owner authorization. Preserve normal compatibility after introduction."
-proof = "Real Python and Node observer tests, immutable Git absence, complete asset inventory, exact oracle authorization and negative controls; required final-head hosted qualification."
+intended_behavior = "Preserve the failed PR 288 candidate and original evidence in a dated archive so its temporary branch can be removed. Runtime behavior is unchanged."
+proof = "Only history documentation, retained evidence and this review record change; production and workflow blobs match the base."
 
 [characterization]
-captured_behavior = "The frozen first-baseline probe measures baseline admission, 400-file inventory completeness and rejection of missing execution, changed source identity and constant outputs on both gate revisions."
-proof = "Native base output and independently specified expected head output are frozen before production implementation. Existing scenario and golden bytes remain unchanged."
+captured_behavior = "Existing production characterization and goldens are unchanged. The historical failed candidate is retained as data and is not executed by current qualification."
+proof = "Exact candidate recovery in an isolated bare repository, full Git object verification, artifact hashes and ZIP integrity; existing hosted base/head characterization."
 
 [separation_of_concerns]
-before = "Ordinary preservation and Python-specific API introduction provided no first baseline for new frontend code and asset collections."
-after = "Characterization binds Git absence, manifests and authenticated captures. The baseline evidence module validates source-bound execution and complete byte inventories. Fixed hosted observers execute target code; existing refactor policy authenticates the frozen transaction."
-boundaries = [
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "_codes", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "_python_witness", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "_typescript_witness", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "behavior", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "digest", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "execution_verified", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "meaningful", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "function", symbol = "source_path", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/baseline_evidence.py", kind = "module", symbol = "src/supportability_gate/baseline_evidence.py", before = "No general first-application baseline witness validator existed.", after = "Validate exact source witnesses and complete asset inventories without executing target code." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_baseline_absence", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_baseline_birth_valid", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_baseline_capture_blocks", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_baseline_row_valid", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_coverage_blocks", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_obligation_capture_blocks", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_obligation_evidence", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_obligation_meaningful", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_observed_definition_blocks", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_coverage", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_obligations", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_scenario_rows", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_valid_obligation_assertion", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_valid_obligation_target", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_verified_capture_rows", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_verified_obligation_coverage", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "baseline_sources", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "parse_manifest", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "scenario_command", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verify_evidence", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-  { path = "src/supportability_gate/characterization.py", kind = "module", symbol = "src/supportability_gate/characterization.py", before = "Preservation rules and Python-only observed introductions had no grouped initial-baseline evidence.", after = "Bind grouped evidence to real source or measured absence, preserve existing scenarios and require the existing protected correction authorization." },
-]
+before = "A failed candidate was preserved on a remote branch and appeared to be active work."
+after = "The dated history archive owns failure evidence and recovery instructions; the PR links the record and the obsolete branch can be removed after verified delivery."
+boundaries = []
 
 [architecture]
-dependency_direction = "Characterization depends on a lower-level baseline evidence validator, which depends only on fixed source parsing and contract definitions. Target code remains confined to hosted observers."
-reviewed_paths = ["src/supportability_gate/baseline_evidence.py", "src/supportability_gate/characterization.py"]
+dependency_direction = "No production modules, imports, dependencies or workflows change. Documentation remains in the established historical-record boundary."
+reviewed_paths = ["docs/history/2026-10-07/pr288-first-attempt/README.md", "docs/history/README.md"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/baseline_evidence.py"
-owns = "Static validation of first-baseline source identity, actual body execution witnesses and complete asset snapshot inventories."
-does_not_own = "Target execution, semantic correctness, arbitrary runtime commands, quality thresholds, owner authentication or deployment."
+path = "docs/history/2026-10-07/pr288-first-attempt/README.md"
+owns = "Historical candidate identity, retained failure evidence, checksums and recovery instructions."
+does_not_own = "Runtime behavior, current qualification decisions, deployment policy or new release authorization."
 
 [incremental_refactor]
-target = "Add bounded first-application baseline evidence without excluding new code or content."
-completed_step = "Integrate grouped schema-5 baselines with fixed Python/V8 observers and the existing oracle-first authorization transaction."
+target = "Replace one obsolete archival branch with a verified historical record."
+completed_step = "Retain the exact candidate and original run evidence, verify recovery, and document the branch cleanup sequence."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Names identify baseline inventories, absence, observed execution and fixed source identities."
-cohesion = "One existing package owns behavior evidence; the new lower-level module is dedicated to validating source and asset witnesses."
-intended_behavior = "Witnesses prove body execution and source identity; author-selected output cases and asset bytes do not certify semantic correctness or exhaustive behavior. No existing-production bootstrap or suppression of coverage is admitted."
-reviewability = "Frozen correction evidence, real-runtime positive and negative tests, retained old-profile behavior and exact protected final-head checks."
+naming = "The dated PR-specific archive identifies its historical purpose and failed status."
+cohesion = "Candidate, original evidence, receipts and recovery instructions are colocated under the existing history directory."
+intended_behavior = "The archived failure remains a failure; no executable behavior or protection changes."
+reviewability = "Original artifact bytes, exact candidate recovery, explicit prerequisite and checksummed inventory support inspection."
