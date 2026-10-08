@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "evidence_class": "measured_fact",
+  "base_sha": "007197628ef4d8ab72a3a7d16ccd21c0b5d43d63",
+  "sources": {
+    "src/supportability_gate/characterization.py": "6d87bd35c31d1eb5fd1357952356439178721620dde03bbc0b49c1e5cb3e0ee6",
+    "src/supportability_gate/refactor_targets.py": "44451bb1e09fe20cfaf7dd8ac994b93740a5cfbead3ca88fb830937a1a67d570",
+    "src/supportability_gate/standard_results.py": "559a0ace39bbfd52cc4fadd0efcd50c0b8c335ffd19fe8737955296a6beb5039"
+  }
+}

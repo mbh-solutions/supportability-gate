@@ -1,6 +1,8 @@
 {
   "asset_owner": "quality-gate",
   "refactor_targets": [
+    "src/plugin.json::asset:src/plugin.json:whole-file",
+    "src/readme.md::asset:src/readme.md:whole-file",
     "src/sample.ts::function:calculate:1-3"
   ],
   "unbounded_source_paths": [

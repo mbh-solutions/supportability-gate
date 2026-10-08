@@ -1,6 +1,64 @@
 {
   "corrections": [
     {
+      "id": "asset-correction-targets",
+      "obligations": [
+        "asset-correction-characterization",
+        "asset-correction-refactor-targets",
+        "asset-correction-standard-results",
+        "refactor-assets"
+      ],
+      "oracle_files": [
+        {
+          "kind": "golden",
+          "path": "tests/characterization/asset-correction.base.golden.json",
+          "sha256": "61587101bb0dc9343ba1bc0e19990a5db4c27ff0b67fd552020e71a7957915eb"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/asset-correction.characterization.py",
+          "sha256": "666bd4afb96cf863eea216edd0af995ce5cab53cf0e2b2c01c4f69eddcbc4e2f"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/asset-correction.golden.json",
+          "sha256": "1bddc458cf0b32f8d8e2eb6f99a614f2fabcf652ae59790d5825ad50826f1f74"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/asset-correction.review.json",
+          "sha256": "0227260b5c58116e9fde958a667e1af07868e4b961e5a9f0c742bef514165789"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/asset-correction.source-receipt.json",
+          "sha256": "90b8e717ec693293ab33e6e909037d99a9bf0c86361c54b280b227cda2dc7e7f"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/refactor-assets.characterization.py",
+          "sha256": "0d6b3e747627bfb79e4edf68d2805dc95b5a00bd162b1823ece1e1d0f1b1e580"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/refactor-assets.golden.json",
+          "sha256": "d0d546c309f678df71dc7f37b3d3e57d6827b421acd111d98e2067fff446a9f2"
+        }
+      ],
+      "scenarios": [
+        "asset-correction",
+        "refactor-assets"
+      ],
+      "targets": [
+        "src/supportability_gate/characterization.py::function:_coverage_blocks:1512-1551",
+        "src/supportability_gate/characterization.py::function:_result_coverage:2291-2346",
+        "src/supportability_gate/refactor_targets.py::function:_asset_targets:203-231",
+        "src/supportability_gate/refactor_targets.py::function:derive:234-274",
+        "src/supportability_gate/standard_results.py::function:_s02_refactor_target_paths:1673-1691",
+        "src/supportability_gate/standard_results.py::module:src/supportability_gate/standard_results.py:249-249"
+      ]
+    },
+    {
       "id": "browser-source-coverage",
       "obligations": [
         "browser-coverage-architecture-policy",
@@ -242,6 +300,27 @@
       "scenario": "architecture-modularity-baseline",
       "selector": "$",
       "target": "scenario:architecture-modularity-baseline"
+    },
+    {
+      "category": "behavior",
+      "id": "asset-correction-characterization",
+      "scenario": "asset-correction",
+      "selector": "$",
+      "target": "src/supportability_gate/characterization.py"
+    },
+    {
+      "category": "behavior",
+      "id": "asset-correction-refactor-targets",
+      "scenario": "asset-correction",
+      "selector": "$",
+      "target": "src/supportability_gate/refactor_targets.py"
+    },
+    {
+      "category": "behavior",
+      "id": "asset-correction-standard-results",
+      "scenario": "asset-correction",
+      "selector": "$",
+      "target": "src/supportability_gate/standard_results.py"
     },
     {
       "category": "behavior",
@@ -546,6 +625,17 @@
         "src/supportability_gate/modularity_policy.py"
       ],
       "id": "architecture-modularity-baseline",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/characterization.py",
+        "src/supportability_gate/refactor_targets.py",
+        "src/supportability_gate/standard_results.py"
+      ],
+      "id": "asset-correction",
       "kind": "regression",
       "module_roots": []
     },
