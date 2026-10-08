@@ -372,6 +372,55 @@ coverage, source integrity, quality commands, thresholds, or required native pro
 
 ## Oracle-first behavior corrections (schema 5)
 
+### First application baseline
+
+Schema 5 also admits `kind: "baseline"` scenarios with `api: null` and
+`module_roots: []`. This bounded introduction path requires an empty production tree at
+the exact PR base. Existing applications continue to use preservation or the existing
+explicit correction paths. Copies, renames, partial absence, missing source, and files
+outside the production roots cannot use first-baseline absence evidence.
+
+Use one `category: "baseline"` obligation per scenario, with `selector: "$"` and
+`target: "scenario:<scenario-id>"`. Explicit `covers` lists may group related files;
+no wildcard or directory coverage is accepted. Existing limits of 64 scenarios, 200
+obligations and bounded JSON transports remain unchanged. A content collection can
+therefore cover hundreds of individually listed files without hundreds of obligations.
+Separate Python and frontend scenarios in mixed profiles. Asset-only mixed scenarios
+use Python. For example:
+
+```json
+{"id":"catalog","kind":"baseline","covers":["content/a.json","content/b.json"],"api":null,"module_roots":[]}
+```
+
+The ordinary fixed driver emits schema 1, its scenario ID, and `behavior` containing
+actual observed input/output cases. Source scenarios need at least two distinct inputs
+with different outputs. Asset-only drivers emit an empty list. The fixed collector
+constructs the golden value as `{"cases": [...], "assets": {"content/a.json": "<sha256>"}}`:
+`assets` contains the exact SHA-256 of every covered non-source file, and is empty when
+the scenario covers only source. Asset validation and all source quality checks remain
+mandatory through Gate 7. Asset hashes establish byte identity, not semantic correctness.
+
+Fixed Python and V8 observers independently collect execution. Every statically compiled
+Python function body, including anonymous and generator bodies, must execute a line;
+exact code identities and source hashes are checked. Frontend evidence requires actual
+V8 execution of every parser-inventoried function at its exact UTF-16 source span.
+Importing a module or printing an expected answer does not establish execution coverage.
+Drivers must await asynchronous work before returning. No executable or command option
+is supplied by the manifest. Code runs only in the existing isolated hosted boundary.
+
+Commit the schema-5 correction manifest, drivers, goldens, review and source receipts
+before production implementation. Both the driver and golden must be listed among the
+frozen oracle files. The base collector records Git-derived absence explicitly; it does
+not execute the candidate as a substitute base. The head runs twice and must match the
+frozen golden and source-bound execution witnesses. Exact schema-5 owner authorization
+is still required. A false absence, missing execution, replay drift or mismatch cannot
+be reconciled by authorization.
+
+After introduction, both sides execute against their real source revisions and the same
+goldens protect later behavior. A baseline group's file inventory cannot be narrowed or
+relabelled. The initial release path does not introduce a generic exception for additions
+to an already populated production tree.
+
 Schema `5.0` preserves schema 4 and adds a closed `corrections` collection. A correction has one
 stable ID and exact sorted scenario, obligation and production-target identities. Its
 `oracle_files` list contains every expected-case, golden, review and source-receipt path with the

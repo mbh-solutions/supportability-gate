@@ -19,6 +19,7 @@ that responsibility; the declared package dependency direction is enforced in
 | [gate_policy.py](../../src/supportability_gate/gate_policy.py) | Fixed adapter coverage and contract anti-weakening |
 | [review_evidence.py](../../src/supportability_gate/review_evidence.py) | Fixed review structure, changed-boundary declarations, and handoff sentinels |
 | [characterization.py](../../src/supportability_gate/characterization.py) | Manifest obligations and authenticated behavior compatibility |
+| [baseline_evidence.py](../../src/supportability_gate/baseline_evidence.py) | First-release source execution witnesses and complete asset snapshot inventories |
 | [refactor_targets.py](../../src/supportability_gate/refactor_targets.py) | Derived responsibility target inventory |
 | [refactor_policy.py](../../src/supportability_gate/refactor_policy.py) | Trusted-owner scope, sequence, and runnability checks |
 | [quality_profile.py](../../src/supportability_gate/quality_profile.py) | Fixed command profiles, source/dependency receipts, suppressions, and observed coverage |

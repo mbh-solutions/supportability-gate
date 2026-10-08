@@ -508,7 +508,10 @@ def _run_driver(
             if language == "python"
             else (arguments[0], container_driver)
         )
-        if scenario.api is not None:
+        if scenario.kind == "baseline":
+            recorded = characterization.scenario_command(scenario, language)
+            inner = tuple([arguments[0], *recorded[1:-1], container_driver])
+        elif scenario.api is not None:
             recorded = characterization.scenario_command(scenario, language)
             inner = tuple([arguments[0], *recorded[1:6], container_driver, *recorded[7:]])
         output = execution_output or Path(temporary) / "supervisor"
@@ -572,7 +575,27 @@ def _run_driver(
         except OSError as error:
             stdout, stderr, exit_code = b"", str(error).encode(errors="replace"), -127
     observation = None
-    if scenario.api is not None and exit_code == 0:
+    baseline_witness = None
+    if scenario.kind == "baseline" and exit_code == 0:
+        envelope = characterization._exact_keys(
+            characterization._read_json_bytes(stdout, "MALFORMED_BEHAVIOR_OUTPUT"),
+            {"driver", "witness"},
+            "MALFORMED_BEHAVIOR_OUTPUT",
+        )
+        behavior, error_code = _behavior(
+            characterization._canonical(envelope["driver"]), scenario.id
+        )
+        baseline_witness = {
+            path: value for path, value in envelope["witness"].items() if path in scenario.covers
+        }
+        sources = characterization.baseline_sources(
+            target,
+            git_changes.run_git(target, ("rev-parse", "HEAD"), []).decode().strip(),
+            scenario,
+            [],
+        )
+        behavior = characterization.baseline_evidence.behavior(sources, behavior)
+    elif scenario.api is not None and exit_code == 0:
         behavior, error_code, observation = _observed_behavior(
             stdout, scenario.api, scenario.module_roots
         )
@@ -608,6 +631,7 @@ def _run_driver(
         "stderr_sha256": characterization._sha256(stderr),
         "stdout_sha256": characterization._sha256(stdout),
         **({"api_observation": observation} if scenario.api is not None else {}),
+        **({"baseline_witness": baseline_witness} if scenario.kind == "baseline" else {}),
     }
 
 
@@ -629,6 +653,20 @@ def _scenario_capture(
     driver = git_changes.read_regular_blob(definition, definition_sha, driver_path, records)
     golden = git_changes.read_regular_blob(definition, definition_sha, golden_path, records)
     golden_behavior = characterization._read_json_bytes(golden.content, "MALFORMED_GOLDEN_OUTPUT")
+    if scenario.kind == "baseline" and not characterization.baseline_sources(
+        target,
+        git_changes.run_git(target, ("rev-parse", "HEAD"), records).decode().strip(),
+        scenario,
+        records,
+    ):
+        row = _absent_api_capture(scenario, driver, golden, golden_behavior)
+        row.pop("api_observation")
+        row["baseline_witness"] = {}
+        row["behavior"] = {"absent": list(scenario.covers)}
+        row["behavior_sha256"] = characterization._sha256(
+            characterization._canonical(row["behavior"])
+        )
+        return row
     if scenario.api is not None:
         source = characterization._api_source(
             target,
@@ -680,6 +718,7 @@ def _scenario_capture(
         "stderr_sha256": first["stderr_sha256"],
         "stdout_sha256": first["stdout_sha256"],
         **({"api_observation": first["api_observation"]} if scenario.api is not None else {}),
+        **({"baseline_witness": first["baseline_witness"]} if scenario.kind == "baseline" else {}),
     }
 
 
