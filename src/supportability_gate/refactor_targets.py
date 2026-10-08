@@ -200,6 +200,37 @@ def _spans_or_unbounded(
         return (), (path,)
 
 
+def _asset_targets(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    policy: contract.Contract,
+    changes: tuple[git_changes.ChangedPath, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[list[str], list[str]]:
+    targets: list[str] = []
+    unbounded: list[str] = []
+    for change in changes:
+        for commit, path in (
+            (identity.base_sha, change.old_path),
+            (identity.head_sha, change.new_path),
+        ):
+            if (
+                not path
+                or not policy.is_production_path(path)
+                or _profile_source(path, policy.language)
+            ):
+                continue
+            try:
+                git_changes.read_regular_blob(repository, commit, path, records)
+            except git_changes.GitError as error:
+                if error.code != "SYMLINK_OR_NONFILE":
+                    raise
+                unbounded.append(path)
+            else:
+                targets.append(f"{path}::asset:{path}:whole-file")
+    return targets, unbounded
+
+
 def derive(
     repository: Path,
     identity: git_changes.RepositoryIdentity,
@@ -207,9 +238,8 @@ def derive(
     changes: tuple[git_changes.ChangedPath, ...],
     records: list[git_changes.CommandRecord],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return exact source targets and unbounded production paths."""
-    targets: list[str] = []
-    unbounded: list[str] = []
+    """Return exact source/whole-asset targets and unbounded production paths."""
+    targets, unbounded = _asset_targets(repository, identity, policy, changes, records)
     for change in changes:
         profiled_paths = tuple(
             path

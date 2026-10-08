@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "evidence_class": "author_declaration",
+  "intended_change": "Derive whole-file production asset targets; retain exact correction approval, immutable expected evidence, complete asset coverage and source function obligations.",
+  "negative_controls": [
+    "empty correction denied",
+    "source cannot claim asset identity",
+    "mismatched asset paths denied",
+    "missing and stale owner approval denied",
+    "missing or substituted asset evidence denied"
+  ]
+}

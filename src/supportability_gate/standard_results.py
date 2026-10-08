@@ -246,6 +246,7 @@ _S02_REFACTOR_KEYS = {
 _S02_REFACTOR_TARGET = re.compile(
     r"(?P<path>.+)::(?:component|function|module):.+:(?P<start>[1-9][0-9]*)-(?P<end>[1-9][0-9]*)\Z"
 )
+_S02_ASSET_TARGET = re.compile(r"(?P<path>.+)::asset:(?P=path):whole-file\Z")
 _S02_REFACTOR_AUTHORIZATION_BLOCKS = {
     "AUTHORIZATION_REPOSITORY_MISMATCH",
     "BROAD_AUTHORIZATION_REQUIRED",
@@ -1674,6 +1675,15 @@ def _s02_refactor_target_paths(
 ) -> list[str]:
     paths: list[str] = []
     for target in targets:
+        asset = _S02_ASSET_TARGET.fullmatch(target)
+        if asset is not None:
+            if asset["path"].endswith(contract.SOURCE_SUFFIXES["mixed"]):
+                raise StandardResultsError(code)
+            try:
+                paths.append(contract.normalize_repository_path(asset["path"], "asset_target"))
+            except contract.ContractError:
+                raise StandardResultsError(code) from None
+            continue
         match = _S02_REFACTOR_TARGET.fullmatch(target)
         if match is None or int(match["start"]) > int(match["end"]):
             raise StandardResultsError(code)

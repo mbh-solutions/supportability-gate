@@ -1,0 +1,32 @@
+[
+  {
+    "input": "asset-coverage",
+    "output": "MALFORMED_CHARACTERIZATION_RESULT"
+  },
+  {
+    "input": "asset-parser",
+    "output": "MALFORMED_REFACTOR_RESULT"
+  },
+  {
+    "input": "asset-path-mismatch",
+    "output": "MALFORMED_REFACTOR_RESULT"
+  },
+  {
+    "input": "asset-targets",
+    "output": []
+  },
+  {
+    "input": "empty-correction",
+    "output": "MALFORMED_CORRECTION"
+  },
+  {
+    "input": "mixed-targets",
+    "output": [
+      "src/model.py::function:calculate:1-2"
+    ]
+  },
+  {
+    "input": "source-disguised-as-asset",
+    "output": "MALFORMED_REFACTOR_RESULT"
+  }
+]

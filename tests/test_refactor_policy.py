@@ -1234,7 +1234,7 @@ def test_multiline_typescript_declarator_rename_binds_old_and_new_identities(
     assert result["targets"] == targets
 
 
-def test_refactor_targets_leave_mixed_assets_to_quality_gate(tmp_path: Path) -> None:
+def test_refactor_targets_include_mixed_assets_and_source(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path, "typescript")
     _git(repository, "reset", "--hard", base_sha)
     _write(
@@ -1246,13 +1246,17 @@ def test_refactor_targets_leave_mixed_assets_to_quality_gate(tmp_path: Path) -> 
     head_sha = _commit(repository, "change source and assets")
 
     assert _derived_targets(repository, base_sha, head_sha) == (
-        ("src/sample.ts::function:calculate:1-3",),
+        (
+            "src/plugin.json::asset:src/plugin.json:whole-file",
+            "src/readme.md::asset:src/readme.md:whole-file",
+            "src/sample.ts::function:calculate:1-3",
+        ),
         (),
     )
 
 
 @pytest.mark.parametrize("old_path", ["sample.bin", "src/sample.bin"])
-def test_refactor_targets_unprofiled_to_python_rename_ignores_old_asset(
+def test_refactor_targets_unprofiled_to_python_rename_retains_production_asset(
     tmp_path: Path, old_path: str
 ) -> None:
     repository, base_sha, _ = _repository(tmp_path)
@@ -1271,20 +1275,29 @@ def test_refactor_targets_unprofiled_to_python_rename_ignores_old_asset(
     head_sha = _commit(repository, "move source into Python profile")
     scope = sorted([old_path, "src/sample.py"])
     target = "src/sample.py::function:calculate:1-2"
+    targets = sorted(
+        [target, f"{old_path}::asset:{old_path}:whole-file"]
+        if old_path.startswith("src/")
+        else [target]
+    )
     event = _event(
         base_sha,
         head_sha,
-        _authorization(base_sha, head_sha, scope, [target], broad=True),
+        _authorization(base_sha, head_sha, scope, targets, broad=True),
     )
 
     assert _derived_targets(repository, base_sha, head_sha) == (
-        (target,),
+        tuple(targets),
         (),
     )
-    result = _verify(repository, event, _characterization(base_sha, head_sha, ["src/sample.py"]))
+    result = _verify(
+        repository,
+        event,
+        _characterization(base_sha, head_sha, [t.split("::", 1)[0] for t in targets]),
+    )
 
     assert result["overall_result"] == "PASS"
-    assert result["targets"] == [target]
+    assert result["targets"] == targets
     assert result["unbounded_paths"] == []
     assert result["policy_blocks"] == []
 
@@ -1322,13 +1335,24 @@ def test_renamed_profiled_source_distinguishes_asset_from_malformed_head(
         (git_changes.ChangedPath("RENAMED", "src/sample.py", new_path),),
         records,
     ) == (
-        ("src/sample.py::function:calculate:1-2",),
+        tuple(
+            sorted(
+                [
+                    "src/sample.py::function:calculate:1-2",
+                    *(
+                        [f"{new_path}::asset:{new_path}:whole-file"]
+                        if new_path.endswith(".txt")
+                        else []
+                    ),
+                ]
+            )
+        ),
         expected_unbounded,
     )
 
 
 @pytest.mark.parametrize("base_source", ["", "def broken(:\n"])
-def test_source_to_asset_rename_keeps_only_unbounded_source_path(
+def test_source_to_asset_rename_keeps_unbounded_source_and_asset_target(
     tmp_path: Path, base_source: str
 ) -> None:
     repository, base_sha, _ = _repository(tmp_path)
@@ -1339,7 +1363,7 @@ def test_source_to_asset_rename_keeps_only_unbounded_source_path(
     head_sha = _commit(repository, "replace source with asset")
 
     assert _derived_targets(repository, base_sha, head_sha) == (
-        (),
+        ("src/sample.json::asset:src/sample.json:whole-file",),
         ("src/sample.py",),
     )
 
@@ -1455,7 +1479,7 @@ def test_python_deletion_authorization_remains_exact(
     assert result["policy_blocks"] == [code]
 
 
-def test_deleted_production_asset_is_not_a_refactor(tmp_path: Path) -> None:
+def test_deleted_production_asset_requires_authorization_and_coverage(tmp_path: Path) -> None:
     repository, base_sha, _ = _repository(tmp_path)
     _git(repository, "reset", "--hard", base_sha)
     path = "src/data.bin"
@@ -1470,9 +1494,11 @@ def test_deleted_production_asset_is_not_a_refactor(tmp_path: Path) -> None:
         _characterization(base_sha, head_sha, []),
     )
 
-    assert result["overall_result"] == "PASS"
-    assert result["applicable"] is False
-    assert result["targets"] == []
+    assert result["overall_result"] == "BLOCK"
+    assert result["applicable"] is True
+    assert result["targets"] == [f"{path}::asset:{path}:whole-file"]
+    assert "MISSING_OWNER_AUTHORIZATION" in result["policy_blocks"]
+    assert "MISSING_RUNNABILITY_COVERAGE" in result["policy_blocks"]
     assert result["unbounded_paths"] == []
 
 

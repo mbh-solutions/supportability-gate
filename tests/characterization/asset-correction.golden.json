@@ -1,0 +1,37 @@
+[
+  {
+    "input": "asset-coverage",
+    "output": []
+  },
+  {
+    "input": "asset-parser",
+    "output": [
+      "src/catalog.json"
+    ]
+  },
+  {
+    "input": "asset-path-mismatch",
+    "output": "MALFORMED_REFACTOR_RESULT"
+  },
+  {
+    "input": "asset-targets",
+    "output": [
+      "src/catalog.json::asset:src/catalog.json:whole-file"
+    ]
+  },
+  {
+    "input": "empty-correction",
+    "output": "MALFORMED_CORRECTION"
+  },
+  {
+    "input": "mixed-targets",
+    "output": [
+      "src/catalog.json::asset:src/catalog.json:whole-file",
+      "src/model.py::function:calculate:1-2"
+    ]
+  },
+  {
+    "input": "source-disguised-as-asset",
+    "output": "MALFORMED_REFACTOR_RESULT"
+  }
+]

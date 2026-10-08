@@ -1530,7 +1530,8 @@ def _coverage_blocks(
         {
             target.rsplit(":", 1)[0]
             for target in responsibility_targets
-            if "::" in target and target.split("::", 1)[1].split(":", 1)[0] != "module"
+            if "::" in target
+            and target.split("::", 1)[1].split(":", 1)[0] not in {"module", "asset"}
         }
     )
     behavior_targets = {item.target for item in manifest.obligations if item.category == "behavior"}
@@ -2310,7 +2311,8 @@ def _result_coverage(
                 {
                     target.rsplit(":", 1)[0]
                     for target in required_targets
-                    if "::" in target and target.split("::", 1)[1].split(":", 1)[0] != "module"
+                    if "::" in target
+                    and target.split("::", 1)[1].split(":", 1)[0] not in {"module", "asset"}
                 }
             )
         )

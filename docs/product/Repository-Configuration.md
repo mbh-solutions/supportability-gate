@@ -421,6 +421,10 @@ goldens protect later behavior. A baseline group's file inventory cannot be narr
 relabelled. The initial release path does not introduce a generic exception for additions
 to an already populated production tree.
 
+Later corrections to existing production content use the same schema-5 correction transaction
+with [whole-file asset targets](Refactor-Authorization.md#content-only-corrections). Both real
+revisions are captured, and the expected content and exact owner approval remain mandatory.
+
 Schema `5.0` preserves schema 4 and adds a closed `corrections` collection. A correction has one
 stable ID and exact sorted scenario, obligation and production-target identities. Its
 `oracle_files` list contains every expected-case, golden, review and source-receipt path with the
