@@ -16,7 +16,7 @@ from pathlib import Path
 from types import CodeType
 from typing import Any, cast
 
-from supportability_gate import contract, git_changes
+from supportability_gate import baseline_evidence, contract, git_changes
 
 MANIFEST_PATH = ".supportability-characterization.json"
 SCENARIO_ROOT = "tests/characterization"
@@ -31,8 +31,8 @@ MODULE_CAPTURE_SCHEMA = "characterization-capture.v4"
 CORRECTION_RESULT_SCHEMA = "characterization-result.v5"
 CORRECTION_CAPTURE_SCHEMA = "characterization-capture.v5"
 RUNNABILITY_SCHEMA = "refactor-runnability.v1"
-KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression"})
-OBLIGATION_CATEGORIES = frozenset({"behavior", "cli_help", "static"})
+KINDS = frozenset({"test", "sample_io", "snapshot", "golden", "cli", "regression", "baseline"})
+OBLIGATION_CATEGORIES = frozenset({"behavior", "cli_help", "static", "baseline"})
 SCENARIO_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 ARTIFACT_ID = re.compile(r"[1-9][0-9]*")
 SHA = re.compile(r"[0-9a-f]{40}")
@@ -270,6 +270,8 @@ def _scenario_rows(value: object, version: str = "1.0") -> tuple[Scenario, ...]:
         covers = _path_list(row["covers"], "covers")
         api = _parse_api(row.get("api"), covers)
         roots = _module_roots(row.get("module_roots", []), api, covers)
+        if kind == "baseline" and (version != "5.0" or api is not None or roots):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
         parsed.append(Scenario(identifier, str(kind), covers, api, roots))
     if (
         len(parsed) != len({item.id for item in parsed})
@@ -354,6 +356,12 @@ def _valid_obligation_target(row: dict[str, Any], scenarios: tuple[Scenario, ...
     target = str(row["target"])
     if row["category"] == "static":
         return target == f"scenario:{scenario.id}"
+    if row["category"] == "baseline":
+        return (
+            scenario.kind == "baseline"
+            and target == f"scenario:{scenario.id}"
+            and row["selector"] == "$"
+        )
     path = target.split("::", 1)[0]
     try:
         normalized = contract.normalize_repository_path(path, "obligations.target")
@@ -509,6 +517,10 @@ def parse_manifest(content: bytes, blob_sha: str) -> Manifest:
         _correction_rows(data["corrections"], parsed, obligations) if version == "5.0" else ()
     )
     for scenario in parsed:
+        if scenario.kind == "baseline" and [
+            item.category for item in obligations if item.scenario == scenario.id
+        ] != ["baseline"]:
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
         if scenario.api is not None and not _observed_obligations_valid(scenario, obligations):
             raise CharacterizationError("MALFORMED_CHARACTERIZATION_MANIFEST")
     return Manifest(
@@ -550,6 +562,12 @@ def scenario_language(scenario: Scenario, language: str) -> str:
 def scenario_command(scenario: Scenario, language: str) -> list[str]:
     """Return the fixed recorded command; contracts cannot select executables."""
     driver, _ = _scenario_paths(scenario, language)
+    if scenario.kind == "baseline":
+        return (
+            ["python3.12", "-P", "/collector/baseline_observer.py", driver]
+            if scenario_language(scenario, language) == "python"
+            else ["node", "/collector/baseline_observer.mjs", driver]
+        )
     if scenario.api is not None:
         return [
             "python3.12",
@@ -1327,6 +1345,8 @@ def _observed_definition_blocks(
         old = previous.get(item.id)
         if old is None:
             continue
+        if old.kind == "baseline" and (item.kind != old.kind or item.covers != old.covers):
+            blocks.append(f"CHARACTERIZATION_DEFINITION_MISMATCH:{item.id}")
         if old.api != item.api or old.module_roots != item.module_roots:
             blocks.append(f"CHANGED_CHARACTERIZATION_DEFINITION:{item.id}")
         elif item.api is not None:
@@ -1428,7 +1448,9 @@ def _meaningful_cases(value: object) -> bool:
     return len(inputs) == len(set(inputs)) and len(set(outputs)) > 1
 
 
-def _valid_obligation_assertion(category: str, value: object) -> bool:
+def _valid_obligation_assertion(category: str, value: object, paths: tuple[str, ...] = ()) -> bool:
+    if category == "baseline":
+        return baseline_evidence.meaningful(value, paths)
     if category == "behavior":
         return _meaningful_cases(value)
     if category == "cli_help":
@@ -1457,7 +1479,9 @@ def _obligation_capture_blocks(
         except CharacterizationError:
             blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{obligation.id}")
             continue
-        if not correction_base and not _valid_obligation_assertion(obligation.category, selected):
+        if not correction_base and not _valid_obligation_assertion(
+            obligation.category, selected, tuple(row.get("covers", []))
+        ):
             blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{obligation.id}")
     return blocks
 
@@ -1510,6 +1534,9 @@ def _coverage_blocks(
         }
     )
     behavior_targets = {item.target for item in manifest.obligations if item.category == "behavior"}
+    behavior_targets.update(
+        path for item in manifest.scenarios if item.kind == "baseline" for path in item.covers
+    )
     covered_obligations = sorted(
         target
         for target in required_obligations
@@ -1528,6 +1555,122 @@ def derive_required_paths(
 ) -> list[str]:
     """Return canonical changed and retained high-risk characterization coverage."""
     return sorted(changed_paths | (high_risk_paths - deleted_paths))
+
+
+def baseline_sources(
+    repository: Path, commit: str, scenario: Scenario, records: list[git_changes.CommandRecord]
+) -> dict[str, bytes]:
+    """Read the exact explicit inventory, never target-selected filesystem paths."""
+    entries = git_changes.list_regular_blobs(repository, commit, scenario.covers, records)
+    if not entries:
+        return {}
+    if {item.path for item in entries} != set(scenario.covers):
+        raise CharacterizationError("CHARACTERIZATION_DEFINITION_MISMATCH", scenario.id)
+    return {
+        path: blob.content
+        for path, blob in git_changes.read_regular_blobs(
+            repository, commit, scenario.covers, records
+        )
+    }
+
+
+def _baseline_absence(row: dict[str, Any] | None, obligation: Obligation) -> bool:
+    return bool(
+        row
+        and obligation.category == "baseline"
+        and row.get("command") is None
+        and row.get("behavior") == {"absent": row.get("covers")}
+    )
+
+
+def _baseline_row_valid(
+    scenario: Scenario, row: dict[str, Any], sources: dict[str, bytes], language: str
+) -> bool:
+    if row.get("behavior_sha256") != _sha256(_canonical(row.get("behavior"))):
+        return False
+    if not sources:
+        return (
+            row.get("command") is None
+            and row.get("behavior") == {"absent": list(scenario.covers)}
+            and row.get("baseline_witness") == {}
+        )
+    actual = row.get("behavior")
+    if not isinstance(actual, dict) or actual != baseline_evidence.behavior(
+        sources, actual.get("cases")
+    ):
+        return False
+    return row.get("command") == scenario_command(
+        scenario, language
+    ) and baseline_evidence.execution_verified(sources, row.get("baseline_witness"))
+
+
+def _baseline_birth_valid(
+    repository: Path,
+    base: str,
+    head: str,
+    policy: contract.Contract,
+    manifest: Manifest,
+    scenario: Scenario,
+    records: list[git_changes.CommandRecord],
+) -> bool:
+    if git_changes.list_regular_blobs(repository, base, policy.production_paths, records):
+        return False
+    changes = git_changes.changed_paths(repository, base, head, records)
+    if any(change.new_path in scenario.covers and change.status != "ADDED" for change in changes):
+        return False
+    if set(scenario.covers) & _copied_source_paths(repository, base, head, records):
+        return False
+    required = set(_scenario_paths(scenario, policy.language))
+    return any(
+        scenario.id in item.scenarios and required.issubset({f.path for f in item.oracle_files})
+        for item in manifest.corrections
+    )
+
+
+def _baseline_capture_blocks(
+    repository: Path,
+    target: str,
+    base: str,
+    policy: contract.Contract,
+    manifest: Manifest,
+    artifact: dict[str, Any],
+    records: list[git_changes.CommandRecord],
+) -> tuple[list[str], frozenset[str]]:
+    blocks: list[str] = []
+    absent: set[str] = set()
+    baseline_scenarios = [item for item in manifest.scenarios if item.kind == "baseline"]
+    if not baseline_scenarios:
+        return blocks, frozenset()
+    if not isinstance(artifact.get("scenarios"), list):
+        return ["UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE"], frozenset()
+    rows = {row.get("id"): row for row in artifact.get("scenarios", []) if isinstance(row, dict)}
+    for scenario in baseline_scenarios:
+        try:
+            sources = baseline_sources(repository, target, scenario, records)
+            valid = all(policy.is_production_path(path) for path in scenario.covers)
+            if not sources:
+                absent.add(scenario.id)
+                valid = (
+                    valid
+                    and target == base
+                    and _baseline_birth_valid(
+                        repository,
+                        base,
+                        str(artifact.get("definition_sha", "")),
+                        policy,
+                        manifest,
+                        scenario,
+                        records,
+                    )
+                )
+            valid = valid and _baseline_row_valid(
+                scenario, rows.get(scenario.id, {}), sources, policy.language
+            )
+        except (git_changes.GitError, CharacterizationError):
+            valid = False
+        if not valid:
+            blocks.append(f"CHARACTERIZATION_EXECUTION_FAILED:{scenario.id}")
+    return blocks, frozenset(absent)
 
 
 def _verified_capture_rows(
@@ -1552,6 +1695,11 @@ def _verified_capture_rows(
     absent = frozenset(
         key for key, value in facts.items() if side == "base" and value["base_absent"]
     )
+    baseline_blocks, baseline_absent = _baseline_capture_blocks(
+        repository, target_sha, expected_common["base_sha"], policy, manifest, artifact, records
+    )
+    blocks.extend(baseline_blocks)
+    absent |= baseline_absent
     capture_blocks, rows = _capture_blocks(artifact, manifest, policy.language, side, absent)
     blocks.extend(capture_blocks)
     blocks.extend(
@@ -1641,7 +1789,10 @@ def _obligation_evidence(
             blocks.append(f"INCOMPATIBLE_POST_CHANGE_BEHAVIOR:obligation:{item.id}")
         meaningful = _obligation_meaningful(head_rows.get(item.scenario), item)
         if any(item.id in correction.obligations for correction in manifest.corrections):
-            meaningful = meaningful and _obligation_meaningful(base_rows.get(item.scenario), item)
+            meaningful = meaningful and (
+                _obligation_meaningful(base_rows.get(item.scenario), item)
+                or _baseline_absence(base_rows.get(item.scenario), item)
+            )
             if not meaningful:
                 blocks.append(f"GOLDEN_BEHAVIOR_MISMATCH:obligation:{item.id}")
         if fact is not None:
@@ -1672,7 +1823,7 @@ def _obligation_meaningful(row: dict[str, Any] | None, obligation: Obligation) -
         selected = _selected_assertion(row.get("behavior"), obligation.selector)
     except CharacterizationError:
         return False
-    return _valid_obligation_assertion(obligation.category, selected)
+    return _valid_obligation_assertion(obligation.category, selected, tuple(row.get("covers", [])))
 
 
 def _logical_step_runnable(
@@ -1848,6 +1999,12 @@ def _result_obligations(
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     scenario_ids = {str(item["id"]) for item in scenarios}
     rows = [_result_obligation(item, scenario_ids, api_facts) for item in value]
+    for item in rows:
+        if item["category"] == "baseline" and (
+            item["target"] != f"scenario:{item['scenario']}"
+            or next(s for s in scenarios if s["id"] == item["scenario"])["kind"] != "baseline"
+        ):
+            raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
     identifiers = [str(item["id"]) for item in rows]
     if identifiers != sorted(set(identifiers)):
         raise CharacterizationError("MALFORMED_CHARACTERIZATION_RESULT")
@@ -2164,7 +2321,9 @@ def _result_coverage(
         sorted({path for scenario in scenarios for path in scenario["covers"]})
     )
     expected_covered_obligations = tuple(
-        _verified_obligation_coverage(list(required_obligations), obligations, correction_ids)
+        _verified_obligation_coverage(
+            list(required_obligations), obligations, correction_ids, scenarios
+        )
     )
     if (
         covered != expected_covered
@@ -2978,7 +3137,7 @@ def verify_evidence(
         responsibility_targets,
     )
     covered_obligations = _verified_obligation_coverage(
-        required_obligations, obligations, _correction_coverage_ids(correction, blocks)
+        required_obligations, obligations, _correction_coverage_ids(correction, blocks), scenarios
     )
     blocks.extend(
         f"MISSING_CHARACTERIZATION_COVERAGE:obligation:{target}"
@@ -3051,6 +3210,7 @@ def _verified_obligation_coverage(
     required: list[str],
     obligations: list[dict[str, object]],
     correction_ids: frozenset[str] = frozenset(),
+    scenarios: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     targets = {
         str(item["target"])
@@ -3066,6 +3226,19 @@ def _verified_obligation_coverage(
             )
         )
     }
+    baseline_ids = {
+        str(item["scenario"])
+        for item in obligations
+        if item["category"] == "baseline"
+        and item["meaningful"] is True
+        and (item["compatibility"] == "PASS" or item["id"] in correction_ids)
+    }
+    targets.update(
+        str(path)
+        for scenario in (scenarios or [])
+        if scenario.get("kind") == "baseline" and scenario["id"] in baseline_ids
+        for path in scenario["covers"]
+    )
     return [item for item in required if item in targets or item.split("::", 1)[0] in targets]
 
 

@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0",
+  "evidence_class": "author_declaration",
+  "intended_behavior": "Establish a first application baseline only from Git-derived production absence, frozen expected cases, source-bound Python/V8 body execution, complete asset snapshots and exact schema-5 owner authorization. Preserve normal compatibility after introduction.",
+  "limits": "Witnesses prove body execution and source identity; author-selected output cases and asset bytes do not certify semantic correctness or exhaustive behavior. No existing-production bootstrap or suppression of coverage is admitted."
+}

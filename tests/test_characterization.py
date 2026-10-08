@@ -1939,7 +1939,7 @@ def test_capture_requires_github_hosted_runner(
         )
 
 
-@pytest.mark.parametrize("kind", sorted(characterization.KINDS))
+@pytest.mark.parametrize("kind", sorted(characterization.KINDS - {"baseline"}))
 def test_all_characterization_types_use_same_manifest_format(kind: str) -> None:
     content = _manifest([{"id": "scenario", "kind": kind, "covers": ["src/sample.py"]}])
 

@@ -78,6 +78,18 @@ observed in the collector's traced thread; multithreaded execution and hostile s
 memory introspection are outside this proof boundary. Fixed collector code and container
 isolation remain the enforcement boundary; this mode adds no semantic policy engine.
 
+The separate schema-5 first-application baseline supports fixed Python and Node execution
+and complete asset inventories only when production is absent at the PR base. It preserves
+all quality requirements, freezes expected cases before implementation, and requires exact
+owner authorization. Its observers prove static body execution and source identity; the
+driver's selected JSON observations remain author-authored and do not prove exhaustive
+correctness or semantic independence. Hostile same-process introspection is outside this
+observer boundary. V8 must execute the source directly at its original spans: unsupported
+syntax, transformed sources, or delayed work outside the driver lifetime cannot supply
+coverage. Asset snapshots prove exact bytes; format validity comes from Gate 7 and domain
+correctness still needs application tests and review. No new browser engine, compilation
+service, asset exclusion, approval waiver or existing-application bootstrap is provided.
+
 Implementation references: [short-task classifier](../../src/supportability_gate/standard_results.py),
 [profile limits](../../src/supportability_gate/contract.py),
 [owner identity](../../src/supportability_gate/refactor_policy.py), and

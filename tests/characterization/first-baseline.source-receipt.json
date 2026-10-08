@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "evidence_class": "measured_fact",
+  "base_sha": "2a3c86c50b40cad20fbaa0f7e08ed0a6f7649ab7",
+  "sources": {
+    "src/supportability_gate/baseline_evidence.py": "b3532b885259b4607f9a9e507d781f36a5a17398d2560f0fcb9de754547018ec",
+    "src/supportability_gate/characterization.py": "b3b3962511197cf386fe9ae1c10ceb84dca52948cdaec3773cef306b2c76e2d8"
+  },
+  "observers": {
+    "tests/baseline_observer.py": "ca58d7fa548208e5824727d692536c525517acdcad567cbc6b231091e98c6d6a",
+    "tests/baseline_observer.mjs": "258ddb7152c09faca7e61be9f32f3217ca62b8a5041e6771a486fe39edbbe4c3"
+  }
+}
