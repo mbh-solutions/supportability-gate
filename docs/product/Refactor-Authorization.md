@@ -30,6 +30,12 @@ above is reference structure, not evidence for any real pull request. Use the Ga
 symbols and line spans, not guessed function identities. All required keys are fixed and unknown
 keys do not add authority.
 
+Changed production assets have whole-file identities, for example
+`content/catalog.json::asset:content/catalog.json:whole-file`. These are derived from actual
+Git changes within the production roots. Additions, modifications and deletions retain their
+asset path; renames retain each production asset path on either side. Nonregular files remain
+unbounded and blocking. Source files retain their source responsibility identities.
+
 ## Scope and related tests
 
 For a narrow Python association use `tests/test_<source-stem>.py`. A narrow TypeScript association
@@ -111,3 +117,21 @@ Authorization authenticates the transaction the owner chose; it does not certify
 truth of expected cases or source receipts. A stale head or oracle, modified oracle bytes,
 undeclared or absent delta, missing technical proof, or unrelated raw block still fails closed.
 No wildcard correction scope, waiver, administrator bypass or second reviewer loop exists.
+
+### Content-only corrections
+
+A change to a production content file can use this same correction transaction without changing
+source code. Declare the exact derived whole-file asset targets, the affected scenarios and
+obligations, and the complete expected change. Commit expected cases, new goldens, review and
+source receipts before changing the production content. Then run the captures and obtain the
+schema-5 owner authorization for the exact base, oracle, head, scope, targets and observed delta.
+
+An established baseline scenario continues to capture both real revisions. Its asset hashes must
+cover every listed file and match the frozen expected bytes. Function execution obligations apply
+to source responsibilities; assets still require file coverage and the existing fixed format
+validators. Mixed source/content changes require both kinds of target. Empty or invented targets,
+missing files, changed oracle bytes, stale approval and invalid assets remain blocking.
+
+Whole-file target derivation does not itself make a deletion or rename admissible. The existing
+scenario inventory and evidence rules must also support the change. It does not certify the truth
+of content or provide a generic existing-application bootstrap.

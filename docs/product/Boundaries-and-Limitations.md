@@ -90,6 +90,12 @@ coverage. Asset snapshots prove exact bytes; format validity comes from Gate 7 a
 correctness still needs application tests and review. No new browser engine, compilation
 service, asset exclusion, approval waiver or existing-application bootstrap is provided.
 
+Subsequent content-only corrections have exact whole-file production asset targets and use the
+existing frozen-oracle and owner-authorization transaction. Assets retain complete byte snapshots
+and format validation; source execution obligations remain attached to source responsibilities.
+Changing the expected content requires evidence and approval of that exact change. Target
+derivation alone does not waive scenario inventory constraints for asset deletion or relocation.
+
 Implementation references: [short-task classifier](../../src/supportability_gate/standard_results.py),
 [profile limits](../../src/supportability_gate/contract.py),
 [owner identity](../../src/supportability_gate/refactor_policy.py), and

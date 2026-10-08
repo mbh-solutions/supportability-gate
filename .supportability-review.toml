@@ -2,37 +2,44 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Preserve the failed PR 288 candidate and original evidence in a dated archive so its temporary branch can be removed. Runtime behavior is unchanged."
-proof = "Only history documentation, retained evidence and this review record change; production and workflow blobs match the base."
+intended_behavior = "Support exact approved corrections to production content using whole-file asset targets, frozen expected bytes and complete hosted evidence."
+proof = "Actual Git target derivation, native content captures, authenticated correction tests and retained negative controls; required final-head hosted proof."
 
 [characterization]
-captured_behavior = "Existing production characterization and goldens are unchanged. The historical failed candidate is retained as data and is not executed by current qualification."
-proof = "Exact candidate recovery in an isolated bare repository, full Git object verification, artifact hashes and ZIP integrity; existing hosted base/head characterization."
+captured_behavior = "The frozen asset-correction probe measures real content and mixed source changes, target parsing, source-disguise rejection, empty-correction rejection and asset coverage. The existing refactor-assets probe now reports its actual target inventory."
+proof = "Native base outputs and explicitly specified head expectations are frozen before production implementation. Other scenario and golden bytes are preserved."
 
 [separation_of_concerns]
-before = "A failed candidate was preserved on a remote branch and appeared to be active work."
-after = "The dated history archive owns failure evidence and recovery instructions; the PR links the record and the obsolete branch can be removed after verified delivery."
-boundaries = []
+before = "Target derivation covered source responsibilities only, leaving content-only corrections with an empty rejected target set."
+after = "Target derivation owns whole-asset identities; characterization retains file coverage while reserving function obligations for source; serialized result validation admits only the exact asset form."
+boundaries = [
+{ path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_coverage_blocks", before = "Production assets had no explicit correction target; only source responsibilities entered exact approval.", after = "Derive whole-file asset targets, retain source obligations, and validate complete explicit identities without executing target code." },
+{ path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_result_coverage", before = "Production assets had no explicit correction target; only source responsibilities entered exact approval.", after = "Derive whole-file asset targets, retain source obligations, and validate complete explicit identities without executing target code." },
+{ path = "src/supportability_gate/refactor_targets.py", kind = "function", symbol = "_asset_targets", before = "Production assets had no explicit correction target; only source responsibilities entered exact approval.", after = "Derive whole-file asset targets, retain source obligations, and validate complete explicit identities without executing target code." },
+{ path = "src/supportability_gate/refactor_targets.py", kind = "function", symbol = "derive", before = "Production assets had no explicit correction target; only source responsibilities entered exact approval.", after = "Derive whole-file asset targets, retain source obligations, and validate complete explicit identities without executing target code." },
+{ path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_target_paths", before = "Production assets had no explicit correction target; only source responsibilities entered exact approval.", after = "Derive whole-file asset targets, retain source obligations, and validate complete explicit identities without executing target code." },
+{ path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "Production assets had no explicit correction target; only source responsibilities entered exact approval.", after = "Derive whole-file asset targets, retain source obligations, and validate complete explicit identities without executing target code." }
+]
 
 [architecture]
-dependency_direction = "No production modules, imports, dependencies or workflows change. Documentation remains in the established historical-record boundary."
-reviewed_paths = ["docs/history/2026-10-07/pr288-first-attempt/README.md", "docs/history/README.md"]
+dependency_direction = "Existing dependency direction is unchanged; no module, adapter or execution boundary is added."
+reviewed_paths = ["src/supportability_gate/characterization.py", "src/supportability_gate/refactor_targets.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "docs/history/2026-10-07/pr288-first-attempt/README.md"
-owns = "Historical candidate identity, retained failure evidence, checksums and recovery instructions."
-does_not_own = "Runtime behavior, current qualification decisions, deployment policy or new release authorization."
+path = "src/supportability_gate/refactor_targets.py"
+owns = "Exact source and whole-file production asset targets derived from immutable Git changes."
+does_not_own = "Content truth, target execution, owner identity, golden approval, asset format validation or deployment."
 
 [incremental_refactor]
-target = "Replace one obsolete archival branch with a verified historical record."
-completed_step = "Retain the exact candidate and original run evidence, verify recovery, and document the branch cleanup sequence."
+target = "Close the content-only correction gap through existing exact scope and approval controls."
+completed_step = "Derive asset targets, preserve source coverage requirements and validate serialized identities without weakening any check."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "The dated PR-specific archive identifies its historical purpose and failed status."
-cohesion = "Candidate, original evidence, receipts and recovery instructions are colocated under the existing history directory."
-intended_behavior = "The archived failure remains a failure; no executable behavior or protection changes."
-reviewability = "Original artifact bytes, exact candidate recovery, explicit prerequisite and checksummed inventory support inspection."
+naming = "Whole-file asset targets distinguish data identity from source function spans."
+cohesion = "Existing target derivation, characterization and result validation modules retain their responsibilities."
+intended_behavior = "Content-only corrections remain blocked without authentic exact approval, correct frozen expectations and complete valid evidence. Content semantics require source evidence and review."
+reviewability = "Six exact production responsibilities, frozen before-and-after observations, real content correction and negative tests, plus protected final-head checks."
