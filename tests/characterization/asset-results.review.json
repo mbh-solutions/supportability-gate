@@ -1,0 +1,12 @@
+{
+  "evidence_class": "author_declaration",
+  "intended_change": "Retain exact content correction approval through full evidence composition; require each changed asset side.",
+  "negative_controls": [
+    "missing targets denied",
+    "stale approval denied",
+    "wrong scope denied",
+    "source requirements retained",
+    "each renamed asset side required"
+  ],
+  "schema_version": "1.0"
+}

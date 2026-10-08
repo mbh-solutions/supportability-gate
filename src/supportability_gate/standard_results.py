@@ -1667,6 +1667,7 @@ def _s02_refactor_change_paths(
             if path and production
         }
     )
+    required.extend((path,) for path in allowed if not path.endswith(suffixes))
     return scope, required, allowed
 
 

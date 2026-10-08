@@ -1,0 +1,8 @@
+{
+  "base_sha": "06416c75822ef9a7247198b90b112625bbd14f68",
+  "evidence_class": "measured_fact",
+  "schema_version": "1.0",
+  "sources": {
+    "src/supportability_gate/standard_results.py": "802cba76595cc29bdb862f6845ecf3c83c6792925e8946082d90cce88ec0e46a"
+  }
+}

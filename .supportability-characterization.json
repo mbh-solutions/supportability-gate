@@ -59,6 +59,50 @@
       ]
     },
     {
+      "id": "asset-results-binding",
+      "obligations": [
+        "asset-results-standard-results"
+      ],
+      "oracle_files": [
+        {
+          "kind": "golden",
+          "path": "tests/characterization/asset-results.base.golden.json",
+          "sha256": "3572f0f4bc09a038be1c4934ee827818f8f3e15b2522594addc652be684689e6"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/asset-results.characterization.py",
+          "sha256": "4e69c94a70c03ccda652b173c128b04ab05334db35df83700c0f5cc2bd732c64"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/asset-results.golden.json",
+          "sha256": "e937dc9f9dbbcd02aea6d9ed28b5d32b694352dc141df338c1353319d4121d9f"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/asset-results.inputs.json",
+          "sha256": "b0000e7373ab06d0362ff045b2993f9dddb261d581c8211597d587f349872f56"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/asset-results.review.json",
+          "sha256": "2c9ee10f03688ba509b55c5bf3f6ad713c7563f438d76d323dfbc24f21ce990b"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/asset-results.source-receipt.json",
+          "sha256": "9e2ffc7e72560511efaf0bc4e5d1503695d54ef4e9acec99563ccc09f7a32a94"
+        }
+      ],
+      "scenarios": [
+        "asset-results"
+      ],
+      "targets": [
+        "src/supportability_gate/standard_results.py::function:_s02_refactor_change_paths:1638-1671"
+      ]
+    },
+    {
       "id": "browser-source-coverage",
       "obligations": [
         "browser-coverage-architecture-policy",
@@ -319,6 +363,13 @@
       "category": "behavior",
       "id": "asset-correction-standard-results",
       "scenario": "asset-correction",
+      "selector": "$",
+      "target": "src/supportability_gate/standard_results.py"
+    },
+    {
+      "category": "behavior",
+      "id": "asset-results-standard-results",
+      "scenario": "asset-results",
       "selector": "$",
       "target": "src/supportability_gate/standard_results.py"
     },
@@ -636,6 +687,15 @@
         "src/supportability_gate/standard_results.py"
       ],
       "id": "asset-correction",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/standard_results.py"
+      ],
+      "id": "asset-results",
       "kind": "regression",
       "module_roots": []
     },

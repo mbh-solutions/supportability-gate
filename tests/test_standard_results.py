@@ -1324,7 +1324,7 @@ def test_refactor_binding_preserves_deleted_old_path_identity_on_rename() -> Non
     )
 
 
-def test_refactor_binding_leaves_mixed_asset_to_quality_gate() -> None:
+def test_refactor_binding_requires_mixed_asset_and_source_targets() -> None:
     source = "src/sample.py"
     asset = "src/plugin.json"
     target = f"{source}::function:calculate:1-2"
@@ -1344,6 +1344,7 @@ def test_refactor_binding_leaves_mixed_asset_to_quality_gate() -> None:
             "old_path": None,
         },
     )
+    asset_target = f"{asset}::asset:{asset}:whole-file"
     scope = [asset, source]
     authorization = {
         "base_sha": IDENTITY.base_sha,
@@ -1357,23 +1358,31 @@ def test_refactor_binding_leaves_mixed_asset_to_quality_gate() -> None:
             "series_id": "fixture-series",
             "step": 1,
         },
-        "targets": [target],
+        "targets": sorted([asset_target, target]),
     }
     row = {
         "applicable": True,
         "changed_paths": scope,
         "policy_blocks": [],
-        "targets": [target],
+        "targets": sorted([asset_target, target]),
         "unbounded_paths": [],
     }
 
     assert standard_results._s02_refactor_change_paths(changed, "python") == (
         scope,
-        [(source,)],
+        [(source,), (asset,)],
         scope,
     )
     standard_results._s02_refactor_binding(
-        row, authorization, IDENTITY, changed, (target,), (), None, None, "python"
+        row,
+        authorization,
+        IDENTITY,
+        changed,
+        tuple(sorted([asset_target, target])),
+        (),
+        None,
+        None,
+        "python",
     )
 
 
@@ -1386,9 +1395,7 @@ def test_refactor_binding_source_to_asset_keeps_source_requirement(
     target = f"{source}::function:calculate:1-2"
     targets = [] if malformed else [target]
     unbounded = [source] if malformed else []
-    blocks = (
-        ["MISSING_BOUNDED_PRODUCTION_TARGET", "UNVERIFIABLE_BOUNDED_TARGET"] if malformed else []
-    )
+    blocks = ["UNVERIFIABLE_BOUNDED_TARGET"] if malformed else []
     changed = (
         {
             "base_production": True,
@@ -1398,6 +1405,7 @@ def test_refactor_binding_source_to_asset_keeps_source_requirement(
             "old_path": source,
         },
     )
+    asset_target = f"{asset}::asset:{asset}:whole-file"
     scope = [asset, source]
     authorization = {
         "base_sha": IDENTITY.base_sha,
@@ -1411,8 +1419,9 @@ def test_refactor_binding_source_to_asset_keeps_source_requirement(
             "series_id": "fixture-series",
             "step": 1,
         },
-        "targets": [target],
+        "targets": sorted([asset_target, target]),
     }
+    targets = sorted([*targets, asset_target])
     row = {
         "applicable": True,
         "changed_paths": scope,
@@ -1423,7 +1432,7 @@ def test_refactor_binding_source_to_asset_keeps_source_requirement(
 
     assert standard_results._s02_refactor_change_paths(changed, "python") == (
         scope,
-        [(source,)],
+        [(source,), (asset,)],
         scope,
     )
     standard_results._s02_refactor_binding(

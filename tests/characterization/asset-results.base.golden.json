@@ -1,0 +1,291 @@
+[
+  {
+    "input": "approved-content",
+    "output": [
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 1,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 2,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 3,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 4,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 5,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 6,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 7,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 8,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      }
+    ]
+  },
+  {
+    "input": "missing-target",
+    "output": [
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 1,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 2,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 3,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 4,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 5,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 6,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 7,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 8,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      }
+    ]
+  },
+  {
+    "input": "stale-approval",
+    "output": [
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 1,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 2,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 3,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 4,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 5,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 6,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 7,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 8,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      }
+    ]
+  },
+  {
+    "input": "wrong-scope",
+    "output": [
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 1,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 2,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 3,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 4,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 5,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 6,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 7,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "TECHNICAL_FAILURE",
+        "standard": 8,
+        "technical_errors": [
+          "MALFORMED_CHARACTERIZATION_RESULT"
+        ]
+      }
+    ]
+  },
+  {
+    "input": "source-control",
+    "output": [
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 1,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 2,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 3,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 4,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 5,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 6,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 7,
+        "technical_errors": []
+      },
+      {
+        "policy_blocks": [],
+        "result": "PASS",
+        "standard": 8,
+        "technical_errors": []
+      }
+    ]
+  }
+]
