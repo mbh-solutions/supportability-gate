@@ -1,0 +1,38 @@
+[
+  {
+    "input": "asset-inventory",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "baseline-admission",
+    "output": "MALFORMED_CHARACTERIZATION_MANIFEST"
+  },
+  {
+    "input": "constant-output",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "missing-asset",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "ordinary-command",
+    "output": [
+      "python3.12",
+      "-P",
+      "tests/characterization/ordinary.characterization.py"
+    ]
+  },
+  {
+    "input": "python-executed",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "python-unexecuted",
+    "output": "UNSUPPORTED"
+  },
+  {
+    "input": "source-substitution",
+    "output": "UNSUPPORTED"
+  }
+]

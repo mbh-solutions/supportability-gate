@@ -1,0 +1,38 @@
+[
+  {
+    "input": "asset-inventory",
+    "output": true
+  },
+  {
+    "input": "baseline-admission",
+    "output": "ADMITTED"
+  },
+  {
+    "input": "constant-output",
+    "output": false
+  },
+  {
+    "input": "missing-asset",
+    "output": false
+  },
+  {
+    "input": "ordinary-command",
+    "output": [
+      "python3.12",
+      "-P",
+      "tests/characterization/ordinary.characterization.py"
+    ]
+  },
+  {
+    "input": "python-executed",
+    "output": true
+  },
+  {
+    "input": "python-unexecuted",
+    "output": false
+  },
+  {
+    "input": "source-substitution",
+    "output": false
+  }
+]

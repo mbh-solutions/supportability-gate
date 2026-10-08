@@ -83,6 +83,79 @@
       ]
     },
     {
+      "id": "first-application-baseline",
+      "obligations": [
+        "first-baseline-baseline-evidence",
+        "first-baseline-characterization"
+      ],
+      "oracle_files": [
+        {
+          "kind": "golden",
+          "path": "tests/characterization/first-baseline.base.golden.json",
+          "sha256": "1b2fa2d4d7eb15dae06292beaeaafe38d93087bf831a8623a59a0e8139aeba67"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/first-baseline.characterization.py",
+          "sha256": "ce6e9aae8b7963bd240e3da5296bcfddda643571ff559607f43cbb24e4e87265"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/first-baseline.golden.json",
+          "sha256": "64d01c3b45c2d1dc3500d78dae2602b43335f4aa9476eb342c3b56e9e60656d0"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/first-baseline.review.json",
+          "sha256": "d4ee033f21d860b9ef46760346b9996cf962b5039006d29d8dc600e2c4de8b55"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/first-baseline.source-receipt.json",
+          "sha256": "cf11844dbcb10bf18136b2b22a1d8b5576401d4b3f069e4dad170a5c1e599f1e"
+        }
+      ],
+      "scenarios": [
+        "first-baseline"
+      ],
+      "targets": [
+        "src/supportability_gate/baseline_evidence.py::function:_codes:57-61",
+        "src/supportability_gate/baseline_evidence.py::function:_python_witness:64-74",
+        "src/supportability_gate/baseline_evidence.py::function:_typescript_witness:77-104",
+        "src/supportability_gate/baseline_evidence.py::function:behavior:23-30",
+        "src/supportability_gate/baseline_evidence.py::function:digest:13-15",
+        "src/supportability_gate/baseline_evidence.py::function:execution_verified:107-124",
+        "src/supportability_gate/baseline_evidence.py::function:meaningful:33-54",
+        "src/supportability_gate/baseline_evidence.py::function:source_path:18-20",
+        "src/supportability_gate/baseline_evidence.py::module:src/supportability_gate/baseline_evidence.py:1-1",
+        "src/supportability_gate/baseline_evidence.py::module:src/supportability_gate/baseline_evidence.py:10-10",
+        "src/supportability_gate/baseline_evidence.py::module:src/supportability_gate/baseline_evidence.py:3-3",
+        "src/supportability_gate/baseline_evidence.py::module:src/supportability_gate/baseline_evidence.py:5-8",
+        "src/supportability_gate/characterization.py::function:_baseline_absence:1577-1583",
+        "src/supportability_gate/characterization.py::function:_baseline_birth_valid:1607-1627",
+        "src/supportability_gate/characterization.py::function:_baseline_capture_blocks:1630-1673",
+        "src/supportability_gate/characterization.py::function:_baseline_row_valid:1586-1604",
+        "src/supportability_gate/characterization.py::function:_coverage_blocks:1512-1550",
+        "src/supportability_gate/characterization.py::function:_obligation_capture_blocks:1465-1486",
+        "src/supportability_gate/characterization.py::function:_obligation_evidence:1768-1816",
+        "src/supportability_gate/characterization.py::function:_obligation_meaningful:1819-1826",
+        "src/supportability_gate/characterization.py::function:_observed_definition_blocks:1333-1365",
+        "src/supportability_gate/characterization.py::function:_result_coverage:2290-2344",
+        "src/supportability_gate/characterization.py::function:_result_obligations:1993-2011",
+        "src/supportability_gate/characterization.py::function:_scenario_rows:250-291",
+        "src/supportability_gate/characterization.py::function:_valid_obligation_assertion:1451-1462",
+        "src/supportability_gate/characterization.py::function:_valid_obligation_target:354-372",
+        "src/supportability_gate/characterization.py::function:_verified_capture_rows:1676-1713",
+        "src/supportability_gate/characterization.py::function:_verified_obligation_coverage:3209-3242",
+        "src/supportability_gate/characterization.py::function:baseline_sources:1560-1574",
+        "src/supportability_gate/characterization.py::function:parse_manifest:497-528",
+        "src/supportability_gate/characterization.py::function:scenario_command:562-592",
+        "src/supportability_gate/characterization.py::function:verify_evidence:2986-3198",
+        "src/supportability_gate/characterization.py::module:src/supportability_gate/characterization.py:19-19",
+        "src/supportability_gate/characterization.py::module:src/supportability_gate/characterization.py:34-35"
+      ]
+    },
+    {
       "id": "quality-capture-efficiency",
       "obligations": [
         "gate8-standard-results-boundary-v5",
@@ -274,6 +347,20 @@
       "scenario": "s05-meaningful-behavior",
       "selector": "contract-command-policy",
       "target": "src/supportability_gate/contract.py"
+    },
+    {
+      "category": "behavior",
+      "id": "first-baseline-baseline-evidence",
+      "scenario": "first-baseline",
+      "selector": "$",
+      "target": "src/supportability_gate/baseline_evidence.py"
+    },
+    {
+      "category": "behavior",
+      "id": "first-baseline-characterization",
+      "scenario": "first-baseline",
+      "selector": "$",
+      "target": "src/supportability_gate/characterization.py"
     },
     {
       "category": "static",
@@ -485,6 +572,16 @@
         "src/supportability_gate/clause_inventory.py"
       ],
       "id": "clause-inventory-baseline",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/baseline_evidence.py",
+        "src/supportability_gate/characterization.py"
+      ],
+      "id": "first-baseline",
       "kind": "regression",
       "module_roots": []
     },
