@@ -1,0 +1,63 @@
+{
+  "candidate": "dc80e892d7e504726cdf6def77e245b70fd917c4",
+  "parent": "73b9a98412d323b958d9df67932c3bf1ae666209",
+  "pull_request": "https://github.com/mbh-solutions/supportability-gate/pull/288",
+  "run": "https://github.com/mbh-solutions/supportability-gate/actions/runs/37415287708",
+  "conclusion": "failure",
+  "artifacts": [
+    {
+      "id": 11390763991,
+      "name": "supportability-evidence-37415287708-1",
+      "size_in_bytes": 60465,
+      "digest": "sha256:00a4d0ae03c7cb94f2fdb3c584fe2bd1d15f3b838ac965e200d6be7d71fb6084"
+    },
+    {
+      "id": 11390623866,
+      "name": "characterization-base-37415287708-1",
+      "size_in_bytes": 12945,
+      "digest": "sha256:c9dc7809932ac02bdf0e982d3c7ec1897e794c9d2def1d2ad971813567664e75"
+    },
+    {
+      "id": 11390509328,
+      "name": "quality-profile-37415287708-1",
+      "size_in_bytes": 13760,
+      "digest": "sha256:db40fe3e636dd5dd2be1d3a7e298a180c2ac3df87de5f9b4b6625f9d556b8efb"
+    },
+    {
+      "id": 11390074278,
+      "name": "characterization-head-37415287708-1",
+      "size_in_bytes": 9653,
+      "digest": "sha256:67f580e022f4024fb194bd41aea476f34322dc985c16c8aac6a0e92ad29e9584"
+    }
+  ],
+  "files": {
+    "candidate.bundle": {
+      "sha256": "7bbc967aaf67e0f64291b56800d2052d6432943d77e53d72985ef6a14e66d025",
+      "bytes": 48930
+    },
+    "characterization-base-37415287708-1.zip": {
+      "sha256": "c9dc7809932ac02bdf0e982d3c7ec1897e794c9d2def1d2ad971813567664e75",
+      "bytes": 12945
+    },
+    "characterization-head-37415287708-1.zip": {
+      "sha256": "67f580e022f4024fb194bd41aea476f34322dc985c16c8aac6a0e92ad29e9584",
+      "bytes": 9653
+    },
+    "quality-profile-37415287708-1.zip": {
+      "sha256": "db40fe3e636dd5dd2be1d3a7e298a180c2ac3df87de5f9b4b6625f9d556b8efb",
+      "bytes": 13760
+    },
+    "run-logs.zip": {
+      "sha256": "a0df3cf46331d4dc33320dca097d3d7a3e6ba75d0605605145ead7e9d45af708",
+      "bytes": 116094
+    },
+    "run.json": {
+      "sha256": "7f1f2be670622b81a6926cd53ccc9d7ae6656abcd0b7b4af0f8946e4d30d1b96",
+      "bytes": 464
+    },
+    "supportability-evidence-37415287708-1.zip": {
+      "sha256": "00a4d0ae03c7cb94f2fdb3c584fe2bd1d15f3b838ac965e200d6be7d71fb6084",
+      "bytes": 60465
+    }
+  }
+}
