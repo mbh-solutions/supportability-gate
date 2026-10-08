@@ -132,6 +132,11 @@ to source responsibilities; assets still require file coverage and the existing 
 validators. Mixed source/content changes require both kinds of target. Empty or invented targets,
 missing files, changed oracle bytes, stale approval and invalid assets remain blocking.
 
+The final results cross-check includes each changed production asset even though assets do not
+receive a source complexity score. Each asset path on either side of a rename requires its own
+target or an explicit unbounded-path failure. This keeps content-only approval applicable through
+final reconciliation while preserving source coverage and exact evidence binding.
+
 Whole-file target derivation does not itself make a deletion or rename admissible. The existing
 scenario inventory and evidence rules must also support the change. It does not certify the truth
 of content or provide a generic existing-application bootstrap.
