@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: mbh-solutions/supportability-gate
-          ref: a5d4d5bb201c39b93bf030cfacb8a77e724d55ab
+          ref: 4b8837e9e9ec59d54925ca0ff9e4755bc6757716
           persist-credentials: false
           path: gate
 
@@ -69,7 +69,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: mbh-solutions/supportability-gate
-          ref: a5d4d5bb201c39b93bf030cfacb8a77e724d55ab
+          ref: 4b8837e9e9ec59d54925ca0ff9e4755bc6757716
           persist-credentials: false
           path: gate
 
@@ -135,7 +135,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: mbh-solutions/supportability-gate
-          ref: a5d4d5bb201c39b93bf030cfacb8a77e724d55ab
+          ref: 4b8837e9e9ec59d54925ca0ff9e4755bc6757716
           persist-credentials: false
           path: gate
 
