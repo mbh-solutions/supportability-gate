@@ -1,0 +1,10 @@
+{
+  "base_sha": "ce4e21d3cfdc3b036bfdfee33928a3375dc982f6",
+  "evidence_class": "measured_fact",
+  "prior_golden_sha256": "e937dc9f9dbbcd02aea6d9ed28b5d32b694352dc141df338c1353319d4121d9f",
+  "schema_version": "1.0",
+  "sources": {
+    "src/supportability_gate/characterization.py": "6d87bd35c31d1eb5fd1357952356439178721620dde03bbc0b49c1e5cb3e0ee6",
+    "src/supportability_gate/standard_results.py": "802cba76595cc29bdb862f6845ecf3c83c6792925e8946082d90cce88ec0e46a"
+  }
+}

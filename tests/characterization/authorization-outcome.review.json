@@ -1,0 +1,12 @@
+{
+  "evidence_class": "author_declaration",
+  "intended_change": "Validate the unchanged verifier process outcome separately from owner authorization. Preserve behavior-change blocks until a valid grant; report malformed refactor evidence through its existing refactor binding failure.",
+  "negative_controls": [
+    "Missing targets remain blocked",
+    "Stale authorization remains blocked",
+    "Wrong scope remains blocked",
+    "Unapproved verified corrections remain blocked",
+    "Verification failures are not converted to approval"
+  ],
+  "schema_version": "1.0"
+}

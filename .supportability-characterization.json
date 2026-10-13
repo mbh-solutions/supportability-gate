@@ -103,6 +103,53 @@
       ]
     },
     {
+      "id": "authorization-verifier-outcome",
+      "obligations": [
+        "asset-results-standard-results"
+      ],
+      "oracle_files": [
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/asset-results.characterization.py",
+          "sha256": "4e69c94a70c03ccda652b173c128b04ab05334db35df83700c0f5cc2bd732c64"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/asset-results.golden.json",
+          "sha256": "a9650c3b51e97e88d2e60e46d56a48eaf7cbb32f9e147d7ff43130b134645ca3"
+        },
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/asset-results.inputs.json",
+          "sha256": "b0000e7373ab06d0362ff045b2993f9dddb261d581c8211597d587f349872f56"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/authorization-outcome.base.golden.json",
+          "sha256": "e937dc9f9dbbcd02aea6d9ed28b5d32b694352dc141df338c1353319d4121d9f"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/authorization-outcome.review.json",
+          "sha256": "f1ef60694eee85554be9e0bcdc663e2be7ee85d4581354531efd0d87a76f1fc6"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/authorization-outcome.source-receipt.json",
+          "sha256": "c7cdce892839ac385fa17379b01df6f86fc39bc4c1f1e3bab5d0ce6b14a12242"
+        }
+      ],
+      "scenarios": [
+        "asset-results"
+      ],
+      "targets": [
+        "src/supportability_gate/characterization.py::function:main:4000-4028",
+        "src/supportability_gate/characterization.py::function:verification_outcome:3986-3997",
+        "src/supportability_gate/standard_results.py::function:_s02_add_characterization:2594-2639",
+        "src/supportability_gate/standard_results.py::module:src/supportability_gate/standard_results.py:22-22"
+      ]
+    },
+    {
       "id": "browser-source-coverage",
       "obligations": [
         "browser-coverage-architecture-policy",
