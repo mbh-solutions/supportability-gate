@@ -5565,6 +5565,15 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
                 f"--expected-{side}-characterization-{field} "
                 f'"${{{{ needs.characterize-{side}.outputs.{field} }}}}"' in evidence
             )
+    assert (
+        "group: supportability-capture-${{ github.repository }}-${{ github.event.pull_request.number }}"
+        in workflow
+    )
+    assert "cancel-in-progress: true" in workflow
+    assert (
+        "needs: [characterize-base, characterize-head, quality-profile-plan, quality-profile-shards]"
+        in evidence
+    )
     assert "observe-codex-review:" not in workflow
     assert "collect-codex-review:" not in workflow
     assert "review-required" not in workflow

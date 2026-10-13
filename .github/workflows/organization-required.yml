@@ -3,6 +3,10 @@ name: Organization Required Supportability Gate
 on:
   pull_request:
 
+concurrency:
+  group: supportability-capture-${{ github.repository }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read

@@ -137,6 +137,9 @@ importing a function cannot establish its execution.
 
 ### Timely failure reporting
 
+A new pull-request commit cancels the superseded capture run. The replacement commit must still
+produce its own complete evidence; cancellation never transfers a PASS to a different commit.
+
 Characterization reports an execution failure as soon as its scenario finishes. A failed first
 attempt is retained without spending time on a second attempt; its determinism is unproven and
 it cannot pass. Successful scenarios still run twice in separate isolated containers. Independent
