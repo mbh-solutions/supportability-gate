@@ -831,7 +831,7 @@ def test_hosted_capture_is_compact_and_provenance_binds_actual_bytes(
         "scenarios": [
             {"exit_code": 254 if failed else 0, "error": None, "deterministic": not failed}
         ],
-        "observations": [{"value": "ÃƒÂ©"}] * 32000,
+        "observations": [{"value": "é"}] * 32000,
     }
     environment = {"fixture": "synthetic transport control, not hosted evidence"}
     pretty = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode() + b"\n"
