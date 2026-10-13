@@ -1,5 +1,46 @@
 # Repository Configuration
 
+## Authorization event receiver
+
+An enrolled repository needs a small event receiver on its default branch to resume authorization
+without rerunning captured tests. Organization-required workflows support pull-request events but
+cannot subscribe to issue comments. The receiver contains no policy or consumer commands; it calls
+the shared reusable workflow at the same full, qualified revision as the organization-required
+workflow. Keep the existing eight required check names and their GitHub Actions App binding.
+
+```yaml
+name: Supportability Authorization Events
+on:
+  issue_comment:
+    types: [created, edited, deleted]
+  workflow_run:
+    workflows: [Organization Required Supportability Gate]
+    types: [completed]
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  issues: read
+  pull-requests: read
+concurrency:
+  group: supportability-authorization-${{ github.event.issue.number || github.event.workflow_run.pull_requests[0].number || github.run_id }}
+  cancel-in-progress: false
+jobs:
+  resume:
+    if: github.event_name == 'workflow_run' || github.event.issue.pull_request
+    uses: mbh-solutions/supportability-gate/.github/workflows/authorization-resume.yml@FULL_QUALIFIED_COMMIT_SHA
+```
+
+Replace the revision placeholder with the exact qualified deployment SHA; do not use a branch or
+tag. No cross-repository secret, bot service, administrative bypass, or additional required check
+is needed. `checks: write` is confined to the shared publication job. The static evaluation job
+has read-only permissions and does not execute consumer code. Consumer changes to this receiver
+do not replace or disable the organization-required workflow or its eight required contexts.
+
+The completion event closes the race between a comment and the initial evidence upload. See
+[Pull Request Lifecycle](Pull-Request-Lifecycle.md#authorization-continuation) for retained identities,
+freshness checks, failure handling, and evidence-expiration limits.
+
 Each enrolled repository commits three fixed inputs. The contract establishes supported source
 scope; review evidence describes the actual change; characterization declares executable proof.
 Neither evidence file is a waiver.

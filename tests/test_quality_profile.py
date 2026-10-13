@@ -2154,6 +2154,8 @@ maximum = 10
         WORKFLOW_SHA,
     )
 
+    if "web/presentation/Card.tsx" not in test_result.observed_paths:
+        print(json.dumps(_retained_diagnostics(output), sort_keys=True))
     assert "web/presentation/Card.tsx" in test_result.observed_paths
     assert not any(
         block.endswith(":web/presentation/Card.tsx")

@@ -1957,3 +1957,39 @@ def test_verification_is_byte_deterministic(tmp_path: Path) -> None:
     second = _verify(repository, base_sha, head_sha, *paths)
 
     assert characterization._canonical(first) == characterization._canonical(second)
+
+
+@pytest.mark.parametrize(
+    "exit_code,error,calls", [(0, None, 2), (254, None, 1), (0, "MALFORMED_DRIVER_OUTPUT", 1)]
+)
+def test_failed_characterization_is_not_repeated_but_success_requires_two_captures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, exit_code: int, error: str | None, calls: int
+) -> None:
+    repository, _, _, head = _repository(tmp_path)
+    observed = []
+    result = {
+        "behavior": {},
+        "behavior_sha256": "a" * 64,
+        "command": ["fixed"],
+        "error": error,
+        "exit_code": exit_code,
+        "stderr_sha256": "b" * 64,
+        "stdout_sha256": "c" * 64,
+    }
+
+    def execute(*args: object) -> dict[str, object]:
+        observed.append(args)
+        return dict(result)
+
+    monkeypatch.setattr(hosted_characterization, "_run_driver", execute)
+    row = hosted_characterization._scenario_capture(
+        repository,
+        repository,
+        head,
+        characterization.Scenario("existing", "regression", ("src/sample.py",)),
+        "python",
+        [],
+    )
+    assert len(observed) == calls
+    assert row["deterministic"] is (calls == 2)
+    assert row["exit_code"] == exit_code and row["error"] == error

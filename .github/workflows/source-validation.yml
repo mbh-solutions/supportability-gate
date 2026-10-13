@@ -3,6 +3,10 @@ name: Supportability Gate Source Validation
 on:
   pull_request:
 
+concurrency:
+  group: supportability-source-${{ github.repository }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -25,6 +29,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js 24.20.0
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "24.20.0"
+          package-manager-cache: false
+
       - name: Install exact dependencies
         run: |
           python -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
@@ -32,6 +42,9 @@ jobs:
 
       - name: Ruff lint
         run: python -m ruff check src tests --no-cache
+
+      - name: Verify literal authorization supervisor matches candidate runtime
+        run: python -P tests/verify_authorization_pin.py
 
       - name: Ruff format
         run: python -m ruff format --check src tests --no-cache

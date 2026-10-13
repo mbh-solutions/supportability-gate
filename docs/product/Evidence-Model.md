@@ -40,8 +40,9 @@ limits, timeouts and eight required contexts remain in force. Parallel jobs cons
 concurrent compute and add planning/join overhead; full-suite timing is measured on the
 consumer rather than inferred from a small benchmark.
 
-Characterization executes at most two scenarios concurrently. Each scenario still performs
-two fresh disposable executions in sequence. Results retain manifest order, so behavior
+Characterization executes at most two scenarios concurrently. Each successful scenario performs
+two fresh disposable executions in sequence; an unsuccessful first execution is retained without
+repeating it and cannot establish determinism. Results retain manifest order, so behavior
 fingerprints and deterministic capture payloads are unchanged by completion order.
 
 | Artifact | Responsibility |
@@ -126,3 +127,31 @@ Implementation references: [clause registry](../../src/supportability_gate/claus
 [results](../../src/supportability_gate/standard_results.py),
 [bundle validator](../../src/supportability_gate/qualification_bundle.py), and
 [workflow restore boundary](../../.github/workflows/organization-required.yml).
+
+
+Runtime coverage targets refer to surviving head-revision responsibilities. Deleted base bodies
+remain part of change review but are not execution obligations for head tests. TypeScript tests
+use original source maps; erased type declarations and comment-only or punctuation-only module
+regions are not executable obligations. Function and component bodies remain required, so merely
+importing a function cannot establish its execution.
+
+### Timely failure reporting
+
+When a completed capture already contains the same live authenticated approval, the receiver
+leaves its successful checks in place and skips further evaluation. A changed or unverifiable
+approval cannot take this path.
+
+A new pull-request commit cancels the superseded capture run. The replacement commit must still
+produce its own complete evidence; cancellation never transfers a PASS to a different commit.
+
+Characterization reports an execution failure as soon as its scenario finishes. A failed first
+attempt is retained without spending time on a second attempt; its determinism is unproven and
+it cannot pass. Successful scenarios still run twice in separate isolated containers. Independent
+scenarios continue collecting useful evidence. Collection jobs become failed after uploading
+failed evidence, while the final publisher still evaluates and reports all eight requirements.
+
+The evidence job joins authenticated quality partitions using its existing trusted environment.
+There is no separate runner setup or dependency installation just to join those partitions.
+Artifact identity, digest verification, complete test partition checks, and offline bundle
+verification remain mandatory. Slow consumer test drivers and hosted runner scheduling can still
+dominate elapsed time; operational timings distinguish those costs from gate preparation.

@@ -104,6 +104,14 @@ and [derived targets](../../src/supportability_gate/refactor_targets.py).
 
 ## Schema-5 correction authorization
 
+The observed-delta fingerprint is produced by hosted capture. Its absence before that capture is
+an authorization dependency, not a failed behavioral assertion. With the
+[authorization receiver](Repository-Configuration.md#authorization-event-receiver) installed, a
+technically valid correction waits for authorization and the owner comment resumes evaluation
+against the same retained captures. There is no required fail-first or manual-rerun cycle.
+Ordinary grants that do not depend on observed capture can be prepared for the final base/head
+before evaluation. In either case, only the existing authenticated owner comment supplies authority.
+
 A behavior correction uses the same one-comment trusted-owner boundary and one review cycle. In
 addition to the complete existing scope, targets, related tests and sequence, schema `5.0` binds:
 

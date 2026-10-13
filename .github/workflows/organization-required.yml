@@ -3,6 +3,10 @@ name: Organization Required Supportability Gate
 on:
   pull_request:
 
+concurrency:
+  group: supportability-capture-${{ github.repository }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
@@ -67,6 +71,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/gate/src
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
+          set +e
           mkdir -p "$RUNNER_TEMP/base"
           python -P "$GITHUB_WORKSPACE/gate/tests/hosted_characterization.py" \
             --target-repository "$GITHUB_WORKSPACE/target" \
@@ -81,11 +86,13 @@ jobs:
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --job characterize-base \
             --output "$RUNNER_TEMP/base/characterization.json"
+          status=$?
           if [ -f "$RUNNER_TEMP/base/characterization.json" ]; then
             echo "sha256=$(sha256sum "$RUNNER_TEMP/base/characterization.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
           else
             echo "sha256=" >> "$GITHUB_OUTPUT"
           fi
+          exit "$status"
 
       - name: Upload authenticated base behavior
         id: upload
@@ -95,6 +102,10 @@ jobs:
           name: characterization-base-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/base
           if-no-files-found: error
+
+      - name: Report capture failure after retaining evidence
+        if: ${{ always() && steps.capture.outcome != 'success' }}
+        run: exit 1
 
   characterize-head:
     name: Characterize Head
@@ -153,6 +164,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/gate/src
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
+          set +e
           mkdir -p "$RUNNER_TEMP/head"
           python -P "$GITHUB_WORKSPACE/gate/tests/hosted_characterization.py" \
             --target-repository "$GITHUB_WORKSPACE/target" \
@@ -167,11 +179,13 @@ jobs:
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --job characterize-head \
             --output "$RUNNER_TEMP/head/characterization.json"
+          status=$?
           if [ -f "$RUNNER_TEMP/head/characterization.json" ]; then
             echo "sha256=$(sha256sum "$RUNNER_TEMP/head/characterization.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
           else
             echo "sha256=" >> "$GITHUB_OUTPUT"
           fi
+          exit "$status"
 
       - name: Upload authenticated head behavior
         id: upload
@@ -181,6 +195,10 @@ jobs:
           name: characterization-head-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/head
           if-no-files-found: error
+
+      - name: Report capture failure after retaining evidence
+        if: ${{ always() && steps.capture.outcome != 'success' }}
+        run: exit 1
 
   quality-profile-plan:
     name: Plan Quality Execution
@@ -317,93 +335,13 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
-  quality-profile:
-    name: Quality Profile
-    needs: [quality-profile-plan, quality-profile-shards]
-    if: always()
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    outputs:
-      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
-      artifact-id: ${{ steps.upload.outputs.artifact-id }}
-      capture-outcome: ${{ steps.capture.outcome }}
-      capture-sha256: ${{ steps.capture.outputs.sha256 }}
-    steps:
-      - name: Check out exact target head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: target
-
-      - name: Check out exact gate source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: mbh-solutions/supportability-gate
-          ref: ${{ github.workflow_sha }}
-          persist-credentials: false
-          path: gate
-
-      - name: Set up Python 3.12.14
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12.14"
-
-      - name: Set up Node.js 24.20.0
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: "24.20.0"
-          package-manager-cache: false
-
-      - name: Install exact quality runner dependencies
-        run: python -m pip install --disable-pip-version-check --require-hashes -r gate/requirements-dev.lock
-
-      - name: Capture fixed stack-native quality profile
-        id: capture
-        continue-on-error: true
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PYTHONPATH: ${{ github.workspace }}/gate/src
-          RUNNER_ENVIRONMENT: ${{ runner.environment }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e
-          mkdir -p "$RUNNER_TEMP/quality"
-          python -P "$GITHUB_WORKSPACE/gate/tests/hosted_quality_aggregate.py" \
-            --repository "$GITHUB_WORKSPACE/target" \
-            --repository-name "$GITHUB_REPOSITORY" \
-            --repository-id "$GITHUB_REPOSITORY_ID" \
-            --base-ref "$BASE_SHA" \
-            --head-ref "$HEAD_SHA" \
-            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
-            --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --pytest-shard-count "${{ needs.quality-profile-plan.outputs.count }}" \
-            --output "$RUNNER_TEMP/quality/quality-gates.json"
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          if [ -f "$RUNNER_TEMP/quality/quality-gates.json" ]; then
-            echo "sha256=$(sha256sum "$RUNNER_TEMP/quality/quality-gates.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha256=" >> "$GITHUB_OUTPUT"
-          fi
-          exit "$status"
-
-      - name: Upload authenticated quality evidence
-        id: upload
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: quality-profile-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/quality
-          if-no-files-found: error
-          include-hidden-files: true
+      - name: Report quality failure after retaining evidence
+        if: ${{ always() && steps.capture.outcome != 'success' }}
+        run: exit 1
 
   deterministic-evidence:
     name: Deterministic Supportability Evidence
-    needs: [characterize-base, characterize-head, quality-profile]
+    needs: [characterize-base, characterize-head, quality-profile-plan, quality-profile-shards]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -448,6 +386,49 @@ jobs:
           cat "$RUNNER_TEMP/raw/install.stderr.log" >&2
           exit "$status"
 
+      - name: Capture fixed stack-native quality profile
+        id: aggregate_quality
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          mkdir -p "$RUNNER_TEMP/quality"
+          "$RUNNER_TEMP/gate-venv/bin/python" -P "$GITHUB_WORKSPACE/gate/tests/hosted_quality_aggregate.py" \
+            --repository "$GITHUB_WORKSPACE/target" \
+            --repository-name "$GITHUB_REPOSITORY" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --base-ref "$BASE_SHA" \
+            --head-ref "$HEAD_SHA" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --pytest-shard-count "${{ needs.quality-profile-plan.outputs.count }}" \
+            --output "$RUNNER_TEMP/quality/quality-gates.json"
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ -f "$RUNNER_TEMP/quality/quality-gates.json" ]; then
+            echo "sha256=$(sha256sum "$RUNNER_TEMP/quality/quality-gates.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha256=" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$status"
+
+      - name: Upload authenticated quality evidence
+        id: upload_quality
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: quality-profile-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/quality
+          if-no-files-found: error
+          include-hidden-files: true
+
       - name: Download authenticated base behavior
         id: download_base
         if: needs.characterize-base.outputs.artifact-id != ''
@@ -468,11 +449,11 @@ jobs:
 
       - name: Download authenticated quality evidence
         id: download_quality
-        if: needs.quality-profile.result == 'success'
+        if: steps.upload_quality.outputs.artifact-id != ''
         continue-on-error: true
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          artifact-ids: ${{ needs.quality-profile.outputs.artifact-id }}
+          artifact-ids: ${{ steps.upload_quality.outputs.artifact-id }}
           path: ${{ runner.temp }}/quality
 
       - name: Read back GitHub artifact metadata
@@ -480,7 +461,7 @@ jobs:
         if: steps.download_quality.outcome == 'success'
         continue-on-error: true
         env:
-          ARTIFACT_ID: ${{ needs.quality-profile.outputs.artifact-id }}
+          ARTIFACT_ID: ${{ steps.upload_quality.outputs.artifact-id }}
           GH_TOKEN: ${{ github.token }}
         run: |
           curl --fail-with-body --silent --show-error \
@@ -572,9 +553,9 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          QUALITY_ARTIFACT_DIGEST: ${{ needs.quality-profile.outputs.artifact-digest }}
-          QUALITY_ARTIFACT_ID: ${{ needs.quality-profile.outputs.artifact-id }}
-          QUALITY_CAPTURE_SHA256: ${{ needs.quality-profile.outputs.capture-sha256 }}
+          QUALITY_ARTIFACT_DIGEST: ${{ steps.upload_quality.outputs.artifact-digest }}
+          QUALITY_ARTIFACT_ID: ${{ steps.upload_quality.outputs.artifact-id }}
+          QUALITY_CAPTURE_SHA256: ${{ steps.aggregate_quality.outputs.sha256 }}
         working-directory: ${{ runner.temp }}
         run: |
           set +e
@@ -627,21 +608,21 @@ jobs:
             --complexity-outcome "${{ steps.evaluate.outcome }}" \
             --characterization-outcome "${{ steps.characterization.outcome }}" \
             --refactor-outcome "${{ steps.refactor_policy.outcome }}" \
-            --quality-outcome "${{ needs.quality-profile.outputs.capture-outcome != 'success' && needs.quality-profile.outputs.capture-outcome || steps.download_quality.outcome != 'success' && steps.download_quality.outcome || steps.artifact_metadata.outcome }}" \
+            --quality-outcome "${{ steps.aggregate_quality.outcome != 'success' && steps.aggregate_quality.outcome || steps.download_quality.outcome != 'success' && steps.download_quality.outcome || steps.artifact_metadata.outcome }}" \
             --install-failure-code "GATE_INSTALL_FAILED" \
             --complexity-failure-code "COMPLEXITY_EVALUATION_FAILED" \
             --characterization-failure-code "${{ needs.characterize-base.outputs.capture-outcome != 'success' && 'BASE_CHARACTERIZATION_CAPTURE_FAILED' || needs.characterize-head.outputs.capture-outcome != 'success' && 'HEAD_CHARACTERIZATION_CAPTURE_FAILED' || steps.download_base.outcome != 'success' && 'BASE_CHARACTERIZATION_DOWNLOAD_FAILED' || steps.download_head.outcome != 'success' && 'HEAD_CHARACTERIZATION_DOWNLOAD_FAILED' || 'CHARACTERIZATION_VERIFY_FAILED' }}" \
             --refactor-failure-code "REFACTOR_POLICY_FAILED" \
-            --quality-failure-code "${{ needs.quality-profile.outputs.capture-outcome != 'success' && 'QUALITY_PROFILE_FAILED' || steps.download_quality.outcome != 'success' && 'QUALITY_ARTIFACT_DOWNLOAD_FAILED' || steps.artifact_metadata.outcome != 'success' && 'QUALITY_ARTIFACT_METADATA_FAILED' || 'QUALITY_SOURCE_FAILED' }}" \
+            --quality-failure-code "${{ steps.aggregate_quality.outcome != 'success' && 'QUALITY_PROFILE_FAILED' || steps.download_quality.outcome != 'success' && 'QUALITY_ARTIFACT_DOWNLOAD_FAILED' || steps.artifact_metadata.outcome != 'success' && 'QUALITY_ARTIFACT_METADATA_FAILED' || 'QUALITY_SOURCE_FAILED' }}" \
             --expected-base-characterization-artifact-id "${{ needs.characterize-base.outputs.artifact-id }}" \
             --expected-base-characterization-artifact-digest "${{ needs.characterize-base.outputs.artifact-digest }}" \
             --expected-base-characterization-capture-sha256 "${{ needs.characterize-base.outputs.capture-sha256 }}" \
             --expected-head-characterization-artifact-id "${{ needs.characterize-head.outputs.artifact-id }}" \
             --expected-head-characterization-artifact-digest "${{ needs.characterize-head.outputs.artifact-digest }}" \
             --expected-head-characterization-capture-sha256 "${{ needs.characterize-head.outputs.capture-sha256 }}" \
-            --expected-quality-artifact-id "${{ needs.quality-profile.outputs.artifact-id }}" \
-            --expected-quality-artifact-digest "${{ needs.quality-profile.outputs.artifact-digest }}" \
-            --expected-quality-capture-sha256 "${{ needs.quality-profile.outputs.capture-sha256 }}" \
+            --expected-quality-artifact-id "${{ steps.upload_quality.outputs.artifact-id }}" \
+            --expected-quality-artifact-digest "${{ steps.upload_quality.outputs.artifact-digest }}" \
+            --expected-quality-capture-sha256 "${{ steps.aggregate_quality.outputs.sha256 }}" \
             --complexity-result "$RUNNER_TEMP/evidence/complexity-result.json" \
             --characterization-result "$RUNNER_TEMP/evidence/characterization-result.json" \
             --refactor-result "$RUNNER_TEMP/evidence/refactor-policy-result.json" \
@@ -760,7 +741,7 @@ jobs:
           DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
           GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PYTHONPATH: ${{ github.workspace }}/gate/src
+          PYTHONPATH: ${{ github.workspace }}/gate/src:${{ github.workspace }}/gate/tests
         run: |
           set +e
           overall=0
@@ -795,9 +776,15 @@ jobs:
               --run-attempt "$GITHUB_RUN_ATTEMPT" \
               --standard "$standard" \
               --result-exit-code "$result_status" \
+              --evidence-directory "$RUNNER_TEMP/evidence" \
+              --base-sha "$BASE_SHA" \
+              --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+              --repository-id "$GITHUB_REPOSITORY_ID" \
               --summary "$result"
             publish_status=$?
-            if [ "$publish_status" -ne 0 ]; then
+            if [ "$publish_status" -eq 3 ]; then
+              printf '%s\n' 'Awaiting owner authorization; required check remains pending.'
+            elif [ "$publish_status" -ne 0 ]; then
               overall=2
             elif [ "$result_status" -ne 0 ] && [ "$overall" -eq 0 ]; then
               overall=1

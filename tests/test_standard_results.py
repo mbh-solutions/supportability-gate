@@ -956,7 +956,7 @@ def test_current_refactor_schema_has_authenticated_applicability() -> None:
     assert _entry(payload, 6)["result"] == "PASS"
 
 
-def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> None:
+def _correction_inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     inputs = _inputs()
     characterization_result = inputs[1]
     scenario = characterization_result["scenarios"][0]
@@ -1038,7 +1038,11 @@ def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> No
         _canonical(characterization_result)
     ).hexdigest()
     refactor["result_classification"] = "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+    return inputs
 
+
+def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> None:
+    inputs = _correction_inputs()
     payload = _compose(
         inputs,
         source_outcomes={**SUCCESS_OUTCOMES, "characterization": "success"},
@@ -5464,8 +5468,8 @@ def _job(name: str, next_name: str | None) -> str:
 def test_capture_jobs_pin_identical_exact_runtime_versions() -> None:
     jobs = (
         _job("characterize-base", "characterize-head"),
-        _job("characterize-head", "quality-profile"),
-        _job("quality-profile", "deterministic-evidence"),
+        _job("characterize-head", "quality-profile-plan"),
+        _job("quality-profile-shards", "deterministic-evidence"),
     )
 
     for job in jobs:
@@ -5504,7 +5508,7 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     workflow = (
         Path(__file__).parents[1] / ".github/workflows/organization-required.yml"
     ).read_text(encoding="utf-8")
-    quality = _job("quality-profile", "deterministic-evidence")
+    quality = _job("quality-profile-shards", "deterministic-evidence")
     evidence = _job("deterministic-evidence", "standard-results")
     publisher = _job("standard-results", None)
     packaged_modules = {
@@ -5538,21 +5542,21 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     assert "steps.download_quality.outcome == 'success'" not in evaluate
     assert "steps.artifact_metadata.outcome == 'success'" not in evaluate
     assert (
-        "--quality-outcome \"${{ needs.quality-profile.outputs.capture-outcome != 'success' "
-        "&& needs.quality-profile.outputs.capture-outcome || "
+        "--quality-outcome \"${{ steps.aggregate_quality.outcome != 'success' "
+        "&& steps.aggregate_quality.outcome || "
         "steps.download_quality.outcome != 'success' && steps.download_quality.outcome || "
         'steps.artifact_metadata.outcome }}"' in evidence
     )
     assert (
-        '--expected-quality-artifact-id "${{ needs.quality-profile.outputs.artifact-id }}"'
+        '--expected-quality-artifact-id "${{ steps.upload_quality.outputs.artifact-id }}"'
         in evidence
     )
     assert (
-        '--expected-quality-artifact-digest "${{ needs.quality-profile.outputs.artifact-digest }}"'
+        '--expected-quality-artifact-digest "${{ steps.upload_quality.outputs.artifact-digest }}"'
         in evidence
     )
     assert (
-        '--expected-quality-capture-sha256 "${{ needs.quality-profile.outputs.capture-sha256 }}"'
+        '--expected-quality-capture-sha256 "${{ steps.aggregate_quality.outputs.sha256 }}"'
         in evidence
     )
     for side in ("base", "head"):
@@ -5561,6 +5565,15 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
                 f"--expected-{side}-characterization-{field} "
                 f'"${{{{ needs.characterize-{side}.outputs.{field} }}}}"' in evidence
             )
+    assert (
+        "group: supportability-capture-${{ github.repository }}-${{ github.event.pull_request.number }}"
+        in workflow
+    )
+    assert "cancel-in-progress: true" in workflow
+    assert (
+        "needs: [characterize-base, characterize-head, quality-profile-plan, quality-profile-shards]"
+        in evidence
+    )
     assert "observe-codex-review:" not in workflow
     assert "collect-codex-review:" not in workflow
     assert "review-required" not in workflow

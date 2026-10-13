@@ -103,7 +103,7 @@ def test_capture_timings_preserve_authoritative_bytes_and_manifest_order(
     assert second[0]["scenarios"][1]["deterministic"] is False
     assert list(tmp_path.iterdir()) == [tmp_path / "characterization-timings.json"]
     streams = capsys.readouterr()
-    assert streams.out == ""
+    assert streams.out.count("::error title=Characterization execution failed::second") == 2
     output = streams.err
     assert "CHARACTERIZATION_TIMING START scenario first" in output
     assert "CHARACTERIZATION_TIMING END scenario second failed" in output
