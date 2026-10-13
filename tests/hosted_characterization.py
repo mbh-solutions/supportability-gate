@@ -784,24 +784,26 @@ def _scenario_capture(
         identity,
         execution_output,
     )
-    second = _run_driver(
-        target,
-        definition,
-        scenario,
-        profile,
-        driver.content,
-        dependencies,
-        diagnostics,
-        stage,
-        identity,
-        execution_output,
-    )
+    second = None
+    if not first["exit_code"] and not first["error"]:
+        second = _run_driver(
+            target,
+            definition,
+            scenario,
+            profile,
+            driver.content,
+            dependencies,
+            diagnostics,
+            stage,
+            identity,
+            execution_output,
+        )
     return {
         "behavior": first["behavior"],
         "behavior_sha256": first["behavior_sha256"],
         "command": first["command"],
         "covers": list(scenario.covers),
-        "deterministic": first == second,
+        "deterministic": second is not None and first == second,
         "driver_blob_sha": driver.object_sha,
         "error": first["error"],
         "exit_code": first["exit_code"],
@@ -968,6 +970,7 @@ def capture_evidence(
                 timing["deterministic"] = observed["deterministic"]
                 if observed["exit_code"] or observed["error"] or not observed["deterministic"]:
                     timing["status"] = "failed"
+                    print("::error title=Characterization execution failed::" + item.id, flush=True)
                 records.extend(local_records)
                 return observed
 
@@ -1078,8 +1081,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(code)
         return 2
-    print("PASS")
-    return 0
+    failed = any(
+        item["exit_code"] or item["error"] or not item["deterministic"]
+        for item in result["scenarios"]
+    )
+    print("CHARACTERIZATION_EXECUTION_FAILED" if failed else "CAPTURE_COMPLETE")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

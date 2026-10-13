@@ -1337,6 +1337,50 @@ def _write_capture_provenance(
     )
 
 
+def _runtime_spans(
+    path: str, content: bytes, spans: tuple[function_changes.ResponsibilitySpan, ...]
+) -> tuple[function_changes.ResponsibilitySpan, ...]:
+    """Exclude erased TypeScript declarations and punctuation-only module regions."""
+    if path.endswith((".py", ".pyi")):
+        return spans
+    import tree_sitter
+    import tree_sitter_typescript
+
+    language = (
+        tree_sitter_typescript.language_tsx()
+        if path.endswith((".tsx", ".jsx"))
+        else tree_sitter_typescript.language_typescript()
+    )
+    root = tree_sitter.Parser(tree_sitter.Language(language)).parse(content).root_node
+    if root.has_error:
+        raise quality_profile.QualityProfileError("UNVERIFIABLE_TEST_OBLIGATIONS", path)
+    runtime = bytearray(content)
+    pending = [root]
+    while pending:
+        node = pending.pop()
+        if node.type in {
+            "ambient_declaration",
+            "interface_declaration",
+            "type_alias_declaration",
+            "comment",
+        }:
+            for offset in range(node.start_byte, node.end_byte):
+                if runtime[offset] not in (10, 13):
+                    runtime[offset] = 32
+        else:
+            pending.extend(node.named_children)
+    lines = bytes(runtime).splitlines()
+    return tuple(
+        span
+        for span in spans
+        if span.kind != "module"
+        or any(
+            lines[line - 1].strip(b" \t;{}(),")
+            for line in range(span.start_line, span.end_line + 1)
+        )
+    )
+
+
 def _span_target(path: str, span: function_changes.ResponsibilitySpan) -> str:
     return f"{path}::{span.kind}:{span.name}:{span.start_line}-{span.end_line}"
 
@@ -1361,7 +1405,7 @@ def _high_risk_targets(
             raise quality_profile.QualityProfileError(
                 "UNVERIFIABLE_TEST_OBLIGATIONS", path
             ) from error
-        targets.extend(_span_target(path, span) for span in spans)
+        targets.extend(_span_target(path, span) for span in _runtime_spans(path, content, spans))
     return tuple(targets)
 
 
@@ -1408,7 +1452,7 @@ def _head_runtime_targets(
             raise quality_profile.QualityProfileError(
                 "UNVERIFIABLE_TEST_OBLIGATIONS", path
             ) from error
-        targets.extend(_span_target(path, span) for span in spans)
+        targets.extend(_span_target(path, span) for span in _runtime_spans(path, head, spans))
     return tuple(targets)
 
 

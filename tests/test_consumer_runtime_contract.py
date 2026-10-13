@@ -14,6 +14,7 @@ from test_characterization import _commit, _repository, _write, hosted_character
 from supportability_gate import (
     characterization,
     contract,
+    function_changes,
     git_changes,
     quality_profile,
     refactor_targets,
@@ -287,3 +288,35 @@ console.log(JSON.stringify({schema_version:"1.0",scenario:"coverage",behavior}))
 def test_fixed_typescript_test_command_enables_original_source_coverage() -> None:
     commands = dict(quality_profile.command_templates("typescript"))
     assert "--enable-source-maps" in commands["typescript.test.v1"]
+
+
+def test_runtime_module_spans_exclude_erased_types_without_hiding_executable_code() -> None:
+    source = b"""declare global {
+  interface Window { sample: string; }
+}
+// Runtime begins below.
+const React = {
+  createElement(value: string) {
+    return value;
+  },
+};
+export function Card() {
+  return React.createElement("sample");
+}
+namespace Live { export const value = Card(); }
+const mixed = Card(); /* same-line comment */
+"""
+    spans = function_changes.responsibility_spans("src/card.ts", source, set(range(1, 15)))
+    retained = quality._runtime_spans("src/card.ts", source, spans)
+    assert {span.name for span in retained if span.kind != "module"} == {"createElement", "Card"}
+    module_lines = {
+        line
+        for span in retained
+        if span.kind == "module"
+        for line in range(span.start_line, span.end_line + 1)
+    }
+    assert {5, 13, 14} <= module_lines
+    assert 9 not in module_lines
+    erased = b"declare global { interface Window { sample: string; } }\n"
+    erased_spans = function_changes.responsibility_spans("src/types.ts", erased, {1})
+    assert quality._runtime_spans("src/types.ts", erased, erased_spans) == ()

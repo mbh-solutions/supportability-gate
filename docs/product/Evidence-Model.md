@@ -126,3 +126,18 @@ Implementation references: [clause registry](../../src/supportability_gate/claus
 [results](../../src/supportability_gate/standard_results.py),
 [bundle validator](../../src/supportability_gate/qualification_bundle.py), and
 [workflow restore boundary](../../.github/workflows/organization-required.yml).
+
+
+### Timely failure reporting
+
+Characterization reports an execution failure as soon as its scenario finishes. A failed first
+attempt is retained without spending time on a second attempt; its determinism is unproven and
+it cannot pass. Successful scenarios still run twice in separate isolated containers. Independent
+scenarios continue collecting useful evidence. Collection jobs become failed after uploading
+failed evidence, while the final publisher still evaluates and reports all eight requirements.
+
+The evidence job joins authenticated quality partitions using its existing trusted environment.
+There is no separate runner setup or dependency installation just to join those partitions.
+Artifact identity, digest verification, complete test partition checks, and offline bundle
+verification remain mandatory. Slow consumer test drivers and hosted runner scheduling can still
+dominate elapsed time; operational timings distinguish those costs from gate preparation.

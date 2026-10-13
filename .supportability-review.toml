@@ -2,11 +2,11 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Resume exact-change owner authorization over immutable captures and correct TypeScript runtime coverage attribution with the fixed source-map option."
+intended_behavior = "Resume exact-change owner authorization over immutable captures correct TypeScript runtime coverage attribution, and reduce redundant waiting without weakening proof."
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
-captured_behavior = "Existing characterization protocols and goldens remain unchanged. Hosted import-only and real-call controls distinguish original TypeScript body execution from transformed-file line artifacts."
+captured_behavior = "Successful characterization protocols and goldens remain unchanged; failed execution is not repeated and is reported after evidence retention. Hosted import-only and real-call controls distinguish original TypeScript body execution from transformed-file line artifacts."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
