@@ -119,3 +119,10 @@ conversation it creates remains subject to native thread resolution. Semantic Re
 Implementation references: [required workflow](../../.github/workflows/organization-required.yml),
 [producer](../../src/supportability_gate/standard_results_producer.py), and
 [enforcer](../../src/supportability_gate/standard_results_enforcer.py).
+
+A completed GitHub check cannot be reopened by clearing its conclusion. If an owner grant is
+changed or removed after success, continuation first changes the original authorization check to
+**Action required**, then reevaluates live evidence. Previously completed approval-dependent checks
+remain Action required while approval is missing; initially undecided checks remain pending.
+Restoring a matching grant updates those same check IDs to success without recapture. The publisher
+verifies the state returned by GitHub instead of assuming a successful request applied the change.

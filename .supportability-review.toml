@@ -2,11 +2,11 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Pin the source repository authorization receiver to the exact shared release revision so later default-branch changes do not alter continuation identity."
+intended_behavior = "Explicitly withhold completed authorization checks when their owner evidence changes, and verify that GitHub applied each requested check state."
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
-captured_behavior = "Executable policy, characterization definitions and goldens are unchanged. The event receiver calls the exact merged release instead of a moving local workflow."
+captured_behavior = "Executable policy, characterization definitions and goldens are unchanged. Hosted check publication distinguishes initial pending checks from completed checks that require renewed authorization."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
