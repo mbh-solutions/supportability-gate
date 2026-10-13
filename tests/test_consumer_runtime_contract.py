@@ -127,6 +127,9 @@ def test_node_install_uses_committed_manifests_and_no_target_configuration(
         assert kwargs["cwd"] == destination
         assert kwargs["capture_output"] and kwargs["timeout"] == 120
         assert "NODE_OPTIONS" not in kwargs["env"] and "NPM_TOKEN" not in kwargs["env"]
+        environment = kwargs["env"]
+        assert environment["NPM_CONFIG_USERCONFIG"] != environment["NPM_CONFIG_GLOBALCONFIG"]
+        assert Path(environment["NPM_CONFIG_GLOBALCONFIG"]).read_bytes() == b""
         assert not (destination / ".npmrc").exists()
         assert json.loads((destination / "package.json").read_bytes())["name"] == "fixture"
         assert "--ignore-scripts" in arguments and "--include=dev" in arguments

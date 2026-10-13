@@ -464,9 +464,11 @@ def _install_node_dependencies(
             _validate_node_lock(blob.content)
         (destination / name).write_bytes(blob.content)
     environment = quality_runner.fixed_environment(destination, definition)
+    global_config = destination / "empty-global.npmrc"
+    global_config.write_bytes(b"")
     environment.update(
         NPM_CONFIG_USERCONFIG=os.devnull,
-        NPM_CONFIG_GLOBALCONFIG=os.devnull,
+        NPM_CONFIG_GLOBALCONFIG=str(global_config),
         NPM_CONFIG_CACHE=str(destination / ".npm-cache"),
     )
     try:
