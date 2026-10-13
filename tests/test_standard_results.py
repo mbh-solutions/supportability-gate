@@ -1055,6 +1055,55 @@ def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> No
     assert payload["result_classification"] == "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
 
 
+@pytest.mark.parametrize("outcome", ["success", "failure"])
+def test_unapproved_correction_preserves_blocks_and_validates_verifier_outcome(
+    outcome: str,
+) -> None:
+    inputs = _correction_inputs()
+    inputs[2].update(
+        authorization=None,
+        authorization_comment_id=None,
+        overall_result="BLOCK",
+        policy_blocks=["MISSING_OWNER_AUTHORIZATION", "UNAUTHORIZED_CORRECTION"],
+        result_classification="BLOCK",
+    )
+    payload = _compose(
+        inputs,
+        source_outcomes={**SUCCESS_OUTCOMES, "characterization": outcome, "refactor": "failure"},
+    )
+    row = _entry(payload, 5)
+    if outcome == "success":
+        assert row["result"] == "BLOCK"
+        assert row["policy_blocks"] == ["INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample"]
+        assert row["technical_errors"] == []
+        assert _entry(payload, 6)["result"] == "BLOCK"
+    else:
+        assert row["technical_errors"] == ["MALFORMED_CHARACTERIZATION_RESULT"]
+
+
+@pytest.mark.parametrize(
+    ("blocks", "verification_blocks", "expected"),
+    [
+        ([], [], "success"),
+        (["delta"], [], "success"),
+        (["delta", "other"], [], "failure"),
+        (["delta"], ["invalid"], "failure"),
+    ],
+)
+def test_verifier_success_only_defers_fully_verified_reconcilable_delta(
+    blocks: list[str], verification_blocks: list[str], expected: str
+) -> None:
+    result = {
+        "overall_result": "BLOCK" if blocks else "PASS",
+        "policy_blocks": blocks,
+        "correction": {
+            "verification_blocks": verification_blocks,
+            "reconcilable_blocks": ["delta"],
+        },
+    }
+    assert characterization.verification_outcome(result) == expected
+
+
 def test_schema5_without_active_correction_classifies_preserved_behavior() -> None:
     inputs = _inputs()
     characterization_result = inputs[1]

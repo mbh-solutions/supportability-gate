@@ -2,21 +2,26 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Resume exact-change owner authorization over immutable captures correct TypeScript runtime coverage attribution, and reduce redundant waiting without weakening proof."
+intended_behavior = "Recognize native organization workflow identities and distinguish successful correction verification from owner authorization, preserving canonical blocks until approval."
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
-captured_behavior = "Successful characterization protocols and goldens remain unchanged; failed execution is not repeated and is reported after evidence retention. Hosted import-only and real-call controls distinguish original TypeScript body execution from transformed-file line artifacts."
+captured_behavior = "The verifier process outcome is unchanged. The composer now validates that actual outcome independently of whether an authenticated owner has reconciled the observed correction. Native execution and characterization payloads are unchanged. A frozen correction oracle declares the error-attribution change for malformed owner evidence; all negative cases remain blocking."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
 before = "The publisher completed authorization-dependent checks as failures and comments did not resume evaluation."
 after = "The publisher distinguishes an authorization wait; a read-only supervisor reuses source-bound evidence, while a separate publisher updates original checks after freshness validation."
-boundaries = [{ path = "src/supportability_gate/quality_profile.py", kind = "module", symbol = "src/supportability_gate/quality_profile.py", before = "The fixed Node coverage command omitted source-map interpretation for transformed TypeScript.", after = "The fixed command enables source maps so runtime observations refer to original TypeScript body lines." }]
+boundaries = [
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verification_outcome", before = "The CLI embedded the verifier process outcome contract.", after = "A shared pure function exposes the unchanged process outcome independently of owner approval." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "main", before = "The CLI calculated its exit status inline.", after = "The CLI uses the shared unchanged outcome contract." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_characterization", before = "Composition incorrectly expected a failed verifier process while a verified correction awaited owner approval.", after = "Composition validates the actual verifier process contract and separately retains all unauthorized correction blocks." },
+  { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "The composer used the characterization validator.", after = "The composer also imports its pure verifier outcome contract through the existing dependency direction." },
+]
 
 [architecture]
 dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
-reviewed_paths = ["tests/hosted_authorization_evidence.py", "tests/hosted_authorization_resume.py", "tests/hosted_check_publisher.py", "src/supportability_gate/quality_profile.py"]
+reviewed_paths = ["tests/hosted_authorization_evidence.py", "tests/hosted_authorization_resume.py", "src/supportability_gate/characterization.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
 path = "tests/hosted_authorization_resume.py"

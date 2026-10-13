@@ -80,19 +80,19 @@
         "technical_errors": []
       },
       {
-        "policy_blocks": [],
-        "result": "TECHNICAL_FAILURE",
+        "policy_blocks": [
+          "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample"
+        ],
+        "result": "BLOCK",
         "standard": 5,
-        "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
-        ]
+        "technical_errors": []
       },
       {
         "policy_blocks": [],
         "result": "TECHNICAL_FAILURE",
         "standard": 6,
         "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
+          "REFACTOR_RESULT_BINDING_MISMATCH"
         ]
       },
       {
@@ -106,7 +106,7 @@
         "result": "TECHNICAL_FAILURE",
         "standard": 8,
         "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
+          "REFACTOR_RESULT_BINDING_MISMATCH"
         ]
       }
     ]
@@ -139,19 +139,19 @@
         "technical_errors": []
       },
       {
-        "policy_blocks": [],
-        "result": "TECHNICAL_FAILURE",
+        "policy_blocks": [
+          "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample"
+        ],
+        "result": "BLOCK",
         "standard": 5,
-        "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
-        ]
+        "technical_errors": []
       },
       {
         "policy_blocks": [],
         "result": "TECHNICAL_FAILURE",
         "standard": 6,
         "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
+          "REFACTOR_RESULT_BINDING_MISMATCH"
         ]
       },
       {
@@ -165,7 +165,7 @@
         "result": "TECHNICAL_FAILURE",
         "standard": 8,
         "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
+          "REFACTOR_RESULT_BINDING_MISMATCH"
         ]
       }
     ]
@@ -198,19 +198,19 @@
         "technical_errors": []
       },
       {
-        "policy_blocks": [],
-        "result": "TECHNICAL_FAILURE",
+        "policy_blocks": [
+          "INCOMPATIBLE_POST_CHANGE_BEHAVIOR:sample"
+        ],
+        "result": "BLOCK",
         "standard": 5,
-        "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
-        ]
+        "technical_errors": []
       },
       {
         "policy_blocks": [],
         "result": "TECHNICAL_FAILURE",
         "standard": 6,
         "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
+          "REFACTOR_RESULT_BINDING_MISMATCH"
         ]
       },
       {
@@ -224,7 +224,7 @@
         "result": "TECHNICAL_FAILURE",
         "standard": 8,
         "technical_errors": [
-          "MALFORMED_CHARACTERIZATION_RESULT"
+          "REFACTOR_RESULT_BINDING_MISMATCH"
         ]
       }
     ]

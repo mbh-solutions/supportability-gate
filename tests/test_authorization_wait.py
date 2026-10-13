@@ -32,7 +32,10 @@ def _waiting_evidence(
     if correction:
         refactor["policy_blocks"].append("UNAUTHORIZED_CORRECTION")
         refactor["result_classification"] = "BLOCK"
-    payload = fixtures._compose(inputs)
+    outcomes = None
+    if correction:
+        outcomes = {**fixtures.SUCCESS_OUTCOMES, "refactor": "failure"}
+    payload = fixtures._compose(inputs, source_outcomes=outcomes)
     directory.mkdir()
     for name, source in zip(hosted.SOURCE_FILES, inputs, strict=True):
         (directory / name).write_bytes(json.dumps(source).encode())

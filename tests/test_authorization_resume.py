@@ -148,11 +148,17 @@ def test_consumer_named_workflow_cannot_impersonate_organization_source(
     source = {
         **_run(),
         "workflow_id": 42,
+        "workflow_url": "https://api.github.com/repos/example/repository/actions/required_workflows/42",
         "path": hosted.SOURCE_PATH,
         "pull_requests": [{"number": 25}],
     }
-    impostor = {**source, "id": 999, "workflow_id": 999}
-    monkeypatch.setattr(hosted, "_api", lambda *_args: {"id": 42})
+    impostor = {
+        **source,
+        "id": 999,
+        "workflow_id": 999,
+        "workflow_url": "https://api.github.com/repos/example/repository/actions/workflows/999",
+    }
+    monkeypatch.setattr(hosted, "_require_deployed_source", lambda *_args: None)
     monkeypatch.setattr(hosted, "_pages", lambda *_args: [impostor, source])
     assert hosted._latest_run("example/repository", pull) == source
 
@@ -412,3 +418,45 @@ def test_completion_preserves_green_check_and_skips_unnecessary_continuation(
     monkeypatch.setattr(hosted, "_unchanged_completed_authorization", lambda *args: True)
     hosted.invalidate()
     assert output.read_text() == "continue=false\n"
+
+
+@pytest.mark.parametrize("defect", [None, "revision", "source", "repository-rule", "ambiguous"])
+def test_required_workflow_identity_is_bound_to_effective_organization_rule(
+    monkeypatch: pytest.MonkeyPatch, defect: str | None
+) -> None:
+    _context(monkeypatch)
+    rule = {
+        "type": "workflows",
+        "ruleset_source_type": "Organization",
+        "ruleset_source": "mbh-solutions",
+        "parameters": {
+            "workflows": [
+                {
+                    "repository_id": 1234,
+                    "path": hosted.SOURCE_PATH,
+                    "sha": fixtures.IDENTITY.workflow_sha,
+                }
+            ]
+        },
+    }
+    if defect == "revision":
+        rule["parameters"]["workflows"][0]["sha"] = "0" * 40
+    if defect == "source":
+        rule["parameters"]["workflows"][0]["repository_id"] = 5678
+    if defect == "repository-rule":
+        rule["ruleset_source_type"] = "Repository"
+
+    def api(path: str) -> object:
+        if path == f"repos/{hosted.SOURCE_REPOSITORY}":
+            return {"id": 1234}
+        assert path.endswith("/rules/branches/qualification%2Ftypescript")
+        return [rule, rule] if defect == "ambiguous" else [rule]
+
+    monkeypatch.setattr(hosted, "_api", api)
+    pull = _pull()
+    pull["base"]["ref"] = "qualification/typescript"
+    if defect is None:
+        hosted._require_deployed_source("example/repository", pull)
+    else:
+        with pytest.raises(ValueError, match="REQUIRED_WORKFLOW_SOURCE"):
+            hosted._require_deployed_source("example/repository", pull)
