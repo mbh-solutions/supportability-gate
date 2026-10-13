@@ -21,4 +21,4 @@ concurrency:
 jobs:
   resume:
     if: github.event_name == 'workflow_run' || github.event.issue.pull_request
-    uses: mbh-solutions/supportability-gate/.github/workflows/authorization-resume.yml@d1bd9d7ba367c18be09834387bcfd70651833f5b
+    uses: mbh-solutions/supportability-gate/.github/workflows/authorization-resume.yml@147838eb984368b08715bd4a9e0ed2e75e2cdbdf
