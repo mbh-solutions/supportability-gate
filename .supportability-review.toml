@@ -6,7 +6,7 @@ intended_behavior = "Recognize native organization workflow identities and disti
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
-captured_behavior = "The verifier process outcome is unchanged. The composer now validates that actual outcome independently of whether an authenticated owner has reconciled the observed correction. Native execution, characterization payloads and goldens are unchanged."
+captured_behavior = "The verifier process outcome is unchanged. The composer now validates that actual outcome independently of whether an authenticated owner has reconciled the observed correction. Native execution and characterization payloads are unchanged. A frozen correction oracle declares the error-attribution change for malformed owner evidence; all negative cases remain blocking."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
