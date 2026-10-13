@@ -822,12 +822,13 @@ def test_serialized_capacity_agrees_and_rejects_malformed_rows() -> None:
         refactor_policy.parse_introduction_grants([{}] * 51)
 
 
+@pytest.mark.parametrize("failed", [False, True])
 def test_hosted_capture_is_compact_and_provenance_binds_actual_bytes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failed: bool
 ) -> None:
     payload = {
         "authentication": {"repository": "example/fixture"},
-        "observations": [{"value": "é"}] * 32000,
+        "observations": [{"value": "Ã©"}] * 32000,
     }
     environment = {"fixture": "synthetic transport control, not hosted evidence"}
     pretty = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode() + b"\n"
@@ -866,7 +867,7 @@ def test_hosted_capture_is_compact_and_provenance_binds_actual_bytes(
         "--output",
         str(output),
     ]
-    assert legacy.hosted_characterization.main(arguments) == 0
+    assert legacy.hosted_characterization.main(arguments) == int(failed)
     assert output.read_bytes() == compact
     assert json.loads(output.read_bytes()) == payload
     sidecar = json.loads(characterization._provenance_path(output).read_bytes())
