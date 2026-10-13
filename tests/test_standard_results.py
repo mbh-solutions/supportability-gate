@@ -4859,12 +4859,12 @@ def test_summary_names_truthful_s00_evidence_classes_without_owner_claim() -> No
     assert "review_evidence.behavior" in summary
 
 
-def test_summary_reuses_validated_owner_attestation_for_refactor_pass() -> None:
+def test_summary_does_not_infer_owner_attestation_from_refactor_pass() -> None:
     entry = _entry(_compose(_inputs()), 6)
 
     summary = reporting.standard_result_summary(entry)
 
-    assert "authenticated_owner_attestation: refactor-policy-result.json:authorization" in summary
+    assert "authenticated_owner_attestation: none asserted" in summary
 
 
 def test_stage_failure_summary_retains_original_stage_and_code() -> None:
@@ -5643,3 +5643,38 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
     assert "OBSERVER_RESULT" not in publisher
     assert "COLLECTOR_RESULT" not in publisher
     assert "REVIEW_REQUIRED" not in publisher
+
+
+@pytest.mark.parametrize("correction", [False, True])
+def test_work_evidence_composes_without_owner_attestation(correction: bool) -> None:
+    inputs = _correction_inputs() if correction else _inputs()
+    row = inputs[2]
+    for key in ("authorization", "authorization_comment_id", "predecessor"):
+        del row[key]
+    row["schema_version"] = refactor_policy.WORK_RESULT_SCHEMA
+    row["correction_evidence"] = None
+    row["result_classification"] = "PASS_NO_BEHAVIOR_CHANGE"
+    if correction:
+        facts = inputs[1]["correction"]
+        row["correction_evidence"] = {
+            "oracle_commit_sha": "c" * 40,
+            **{
+                key: facts[key]
+                for key in (
+                    "id",
+                    "oracle_manifest_blob_sha",
+                    "oracle_manifest_sha256",
+                    "behavior_delta_sha256",
+                )
+            },
+        }
+        row["result_classification"] = refactor_policy.CORRECTION_PASS
+    payload = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
+    assert all(row["result"] == "PASS" for row in payload["entries"])
+    standard_results.validate_payload(payload, IDENTITY)
+    if correction:
+        row["correction_evidence"]["behavior_delta_sha256"] = "0" * 64
+    else:
+        row["targets"] = []
+    rejected = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
+    assert any(row["result"] != "PASS" for row in rejected["entries"])

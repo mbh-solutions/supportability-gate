@@ -1301,7 +1301,7 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def legacy_main(argv: list[str] | None = None) -> int:
     """Verify one GitHub-hosted refactor increment without executing target code."""
     arguments = _parser().parse_args(argv)
     try:
@@ -1346,6 +1346,212 @@ def main(argv: list[str] | None = None) -> int:
         )
         _write_result(Path(arguments.output), result)
     except Exception as error:  # fail closed at hosted-job boundary
+        print(getattr(error, "code", "TECHNICAL_FAILURE"))
+        return 2
+    print(result["overall_result"])
+    return 1 if result["overall_result"] == "BLOCK" else 0
+
+
+WORK_RESULT_SCHEMA = "refactor-policy-result.v2"
+CORRECTION_PASS = "PASS_VERIFIED_BEHAVIOR_CORRECTION"
+
+
+def _work_scope(
+    repository: Path, base: str, head: str, records: list[git_changes.CommandRecord]
+) -> tuple[contract.Contract, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    from supportability_gate import refactor_targets
+
+    identity = git_changes.inspect_repository(repository, base, head, records)
+    policy = contract.parse_contract(
+        git_changes.read_regular_blob(repository, base, ".supportability.toml", records).content
+    )
+    candidate = contract.parse_contract(
+        git_changes.read_regular_blob(repository, head, ".supportability.toml", records).content
+    )
+    changes = git_changes.changed_paths(repository, base, head, records)
+    deleted = {
+        item.old_path
+        for item in changes
+        if item.status == "DELETED" and item.old_path is not None and item.new_path is None
+    }
+    if contract.is_profile_expansion(policy, candidate) or contract.is_profile_retirement(
+        policy, candidate, deleted
+    ):
+        policy = candidate
+    targets, unbounded = refactor_targets.derive(repository, identity, policy, changes, records)
+    return policy, _changed_scope(changes), targets, unbounded
+
+
+def _oracle_commit(
+    repository: Path,
+    base: str,
+    head: str,
+    blob: str,
+    records: list[git_changes.CommandRecord],
+) -> str | None:
+    """Find the first frozen declaration on the PR's complete ancestry path.
+
+    Searching earliest-first prevents editing an oracle and reverting it later
+    from resetting the immutability boundary. All later branch history is checked.
+    """
+    commits = (
+        git_changes.run_git(
+            repository,
+            ("rev-list", "--reverse", "--topo-order", "--ancestry-path", f"{base}..{head}"),
+            records,
+        )
+        .decode("ascii")
+        .split()
+    )
+    for commit in commits:
+        try:
+            manifest = git_changes.read_regular_blob(
+                repository, commit, characterization_evidence.MANIFEST_PATH, records
+            )
+        except git_changes.GitError as error:
+            if error.code != "MISSING_BLOB":
+                raise
+            continue
+        if manifest.object_sha == blob:
+            return commit
+    return None
+
+
+def correction_evidence(
+    repository: Path,
+    policy: contract.Contract,
+    base: str,
+    head: str,
+    value: dict[str, Any],
+    records: list[git_changes.CommandRecord],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    correction = value.get("correction")
+    if not isinstance(correction, dict):
+        return None, ["MALFORMED_CORRECTION"]
+    oracle = _oracle_commit(repository, base, head, correction["oracle_manifest_blob_sha"], records)
+    blocks = list(correction["verification_blocks"])
+    if oracle is None:
+        return None, [*blocks, "STALE_CORRECTION_ORACLE"]
+    blocks.extend(_correction_manifest_blocks(repository, oracle, head, correction, records))
+    file_blocks, paths = _correction_file_blocks(
+        repository, oracle, head, correction["oracle_files"], records
+    )
+    blocks.extend(file_blocks)
+    paths.add(characterization_evidence.MANIFEST_PATH)
+    blocks.extend(_correction_history_blocks(repository, oracle, head, paths, records))
+    blocks.extend(_correction_scope_blocks(repository, policy, base, oracle, paths, records))
+    return {
+        "oracle_commit_sha": oracle,
+        **{
+            name: correction[name]
+            for name in (
+                "id",
+                "oracle_manifest_blob_sha",
+                "oracle_manifest_sha256",
+                "behavior_delta_sha256",
+            )
+        },
+    }, sorted(set(blocks))
+
+
+def introduction_blocks(value: dict[str, Any], targets: tuple[str, ...]) -> list[str]:
+    """Retain real API birth, execution and sealed-oracle proof without an owner grant."""
+    facts = characterization_evidence._result_api_facts(
+        value.get("api_observations", []),
+        allow_module=value.get("schema_version")
+        in {
+            characterization_evidence.MODULE_RESULT_SCHEMA,
+            characterization_evidence.CORRECTION_RESULT_SCHEMA,
+        },
+    )
+    return [
+        f"MISSING_INTRODUCTION_PROOF:{key}"
+        for key, fact in facts.items()
+        if fact["base_absent"]
+        and (
+            not fact["admissible"]
+            or not fact["oracle_review_valid"]
+            or fact["api"] not in _target_identities(targets)
+        )
+    ]
+
+
+def verify_work(
+    repository: Path, event: dict[str, Any], value: dict[str, Any]
+) -> dict[str, object]:
+    """Measure the actual PR increment; never read or manufacture owner approval."""
+    records: list[git_changes.CommandRecord] = []
+    repository = git_changes.validate_repository(repository, records)
+    name, base, head, _ = _event_values(event)
+    policy, scope, targets, unbounded = _work_scope(repository, base, head, records)
+    applicable = bool(targets or unbounded)
+    blocks: list[str] = ["UNVERIFIABLE_BOUNDED_TARGET"] if unbounded else []
+    correction = None
+    if applicable:
+        if "correction" in value:
+            correction, correction_blocks = correction_evidence(
+                repository, policy, base, head, value, records
+            )
+            blocks.extend(correction_blocks)
+            reconciled = frozenset(value["correction"]["reconcilable_blocks"])
+            blocks.extend(sorted(set(value["policy_blocks"]) - reconciled))
+            blocks.extend(
+                _runnability_blocks(
+                    value,
+                    name,
+                    base,
+                    head,
+                    targets,
+                    unbounded,
+                    reconciled,
+                    frozenset(value["correction"]["scenarios"]),
+                )
+            )
+        else:
+            blocks.extend(
+                _characterization_blocks(
+                    value, name, base, head, targets, unbounded, repository, policy, None, records
+                )
+            )
+        blocks.extend(introduction_blocks(value, targets))
+    return {
+        "schema_version": WORK_RESULT_SCHEMA,
+        "repository": name,
+        "base_sha": base,
+        "head_sha": head,
+        "applicable": applicable,
+        "changed_paths": list(scope),
+        "targets": list(targets),
+        "unbounded_paths": list(unbounded),
+        "characterization_sha256": hashlib.sha256(
+            json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+        ).hexdigest(),
+        "correction_evidence": correction,
+        "other_standard_clauses_waived": False,
+        "policy_blocks": sorted(set(blocks)),
+        "overall_result": "BLOCK" if blocks else "PASS",
+        "result_classification": "BLOCK"
+        if blocks
+        else (CORRECTION_PASS if correction is not None else "PASS_NO_BEHAVIOR_CHANGE"),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Hosted entry point with the existing authenticated capture reader."""
+    args = _parser().parse_args(argv)
+    try:
+        if (
+            os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted"
+            or os.environ.get("GITHUB_EVENT_NAME") != "pull_request"
+        ):
+            raise RefactorPolicyError("UNAUTHENTICATED_HOSTED_CONTEXT")
+        event, _ = _read_json(Path(args.event), "MALFORMED_GITHUB_EVENT")
+        value, _ = _read_characterization_result(
+            Path(args.characterization_result), Path(args.repository), event
+        )
+        result = verify_work(Path(args.repository), event, value)
+        _write_result(Path(args.output), result)
+    except Exception as error:  # fail closed at hosted boundary
         print(getattr(error, "code", "TECHNICAL_FAILURE"))
         return 2
     print(result["overall_result"])
