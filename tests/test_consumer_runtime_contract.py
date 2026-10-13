@@ -196,3 +196,78 @@ console.log(JSON.stringify({schema_version:"1.0", scenario:"locked", behavior:{n
     )
     assert row["exit_code"] == 0
     assert row["behavior"] == {"number": True, "text": False, "denied": True, "network": False}
+
+
+@pytest.mark.skipif(
+    os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
+    reason="native target execution requires hosted isolation",
+)
+def test_hosted_typescript_import_only_does_not_prove_body_execution(tmp_path: Path) -> None:
+    repo, _, _, _ = _repository(tmp_path, language="typescript")
+    _write(
+        repo / "package.json",
+        '{"name":"coverage-fixture","version":"1.0.0","dependencies":{"typescript":"5.9.3"}}',
+    )
+    _write(
+        repo / "src/sample.ts",
+        "/** Add one. */\nexport function calculate(value: number): number {\n  return 1 + value;\n}\n",
+    )
+    _write(
+        repo / "tests/sample.test.mjs",
+        """import {readFileSync} from "node:fs";
+import {registerHooks} from "node:module";
+import {fileURLToPath} from "node:url";
+import test from "node:test";
+import assert from "node:assert/strict";
+import ts from "typescript";
+registerHooks({load(url, context, nextLoad) {
+  if (!url.endsWith(".ts")) return nextLoad(url, context);
+  const fileName = fileURLToPath(url);
+  return {format:"module",shortCircuit:true,source:ts.transpileModule(readFileSync(fileName,"utf8"),{fileName,compilerOptions:{inlineSourceMap:true,inlineSources:true,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText};
+}});
+test("import alone", async () => { const {calculate} = await import("../src/sample.ts"); assert.equal(typeof calculate,"function"); });
+""",
+    )
+    subprocess.run(
+        ["npm", "install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        timeout=120,
+    )
+    head = _commit(repo, "coverage fixture")
+    dependencies = tmp_path / "trusted" / "characterization-dependencies"
+    dependencies.mkdir(parents=True)
+    hosted_characterization._install_node_dependencies(
+        repo, head, dependencies.parent / "characterization-node", []
+    )
+    (repo / "node_modules").mkdir(exist_ok=True)
+    hosted_characterization._prepare_container()
+    driver = b"""import {spawnSync} from "node:child_process";
+import {readFileSync} from "node:fs";
+const behavior = {};
+for (const mode of ["plain","maps"]) {
+ const flags = mode === "maps" ? ["--enable-source-maps"] : [];
+ const result = spawnSync(process.execPath,[...flags,"--test","--experimental-test-coverage","--test-coverage-include=src/sample.ts","--test-reporter=lcov","--test-reporter-destination=/work/coverage.lcov","/target/tests/sample.test.mjs"],{cwd:"/target",encoding:"utf8"});
+ behavior[mode] = {code:result.status, stderr:result.stderr, lcov:readFileSync("/work/coverage.lcov","utf8")};
+}
+console.log(JSON.stringify({schema_version:"1.0",scenario:"coverage",behavior}));
+"""
+    row = hosted_characterization._run_driver(
+        repo,
+        repo,
+        characterization.Scenario("coverage", "regression", ("src/sample.ts",)),
+        "typescript",
+        driver,
+        dependencies,
+    )
+    assert row["exit_code"] == 0, row
+    behavior = row["behavior"]
+    assert behavior["maps"]["code"] == 0, behavior
+    observed, _ = quality_profile.typescript_lcov_observation(
+        behavior["maps"]["lcov"],
+        ("src/sample.ts",),
+        Path("/target"),
+        ("src/sample.ts::function:calculate:2-4",),
+    )
+    assert not observed, behavior

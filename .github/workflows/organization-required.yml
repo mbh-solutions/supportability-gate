@@ -760,7 +760,7 @@ jobs:
           DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
           GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PYTHONPATH: ${{ github.workspace }}/gate/src
+          PYTHONPATH: ${{ github.workspace }}/gate/src:${{ github.workspace }}/gate/tests
         run: |
           set +e
           overall=0
@@ -795,9 +795,15 @@ jobs:
               --run-attempt "$GITHUB_RUN_ATTEMPT" \
               --standard "$standard" \
               --result-exit-code "$result_status" \
+              --evidence-directory "$RUNNER_TEMP/evidence" \
+              --base-sha "$BASE_SHA" \
+              --workflow-sha "$GITHUB_WORKFLOW_SHA" \
+              --repository-id "$GITHUB_REPOSITORY_ID" \
               --summary "$result"
             publish_status=$?
-            if [ "$publish_status" -ne 0 ]; then
+            if [ "$publish_status" -eq 3 ]; then
+              printf '%s\n' 'Awaiting owner authorization; required check remains pending.'
+            elif [ "$publish_status" -ne 0 ]; then
               overall=2
             elif [ "$result_status" -ne 0 ] && [ "$overall" -eq 0 ]; then
               overall=1

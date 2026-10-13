@@ -15,6 +15,13 @@ sequenceDiagram
     E-->>G: Exact standard-results.v3 artifact
     G->>G: Enforce all eight rows on one runner
     G-->>R: Eight independently named lane results
+    opt Only owner authorization is missing
+        G-->>R: Required authorization checks remain pending
+        A->>E: Authenticated exact-change authorization comment
+        E->>E: Reuse immutable captures and reevaluate authorization
+        E-->>G: Separately retained authorization decision
+        G-->>R: Update original checks after freshness readback
+    end
     R-->>A: Permit merge when required checks and threads pass
 ```
 
@@ -39,6 +46,9 @@ sequenceDiagram
 7. **Inspect each required lane.** One trusted publisher enforces every row from the authoritative
    artifact and creates the eight independently named required checks. A blocking row makes the
    publisher job fail after all eight results are posted, without allocating eight more runners.
+   If the only unresolved evidence is a missing owner authorization, the affected required checks
+   instead remain **Awaiting owner authorization**. The collection workflow completes; merging
+   remains blocked by those pending checks. The canonical evidence still says `BLOCK`.
 8. **Merge normally.** All required checks must bind to the final head and all actual inline
    conversations must satisfy GitHub's native resolution rule. Source-repository protections apply
    additionally when the change is to the Gate itself.
@@ -48,6 +58,33 @@ sequenceDiagram
 A new head creates a new evidence identity. Refresh source-bound declarations and any required
 owner authorization; obtain fresh captures and checks. Earlier green results, archived bundles,
 or local runs cannot qualify the new head.
+
+## Authorization continuation
+
+Install the pinned authorization event receiver described in
+[Repository Configuration](Repository-Configuration.md#authorization-event-receiver) on the
+repository's default branch. Organization ruleset workflows do not receive comment events.
+The receiver handles authorization comments and evidence-workflow completion, including a comment
+that arrives while capture is finishing. It does not post authorization on the owner's behalf.
+
+The shared continuation authenticates the original source workflow ID, repository, run, attempt,
+artifact digest, Gate revision, and exact current base/head. It restores and recomposes the original
+evidence before asking the existing refactor policy to evaluate live GitHub comments. Consumer code
+is never imported or executed. No dependency installation for the consumer, capture, or test rerun
+is necessary for an authorization-only decision.
+
+The read-only evaluator retains a new bundle with the original capture identity and a separate
+`authorization-resume.v1` record identifying the continuation run and owner comment. A different job,
+with no consumer checkout, updates the original GitHub Actions check runs. It reads back the current
+comparison, latest capture, and authorization comments before publication. Repeated events update
+the same checks; they do not create competing green results.
+
+Invalid or duplicate current-head grants, wrong owners, changed oracle bytes, stale comparisons,
+missing artifacts, and actual behavioral or quality failures remain blocking. Changing or deleting
+authorization triggers reevaluation. GitHub event delivery is asynchronous; a receiver failure
+leaves the existing required checks unchanged and reports a continuation error. Expired evidence
+requires fresh captures. A receiver pinned to a different Gate revision rejects the evidence;
+update it together with the qualified organization workflow pin.
 
 ## Preservation and correction lanes
 

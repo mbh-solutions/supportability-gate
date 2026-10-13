@@ -2,37 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Provision locked Node characterization prerequisites outside isolated execution and require quality runtime coverage only for head responsibilities."
-proof = "Focused revision-mapping regressions, dependency integrity and configuration controls, hosted read-only and network denial probe, and complete source validation."
+intended_behavior = "Separate missing owner authorization from technical failures and resume exact-change policy evaluation over authenticated immutable captures."
+proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
 captured_behavior = "Existing capture protocols and goldens remain unchanged. Deleted base responsibilities stay in review and authorization targets while surviving bodies retain runtime obligations."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
-before = "Characterization lacked Node prerequisites, and the quality collector reused combined base/head review targets for head-only runtime coverage."
-after = "The hosted supervisor owns locked provisioning; head runtime target selection is distinct from unchanged review and authorization derivation."
+before = "The publisher completed authorization-dependent checks as failures and comments did not resume evaluation."
+after = "The publisher distinguishes an authorization wait; a read-only supervisor reuses source-bound evidence, while a separate publisher updates original checks after freshness validation."
 boundaries = []
 
 [architecture]
-dependency_direction = "Production package dependencies remain unchanged; hosted characterization reuses the trusted quality collector's installed dependency authentication."
-reviewed_paths = ["tests/hosted_characterization.py", "tests/hosted_quality_profile.py"]
+dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
+reviewed_paths = ["tests/hosted_authorization_evidence.py", "tests/hosted_authorization_resume.py", "tests/hosted_check_publisher.py"]
 
 [responsibility_boundary]
-path = "tests/hosted_characterization.py"
-owns = "Trusted hosted capture orchestration and fixed prerequisite provisioning."
-does_not_own = "Consumer behavior, policy thresholds, owner authentication or merge enforcement."
+path = "tests/hosted_authorization_resume.py"
+owns = "Authenticated event-driven continuation of owner authorization over retained evidence."
+does_not_own = "Consumer execution, policy definitions, fabricated owner authority or bypassing required checks."
 
 [incremental_refactor]
-target = "Correct shared consumer runtime preparation and revision binding."
-completed_step = "Add locked Node preparation and head-bound quality targets without changing review targets or isolation controls."
+target = "Remove the owner authorization failure-and-rerun cycle while preserving exact-change enforcement."
+completed_step = "Add an explicit pending presentation and a pinned reusable continuation with a minimal event receiver."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Prerequisite provisioning and head runtime target selection have explicit responsibility names."
-cohesion = "Changes remain in their existing hosted capture and quality collectors."
-intended_behavior = "Legitimate locked consumers can execute inside isolation; missing body coverage and failed scenarios remain blocking."
-reviewability = "Two hosted collectors, direct regression tests and affected product documentation; immutable policy and production evaluator unchanged."
+naming = "Evidence eligibility, authorization evaluation and check publication have separate named responsibilities."
+cohesion = "New hosted modules own only authorization continuation and its evidence presentation."
+intended_behavior = "Missing authorization waits; valid owner evidence resumes the original checks; technical failures, stale identities and invalid grants remain blocking."
+reviewability = "Pinned shared receiver, isolated privilege boundaries, focused hostile-input regressions and source validation; immutable Standard and policy evaluator remain unchanged."

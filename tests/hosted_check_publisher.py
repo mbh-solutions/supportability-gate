@@ -9,6 +9,8 @@ import re
 import urllib.request
 from pathlib import Path
 
+import hosted_authorization_evidence
+
 from supportability_gate import standard_results
 
 _FULL_SHA = re.compile(r"[0-9a-f]{40}")
@@ -25,6 +27,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--standard", required=True, type=int, choices=range(1, 9))
     parser.add_argument("--result-exit-code", required=True, type=int, choices=(0, 1, 2))
     parser.add_argument("--summary", required=True)
+    parser.add_argument("--evidence-directory", type=Path)
+    parser.add_argument("--base-sha")
+    parser.add_argument("--workflow-sha")
+    parser.add_argument("--repository-id", type=int)
     return parser
 
 
@@ -39,7 +45,7 @@ def _payload(arguments: argparse.Namespace) -> dict[str, object]:
     if not summary:
         raise ValueError("empty result summary")
     context = standard_results.CHECK_CONTEXTS[arguments.standard - 1]
-    return {
+    payload = {
         "name": context,
         "head_sha": arguments.head_sha,
         "status": "completed",
@@ -55,6 +61,31 @@ def _payload(arguments: argparse.Namespace) -> dict[str, object]:
             "summary": summary[:_SUMMARY_LIMIT],
         },
     }
+    if arguments.evidence_directory is not None and arguments.result_exit_code == 1:
+        expected = standard_results.RunIdentity(
+            arguments.repository,
+            arguments.repository_id,
+            arguments.base_sha,
+            arguments.head_sha,
+            arguments.workflow_sha,
+            arguments.run_id,
+            arguments.run_attempt,
+        )
+        if arguments.standard in hosted_authorization_evidence.awaiting_standards(
+            arguments.evidence_directory, expected
+        ):
+            payload["status"] = "in_progress"
+            del payload["conclusion"]
+            payload["output"] = {
+                "title": "Awaiting owner authorization",
+                "summary": (
+                    "Evidence collection is complete. Merge remains blocked until the owner "
+                    "authorizes this exact base and head. The authorization receiver resumes "
+                    "the decision using the retained evidence; application tests are not rerun.\n\n"
+                    + summary[: _SUMMARY_LIMIT - 500]
+                ),
+            }
+    return payload
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -63,9 +94,10 @@ def main(argv: list[str] | None = None) -> int:
         token = os.environ["GITHUB_TOKEN"]
         if not token:
             raise ValueError("missing token")
+        payload = _payload(arguments)
         request = urllib.request.Request(
             f"https://api.github.com/repos/{arguments.repository}/check-runs",
-            data=json.dumps(_payload(arguments), separators=(",", ":")).encode(),
+            data=json.dumps(payload, separators=(",", ":")).encode(),
             headers={
                 "Accept": "application/vnd.github+json",
                 "Authorization": f"Bearer {token}",
@@ -79,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise RuntimeError("unexpected GitHub response")
             result = json.load(response)
         print(json.dumps({"check_run_id": result["id"], "standard": arguments.standard}))
-        return 0
+        return 3 if payload["status"] == "in_progress" else 0
     except Exception as error:
         print(f"CHECK_RUN_PUBLICATION_FAILED:{type(error).__name__}")
         return 2
