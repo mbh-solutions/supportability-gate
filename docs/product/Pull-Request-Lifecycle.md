@@ -53,6 +53,11 @@ sequenceDiagram
    conversations must satisfy GitHub's native resolution rule. Source-repository protections apply
    additionally when the change is to the Gate itself.
 
+A verified schema-5 correction can complete evidence verification successfully while its behavior
+change still awaits owner authorization. The composer validates that process outcome separately
+from approval: it retains the declared behavior-change blocks until the existing owner policy
+authenticates a matching grant. Verification errors or unrelated behavior failures remain failures.
+
 ## What a new push changes
 
 A new head creates a new evidence identity. Refresh source-bound declarations and any required
@@ -67,11 +72,16 @@ repository's default branch. Organization ruleset workflows do not receive comme
 The receiver handles authorization comments and evidence-workflow completion, including a comment
 that arrives while capture is finishing. It does not post authorization on the owner's behalf.
 
-The shared continuation authenticates the original source workflow ID, repository, run, attempt,
+The shared continuation authenticates the native required-workflow identity, repository, run, attempt,
 artifact digest, Gate revision, and exact current base/head. It restores and recomposes the original
 evidence before asking the existing refactor policy to evaluate live GitHub comments. Consumer code
 is never imported or executed. No dependency installation for the consumer, capture, or test rerun
 is necessary for an authorization-only decision.
+
+The receiver identifies GitHub-native required-workflow runs using their consumer-specific metadata,
+not a source repository workflow ID or display name. It verifies the sole matching effective
+organization workflow rule, source repository, path and qualified revision before accepting a run.
+An ordinary consumer workflow with the same name or path cannot supply authorization evidence.
 
 The read-only evaluator retains a new bundle with the original capture identity and a separate
 `authorization-resume.v1` record identifying the continuation run and owner comment. A different job,

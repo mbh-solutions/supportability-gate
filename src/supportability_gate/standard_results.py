@@ -19,6 +19,7 @@ from supportability_gate import (
     review_evidence,
     standard_block_ownership,
 )
+from supportability_gate.characterization import verification_outcome
 
 CHECK_CONTEXTS = (
     "Supportability 1 - Cyclomatic Complexity",
@@ -2628,8 +2629,9 @@ def _s02_add_characterization(
         except StandardResultsError:
             reconciled = set()
     retained = [block for block in blocks if block not in reconciled]
-    expected = "BLOCK" if retained else "PASS"
-    if not _s02_outcome_matches(outcomes["characterization"], expected):
+    assert isinstance(characterization, dict)  # validated by _s02_characterization
+    expected = verification_outcome(characterization)
+    if outcomes["characterization"] != expected:
         _s02_source_failure(state, "characterization", "MALFORMED_CHARACTERIZATION_RESULT")
         return False
     for block in retained:

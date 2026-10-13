@@ -3983,6 +3983,20 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def verification_outcome(result: dict[str, Any]) -> str:
+    """Return the verifier process outcome for validated evidence, not owner approval."""
+    correction = result.get("correction")
+    correction_ready = bool(
+        isinstance(correction, dict)
+        and not correction["verification_blocks"]
+        and set(cast(list[str], result.get("policy_blocks", [])))
+        <= set(cast(list[str], correction["reconcilable_blocks"]))
+    )
+    return (
+        "failure" if result.get("overall_result") == "BLOCK" and not correction_ready else "success"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Verify characterization evidence without executing target code."""
     arguments = _parser().parse_args(argv)
@@ -4011,14 +4025,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     overall = str(result.get("overall_result", "PASS"))
     print(overall)
-    correction = result.get("correction")
-    correction_ready = bool(
-        isinstance(correction, dict)
-        and not correction["verification_blocks"]
-        and set(cast(list[str], result.get("policy_blocks", [])))
-        <= set(cast(list[str], correction["reconcilable_blocks"]))
-    )
-    return 1 if overall == "BLOCK" and not correction_ready else 0
+    return 1 if verification_outcome(result) == "failure" else 0
 
 
 if __name__ == "__main__":
