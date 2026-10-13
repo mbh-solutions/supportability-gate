@@ -2,21 +2,21 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Separate missing owner authorization from technical failures and resume exact-change policy evaluation over authenticated immutable captures."
+intended_behavior = "Resume exact-change owner authorization over immutable captures and correct TypeScript runtime coverage attribution with the fixed source-map option."
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
-captured_behavior = "Existing capture protocols and goldens remain unchanged. Deleted base responsibilities stay in review and authorization targets while surviving bodies retain runtime obligations."
+captured_behavior = "Existing characterization protocols and goldens remain unchanged. Hosted import-only and real-call controls distinguish original TypeScript body execution from transformed-file line artifacts."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
 before = "The publisher completed authorization-dependent checks as failures and comments did not resume evaluation."
 after = "The publisher distinguishes an authorization wait; a read-only supervisor reuses source-bound evidence, while a separate publisher updates original checks after freshness validation."
-boundaries = []
+boundaries = [{ path = "src/supportability_gate/quality_profile.py", kind = "module", symbol = "src/supportability_gate/quality_profile.py", before = "The fixed Node coverage command omitted source-map interpretation for transformed TypeScript.", after = "The fixed command enables source maps so runtime observations refer to original TypeScript body lines." }]
 
 [architecture]
 dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
-reviewed_paths = ["tests/hosted_authorization_evidence.py", "tests/hosted_authorization_resume.py", "tests/hosted_check_publisher.py"]
+reviewed_paths = ["tests/hosted_authorization_evidence.py", "tests/hosted_authorization_resume.py", "tests/hosted_check_publisher.py", "src/supportability_gate/quality_profile.py"]
 
 [responsibility_boundary]
 path = "tests/hosted_authorization_resume.py"
@@ -33,6 +33,6 @@ remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
 naming = "Evidence eligibility, authorization evaluation and check publication have separate named responsibilities."
-cohesion = "New hosted modules own only authorization continuation and its evidence presentation."
+cohesion = "New hosted modules own authorization continuation; the existing fixed quality profile owns the source-map execution option."
 intended_behavior = "Missing authorization waits; valid owner evidence resumes the original checks; technical failures, stale identities and invalid grants remain blocking."
-reviewability = "Pinned shared receiver, isolated privilege boundaries, focused hostile-input regressions and source validation; immutable Standard and policy evaluator remain unchanged."
+reviewability = "Pinned shared receiver, isolated privilege boundaries, focused hostile-input regressions and source validation; immutable Standard and owner policy remain unchanged; the fixed Node command corrects observed-line attribution."

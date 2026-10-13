@@ -272,6 +272,7 @@ _TYPESCRIPT_COMMANDS = (
         "typescript.test.v1",
         (
             "$NODE",
+            "--enable-source-maps",
             "--test",
             "--experimental-test-coverage",
             "$COVERAGE_FILES",

@@ -60,9 +60,10 @@ def _waiting_rows(
     payload: dict[str, Any], characterization: dict[str, Any], refactor: dict[str, Any]
 ) -> frozenset[int]:
     blocks = set(refactor["policy_blocks"])
-    if refactor["authorization"] is not None or "MISSING_OWNER_AUTHORIZATION" not in blocks:
+    absent = {"MISSING_OWNER_AUTHORIZATION", "STALE_OWNER_AUTHORIZATION"}
+    if refactor["authorization"] is not None or not blocks.intersection(absent):
         return frozenset()
-    if blocks - {"MISSING_OWNER_AUTHORIZATION", "UNAUTHORIZED_CORRECTION"}:
+    if blocks - absent - {"UNAUTHORIZED_CORRECTION"}:
         return frozenset()
     behavior_blocks = set(characterization["policy_blocks"])
     correction = characterization.get("correction")

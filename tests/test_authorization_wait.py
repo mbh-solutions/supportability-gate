@@ -13,7 +13,11 @@ from supportability_gate import qualification_bundle
 
 
 def _waiting_evidence(
-    directory: Path, extra_block: str | None = None, *, correction: bool = False
+    directory: Path,
+    extra_block: str | None = None,
+    *,
+    correction: bool = False,
+    missing_code: str = "MISSING_OWNER_AUTHORIZATION",
 ) -> None:
     inputs = fixtures._correction_inputs() if correction else fixtures._inputs()
     refactor = inputs[2]
@@ -21,7 +25,7 @@ def _waiting_evidence(
         authorization=None,
         authorization_comment_id=None,
         overall_result="BLOCK",
-        policy_blocks=["MISSING_OWNER_AUTHORIZATION"],
+        policy_blocks=[missing_code],
     )
     if extra_block:
         refactor["policy_blocks"].append(extra_block)
@@ -51,6 +55,17 @@ def test_other_policy_failure_is_not_hidden_by_wait(tmp_path: Path) -> None:
     directory = tmp_path / "evidence"
     _waiting_evidence(directory, "BROAD_AUTHORIZATION_REQUIRED")
     assert not hosted.awaiting_standards(directory, fixtures.IDENTITY)
+
+
+def test_earlier_head_grant_waits_for_current_authorization_without_becoming_authority(
+    tmp_path: Path,
+) -> None:
+    directory = tmp_path / "evidence"
+    _waiting_evidence(directory, missing_code="STALE_OWNER_AUTHORIZATION")
+    assert hosted.awaiting_standards(directory, fixtures.IDENTITY) == frozenset({6})
+    refactor = json.loads((directory / "refactor-policy-result.json").read_bytes())
+    assert refactor["authorization"] is None
+    assert refactor["overall_result"] == "BLOCK"
 
 
 def test_observed_correction_waits_without_reconciling_unauthorized_behavior(

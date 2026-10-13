@@ -39,6 +39,10 @@ use their head line ranges, additions and renames require head responsibilities,
 high-risk bodies remain required. Deleted base bodies are retained for change review,
 characterization, and exact authorization, but are not treated as executable head code.
 A successful test command alone does not prove coverage of these responsibilities.
+The fixed Node test command enables source maps so transformed TypeScript coverage is attributed
+to original source lines. Merely importing a function is insufficient to observe its body.
+The collector retains bounded, sanitized LCOV and required-target diagnostics for investigation;
+the authenticated runtime receipt remains the enforcement input.
 
 ## Source upgrades and rollback
 

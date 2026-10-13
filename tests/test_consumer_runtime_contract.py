@@ -227,7 +227,7 @@ registerHooks({load(url, context, nextLoad) {
   const fileName = fileURLToPath(url);
   return {format:"module",shortCircuit:true,source:ts.transpileModule(readFileSync(fileName,"utf8"),{fileName,compilerOptions:{inlineSourceMap:true,inlineSources:true,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText};
 }});
-test("import alone", async () => { const {calculate} = await import("../src/sample.ts"); assert.equal(typeof calculate,"function"); });
+test("runtime probe", async () => { const {calculate} = await import("../src/sample.ts"); assert.equal(typeof calculate,"function"); if (process.env.PROBE_CALL === "1") assert.equal(calculate(2),3); });
 """,
     )
     subprocess.run(
@@ -248,9 +248,9 @@ test("import alone", async () => { const {calculate} = await import("../src/samp
     driver = b"""import {spawnSync} from "node:child_process";
 import {readFileSync} from "node:fs";
 const behavior = {};
-for (const mode of ["plain","maps"]) {
- const flags = mode === "maps" ? ["--enable-source-maps"] : [];
- const result = spawnSync(process.execPath,[...flags,"--test","--experimental-test-coverage","--test-coverage-include=src/sample.ts","--test-reporter=lcov","--test-reporter-destination=/work/coverage.lcov","/target/tests/sample.test.mjs"],{cwd:"/target",encoding:"utf8"});
+for (const mode of ["plain","maps","called"]) {
+ const flags = mode === "plain" ? [] : ["--enable-source-maps"];
+ const result = spawnSync(process.execPath,[...flags,"--test","--experimental-test-coverage","--test-coverage-include=src/sample.ts","--test-reporter=lcov","--test-reporter-destination=/work/coverage.lcov","/target/tests/sample.test.mjs"],{cwd:"/target",encoding:"utf8",env:{...process.env,PROBE_CALL:mode === "called" ? "1" : "0"}});
  behavior[mode] = {code:result.status, stderr:result.stderr, lcov:readFileSync("/work/coverage.lcov","utf8")};
 }
 console.log(JSON.stringify({schema_version:"1.0",scenario:"coverage",behavior}));
@@ -275,3 +275,15 @@ console.log(JSON.stringify({schema_version:"1.0",scenario:"coverage",behavior}))
         ("src/sample.ts::function:calculate:2-4",),
     )
     assert not observed, behavior
+    called, _ = quality_profile.typescript_lcov_observation(
+        behavior["called"]["lcov"],
+        ("src/sample.ts",),
+        Path("/target"),
+        ("src/sample.ts::function:calculate:2-4",),
+    )
+    assert called == ("src/sample.ts",), behavior
+
+
+def test_fixed_typescript_test_command_enables_original_source_coverage() -> None:
+    commands = dict(quality_profile.command_templates("typescript"))
+    assert "--enable-source-maps" in commands["typescript.test.v1"]
