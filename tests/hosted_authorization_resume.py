@@ -17,6 +17,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import hosted_authorization_evidence as evidence
 
@@ -111,8 +112,32 @@ def _pull_number(event: dict[str, Any]) -> int | None:
     return None
 
 
+def _require_deployed_source(repository: str, pull: dict[str, Any]) -> None:
+    """Bind native required-workflow runs to the sole effective qualified source."""
+    source = _api(f"repos/{SOURCE_REPOSITORY}")
+    branch = quote(pull["base"]["ref"], safe="")
+    rules = _api(f"repos/{repository}/rules/branches/{branch}")
+    sources = [
+        (rule.get("ruleset_source_type"), rule.get("ruleset_source"), workflow)
+        for rule in rules
+        if rule["type"] == "workflows"
+        for workflow in rule["parameters"]["workflows"]
+        if workflow["path"] == SOURCE_PATH
+    ]
+    if len(sources) != 1 or sources[0] != (
+        "Organization",
+        SOURCE_REPOSITORY.split("/", 1)[0],
+        {
+            "repository_id": source["id"],
+            "path": SOURCE_PATH,
+            "sha": os.environ["RESUME_WORKFLOW_SHA"],
+        },
+    ):
+        raise ValueError("UNAUTHENTICATED_REQUIRED_WORKFLOW_SOURCE")
+
+
 def _latest_run(repository: str, pull: dict[str, Any]) -> dict[str, Any] | None:
-    workflow = _api(f"repos/{SOURCE_REPOSITORY}/actions/workflows/organization-required.yml")
+    _require_deployed_source(repository, pull)
     runs = _pages(
         f"repos/{repository}/actions/runs?event=pull_request&head_sha={pull['head']['sha']}",
         "workflow_runs",
@@ -120,7 +145,8 @@ def _latest_run(repository: str, pull: dict[str, Any]) -> dict[str, Any] | None:
     matches = [
         run
         for run in runs
-        if run["workflow_id"] == workflow["id"]
+        if run["workflow_url"]
+        == f"https://api.github.com/repos/{repository}/actions/required_workflows/{run['workflow_id']}"
         and run["path"] == SOURCE_PATH
         and run["repository"]["full_name"] == repository
         and any(item["number"] == pull["number"] for item in run["pull_requests"])
