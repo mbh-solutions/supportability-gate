@@ -263,6 +263,14 @@ def test_schema5_module_facts_retain_exact_introduction_authorization(tmp_path: 
     result["schema_version"] = gate.CORRECTION_RESULT_SCHEMA
     grant = _grant(result)
     targets = tuple(result["refactor_runnability"]["targets"])
+    repository, base, head = fixture[:3]
+    measured = refactor_policy.verify_work(repository, birth.owner._event(base, head, None), result)
+    assert measured["overall_result"] == "PASS", measured["policy_blocks"]
+    assert "authorization" not in measured
+    assert refactor_policy.introduction_blocks(result, targets) == []
+    assert refactor_policy.introduction_blocks(result, ()) == [
+        "MISSING_INTRODUCTION_PROOF:introduced"
+    ]
 
     assert (
         refactor_policy.introduction_authorization_blocks(
