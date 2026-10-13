@@ -205,6 +205,25 @@ For scenario `pricing`, commit `tests/characterization/pricing.characterization.
 In a mixed profile, each scenario's covered language must be unambiguous; use separate Python
 and TypeScript scenarios rather than one scenario declaring both languages.
 
+For TypeScript and mixed profiles, commit `package.json` and an npm lockfile version 2 or 3
+at the repository root. Characterization provisions the exact head manifests once per capture
+with `npm ci --ignore-scripts --no-audit --no-fund --include=dev --include=optional`. Both base
+and head source run against that same head-defined test environment, including development
+dependencies needed by the head's drivers. This is source compatibility under a common test
+environment, not proof of two historical deployment environments.
+
+Provisioning accepts integrity-bound packages from `https://registry.npmjs.org/`; local links,
+workspaces, Git fetches, other registries, missing locks, and unverifiable installed packages
+fail closed. Repository npm configuration and lifecycle scripts are not executed. Installed
+package content hashes and lock identities are retained in capture provenance. Drivers resolve
+packages from the target or definition root; both receive the same read-only `node_modules`.
+Drivers must not install dependencies, fetch packages, or write into either source tree during
+capture. Execution remains network-disabled and writable output belongs under `/work`.
+
+Prerequisite installation failure is a technical failure, not a behavior mismatch. Successful
+collection jobs only establish that evidence was retained; the published Gate 5 result remains
+authoritative for scenario success, deterministic replay, coverage, and golden compatibility.
+
 Drivers exercise the real responsibility and emit a deterministic JSON object with exactly
 `schema_version`, `scenario`, and `behavior`. The driver protocol uses schema `1.0`, and `scenario`
 must match its manifest ID. The `pricing-total` selector chooses that field inside `behavior`.

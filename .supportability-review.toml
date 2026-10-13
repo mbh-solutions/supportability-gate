@@ -2,37 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Preserve authenticated content correction approval through full eight-result composition by requiring every changed production asset path."
-proof = "Complete composer regression with complexity, characterization, approval and quality evidence; exact hosted consumer artifact replay and retained forgery controls."
+intended_behavior = "Provision locked Node characterization prerequisites outside isolated execution and require quality runtime coverage only for head responsibilities."
+proof = "Focused revision-mapping regressions, dependency integrity and configuration controls, hosted read-only and network denial probe, and complete source validation."
 
 [characterization]
-captured_behavior = "Frozen full-composer inputs expose asset-only approval loss before repair and eight passing results after repair; missing targets, stale approval and wrong scope stay blocked."
-proof = "Oracle-first asset-results scenario and its four explicit input cases; existing scenario goldens remain unchanged."
+captured_behavior = "Existing capture protocols and goldens remain unchanged. Deleted base responsibilities stay in review and authorization targets while surviving bodies retain runtime obligations."
+proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
-before = "Final result binding inferred applicability only from complexity-assessed source changes and dropped valid asset correction approval."
-after = "Final result binding also requires each changed production asset side, while source complexity and exact authorization retain their existing owners."
-boundaries = [{ path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor_change_paths", before = "Only source complexity paths determined approval applicability.", after = "Require source change groups and each production asset path before reconciling an exact approval." }]
+before = "Characterization lacked Node prerequisites, and the quality collector reused combined base/head review targets for head-only runtime coverage."
+after = "The hosted supervisor owns locked provisioning; head runtime target selection is distinct from unchanged review and authorization derivation."
+boundaries = []
 
 [architecture]
-dependency_direction = "Existing dependency direction is preserved; one expression changes within the results validator and no production module is added."
-reviewed_paths = ["src/supportability_gate/standard_results.py"]
+dependency_direction = "Production package dependencies remain unchanged; hosted characterization reuses the trusted quality collector's installed dependency authentication."
+reviewed_paths = ["tests/hosted_characterization.py", "tests/hosted_quality_profile.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_results.py"
-owns = "Deterministic final-result composition and cross-binding of authenticated source evidence."
-does_not_own = "Target execution, content truth, owner authentication, asset format validation or deployment."
+path = "tests/hosted_characterization.py"
+owns = "Trusted hosted capture orchestration and fixed prerequisite provisioning."
+does_not_own = "Consumer behavior, policy thresholds, owner authentication or merge enforcement."
 
 [incremental_refactor]
-target = "Repair asset approval applicability in final result reconciliation."
-completed_step = "Include each changed production asset path in required binding while retaining existing source groups and rejection controls."
+target = "Correct shared consumer runtime preparation and revision binding."
+completed_step = "Add locked Node preparation and head-bound quality targets without changing review targets or isolation controls."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Existing path-binding responsibility is retained without new abstractions."
-cohesion = "Only final result binding changes; target derivation and owner authentication remain independent."
-intended_behavior = "Valid content approval reaches final results; incomplete targets, stale approval, wrong scope and nonregular paths remain blocking."
-reviewability = "One production expression, a frozen full composer regression and focused source-to-asset, rename and mixed-change controls."
+naming = "Prerequisite provisioning and head runtime target selection have explicit responsibility names."
+cohesion = "Changes remain in their existing hosted capture and quality collectors."
+intended_behavior = "Legitimate locked consumers can execute inside isolation; missing body coverage and failed scenarios remain blocking."
+reviewability = "Two hosted collectors, direct regression tests and affected product documentation; immutable policy and production evaluator unchanged."

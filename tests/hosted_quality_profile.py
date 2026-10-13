@@ -33,7 +33,6 @@ from supportability_gate import (
     git_changes,
     quality_profile,
     quality_runner,
-    refactor_targets,
 )
 
 MAX_DIAGNOSTIC_BYTES = 8192
@@ -1363,11 +1362,7 @@ def _runtime_test_targets(
     source_files: tuple[str, ...],
     records: list[git_changes.CommandRecord],
 ) -> tuple[str, ...]:
-    changed, unbounded = refactor_targets.derive(repository, identity, policy, changes, records)
-    if any(path in source_files for path in unbounded):
-        raise quality_profile.QualityProfileError(
-            "UNVERIFIABLE_TEST_OBLIGATIONS", ",".join(unbounded)
-        )
+    changed = _head_runtime_targets(repository, identity, changes, source_files, records)
     high_risk = _high_risk_targets(
         repository, identity.head_sha, policy.high_risk_paths, source_files, records
     )
@@ -1380,6 +1375,64 @@ def _runtime_test_targets(
             }
         )
     )
+
+
+def _head_runtime_targets(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    changes: tuple[git_changes.ChangedPath, ...],
+    source_files: tuple[str, ...],
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    """Bind runtime obligations to surviving head code, never deleted base spans."""
+    targets: list[str] = []
+    for change in changes:
+        path = change.new_path
+        if path is None or path not in source_files:
+            continue
+        head = git_changes.read_regular_blob(repository, identity.head_sha, path, records).content
+        try:
+            spans = _head_change_spans(repository, identity, change, path, head, records)
+        except function_changes.PythonSourceError as error:
+            raise quality_profile.QualityProfileError(
+                "UNVERIFIABLE_TEST_OBLIGATIONS", path
+            ) from error
+        targets.extend(_span_target(path, span) for span in spans)
+    return tuple(targets)
+
+
+def _head_change_spans(
+    repository: Path,
+    identity: git_changes.RepositoryIdentity,
+    change: git_changes.ChangedPath,
+    path: str,
+    head: bytes,
+    records: list[git_changes.CommandRecord],
+) -> tuple[function_changes.ResponsibilitySpan, ...]:
+    if change.old_path != path:
+        return function_changes.responsibility_spans(
+            path, head, set(range(1, len(head.splitlines()) + 1))
+        )
+    head_lines = set(
+        git_changes.changed_head_lines(
+            repository,
+            identity.base_sha,
+            identity.head_sha,
+            path,
+            records,
+            include_deletion_anchor=False,
+        )
+    )
+    base = git_changes.read_regular_blob(repository, identity.base_sha, path, records).content
+    base_lines = set(
+        git_changes.changed_base_lines(
+            repository, identity.base_sha, identity.head_sha, path, records
+        )
+    )
+    surviving, _ = function_changes.changed_responsibility_spans(
+        path, base, head, base_lines, head_lines
+    )
+    return surviving
 
 
 def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidence:
