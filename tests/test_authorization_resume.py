@@ -329,3 +329,86 @@ def test_literal_supervisor_pin_rejects_runtime_and_inventory_drift(
     source.unlink()
     with pytest.raises(ValueError, match="INVENTORY_DRIFT"):
         verify_authorization_pin.verify(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["unchanged", "changed", "deleted", "other-comment", "missing-artifact"]
+)
+def test_completion_does_not_reopen_current_approval_but_changes_cannot_skip(
+    monkeypatch: pytest.MonkeyPatch, mutation: str
+) -> None:
+    _context(monkeypatch)
+    original = {
+        "overall_result": "PASS",
+        "authorization": {"exact": "grant"},
+        "authorization_comment_id": 123,
+    }
+
+    def artifact(*args: object) -> dict[str, object]:
+        if mutation == "missing-artifact":
+            raise ValueError("expired")
+        return {}
+
+    def download(repository: str, artifact: object, directory: Path) -> None:
+        (directory / "refactor-policy-result.json").write_text(json.dumps(original))
+
+    def owner(*args: object) -> tuple[object, int]:
+        if mutation == "deleted":
+            raise hosted.refactor_policy.RefactorPolicyError("MISSING_OWNER_AUTHORIZATION")
+        return object(), 124 if mutation == "other-comment" else 123
+
+    monkeypatch.setattr(hosted, "_artifact", artifact)
+    monkeypatch.setattr(hosted, "_download", download)
+    monkeypatch.setattr(hosted, "_validate_capture", lambda *args: {})
+    monkeypatch.setattr(hosted.refactor_policy, "_github_comments", lambda *args: ())
+    monkeypatch.setattr(hosted.refactor_policy, "_owner_authorization", owner)
+    monkeypatch.setattr(
+        hosted.refactor_policy,
+        "_authorization_payload",
+        lambda value: {"exact": "changed" if mutation == "changed" else "grant"},
+    )
+    result = hosted._unchanged_completed_authorization(
+        fixtures.IDENTITY.repository,
+        fixtures.IDENTITY.repository_id,
+        fixtures.IDENTITY.workflow_sha,
+        _pull(),
+        _run(),
+    )
+    assert result is (mutation == "unchanged")
+
+
+def test_completion_preserves_green_check_and_skips_unnecessary_continuation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _context(monkeypatch)
+    event = tmp_path / "event.json"
+    event.write_text(
+        json.dumps({"workflow_run": {"event": "pull_request", "pull_requests": [{"number": 25}]}})
+    )
+    output = tmp_path / "output"
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_run")
+
+    def api(path: str, method: str = "GET", value: object = None) -> object:
+        assert method == "GET", "unchanged approval must stay green"
+        return _pull()
+
+    monkeypatch.setattr(hosted, "_api", api)
+    monkeypatch.setattr(hosted, "_latest_run", lambda *args: _run())
+    monkeypatch.setattr(
+        hosted,
+        "_pages",
+        lambda *args: [
+            {
+                "id": 106,
+                "external_id": "supportability:456:1:6",
+                "name": hosted.standard_results.CHECK_CONTEXTS[5],
+                "app": {"id": 15368},
+                "conclusion": "success",
+            }
+        ],
+    )
+    monkeypatch.setattr(hosted, "_unchanged_completed_authorization", lambda *args: True)
+    hosted.invalidate()
+    assert output.read_text() == "continue=false\n"

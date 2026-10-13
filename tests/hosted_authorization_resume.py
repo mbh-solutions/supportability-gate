@@ -13,6 +13,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -310,9 +311,36 @@ def _check_ids(repository: str, identity: standard_results.RunIdentity) -> dict[
     return result
 
 
+def _unchanged_completed_authorization(
+    repository: str, repository_id: int, revision: str, pull: dict[str, Any], run: dict[str, Any]
+) -> bool:
+    """Do not turn an already-current PASS into a new approval wait on completion."""
+    try:
+        artifact = _artifact(repository, run)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            _download(repository, artifact, directory)
+            _validate_capture(directory, repository_id, revision, pull, run)
+            original = json.loads((directory / "refactor-policy-result.json").read_bytes())
+        if original["overall_result"] != "PASS":
+            return False
+        if original["authorization"] is None:
+            return True  # This exact capture did not require an owner grant.
+        event = {"repository": {"full_name": repository}, "pull_request": pull}
+        comments = refactor_policy._github_comments(
+            repository, pull["number"], os.environ["GH_TOKEN"]
+        )
+        authorization, comment_id = refactor_policy._owner_authorization(event, comments)
+        return original["authorization_comment_id"] == comment_id and original[
+            "authorization"
+        ] == refactor_policy._authorization_payload(authorization)
+    except Exception:
+        return False  # Unverifiable or changed approval must be withheld.
+
+
 def invalidate() -> None:
     """Withhold a previous authorization success before any fallible reevaluation."""
-    repository, _, _ = _context()
+    repository, repository_id, revision = _context()
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_bytes())
     number = _pull_number(event)
     if number is None:
@@ -338,6 +366,13 @@ def invalidate() -> None:
         raise ValueError("AMBIGUOUS_ORIGINAL_AUTHORIZATION_CHECK")
     if matches[0].get("conclusion") != "success":
         return  # Existing failures and authorization waits already prevent merge.
+    if "workflow_run" in event and _unchanged_completed_authorization(
+        repository, repository_id, revision, pull, run
+    ):
+        with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+            output.write("continue=false\n")
+        print("CURRENT_AUTHORIZATION_ALREADY_PUBLISHED")
+        return
     _api(
         f"repos/{repository}/check-runs/{matches[0]['id']}",
         "PATCH",

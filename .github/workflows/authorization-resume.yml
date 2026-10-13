@@ -22,6 +22,7 @@ jobs:
       pull-requests: read
     outputs:
       gate-sha: ${{ steps.revision.outputs.sha }}
+      continue: ${{ steps.invalidate.outputs.continue }}
     steps:
       - name: Resolve authenticated reusable workflow revision
         id: revision
@@ -46,6 +47,7 @@ jobs:
           python-version: "3.12.14"
 
       - name: Keep authorization pending if continuation fails
+        id: invalidate
         env:
           GH_TOKEN: ${{ github.token }}
           PYTHONPATH: ${{ github.workspace }}/gate/src:${{ github.workspace }}/gate/tests
@@ -56,6 +58,7 @@ jobs:
   evaluate-authorization:
     name: Evaluate authorization against retained evidence
     needs: invalidate-authorization
+    if: needs.invalidate-authorization.outputs.continue != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:

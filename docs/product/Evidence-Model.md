@@ -137,6 +137,10 @@ importing a function cannot establish its execution.
 
 ### Timely failure reporting
 
+When a completed capture already contains the same live authenticated approval, the receiver
+leaves its successful checks in place and skips further evaluation. A changed or unverifiable
+approval cannot take this path.
+
 A new pull-request commit cancels the superseded capture run. The replacement commit must still
 produce its own complete evidence; cancellation never transfers a PASS to a different commit.
 
