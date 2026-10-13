@@ -79,10 +79,11 @@ with no consumer checkout, updates the original GitHub Actions check runs. It re
 comparison, latest capture, and authorization comments before publication. Repeated events update
 the same checks; they do not create competing green results.
 
+Before reevaluation, a job without consumer code withholds the previous authorization check.
 Invalid or duplicate current-head grants, wrong owners, changed oracle bytes, stale comparisons,
 missing artifacts, and actual behavioral or quality failures remain blocking. Changing or deleting
-authorization triggers reevaluation. GitHub event delivery is asynchronous; a receiver failure
-leaves the existing required checks unchanged and reports a continuation error. Expired evidence
+authorization triggers reevaluation. GitHub event delivery is asynchronous; after invalidation,
+a receiver failure leaves authorization pending and reports a continuation error. Expired evidence
 requires fresh captures. A receiver pinned to a different Gate revision rejects the evidence;
 update it together with the qualified organization workflow pin.
 

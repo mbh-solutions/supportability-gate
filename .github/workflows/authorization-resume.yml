@@ -10,12 +10,17 @@ permissions:
   pull-requests: read
 
 jobs:
-  evaluate-authorization:
-    name: Evaluate authorization against retained evidence
+  invalidate-authorization:
+    name: Withhold authorization during reevaluation
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      checks: write
+      contents: read
+      issues: read
+      pull-requests: read
     outputs:
-      artifact-id: ${{ steps.upload.outputs.artifact-id }}
       gate-sha: ${{ steps.revision.outputs.sha }}
     steps:
       - name: Resolve authenticated reusable workflow revision
@@ -40,12 +45,42 @@ jobs:
         with:
           python-version: "3.12.14"
 
+      - name: Keep authorization pending if continuation fails
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}/gate/src:${{ github.workspace }}/gate/tests
+          RESUME_WORKFLOW_SHA: ${{ steps.revision.outputs.sha }}
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: python -P gate/tests/hosted_authorization_resume.py invalidate
+
+  evaluate-authorization:
+    name: Evaluate authorization against retained evidence
+    needs: invalidate-authorization
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      gate-sha: ${{ needs.invalidate-authorization.outputs.gate-sha }}
+    steps:
+      - name: Check out authenticated supervisor
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mbh-solutions/supportability-gate
+          ref: ${{ needs.invalidate-authorization.outputs.gate-sha }}
+          persist-credentials: false
+          path: gate
+
+      - name: Set up Python 3.12.14
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.14"
+
       - name: Select current authenticated capture
         id: prepare
         env:
           GH_TOKEN: ${{ github.token }}
           PYTHONPATH: ${{ github.workspace }}/gate/src:${{ github.workspace }}/gate/tests
-          RESUME_WORKFLOW_SHA: ${{ steps.revision.outputs.sha }}
+          RESUME_WORKFLOW_SHA: ${{ needs.invalidate-authorization.outputs.gate-sha }}
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: python -P gate/tests/hosted_authorization_resume.py prepare --directory "$RUNNER_TEMP/resume"
 
@@ -67,7 +102,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PYTHONPATH: ${{ github.workspace }}/gate/src:${{ github.workspace }}/gate/tests
-          RESUME_WORKFLOW_SHA: ${{ steps.revision.outputs.sha }}
+          RESUME_WORKFLOW_SHA: ${{ needs.invalidate-authorization.outputs.gate-sha }}
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: python -P gate/tests/hosted_authorization_resume.py evaluate --directory "$RUNNER_TEMP/resume" --target "$GITHUB_WORKSPACE/target"
 

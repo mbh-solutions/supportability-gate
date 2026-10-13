@@ -202,7 +202,9 @@ console.log(JSON.stringify({schema_version:"1.0", scenario:"locked", behavior:{n
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="native target execution requires hosted isolation",
 )
-def test_hosted_typescript_import_only_does_not_prove_body_execution(tmp_path: Path) -> None:
+def test_hosted_typescript_import_only_does_not_prove_body_execution(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     repo, _, _, _ = _repository(tmp_path, language="typescript")
     _write(
         repo / "package.json",
@@ -263,6 +265,8 @@ console.log(JSON.stringify({schema_version:"1.0",scenario:"coverage",behavior}))
     )
     assert row["exit_code"] == 0, row
     behavior = row["behavior"]
+    with capsys.disabled():
+        print("HOSTED_TYPESCRIPT_COVERAGE_PROBE " + json.dumps(behavior, sort_keys=True))
     assert behavior["maps"]["code"] == 0, behavior
     observed, _ = quality_profile.typescript_lcov_observation(
         behavior["maps"]["lcov"],

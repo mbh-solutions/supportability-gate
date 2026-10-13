@@ -161,7 +161,14 @@ def test_comment_before_capture_waits_for_completion_event(
 ) -> None:
     _context(monkeypatch)
     event_path = tmp_path / "event.json"
-    event_path.write_text(json.dumps({"issue": {"number": 25, "pull_request": {}}}))
+    event_path.write_text(
+        json.dumps(
+            {
+                "issue": {"number": 25, "pull_request": {}},
+                "comment": {"body": hosted.refactor_policy.AUTHORIZATION_PREFIX + "{}"},
+            }
+        )
+    )
     monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
     monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
     monkeypatch.setattr(hosted, "_api", lambda *_args: _pull())
@@ -190,3 +197,102 @@ def test_publisher_updates_original_checks_without_creating_new_successes(
     rows[0]["app"]["id"] = 999
     with pytest.raises(ValueError, match="ORIGINAL_CHECK"):
         hosted._check_ids("example/repository", fixtures.IDENTITY)
+
+
+def test_changed_authorization_withholds_previous_success_before_artifact_access(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _context(monkeypatch)
+    event = tmp_path / "event.json"
+    event.write_text(
+        json.dumps(
+            {
+                "issue": {"number": 25, "pull_request": {}},
+                "comment": {"body": hosted.refactor_policy.AUTHORIZATION_PREFIX + "{}"},
+            }
+        )
+    )
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
+    updates = []
+
+    def api(path: str, method: str = "GET", value: object = None) -> object:
+        if method == "PATCH":
+            updates.append((path, value))
+            return {}
+        return _pull()
+
+    monkeypatch.setattr(hosted, "_api", api)
+    monkeypatch.setattr(hosted, "_latest_run", lambda *_args: _run())
+    monkeypatch.setattr(
+        hosted,
+        "_pages",
+        lambda *_args: [
+            {
+                "id": 106,
+                "external_id": "supportability:456:1:6",
+                "name": hosted.standard_results.CHECK_CONTEXTS[5],
+                "app": {"id": 15368},
+                "conclusion": "success",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        hosted,
+        "_artifact",
+        lambda *_args: pytest.fail("must not need artifact availability to withhold authorization"),
+    )
+    hosted.invalidate()
+    assert len(updates) == 1
+    assert updates[0][1]["status"] == "in_progress"
+    assert "conclusion" not in updates[0][1]
+
+
+def test_resume_preserves_capture_bytes_and_records_separate_decision_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _context(monkeypatch)
+    directory = tmp_path / "resume"
+    directory.mkdir()
+    _waiting_evidence(directory / "original")
+    (directory / "resume.json").write_text(json.dumps(_record()))
+    (directory / "event.json").write_text(
+        json.dumps(
+            {"repository": {"full_name": fixtures.IDENTITY.repository}, "pull_request": _pull()}
+        )
+    )
+    authorized = fixtures._inputs()[2]
+    monkeypatch.setattr(hosted.refactor_policy, "_github_comments", lambda *_args: ())
+
+    def verify(
+        target: Path,
+        event: dict[str, Any],
+        characterization: dict[str, Any],
+        comments: object,
+        predecessor: object,
+    ) -> dict[str, Any]:
+        assert event["pull_request"] == _pull()
+        assert characterization == fixtures._inputs()[1]
+        return authorized
+
+    monkeypatch.setattr(hosted.refactor_policy, "verify_refactor", verify)
+    hosted.evaluate(directory, tmp_path / "static-target")
+    for name in (
+        hosted.evidence.SOURCE_FILES[0],
+        hosted.evidence.SOURCE_FILES[1],
+        hosted.evidence.SOURCE_FILES[3],
+    ):
+        assert (directory / "evaluated" / name).read_bytes() == (
+            directory / "original" / name
+        ).read_bytes()
+    decision = json.loads((directory / "evaluated" / "standard-results.json").read_bytes())
+    record = json.loads((directory / "evaluated" / "authorization-resume.json").read_bytes())
+    assert all(row["result"] == "PASS" for row in decision["entries"])
+    assert decision["run_id"] == 456
+    assert record["resume_run_id"] == 900
+    assert (
+        hosted.qualification_bundle.restore_bundle(
+            directory / "evaluated" / "qualification-bundle.zip"
+        ).decision
+        == "PASS"
+    )

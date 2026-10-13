@@ -956,7 +956,7 @@ def test_current_refactor_schema_has_authenticated_applicability() -> None:
     assert _entry(payload, 6)["result"] == "PASS"
 
 
-def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> None:
+def _correction_inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     inputs = _inputs()
     characterization_result = inputs[1]
     scenario = characterization_result["scenarios"][0]
@@ -1038,7 +1038,11 @@ def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> No
         _canonical(characterization_result)
     ).hexdigest()
     refactor["result_classification"] = "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+    return inputs
 
+
+def test_authenticated_schema5_correction_reconciles_only_declared_delta() -> None:
+    inputs = _correction_inputs()
     payload = _compose(
         inputs,
         source_outcomes={**SUCCESS_OUTCOMES, "characterization": "success"},

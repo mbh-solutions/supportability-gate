@@ -91,6 +91,16 @@ def _context() -> tuple[str, int, str]:
 def _pull_number(event: dict[str, Any]) -> int | None:
     event_name = os.environ["GITHUB_EVENT_NAME"]
     if event_name == "issue_comment" and "pull_request" in event.get("issue", {}):
+        bodies = (
+            event.get("comment", {}).get("body", ""),
+            event.get("changes", {}).get("body", {}).get("from", ""),
+        )
+        if not any(
+            line.startswith(refactor_policy.AUTHORIZATION_PREFIX)
+            for body in bodies
+            for line in body.splitlines()
+        ):
+            return None
         return int(event["issue"]["number"])
     if event_name == "workflow_run":
         run = event["workflow_run"]
@@ -189,8 +199,6 @@ def prepare(directory: Path) -> None:
     artifact = _artifact(repository, run)
     _download(repository, artifact, directory / "original")
     payload = _validate_capture(directory / "original", repository_id, revision, pull, run)
-    if payload["short_task"]:
-        return
     record = {
         "schema_version": "authorization-resume.v1",
         "capture_artifact": {key: artifact[key] for key in ("id", "digest", "name")},
@@ -237,8 +245,12 @@ def evaluate(directory: Path, target: Path) -> None:
         },
     )
     output = directory / "evaluated"
-    for name, value in zip(evidence.SOURCE_FILES, sources, strict=True):
-        _write(output / name, value)
+    output.mkdir(parents=True, exist_ok=True)
+    for index, (name, value) in enumerate(zip(evidence.SOURCE_FILES, sources, strict=True)):
+        if index == 2:
+            _write(output / name, value)
+        else:
+            (output / name).write_bytes((original / name).read_bytes())
     record["authorization_comment_id"] = sources[2]["authorization_comment_id"]
     record["authorization_comments_sha256"] = _authorization_snapshot(comments)
     record["original_source_sha256"] = {
@@ -298,6 +310,47 @@ def _check_ids(repository: str, identity: standard_results.RunIdentity) -> dict[
     return result
 
 
+def invalidate() -> None:
+    """Withhold a previous authorization success before any fallible reevaluation."""
+    repository, _, _ = _context()
+    event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_bytes())
+    number = _pull_number(event)
+    if number is None:
+        return
+    pull = _api(f"repos/{repository}/pulls/{number}")
+    run = _latest_run(repository, pull)
+    if pull["state"] != "open" or run is None:
+        return
+    external = f"supportability:{run['id']}:{run['run_attempt']}:6"
+    rows = _pages(
+        f"repos/{repository}/commits/{pull['head']['sha']}/check-runs?filter=all", "check_runs"
+    )
+    matches = [
+        row
+        for row in rows
+        if row["external_id"] == external
+        and row["name"] == standard_results.CHECK_CONTEXTS[5]
+        and row["app"]["id"] == 15368
+    ]
+    if not matches:
+        return  # The initial publisher has not reached this check yet.
+    if len(matches) != 1:
+        raise ValueError("AMBIGUOUS_ORIGINAL_AUTHORIZATION_CHECK")
+    if matches[0].get("conclusion") != "success":
+        return  # Existing failures and authorization waits already prevent merge.
+    _api(
+        f"repos/{repository}/check-runs/{matches[0]['id']}",
+        "PATCH",
+        {
+            "status": "in_progress",
+            "output": {
+                "title": "Evaluating current owner authorization",
+                "summary": "Rechecking live owner evidence against the retained exact-change capture. Merge remains blocked if continuation cannot complete.",
+            },
+        },
+    )
+
+
 def publish(directory: Path) -> None:
     record = json.loads((directory / "authorization-resume.json").read_bytes())
     if not _current(record):
@@ -336,11 +389,16 @@ def publish(directory: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("operation", choices=("prepare", "evaluate", "publish"))
-    parser.add_argument("--directory", type=Path, required=True)
+    parser.add_argument("operation", choices=("prepare", "evaluate", "publish", "invalidate"))
+    parser.add_argument("--directory", type=Path)
     parser.add_argument("--target", type=Path)
     arguments = parser.parse_args()
     try:
+        if arguments.operation == "invalidate":
+            invalidate()
+            return 0
+        if arguments.directory is None:
+            raise ValueError("MISSING_EVIDENCE_DIRECTORY")
         if arguments.operation == "evaluate":
             if arguments.target is None:
                 raise ValueError("MISSING_STATIC_TARGET_CHECKOUT")
