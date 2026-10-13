@@ -36,7 +36,8 @@ sequenceDiagram
 3. **Run the pinned workflow.** GitHub checks out immutable target commits and trusted Gate source
    separately. Fixed dependency provisioning occurs under the hosted supervisor; target execution
    occurs inside the defined isolated container boundary.
-4. **Capture and authenticate evidence.** Scenarios run twice at each revision. Quality execution
+4. **Capture and authenticate evidence.** Successful scenarios run twice at each revision; a failed first execution is retained without
+   repeating it. Quality execution
    retains fixed command vectors, outcomes, source and dependency receipts, and observed coverage.
    Artifact metadata and digests must match repository, commits, workflow, run, and attempt.
 5. **Evaluate and compose.** Static parsing and the policy modules produce canonical evidence.

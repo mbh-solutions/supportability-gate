@@ -2,7 +2,7 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Explicitly withhold completed authorization checks when their owner evidence changes, and verify that GitHub applied each requested check state."
+intended_behavior = "Bind source authorization events to the exact merged release that safely withholds completed checks."
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
