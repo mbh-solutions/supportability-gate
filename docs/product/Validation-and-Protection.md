@@ -34,6 +34,12 @@ prevents candidate workflows/tests from qualifying their own weakening of the es
 These source-only contexts are not generic extra check requirements for each consumer repository.
 The consumer's fixed quality profile remains part of its eight-lane evaluation.
 
+Quality runtime coverage is evaluated against the head source tree. Changed surviving bodies
+use their head line ranges, additions and renames require head responsibilities, and unchanged
+high-risk bodies remain required. Deleted base bodies are retained for change review,
+characterization, and exact authorization, but are not treated as executable head code.
+A successful test command alone does not prove coverage of these responsibilities.
+
 ## Source upgrades and rollback
 
 Executable Gate upgrades follow normal protection, qualification of the exact merged candidate,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
+import importlib.util
 import json
 import os
 import re
@@ -23,7 +24,13 @@ from threading import Lock
 
 from packaging.requirements import Requirement
 
-from supportability_gate import characterization, contract, git_changes, quality_runner
+from supportability_gate import (
+    characterization,
+    contract,
+    git_changes,
+    quality_profile,
+    quality_runner,
+)
 
 EXECUTION_TIMEOUT_SECONDS = 120
 MAX_DIAGNOSTIC_BYTES = 8192
@@ -409,6 +416,87 @@ def _install_python_dependencies(
     raise characterization.CharacterizationError("CHARACTERIZATION_PREREQUISITE_FAILED")
 
 
+def _node_receipts(destination: Path) -> tuple[str, ...]:
+    """Reuse the trusted quality collector's installed-tree and lock authentication."""
+    path = Path(__file__).resolve().with_name("hosted_quality_profile.py")
+    spec = importlib.util.spec_from_file_location("characterization_quality_collector", path)
+    if spec is None or spec.loader is None:
+        raise characterization.CharacterizationError("MISSING_TRUSTED_QUALITY_COLLECTOR")
+    collector = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(collector)
+    return tuple(collector._node_lock_receipts(destination, "characterization"))
+
+
+def _validate_node_lock(raw: bytes) -> None:
+    """Admit integrity-bound public registry packages without executable source fetches."""
+    try:
+        lock = json.loads(raw)
+        packages = lock["packages"]
+        if lock["lockfileVersion"] not in {2, 3} or not isinstance(packages.get(""), dict):
+            raise ValueError("unsupported lock")
+        for location, package in packages.items():
+            if not location:
+                continue
+            if (
+                not location.startswith("node_modules/")
+                or package.get("link")
+                or not str(package.get("resolved", "")).startswith("https://registry.npmjs.org/")
+                or not package.get("integrity")
+            ):
+                raise ValueError("registry integrity required")
+    except (KeyError, TypeError, AttributeError, ValueError) as error:
+        raise characterization.CharacterizationError(
+            "CHARACTERIZATION_NODE_LOCK_UNSUPPORTED"
+        ) from error
+
+
+def _install_node_dependencies(
+    definition: Path,
+    head_sha: str,
+    destination: Path,
+    records: list[git_changes.CommandRecord],
+) -> tuple[str, ...]:
+    """Install exact head driver prerequisites outside target execution, without scripts."""
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in ("package.json", "package-lock.json"):
+        blob = git_changes.read_regular_blob(definition, head_sha, name, records)
+        if name == "package-lock.json":
+            _validate_node_lock(blob.content)
+        (destination / name).write_bytes(blob.content)
+    environment = quality_runner.fixed_environment(destination, definition)
+    global_config = destination / "empty-global.npmrc"
+    global_config.write_bytes(b"")
+    environment.update(
+        NPM_CONFIG_USERCONFIG=os.devnull,
+        NPM_CONFIG_GLOBALCONFIG=str(global_config),
+        NPM_CONFIG_CACHE=str(destination / ".npm-cache"),
+    )
+    try:
+        subprocess.run(
+            [
+                shutil.which("npm") or "npm",
+                "ci",
+                "--ignore-scripts",
+                "--no-audit",
+                "--no-fund",
+                "--include=dev",
+                "--include=optional",
+            ],
+            cwd=destination,
+            env=environment,
+            check=True,
+            capture_output=True,
+            timeout=EXECUTION_TIMEOUT_SECONDS,
+        )
+        receipts = _node_receipts(destination)
+        (destination / "node_modules").mkdir(exist_ok=True)
+        return receipts
+    except (OSError, subprocess.SubprocessError, quality_profile.QualityProfileError) as error:
+        raise characterization.CharacterizationError(
+            "CHARACTERIZATION_NODE_PREREQUISITE_FAILED"
+        ) from error
+
+
 def _command(language: str, relative_driver: str, driver: Path) -> tuple[list[str], list[str]]:
     if language == "python":
         return [sys.executable, "-P", str(driver)], ["python3.12", "-P", relative_driver]
@@ -523,6 +611,14 @@ def _run_driver(
             mounts.append((Path(__file__).resolve().parents[1] / "src", "/gate-source"))
         if dependencies is not None:
             mounts.append((dependencies, "/dependencies"))
+            node_modules = dependencies.parent / "characterization-node" / "node_modules"
+            if node_modules.is_dir():
+                mounts.extend(
+                    (
+                        (node_modules, "/target/node_modules"),
+                        (node_modules, "/definition/node_modules"),
+                    )
+                )
         sandbox = quality_runner.sandbox_command(
             plan,
             repository=target,
@@ -828,7 +924,18 @@ def capture_evidence(
                 diagnostic_identity,
             )
             node_runtime = ""
+            node_dependencies: tuple[str, ...] = ()
             if policy.language in {"typescript", "mixed"}:
+                node_dependencies = _install_node_dependencies(
+                    definition, head_sha, dependencies.parent / "characterization-node", records
+                )
+                for root in (target, definition):
+                    mountpoint = root / "node_modules"
+                    if mountpoint.is_symlink():
+                        raise characterization.CharacterizationError(
+                            "CHARACTERIZATION_NODE_MOUNT_INVALID"
+                        )
+                    mountpoint.mkdir(exist_ok=True)
                 node_runtime = _runtime_probe(
                     target,
                     supervisor_output,
@@ -838,7 +945,9 @@ def capture_evidence(
                     f"characterization-{side}-runtime",
                     diagnostic_identity,
                 )
-            resolved_dependencies = _dependency_receipts(dependencies)
+            resolved_dependencies = tuple(
+                sorted((*_dependency_receipts(dependencies), *node_dependencies))
+            )
 
         def capture(item: characterization.Scenario) -> dict[str, object]:
             local_records: list[git_changes.CommandRecord] = []
