@@ -226,7 +226,7 @@ def test_changed_authorization_withholds_previous_success_before_artifact_access
     def api(path: str, method: str = "GET", value: object = None) -> object:
         if method == "PATCH":
             updates.append((path, value))
-            return {}
+            return value
         return _pull()
 
     monkeypatch.setattr(hosted, "_api", api)
@@ -251,8 +251,8 @@ def test_changed_authorization_withholds_previous_success_before_artifact_access
     )
     hosted.invalidate()
     assert len(updates) == 1
-    assert updates[0][1]["status"] == "in_progress"
-    assert "conclusion" not in updates[0][1]
+    assert updates[0][1]["status"] == "completed"
+    assert updates[0][1]["conclusion"] == "action_required"
 
 
 def test_resume_preserves_capture_bytes_and_records_separate_decision_identity(
@@ -460,3 +460,36 @@ def test_required_workflow_identity_is_bound_to_effective_organization_rule(
     else:
         with pytest.raises(ValueError, match="REQUIRED_WORKFLOW_SOURCE"):
             hosted._require_deployed_source("example/repository", pull)
+
+
+@pytest.mark.parametrize("previous", [None, "success", "failure", "action_required"])
+def test_wait_preserves_pending_or_explicitly_withholds_completed_check(
+    monkeypatch: pytest.MonkeyPatch, previous: str | None
+) -> None:
+    state = {"status": "completed" if previous else "in_progress", "conclusion": previous}
+
+    def api(path: str, method: str = "GET", value: dict[str, Any] | None = None) -> object:
+        if method == "PATCH":
+            assert value is not None
+            state.update(value)
+            if state["conclusion"] is not None:
+                state["status"] = "completed"  # Actual GitHub concluded-check behavior.
+        return dict(state)
+
+    monkeypatch.setattr(hosted, "_api", api)
+    waiting = hosted._waiting_state("example/repository", 106)
+    hosted._update_check("example/repository", 106, waiting)
+    assert state["conclusion"] in {None, "action_required"}
+    assert state["status"] == ("in_progress" if previous is None else "completed")
+    hosted._update_check(
+        "example/repository", 106, {"status": "completed", "conclusion": "success"}
+    )
+    assert state["conclusion"] == "success"
+
+
+def test_check_update_rejects_ignored_state_change(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        hosted, "_api", lambda *_args: {"status": "completed", "conclusion": "success"}
+    )
+    with pytest.raises(ValueError, match="CHECK_UPDATE_NOT_APPLIED"):
+        hosted._update_check("example/repository", 106, {"status": "in_progress"})

@@ -364,6 +364,24 @@ def _unchanged_completed_authorization(
         return False  # Unverifiable or changed approval must be withheld.
 
 
+def _update_check(repository: str, check_id: int, value: dict[str, Any]) -> None:
+    """Require GitHub to apply the requested blocking or completed state."""
+    result = _api(f"repos/{repository}/check-runs/{check_id}", "PATCH", value)
+    if result.get("status") != value["status"] or result.get("conclusion") != value.get(
+        "conclusion"
+    ):
+        raise ValueError("CHECK_UPDATE_NOT_APPLIED")
+
+
+def _waiting_state(repository: str, check_id: int) -> dict[str, Any]:
+    current = _api(f"repos/{repository}/check-runs/{check_id}")
+    # GitHub cannot clear a completed conclusion or reopen that check. Keep the
+    # original ID and explicitly withhold it; an initial undecided check stays pending.
+    if current["conclusion"] is not None:
+        return {"status": "completed", "conclusion": "action_required"}
+    return {"status": "in_progress"}
+
+
 def invalidate() -> None:
     """Withhold a previous authorization success before any fallible reevaluation."""
     repository, repository_id, revision = _context()
@@ -399,11 +417,12 @@ def invalidate() -> None:
             output.write("continue=false\n")
         print("CURRENT_AUTHORIZATION_ALREADY_PUBLISHED")
         return
-    _api(
-        f"repos/{repository}/check-runs/{matches[0]['id']}",
-        "PATCH",
+    _update_check(
+        repository,
+        matches[0]["id"],
         {
-            "status": "in_progress",
+            "status": "completed",
+            "conclusion": "action_required",
             "output": {
                 "title": "Evaluating current owner authorization",
                 "summary": "Rechecking live owner evidence against the retained exact-change capture. Merge remains blocked if continuation cannot complete.",
@@ -427,7 +446,7 @@ def publish(directory: Path) -> None:
             raise ValueError("PR_CHANGED_DURING_AUTHORIZATION_PUBLICATION")
         number = row["standard"]
         value: dict[str, Any] = {
-            "status": "in_progress" if number in waiting else "completed",
+            "status": "completed",
             "details_url": f"https://github.com/{identity.repository}/actions/runs/{current_run}",
             "output": {
                 "title": "Awaiting owner authorization"
@@ -441,11 +460,13 @@ def publish(directory: Path) -> None:
                 ),
             },
         }
-        if number not in waiting:
+        if number in waiting:
+            value.update(_waiting_state(identity.repository, checks[number]))
+        else:
             value["conclusion"] = (
                 "success" if row["result"] in {"PASS", "NOT_APPLICABLE_SHORT_TASK"} else "failure"
             )
-        _api(f"repos/{identity.repository}/check-runs/{checks[number]}", "PATCH", value)
+        _update_check(identity.repository, checks[number], value)
 
 
 def main() -> int:
