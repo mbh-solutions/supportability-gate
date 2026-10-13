@@ -12,6 +12,7 @@ from typing import Any
 import hosted_authorization_resume as hosted
 import pytest
 import test_standard_results as fixtures
+import verify_authorization_pin
 from test_authorization_wait import _waiting_evidence
 
 
@@ -296,3 +297,35 @@ def test_resume_preserves_capture_bytes_and_records_separate_decision_identity(
         ).decision
         == "PASS"
     )
+
+
+def test_literal_supervisor_pin_rejects_runtime_and_inventory_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    workflow = tmp_path / ".github/workflows/authorization-resume.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("\n".join(["  ref: " + "a" * 40] * 3))
+    source = tmp_path / "src/sample.py"
+    source.parent.mkdir()
+    source.write_bytes(b"original")
+    for name in verify_authorization_pin.RUNTIME_FILES:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"original")
+    monkeypatch.setattr(
+        verify_authorization_pin.git_changes, "run_git", lambda *_args: b"src/sample.py\n"
+    )
+    monkeypatch.setattr(
+        verify_authorization_pin.git_changes,
+        "read_regular_blob",
+        lambda *_args: SimpleNamespace(content=b"original"),
+    )
+    verify_authorization_pin.verify(tmp_path)
+    source.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="PIN_DRIFT"):
+        verify_authorization_pin.verify(tmp_path)
+    source.unlink()
+    with pytest.raises(ValueError, match="INVENTORY_DRIFT"):
+        verify_authorization_pin.verify(tmp_path)

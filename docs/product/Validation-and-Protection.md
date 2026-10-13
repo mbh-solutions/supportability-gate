@@ -51,6 +51,13 @@ and explicit authorized pin promotion. Preserve strictness, context/App identiti
 resolution, enrolled scope, and zero bypass. Roll back through a protected revert or previously
 qualified pin; never remove protection to obtain a green result.
 
+Authorization continuation checks out its supervisor at a literal immutable commit, including in
+privileged jobs. Source Validation verifies that the pinned Python runtime and exact dependency
+lock match the candidate bytes. When those runtime files change, commit them first, then update
+the literal supervisor pin before final source validation. The consumer receiver and organization
+workflow use the final qualified release revision; the supervisor pin identifies its matching
+runtime, and the continuation separately authenticates that release's workflow identity.
+
 Documentation-only changes do not require deployment pin churn when executable and workflow blobs
 remain identical to the deployed revision. Wiki publication is a separate documentation action.
 
