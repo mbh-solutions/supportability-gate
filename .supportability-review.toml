@@ -2,22 +2,17 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Recognize native organization workflow identities and distinguish successful correction verification from owner authorization, preserving canonical blocks until approval."
+intended_behavior = "Pin the source repository authorization receiver to the exact shared release revision so later default-branch changes do not alter continuation identity."
 proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
 
 [characterization]
-captured_behavior = "The verifier process outcome is unchanged. The composer now validates that actual outcome independently of whether an authenticated owner has reconciled the observed correction. Native execution and characterization payloads are unchanged. A frozen correction oracle declares the error-attribution change for malformed owner evidence; all negative cases remain blocking."
+captured_behavior = "Executable policy, characterization definitions and goldens are unchanged. The event receiver calls the exact merged release instead of a moving local workflow."
 proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
 
 [separation_of_concerns]
 before = "The publisher completed authorization-dependent checks as failures and comments did not resume evaluation."
 after = "The publisher distinguishes an authorization wait; a read-only supervisor reuses source-bound evidence, while a separate publisher updates original checks after freshness validation."
-boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "verification_outcome", before = "The CLI embedded the verifier process outcome contract.", after = "A shared pure function exposes the unchanged process outcome independently of owner approval." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "main", before = "The CLI calculated its exit status inline.", after = "The CLI uses the shared unchanged outcome contract." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_characterization", before = "Composition incorrectly expected a failed verifier process while a verified correction awaited owner approval.", after = "Composition validates the actual verifier process contract and separately retains all unauthorized correction blocks." },
-  { path = "src/supportability_gate/standard_results.py", kind = "module", symbol = "src/supportability_gate/standard_results.py", before = "The composer used the characterization validator.", after = "The composer also imports its pure verifier outcome contract through the existing dependency direction." },
-]
+boundaries = []
 
 [architecture]
 dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
