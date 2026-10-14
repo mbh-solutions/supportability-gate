@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -146,3 +147,80 @@ def test_wait_rejects_stale_or_ambiguous_artifact_identity(fault):
     items = [artifact, artifact] if fault == "duplicate" else [artifact]
     with pytest.raises(ValueError):
         waiter.artifact_values(items, "proof-2-1", "repos/example/repo", "a" * 40, "2", "3", False)
+
+
+def test_wait_groups_overlap_only_independent_work():
+    assert waiter.producer_names("capture") == ("Characterize Base", "Characterize Head")
+    assert waiter.producer_names("quality") == tuple(
+        f"Quality Profile (Partition {index})" for index in range(4)
+    )
+    assert waiter.producer_names("publish") == ("Deterministic Supportability Evidence",)
+    with pytest.raises(ValueError):
+        waiter.producer_names("untrusted")
+    workflow = Path(__file__).parents[1] / ".github/workflows/organization-required.yml"
+    text = workflow.read_text()
+    assert text.index("id: characterization") < text.index("id: await_quality")
+    assert text.index("id: await_quality") < text.index("id: aggregate_quality")
+    assert text.index("id: aggregate_quality") < text.index("id: evaluate")
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "index",
+        "count",
+        "command",
+        "required_targets",
+        "coverage_sha256",
+        "schema_version",
+        "missing",
+        "bytes",
+    ],
+)
+def test_node_join_authenticates_every_partition_before_coverage(tmp_path, monkeypatch, fault):
+    targets = ("src/app.js::function:body:2-2",)
+    monkeypatch.setattr(aggregate, "required_targets", lambda *_: targets)
+    parts, profiles = [], []
+    for index in range(4):
+        part = tmp_path / str(index)
+        shard = part / "typescript-shard"
+        shard.mkdir(parents=True)
+        raw = b"SF:src/app.js\nDA:2,1\nLF:1\nLH:1\nend_of_record\n"
+        digest = hashlib.sha256(raw).hexdigest()
+        command = quality_profile.GateResult(
+            "typescript.test.v1",
+            (),
+            "lcov",
+            (),
+            (),
+            True,
+            0,
+            "a" * 64,
+            "b" * 64,
+            digest,
+            ("node", "--test"),
+        )
+        receipt = dict(
+            schema_version="quality-node-partition.v1",
+            index=index,
+            count=4,
+            required_targets=list(targets),
+            command=list(command.executed_arguments),
+            coverage_sha256=digest,
+        )
+        if index == 3 and fault in receipt:
+            receipt[fault] = "wrong"
+        if index == 3 and fault == "bytes":
+            raw = raw.replace(b"DA:2,1", b"DA:2,0")
+        (shard / "coverage.lcov").write_bytes(raw)
+        if index != 3 or fault != "missing":
+            (shard / "partition.json").write_text(json.dumps(receipt))
+        parts.append(part)
+        profiles.append(SimpleNamespace(commands=(command,), source_files=("src/app.js",)))
+    if fault is not None:
+        with pytest.raises(quality_profile.QualityProfileError):
+            aggregate.combined_typescript(parts, profiles, tmp_path, tmp_path / "joined")
+    else:
+        result = aggregate.combined_typescript(parts, profiles, tmp_path, tmp_path / "joined")
+        assert result.observed_paths == ("src/app.js",)

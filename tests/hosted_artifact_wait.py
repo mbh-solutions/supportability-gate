@@ -20,13 +20,11 @@ def api(route: str) -> bytes:
 def producer_names(mode: str) -> tuple[str, ...]:
     if mode == "publish":
         return ("Deterministic Supportability Evidence",)
-    if mode != "capture":
-        raise ValueError("invalid producer group")
-    return (
-        "Characterize Base",
-        "Characterize Head",
-        *(f"Quality Profile (Partition {index})" for index in range(4)),
-    )
+    if mode == "quality":
+        return tuple(f"Quality Profile (Partition {index})" for index in range(4))
+    if mode == "capture":
+        return ("Characterize Base", "Characterize Head")
+    raise ValueError("invalid producer group")
 
 
 def completed_jobs(jobs: list[dict], names: tuple[str, ...]) -> dict[str, str] | None:
@@ -95,6 +93,8 @@ def main(mode: str) -> None:
         time.sleep(3)
     if outcomes is None:
         raise TimeoutError("producer jobs did not finish")
+    if mode == "quality":
+        return
     items = json.loads(api(f"{root}/actions/runs/{run}/artifacts?per_page=100"))["artifacts"]
     groups = (
         (("evidence", "supportability-evidence", "Deterministic Supportability Evidence"),)

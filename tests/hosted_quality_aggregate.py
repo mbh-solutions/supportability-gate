@@ -539,7 +539,8 @@ def main() -> int:
             repository, arguments.base_ref, arguments.head_ref, records
         )
         policy = head if gate_policy.is_allowed_contract_transition(base, head, changes) else base
-        count = 4 if policy.language in {"python", "mixed"} else 1
+        quality_profile.required_adapters(policy.language)
+        count = COUNT
         print("matrix=" + json.dumps({"shard": list(range(count))}))
         print(f"count={count}")
         return 0

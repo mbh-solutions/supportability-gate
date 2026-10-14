@@ -2,42 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Preserve a sealed module oracle review across behavior-preserving implementation changes when the identical scenario and review already exist in the comparison base. New scenarios still require exact current source and inventory binding."
-proof = "Successive real-observation refactors plus negative behavior, witness, review, oracle, driver, and new-scenario tests. Hosted qualification measures both preserving and forbidden changes."
+intended_behavior = "Reduce full gate latency while preserving every required adapter, complete test partitions, source-bound observations, isolation and authenticated enforcement."
+proof = "Exact legacy versus optimized observation comparisons, full positive and negative hosted qualification, complete source proof and protected delivery."
 
 [characterization]
-captured_behavior = "Existing module observation, source inventory, golden compatibility and named-body execution remain enforced."
-proof = "Existing frozen characterization scenarios and fresh source-bound base/head execution evidence."
+captured_behavior = "The same scenario repetitions, named-body execution counts and expected outputs remain mandatory."
+proof = "Identical complete consumer observation payloads under the legacy and optimized observers; full source-bound base and head captures."
 
 [separation_of_concerns]
-before = "Module review validation required a current implementation fingerprint while definition preservation forbade updating that review."
-after = "Admission review remains immutable; independently derived current inventories and observed execution establish ongoing compatibility."
-boundaries = [
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_bindings", before = "Provide only head identity to oracle review validation.", after = "Provide the exact comparison base for sealed review provenance." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_preserved_module_review", before = "No distinction between new admission and established sealed review.", after = "Require the same module scenario and byte-identical review in the exact comparison base." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_oracle_review", before = "Validate every module review against current source.", after = "Identify sealed existing module reviews before validating their bindings." },
-  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_review_matches", before = "Require head fingerprints for both admission and preservation.", after = "Keep exact oracle and roots; require head fingerprints for new admissions and preserve historical bindings for unchanged admitted reviews." }
-]
+before = "External Python lines were repeatedly inspected; native Node tests and non-test checks repeated across partitions; evidence jobs prepared serially."
+after = "Code locations are classified once, complete tests are partitioned, non-test checks execute once, and independent trusted preparation and verification overlap."
+boundaries = []
 
 [architecture]
-dependency_direction = "Characterization reads fixed Git blobs and statically derived source facts. Native execution remains in the existing isolated capture boundary."
-reviewed_paths = ["src/supportability_gate/characterization.py"]
+dependency_direction = "Static evaluation remains unchanged. Target execution remains inside the fixed isolated hosted boundary; a separate authenticated publisher enforces results."
+reviewed_paths = ["tests/baseline_observer.py", "tests/hosted_quality_profile.py", "tests/hosted_quality_aggregate.py", "tests/hosted_artifact_wait.py", ".github/workflows/organization-required.yml"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/characterization.py"
-owns = "Source-bound characterization evidence validation and behavior-preservation decisions."
-does_not_own = "Consumer behavior, sandbox configuration, policy waivers or human attestations."
+path = "tests/hosted_quality_aggregate.py"
+owns = "Authenticate complete fixed partitions, combine actual runtime coverage and preserve failures."
+does_not_own = "Consumer behavior, arbitrary commands, exclusions, waivers, policy overrides or human attestations."
 
 [incremental_refactor]
-target = "Remove the contradictory current-source versus immutable-review requirements for established module scenarios."
-completed_step = "Separate original review admission binding from current independently verified execution without changing protected expectations."
+target = "Remove measured duplicate work and unnecessary serial dependencies from the shared hosted gate."
+completed_step = "Optimize tracing and complete test scheduling with source-bound partition receipts and unchanged final protection."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Preserved module review identifies exact base scenario and byte identity."
-cohesion = "The existing characterization module owns the fix; no new production module."
-intended_behavior = "Established unchanged expectations support preserving refactors; new scenarios and forged evidence remain blocked."
-reviewability = "Author declaration only; existing source integrity, isolation and protected delivery remain mandatory."
+naming = "Fixed partitions, authenticated producer waits and observed coverage describe actual responsibilities."
+cohesion = "Existing hosted helpers retain their responsibilities; no new production modules or policy engine."
+intended_behavior = "Complete equivalent checks finish faster; missing execution, failed tests and forged evidence remain blocking."
+reviewability = "Author declaration only. Immutable policy, source integrity, isolated execution and normal protected delivery remain mandatory."
