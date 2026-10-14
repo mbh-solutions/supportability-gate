@@ -58,14 +58,14 @@ recording the human cohesion assessment.
 
 **Enforcement and evidence:** authenticated measured base/head captures and deterministic checks
 of identity, repeatability, golden behavior, covered responsibilities, and retained obligations.
-This lane also owns the intended-behavior author declarations. Existing behavior runs twice
-at base and twice at head. A schema-3 observed Python API can record exact Git absence at base
+This lane also owns the intended-behavior author declarations. Successful behavior scenarios run twice
+at base and twice at head; a failed first attempt is retained without repetition. A schema-3 observed Python API can record exact Git absence at base
 when its entire production file is genuinely new, then execute twice at head against a sealed
 intended oracle. The absence row records no executed command. Once merged, the same scenario
 requires real compatible base/head execution. Supported schema-2 and schema-3 obligations keep
 assertion identities stable when scenario packaging changes.
 
-Schema 5 adds one explicit exception to preservation: a technically verified correction may reconcile
+Schema 5 permits an explicit exception to preservation: a technically verified correction may reconcile
 only its declared changed definitions, goldens and incompatible observations. The oracle commit
 must precede production implementation and remain byte-frozen. Head outputs, deterministic replay,
 API execution, coverage and every other Gate remain mandatory.
@@ -93,9 +93,8 @@ establish semantic smallness, naming quality or independent human review. See
 
 **Enforcement and evidence:** authenticated command outcomes, source/dependency receipts, observed
 coverage, and deterministic anti-weakening decisions. Python and TypeScript select closed quality
-profiles; mixed repositories run both. The fixed command sequence stops after its first blocking
-command because later commands cannot restore PASS; the authenticated failed prefix remains the
-authoritative result. Required changed and high-risk responsibilities must have the specified
+profiles; mixed repositories run both. Each fixed partition stops after its first blocking command; the authenticated failed prefix
+blocks the combined profile. Other partitions retain their own results. Required changed and high-risk responsibilities must have the specified
 proof. Supported blanket suppressions cannot silently create covered PASS.
 
 **Example failure:** tests pass while a high-risk responsibility remains unobserved, or contract

@@ -8,7 +8,7 @@ sequenceDiagram
     participant G as Required-check publisher
     participant R as GitHub ruleset
     A->>H: Pull request with exact base and head
-    H->>H: Capture base and head twice and run fixed checks
+    H->>H: Repeat successful behavior captures and run fixed checks
     H-->>E: Authenticated artifacts and diagnostics
     E->>E: Static evaluation and canonical composition
     E->>E: Build and restore offline evidence bundle
@@ -28,9 +28,8 @@ sequenceDiagram
 3. **Run the pinned workflow.** GitHub checks out immutable target commits and trusted Gate source
    separately. Fixed dependency provisioning occurs under the hosted supervisor; target execution
    occurs inside the defined isolated container boundary.
-4. **Capture and authenticate evidence.** Successful scenarios run twice at each revision; a failed first execution is retained without
-   repeating it. Quality execution
-   retains fixed command vectors, outcomes, source and dependency receipts, and observed coverage.
+4. **Capture and authenticate evidence.** Successful scenarios run twice against each applicable source commit; a failed first
+   execution is retained without repeating it. Quality execution retains fixed command vectors, outcomes, source and dependency receipts, and observed coverage.
    Artifact metadata and digests must match repository, commits, workflow, run, and attempt.
 5. **Evaluate and compose.** Static parsing and the policy modules produce canonical evidence.
    The composer produces eight rows in `standard-results.v3` and a derived review handoff.
@@ -51,14 +50,12 @@ or local runs cannot qualify the new head.
 
 ## Authorization continuation
 
-New-policy runs need no authorization continuation or event receiver. Previously installed
-receivers pinned to older releases reject a different deployed workflow revision before changing
-checks. They can be removed through normal repository delivery. Historical runs retain their
-original policy and evidence; do not reinterpret them as current qualification.
+The workflow does not require an authorization receiver or approval comment. Work authorization
+and technical evidence responsibilities are described in [Refactor Authorization](Refactor-Authorization.md).
 
 ## Preservation and correction lanes
 
-A refactor remains the default lane: base and head behavior must be identical. A correction stays
+A refactor uses the preservation lane: base and head behavior must be identical. A correction stays
 inside the same pull request and review cycle but has two Git stages. First commit the schema-5
 declaration and all expected cases, goldens, reviews and source receipts without production-code
 changes. Then commit the implementation without altering those oracle bytes. After the final head
@@ -72,7 +69,7 @@ permits irrelevant lanes to report `NOT_APPLICABLE_SHORT_TASK`. Gate 7 still run
 documentation edits do not automatically qualify for the exception.
 
 Codex review is optional, owner-requested advisory input and is not a required check. Any inline
-conversation it creates remains subject to native thread resolution. Semantic Review is retired.
+conversation it creates remains subject to native thread resolution. No model-backed review is required.
 
 Implementation references: [required workflow](../../.github/workflows/organization-required.yml),
 [producer](../../src/supportability_gate/standard_results_producer.py), and
@@ -85,5 +82,5 @@ prepare their environments concurrently. Preparation does not authorize a result
 an artifact, downstream jobs wait for the exact producer jobs from the same run attempt, read
 native artifact identities, and enforce the existing repository, head, digest and evidence checks.
 A failed producer remains failed; a missing, stale, duplicate or malformed artifact cannot satisfy
-the join. Waiting is bounded and errors flow through the normal blocking result path. The publisher
+the join. Waiting is bounded and errors flow through the normal blocking result path. Behavior verification can finish while quality tests run. The publisher
 retains its separate permission boundary and cannot publish a PASS from incomplete evidence.

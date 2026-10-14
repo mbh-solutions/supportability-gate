@@ -1,24 +1,40 @@
 # CLI Reference
 
 The installed entrypoint is `supportability-gate`; `python -m supportability_gate` exposes the
-same evaluator parser. The public evaluation subcommand remains `evaluate-complexity`, although
+same evaluator parser. The public evaluation subcommand is `evaluate-complexity`, although
 its result also includes the supported static policy and review evidence responsibilities.
 
 ## Install the exact source environment
 
-Use Python `>=3.12,<3.13`, Git, an already selected trusted Gate source revision, and its exact
-`requirements-dev.lock`. In that trusted source checkout:
+Use Python `>=3.12,<3.13`, Git, an already selected trusted Gate source commit, and its exact
+`requirements-dev.lock`. The organization administrator or maintainer supplies the qualified commit ID. Clone
+`https://github.com/mbh-solutions/supportability-gate.git` with Git and check out that exact commit.
+Open a terminal in that checkout, where `requirements-dev.lock` and `pyproject.toml` are present.
 
-```text
-python -m pip install --require-hashes -r requirements-dev.lock
-python -m pip install --no-build-isolation --no-deps .
-supportability-gate --help
-supportability-gate --version
+On Windows, enter these commands in PowerShell:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements-dev.lock
+.\.venv\Scripts\python.exe -m pip install --no-build-isolation --no-deps .
+.\.venv\Scripts\supportability-gate.exe --help
+.\.venv\Scripts\supportability-gate.exe --version
 ```
 
-Use an isolated environment for installation. This guide makes no published-package or release
-tag claim. Local installation does not supply authenticated hosted evidence or organization merge
-protection.
+On Linux or macOS, enter these commands in a terminal with Python 3.12 available:
+
+```sh
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --require-hashes -r requirements-dev.lock
+.venv/bin/python -m pip install --no-build-isolation --no-deps .
+.venv/bin/supportability-gate --help
+.venv/bin/supportability-gate --version
+```
+
+The help output lists `evaluate-complexity`; the version command prints the installed package
+version. Use the executable inside this environment for the commands below, or activate the
+environment first. Local installation supplies tools, not authenticated hosted evidence or
+organization merge protection. Ordinary PR users do not need this installation.
 
 ## Evaluate immutable commits
 

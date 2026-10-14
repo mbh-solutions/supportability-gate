@@ -11,14 +11,18 @@ policy defect or an evidence/runtime failure; the remedy depends on which was ac
 
 ## Find the authoritative cause
 
-1. Open the failed lane and its matching workflow run/attempt. Confirm its base, head, and workflow
-   SHA are the ones you intend to assess.
-2. Read that lane's blocks, technical errors, evidence sources, and dependency list in
-   `standard-results.json`. Read retained `stage-diagnostic.v1` diagnostics and the originating job
-   output when the named cause is technical.
+1. In the pull request's **Checks** view, open the failed Supportability check and its workflow
+   run. Confirm the proposed commit matches the PR. An implementer can also compare the recorded
+   base, head, workflow commit, and attempt.
+2. On the workflow run's **Summary** page, find **Artifacts** and download
+   `supportability-evidence-<run-id>-<attempt>`. Sign in with repository access if needed.
+   Unzip it and open `standard-results.json` in a text editor. Find the failed check's
+   `check_context`, `policy_blocks`, and `technical_errors`. An implementer should inspect its
+   evidence sources and retained stage diagnostics. Missing final evidence requires inspection
+   of the failed producer job's log.
 3. Check the relevant input or command without weakening scope or thresholds.
 4. Make the correction, refresh source-bound review evidence as necessary, and obtain fresh
-   complete checks on the new head. Historical evidence cannot qualify a new head.
+   complete checks on the new head. Evidence for a different commit cannot qualify the proposed head.
 
 ## Representative failures
 
@@ -31,11 +35,10 @@ policy defect or an evidence/runtime failure; the remedy depends on which was ac
 | `UNTESTED_AREA:*` or `QUALITY_HIGH_RISK_FILE_COVERAGE:*` | Required responsibilities were not meaningfully observed. Add executable tests/assertions that exercise the actual spans. Passing unrelated tests does not establish coverage. |
 | `GOLDEN_BEHAVIOR_MISMATCH:*` | The captured assertion differs or is not meaningful. Inspect the real behavior and retained baseline; do not blindly regenerate a golden to obtain PASS. |
 | `CHARACTERIZATION_ENVIRONMENT_DRIFT` | The compared capture environments differ. Verify executable and dependency identities and restore the intended matched environment. |
-| `MISSING_OWNER_AUTHORIZATION` / `STALE_OWNER_AUTHORIZATION` | This is an older-policy run. Check the deployed revision and obtain a fresh current-policy capture; new runs need no approval comment. |
+| An authorization comment is requested | No approval comment is part of the documented workflow. Ask the maintainer to verify the effective organization workflow and the run's identity. Report the PR/run links; do not manufacture a technical-review attestation. |
 | `STALE_CORRECTION_ORACLE` / `MODIFIED_CORRECTION_ORACLE` | The declared oracle is outside the exact base-to-head ancestry or one of its frozen bytes changed after the oracle commit. Prepare a fresh oracle-before-implementation transaction; a later byte restoration or approval comment cannot waive the history violation. |
 | `UNDECLARED_CORRECTION_DELTA` / `ABSENT_DECLARED_CORRECTION_DELTA` | The observed scenario, obligation or target delta does not exactly equal the correction declaration. Correct the declaration before implementation, or remove the unintended change. |
 | `CORRECTION_ORACLE_MISMATCH` / `MALFORMED_CORRECTION` | The oracle commit changed production or undeclared paths, lacks a required generic oracle role, or its identities are malformed. Rebuild the oracle commit from the exact evidence files; do not regenerate snapshots after implementation. |
-| `UNAUTHORIZED_CORRECTION` | This is an older-policy result. Current policy derives and verifies the oracle history and observed delta without an owner comment. |
 | `UNVERIFIABLE_DEPENDENCY_IDENTITY` | Locked and installed dependency evidence cannot authenticate. Inspect the retained receipts and supported optional/local dependency rules; do not simply skip missing packages. |
 | `TARGET_SANDBOX_WRITE_DENIED` | A fixed target command could not write within its permitted boundary. Inspect diagnostics and supported writable areas. Do not disable isolation. |
 | Missing/malformed canonical artifact or identity mismatch | Evidence cannot be trusted. Restore the correct artifact and run binding; diagnose its producer rather than substituting authored JSON. |
@@ -45,6 +48,30 @@ dependency. Read the original cause once and confirm each affected row's depende
 policy failures must remain in their owning lanes. Field ownership comes from the canonical map,
 not the evidence filename: for example, `human_review.naming` belongs to Gate 1, `human_review.cohesion`
 to Gate 4, and `human_review.intended_behavior` to Gate 5.
+
+## A check is taking a long time
+
+Open the running job's log to distinguish dependency preparation, behavior capture, test execution,
+and evidence verification. **Characterize Base** and **Characterize Head** run independently;
+each repeats successful scenarios to check repeatability. Four quality partitions divide the
+test suite. Independent jobs can continue after a failure to retain useful diagnostics.
+
+Use the characterization and quality timing files described in [Evidence Model](Evidence-Model.md)
+to identify expensive scenarios or commands. A blocked result does not justify dropping tests,
+weakening isolation, or treating missing evidence as passed. Report a repeated infrastructure delay
+with the run link, job name, timings, and diagnostics. There is no guaranteed two-minute completion.
+
+## Dependency setup or coverage fails
+
+Scenario drivers must use the dependencies provisioned by the hosted supervisor. They cannot run
+`npm ci`, fetch packages, or write into the read-only source trees during isolated execution.
+Verify committed package manifests and lockfiles against the
+[dependency contract](Characterization-Reference.md#characterization-manifest-and-executable-proof).
+
+For coverage failures, compare the reported responsibility with the proposed source commit.
+A surviving changed function needs body execution at its head line range. A deleted function is
+not an executable head target; retain a diagnostic that claims otherwise for Gate investigation.
+Add meaningful application tests when the target exists and is untested.
 
 ## Check effective protection
 
