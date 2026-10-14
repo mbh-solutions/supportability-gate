@@ -267,7 +267,7 @@ empty array for ordinary or function-only rows. A module row supplies a sorted, 
 public synchronous APIs from the same covered Python file, including its primary `api`. Each
 declared root counts toward schema 4's fixed global limit of 100 observed APIs, including
 ordinary/function-only rows. Roots must be globally unique and each declared root must execute
-as an actual root. Schemas 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3 retain their 50-API limit; total scenarios remain limited to 64.
+as an actual root. Schemas 1-3 retain their 50-API limit; total scenarios remain limited to 64.
 
 Retain a `$` behavior obligation targeting the primary API. A second `$` behavior obligation may
 target that exact source filepath. File coverage requires a complete source/function/code inventory
@@ -482,7 +482,7 @@ execution failure, missing execution or coverage, quality failure, malformed evi
 source identities and missing handoff evidence are never reconciled.
 
 An unchanged schema-5 manifest has no active correction and follows the ordinary preservation
-path. Existing schema 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4 manifests keep their existing decisions and wire formats.
+path. Existing schema 1-4 manifests keep their existing decisions and wire formats.
 
 The refactor and final-result readers select the schema-4 or schema-5 aggregate transport from
 the exact-head Git manifest. The existing 32,000,000-byte limit and duplicate-key rejection apply

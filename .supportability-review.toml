@@ -2,7 +2,7 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Clarify current module-introduction documentation: technical bindings remain required, but historical owner grants are not required in current runs. No executable behavior changes."
+intended_behavior = "Clarify current module-introduction documentation: technical bindings remain required, but historical owner grants are not required in current runs. Repair two rendered schema-range encoding defects. No executable behavior changes."
 proof = "Direct no-comment Python and TypeScript fixtures, correction history tamper regressions, consumer composition checks, preserved legacy evidence tests and hosted protected qualification."
 
 [characterization]
