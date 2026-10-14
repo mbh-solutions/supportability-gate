@@ -1,0 +1,11 @@
+{
+  "evidence_class": "author_declaration",
+  "intended_change": "Owner authorizes work and does not review code. A passing technical result must never manufacture an owner attestation. All technical enforcement remains required.",
+  "negative_controls": [
+    "stale source evidence remains blocked",
+    "missing behavior coverage remains blocked",
+    "altered frozen oracle history remains blocked",
+    "a PASS cannot imply personal owner review"
+  ],
+  "schema_version": "1.0"
+}
