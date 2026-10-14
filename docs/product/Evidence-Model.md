@@ -18,27 +18,37 @@ semantic proofs.
 
 ## Canonical artifacts
 
-Python quality execution is partitioned across four independent hosted jobs. Each job
-collects the complete test list before selecting its fixed round-robin partition, uses two
-isolated coverage workers, and retains the full/selected lists, completion receipt and raw
-branch-coverage database. TypeScript-only profiles use one job. Every job still executes
-the complete fixed adapter sequence; the Python test command is the only partitioned work.
+Quality execution starts four independent hosted partitions immediately. Python partitions
+collect the complete test list before selecting their fixed round-robin subset, use two
+isolated coverage workers, and retain full/selected lists, completion receipts and raw branch
+coverage. Node partitions use the fixed native `--test-shard=N/4` option with the same complete
+Git-derived test-file list. Every Node partition retains its exact command scope, partition
+identity, original LCOV bytes and digest, and required responsibility targets.
+
+Partition zero runs the complete non-test adapter sequence. Other partitions run their tests
+and required dependency provisioning; they do not repeat lint, formatting, typing, build or
+import-boundary checks. No required adapter or test is removed from the combined profile.
 
 The quality join downloads the exact native artifacts for the same repository, head,
 run and attempt and verifies their GitHub SHA-256 digests. It rejects missing or duplicate
 partitions, different full collections, missing/failed tests or subtests, absent worker
-coverage, differing command scope, runtimes, dependencies or sandbox controls. It combines
+coverage, differing command scope, runtimes, dependencies or sandbox controls. Node LCOV records are
+validated individually before actual reported line executions are combined; missing execution
+is never inferred from ignored lines or a successful command. It combines
 raw coverage databases and reapplies the current changed/high-risk responsibility coverage
 requirements to the union. A partial capture has a distinct job identity and cannot satisfy
 the ordinary quality attestation directly. Failed partitions retain their evidence and block
 qualification; they are never republished as a complete passing profile.
 
 The joined quality capture retains each original invocation and identifies the derivation as
-`isolated-target-provenance.sharded.v1`. Combined Python stdout/stderr digests bind explicit
+`isolated-target-provenance.sharded.v1`. Combined Python and Node stdout/stderr digests bind explicit
 manifests of the original stream digests. All sixteen mixed-profile adapter results, resource
-limits, timeouts and eight required contexts remain in force. Parallel jobs consume more
-concurrent compute and add planning/join overhead; full-suite timing is measured on the
+limits, timeouts and eight required contexts remain in force. Parallel jobs consume concurrent compute and add join overhead; full-suite timing is measured on the
 consumer rather than inferred from a small benchmark.
+
+The Python characterization observer caches code identity and path classification. It traces
+line events only inside the target tree, while continuing to observe calls back into target
+code from external libraries. Source hashes and exact per-code execution counts are preserved.
 
 Characterization executes at most two scenarios concurrently. Each successful scenario performs
 two fresh disposable executions in sequence; an unsuccessful first execution is retained without

@@ -148,7 +148,7 @@ def validate_profiles(
     parts: list[Path], arguments: argparse.Namespace
 ) -> list[quality_profile.QualityEvidence]:
     profiles = [quality_profile.load_evidence(part / "quality-gates.json") for part in parts]
-    if len(profiles) != (4 if profiles[0].language in {"python", "mixed"} else 1):
+    if len(profiles) != arguments.pytest_shard_count:
         fail("incorrect partition count for the stack")
     identities = []
     environments = []
@@ -175,7 +175,7 @@ def validate_profiles(
         )
         if observed != expected or profile.runner_environment != "github-hosted":
             fail("stale capture identity")
-        validate_command_prefix(profile.language, profile.commands)
+        validate_command_prefix(profile.language, profile.commands, index)
         identity = asdict(profile)
         for key in ("job", "commands"):
             del identity[key]
@@ -223,9 +223,9 @@ def validate_profiles(
 
 
 def validate_command_prefix(
-    language: str, commands: tuple[quality_profile.GateResult, ...]
+    language: str, commands: tuple[quality_profile.GateResult, ...], index: int | None = None
 ) -> None:
-    required = quality_profile.required_adapters(language)
+    required = collector.partition_adapters(language, index)
     observed = tuple(command.adapter for command in commands)
     if not observed or observed != required[: len(observed)]:
         fail("invalid command profile")
@@ -248,21 +248,15 @@ def has_failure(profiles: list[quality_profile.QualityEvidence]) -> bool:
 
 
 def validate_command_scope(profiles: list[quality_profile.QualityEvidence]) -> None:
-    for commands in zip(*(profile.commands for profile in profiles), strict=True):
-        expected = commands[0]
-        for command in commands[1:]:
-            fixed = (
-                "adapter",
-                "arguments",
-                "executed_arguments",
-                "proof_kind",
-                "zero_statement_paths",
-            )
+    reference = {command.adapter: command for command in profiles[0].commands}
+    for profile in profiles[1:]:
+        for command in profile.commands:
+            expected = reference[command.adapter]
+            fixed = ("arguments", "executed_arguments", "proof_kind", "zero_statement_paths")
             if any(getattr(command, key) != getattr(expected, key) for key in fixed):
                 fail("command scope mismatch")
-            if (
-                command.adapter != "python.pytest.v1"
-                and command.observed_paths != expected.observed_paths
+            if command.adapter not in {"python.pytest.v1", "typescript.test.v1"} and (
+                command.observed_paths != expected.observed_paths
             ):
                 fail("non-partitioned proof mismatch")
 
@@ -394,6 +388,75 @@ def combined_python(
     )
 
 
+def combined_typescript(parts, profiles, repository: Path, output: Path):
+    """Verify every native Node partition before applying obligations to merged raw lines."""
+    targets = required_targets(repository, profiles[0])
+    commands = [next(c for c in p.commands if c.adapter == "typescript.test.v1") for p in profiles]
+    reports = []
+    for index, part in enumerate(parts):
+        raw = (part / "typescript-shard" / "coverage.lcov").read_bytes()
+        receipt = read_json(part / "typescript-shard" / "partition.json")
+        expected = {
+            "schema_version": "quality-node-partition.v1",
+            "index": index,
+            "count": len(parts),
+            "required_targets": list(targets),
+            "command": list(commands[index].executed_arguments),
+            "coverage_sha256": hashlib.sha256(raw).hexdigest(),
+        }
+        if receipt != expected or commands[index].raw_proof_sha256 != expected["coverage_sha256"]:
+            fail("Node partition identity or coverage mismatch")
+        reports.append(raw.decode("utf-8"))
+    report = merge_lcov(reports)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "coverage.lcov").write_text(report, encoding="utf-8")
+    observed, _ = quality_profile.typescript_lcov_observation(
+        report, profiles[0].source_files, Path("/target"), targets
+    )
+    streams = {
+        stream: hashlib.sha256(
+            json.dumps([getattr(c, stream + "_sha256") for c in commands]).encode()
+        ).hexdigest()
+        for stream in ("stdout", "stderr")
+    }
+    return replace(
+        commands[0],
+        observed_paths=observed,
+        raw_proof_sha256=hashlib.sha256(report.encode()).hexdigest(),
+        stdout_sha256=streams["stdout"],
+        stderr_sha256=streams["stderr"],
+    )
+
+
+def merge_lcov(reports: list[str]) -> str:
+    """Validate each report and union actual DA records; never invent execution."""
+    files: dict[str, dict[int, int]] = {}
+    for report in reports:
+        quality_profile._lcov_records(report, Path("/target"))
+        current = None
+        for line in report.splitlines():
+            if line.startswith("SF:"):
+                current = quality_profile._lcov_path(line[3:], Path("/target"))
+                files.setdefault(current, {})
+            elif line.startswith("DA:") and current is not None:
+                number, hits = (int(x) for x in line[3:].split(",")[:2])
+                files[current][number] = files[current].get(number, 0) + hits
+            elif line == "end_of_record":
+                current = None
+    lines = []
+    for path, counts in sorted(files.items()):
+        lines.extend(
+            [
+                "SF:" + path,
+                *(f"DA:{n},{v}" for n, v in sorted(counts.items())),
+                f"LF:{len(counts)}",
+                f"LH:{sum(v > 0 for v in counts.values())}",
+                "end_of_record",
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
 def aggregate(arguments: argparse.Namespace, parts: list[Path]) -> quality_profile.QualityEvidence:
     profiles = validate_profiles(parts, arguments)
     output = Path(arguments.output)
@@ -402,9 +465,31 @@ def aggregate(arguments: argparse.Namespace, parts: list[Path]) -> quality_profi
     selected = profiles[0]
     if has_failure(profiles):
         selected = next(profile for profile in profiles if has_failure([profile]))
-        commands = selected.commands
+        failed = next(
+            (
+                c
+                for c in selected.commands
+                if contract.command_failed(selected.language, c.adapter, c.executed, c.exit_code)
+            ),
+            None,
+        )
+        if failed is not None:
+            order = quality_profile.required_adapters(selected.language)
+            first = {c.adapter: c for c in profiles[0].commands}
+            commands = tuple(
+                first[a] for a in order[: order.index(failed.adapter)] if a in first
+            ) + (failed,)
+        else:
+            commands = profiles[0].commands
     elif profiles[0].language in {"python", "mixed"}:
         combined = combined_python(parts, profiles, repository, output.parent / "python-combined")
+        commands = tuple(
+            combined if item.adapter == combined.adapter else item for item in commands
+        )
+    if not has_failure(profiles) and profiles[0].language in {"typescript", "mixed"}:
+        combined = combined_typescript(
+            parts, profiles, repository, output.parent / "typescript-combined"
+        )
         commands = tuple(
             combined if item.adapter == combined.adapter else item for item in commands
         )
@@ -454,7 +539,8 @@ def main() -> int:
             repository, arguments.base_ref, arguments.head_ref, records
         )
         policy = head if gate_policy.is_allowed_contract_transition(base, head, changes) else base
-        count = 4 if policy.language in {"python", "mixed"} else 1
+        quality_profile.required_adapters(policy.language)
+        count = COUNT
         print("matrix=" + json.dumps({"shard": list(range(count))}))
         print(f"count={count}")
         return 0
