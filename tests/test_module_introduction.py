@@ -52,7 +52,7 @@ def _actual_witness(
         check=True,
         capture_output=True,
         timeout=15,
-        env={**os.environ, "PYTHONHASHSEED": "0"},
+        env={**os.environ, "PYTHONHASHSEED": "0", "PYTHONDONTWRITEBYTECODE": "1"},
     )
     return json.loads(completed.stdout)
 
@@ -156,7 +156,9 @@ def _fixture(
     assert actual["primary"]["cases"] == primary_cases
     assert actual["root_cases"] == oracle
     for side, capture in (("base", base), ("head", head)):
-        capture["authentication"].update(base_sha=base_sha, head_sha=head_sha)
+        capture["authentication"].update(
+            base_sha=base_sha, head_sha=head_sha, side=side, job=f"characterize-{side}"
+        )
         capture["definition_sha"] = head_sha
         capture["target_sha"] = base_sha if side == "base" else head_sha
         capture["manifest"] = gate._manifest_payload(definition)
@@ -507,6 +509,111 @@ def test_real_synthetic_calls_pass_parser_capture_result_coverage_and_owner_join
     assert "src/introduced.py::function:validate" in result["coverage"]["covered_obligations"]
     legacy._validate_round_trip(result)
     assert birth._s6(fixture, result, [_grant(result)])["overall_result"] == "PASS"
+
+
+def _module_followup(fixture: tuple, source: str) -> tuple:
+    """Refresh synthetic transport around real observations of both source revisions."""
+    repository, _, base_sha, _, prior_head = fixture
+    base = copy.deepcopy(prior_head)
+    head = copy.deepcopy(prior_head)
+    legacy._write(repository / "src/introduced.py", source)
+    head_sha = legacy._commit(repository, "synthetic existing module follow-up")
+    driver = repository / "tests/characterization/introduced.characterization.py"
+    actual = _actual_witness(repository, driver, [birth.API])
+    row = birth._introduced(head)
+    row.update(
+        api_observation={**actual["primary"], "module_witness": actual},
+        behavior=actual["primary"]["cases"],
+        behavior_sha256=birth._sha(gate._canonical(actual["primary"]["cases"])),
+        stdout_sha256=birth._sha(gate._canonical(actual)),
+    )
+    for side, capture in (("base", base), ("head", head)):
+        capture["authentication"].update(
+            base_sha=base_sha, head_sha=head_sha, side=side, job=f"characterize-{side}"
+        )
+        capture["definition_sha"] = head_sha
+        capture["target_sha"] = base_sha if side == "base" else head_sha
+        birth._fingerprint(capture)
+    return repository, base_sha, head_sha, base, head
+
+
+def test_sealed_module_review_survives_successive_source_refactors(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    review_path = fixture[0] / "tests/characterization/introduced.review.json"
+    sealed = review_path.read_bytes()
+    for expression in ("value + value", "value << 1"):
+        source = witness.SOURCE.decode().replace("value * 2", expression)
+        fixture = _module_followup(fixture, source)
+        result = birth._verify(tmp_path, fixture)
+        assert result["overall_result"] == "PASS", result["policy_blocks"]
+        fact = result["api_observations"][0]
+        assert fact["oracle_review_valid"] is True
+        assert fact["base_execution_verified"] is True
+        assert fact["head_execution_verified"] is True
+        assert review_path.read_bytes() == sealed
+        assert fact["head_source"]["source_sha256"] != json.loads(sealed)["source_sha256"]
+        legacy._validate_round_trip(result)
+
+
+@pytest.mark.parametrize("defect", ["behavior", "stale-witness", "review", "oracle", "driver"])
+def test_preserved_module_review_does_not_waive_current_proof(tmp_path: Path, defect: str) -> None:
+    fixture = _fixture(tmp_path)
+    source = witness.SOURCE.decode()
+    if defect == "behavior":
+        source = source.replace("value * 2", "value * 3")
+    fixture = _module_followup(fixture, "# Changed source\n" + source)
+    repository = fixture[0]
+    if defect == "stale-witness":
+        birth._introduced(fixture[4])["api_observation"]["module_witness"]["source_sha256"] = (
+            "0" * 64
+        )
+    elif defect in {"review", "oracle", "driver"}:
+        suffix = {
+            "review": "review.json",
+            "oracle": "module.golden.json",
+            "driver": "characterization.py",
+        }[defect]
+        path = repository / f"tests/characterization/introduced.{suffix}"
+        path.write_bytes(path.read_bytes() + b"\n")
+        fixture = birth._advance_head(fixture, "synthetic sealed evidence tampering")
+    result = birth._verify(tmp_path, fixture)
+    assert result["overall_result"] == "BLOCK", result
+    assert "UNAUTHENTICATED_CHARACTERIZATION_EVIDENCE" not in result["policy_blocks"]
+    if defect == "review":
+        assert "CHANGED_CHARACTERIZATION_DEFINITION:review:introduced" in result["policy_blocks"]
+
+
+def test_new_module_scenario_on_existing_source_requires_current_review(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    repository = fixture[0]
+    path = repository / gate.MANIFEST_PATH
+    manifest = path.read_bytes()
+    without = json.loads(manifest)
+    without["scenarios"] = [row for row in without["scenarios"] if row["id"] != "introduced"]
+    without["obligations"] = [
+        row for row in without["obligations"] if row["scenario"] != "introduced"
+    ]
+    birth._json(path, without)
+    base_sha = legacy._commit(repository, "existing source without admitted module scenario")
+    path.write_bytes(manifest)
+    fixture = (repository, fixture[1], base_sha, fixture[3], fixture[4])
+    fixture = _module_followup(
+        fixture, "# New scenario must bind this source\n" + witness.SOURCE.decode()
+    )
+    result = birth._verify(tmp_path, fixture)
+    assert "INVALID_API_ORACLE_REVIEW:introduced" in result["policy_blocks"]
+    manifest = gate._manifest(repository, fixture[2], [])
+    scenario = next(row for row in manifest.scenarios if row.id == "introduced")
+    fact = result["api_observations"][0]
+    review_path = repository / "tests/characterization/introduced.review.json"
+    review = json.loads(review_path.read_bytes())
+    review["source_sha256"] = fact["head_source"]["source_sha256"]
+    review["module_inventory_sha256"] = fact["module"]["head_inventory"]["inventory_sha256"]
+    birth._json(review_path, review)
+    head_sha = legacy._commit(repository, "bind newly admitted scenario to actual source")
+    assert gate._api_oracle_review(repository, fixture[1], head_sha, scenario, fact, [])[
+        "oracle_review_valid"
+    ]
 
 
 @pytest.mark.parametrize(

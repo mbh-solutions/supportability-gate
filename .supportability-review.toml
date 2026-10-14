@@ -2,42 +2,42 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Accept Node LCOV ignored-line accounting while deriving coverage only from positive explicit line records. Preserve malformed-proof rejection and retain bounded failure diagnostics. Erased type exports do not create runtime obligations."
-proof = "Direct positive/negative LCOV parser tests, retention-on-parse-failure regression, and fixed isolated hosted Node coverage probes with type-only source and uncalled functions."
+intended_behavior = "Preserve a sealed module oracle review across behavior-preserving implementation changes when the identical scenario and review already exist in the comparison base. New scenarios still require exact current source and inventory binding."
+proof = "Successive real-observation refactors plus negative behavior, witness, review, oracle, driver, and new-scenario tests. Hosted qualification measures both preserving and forbidden changes."
 
 [characterization]
-captured_behavior = "Existing quality-profile command and result characterization remains unchanged. Node native coverage probes measure real source-mapped test execution."
-proof = "Existing m9-quality-profile and quality-runner-boundary scenarios remain frozen; exact final source and consumer qualification validate preserved isolation and execution requirements."
+captured_behavior = "Existing module observation, source inventory, golden compatibility and named-body execution remain enforced."
+proof = "Existing frozen characterization scenarios and fresh source-bound base/head execution evidence."
 
 [separation_of_concerns]
-before = "LCOV parsing required aggregate hit counts to equal explicit executed lines, and orchestration retained the trace only after parsing succeeded."
-after = "The parser validates native accounting without inventing execution, while orchestration retains bounded diagnostic evidence before parsing."
+before = "Module review validation required a current implementation fingerprint while definition preservation forbade updating that review."
+after = "Admission review remains immutable; independently derived current inventories and observed execution establish ongoing compatibility."
 boundaries = [
-  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_lcov_executed_line", before = "Parse positive execution counts.", after = "Also validate unique positive line identities and record all reported lines." },
-  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_store_lcov_record", before = "Require hit totals equal explicit positive line count.", after = "Reconcile omitted ignored-line totals without assigning them execution." },
-  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_lcov_records", before = "Collect only positive line identities.", after = "Track all explicit line identities for exact accounting." },
-  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "typescript_lcov_observation", before = "Use aggregate hits for the file execution prerequisite.", after = "Require an explicit positive line record, including when no responsibility range is supplied." }
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_bindings", before = "Provide only head identity to oracle review validation.", after = "Provide the exact comparison base for sealed review provenance." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_preserved_module_review", before = "No distinction between new admission and established sealed review.", after = "Require the same module scenario and byte-identical review in the exact comparison base." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_oracle_review", before = "Validate every module review against current source.", after = "Identify sealed existing module reviews before validating their bindings." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_review_matches", before = "Require head fingerprints for both admission and preservation.", after = "Keep exact oracle and roots; require head fingerprints for new admissions and preserve historical bindings for unchanged admitted reviews." }
 ]
 
 [architecture]
-dependency_direction = "Hosted orchestration calls the deterministic quality-profile reader. The reader does not depend on orchestration or execute target source."
-reviewed_paths = ["src/supportability_gate/quality_profile.py"]
+dependency_direction = "Characterization reads fixed Git blobs and statically derived source facts. Native execution remains in the existing isolated capture boundary."
+reviewed_paths = ["src/supportability_gate/characterization.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/quality_profile.py"
-owns = "Fixed quality evidence parsing, accounting, and coverage decisions."
-does_not_own = "Consumer test behavior, sandbox setup, owner permission, or policy waivers."
+path = "src/supportability_gate/characterization.py"
+owns = "Source-bound characterization evidence validation and behavior-preservation decisions."
+does_not_own = "Consumer behavior, sandbox configuration, policy waivers or human attestations."
 
 [incremental_refactor]
-target = "Repair the LCOV accounting and lost diagnostic evidence exposed by a legitimate TypeScript consumer."
-completed_step = "Accept the fixed Node reporter format while preserving explicit execution coverage and invalid-proof rejection."
+target = "Remove the contradictory current-source versus immutable-review requirements for established module scenarios."
+completed_step = "Separate original review admission binding from current independently verified execution without changing protected expectations."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Reported lines and executed lines name separate evidence sets."
-cohesion = "Existing parser and hosted orchestration retain their own responsibilities; no new production module."
-intended_behavior = "Type-only omitted rows do not block valid native reports and never provide runtime credit. Uncalled bodies and malformed traces remain blocking."
-reviewability = "Author declaration only. Existing immutable policy, source integrity, isolated execution, and protected delivery remain mandatory."
+naming = "Preserved module review identifies exact base scenario and byte identity."
+cohesion = "The existing characterization module owns the fix; no new production module."
+intended_behavior = "Established unchanged expectations support preserving refactors; new scenarios and forged evidence remain blocked."
+reviewability = "Author declaration only; existing source integrity, isolation and protected delivery remain mandatory."
