@@ -158,7 +158,13 @@ def test_wait_groups_overlap_only_independent_work():
     with pytest.raises(ValueError):
         waiter.producer_names("untrusted")
     workflow = Path(__file__).parents[1] / ".github/workflows/organization-required.yml"
-    text = workflow.read_text()
+    content = workflow.read_text()
+    quality = content.split("  quality-profile-shards:")[1].split("  deterministic-evidence:")[0]
+    assert "id: capture" in quality
+    assert "id: await_quality" not in quality
+    text = content.split("  deterministic-evidence:")[1].split("  publish-results:")[0]
+    assert "id: capture\n" not in text
+    assert text.index("id: await_capture") < text.index("id: characterization")
     assert text.index("id: characterization") < text.index("id: await_quality")
     assert text.index("id: await_quality") < text.index("id: aggregate_quality")
     assert text.index("id: aggregate_quality") < text.index("id: evaluate")
