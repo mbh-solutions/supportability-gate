@@ -382,6 +382,56 @@
         "src/supportability_gate/quality_profile.py::module:src/supportability_gate/quality_profile.py:163-176",
         "src/supportability_gate/quality_runner.py::function:sandbox_command:111-233"
       ]
+    },
+    {
+      "id": "work-authorization-reporting",
+      "obligations": [
+        "work-authorization-reporting"
+      ],
+      "oracle_files": [
+        {
+          "kind": "expected_case",
+          "path": "tests/characterization/work-authorization-reporting.characterization.py",
+          "sha256": "f3afdc8c4eba25ae6cb30f82d464aa204caf92434236b4f7cad8efcbc95d9da4"
+        },
+        {
+          "kind": "golden",
+          "path": "tests/characterization/work-authorization-reporting.golden.json",
+          "sha256": "b89cfb829d540bff4cdd2eff1492c7e35e924934327335272c3dc07c7cb01949"
+        },
+        {
+          "kind": "review",
+          "path": "tests/characterization/work-authorization-reporting.review.json",
+          "sha256": "d714668b46b7b8c65fc47f2c754f1504f0dbf99d257c739d2033b855c5e15ecf"
+        },
+        {
+          "kind": "source_receipt",
+          "path": "tests/characterization/work-authorization-reporting.source.json",
+          "sha256": "1f7a98a65a8d7148ca1ceefb85a3578b84c69e8027c9f0ab24c432e798a5d917"
+        }
+      ],
+      "scenarios": [
+        "work-authorization-reporting"
+      ],
+      "targets": [
+        "src/supportability_gate/refactor_policy.py::function:_oracle_commit:1385-1417",
+        "src/supportability_gate/refactor_policy.py::function:_work_scope:1359-1382",
+        "src/supportability_gate/refactor_policy.py::function:correction_evidence:1420-1454",
+        "src/supportability_gate/refactor_policy.py::function:introduction_blocks:1457-1476",
+        "src/supportability_gate/refactor_policy.py::function:legacy_main:1304-1352",
+        "src/supportability_gate/refactor_policy.py::function:main:1539-1558",
+        "src/supportability_gate/refactor_policy.py::function:verify_work:1479-1536",
+        "src/supportability_gate/refactor_policy.py::module:src/supportability_gate/refactor_policy.py:1355-1356",
+        "src/supportability_gate/reporting.py::function:_evidence_classes:326-337",
+        "src/supportability_gate/standard_block_ownership.py::module:src/supportability_gate/standard_block_ownership.py:70-70",
+        "src/supportability_gate/standard_results.py::function:_s02_add_characterization:2723-2769",
+        "src/supportability_gate/standard_results.py::function:_s02_authorized_correction:1906-1910",
+        "src/supportability_gate/standard_results.py::function:_s02_refactor:2059-2131",
+        "src/supportability_gate/standard_results.py::function:_s02_result_classification:3522-3529",
+        "src/supportability_gate/standard_results.py::function:_s02_work_blocks:2230-2252",
+        "src/supportability_gate/standard_results.py::function:_s02_work_correction:2134-2173",
+        "src/supportability_gate/standard_results.py::function:_s02_work_evidence:2176-2227"
+      ]
     }
   ],
   "obligations": [
@@ -713,6 +763,13 @@
       "scenario": "standard-composer-source-boundary",
       "selector": "cases",
       "target": "src/supportability_gate/standard_results_producer.py"
+    },
+    {
+      "category": "behavior",
+      "id": "work-authorization-reporting",
+      "scenario": "work-authorization-reporting",
+      "selector": "$",
+      "target": "src/supportability_gate/reporting.py"
     }
   ],
   "scenarios": [
@@ -913,6 +970,15 @@
         "src/supportability_gate/standard_results_producer.py"
       ],
       "id": "standard-composer-source-boundary",
+      "kind": "regression",
+      "module_roots": []
+    },
+    {
+      "api": null,
+      "covers": [
+        "src/supportability_gate/reporting.py"
+      ],
+      "id": "work-authorization-reporting",
       "kind": "regression",
       "module_roots": []
     }

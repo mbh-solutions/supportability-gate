@@ -1,0 +1,54 @@
+[
+  {
+    "input": {
+      "result": "PASS",
+      "standard": 6
+    },
+    "output": {
+      "authenticated_owner_attestation": [],
+      "author_declaration": [],
+      "measured_fact": [
+        "refactor-policy-result.json"
+      ]
+    }
+  },
+  {
+    "input": {
+      "result": "PASS",
+      "standard": 8
+    },
+    "output": {
+      "authenticated_owner_attestation": [],
+      "author_declaration": [],
+      "measured_fact": [
+        "refactor-policy-result.json"
+      ]
+    }
+  },
+  {
+    "input": {
+      "result": "PASS",
+      "standard": 1
+    },
+    "output": {
+      "authenticated_owner_attestation": [],
+      "author_declaration": [],
+      "measured_fact": [
+        "refactor-policy-result.json"
+      ]
+    }
+  },
+  {
+    "input": {
+      "result": "BLOCK",
+      "standard": 6
+    },
+    "output": {
+      "authenticated_owner_attestation": [],
+      "author_declaration": [],
+      "measured_fact": [
+        "refactor-policy-result.json"
+      ]
+    }
+  }
+]
