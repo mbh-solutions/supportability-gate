@@ -13,6 +13,8 @@ proof = "Existing frozen characterization scenarios and fresh source-bound base/
 before = "Module review validation required a current implementation fingerprint while definition preservation forbade updating that review."
 after = "Admission review remains immutable; independently derived current inventories and observed execution establish ongoing compatibility."
 boundaries = [
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_bindings", before = "Provide only head identity to oracle review validation.", after = "Provide the exact comparison base for sealed review provenance." },
+  { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_preserved_module_review", before = "No distinction between new admission and established sealed review.", after = "Require the same module scenario and byte-identical review in the exact comparison base." },
   { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_api_oracle_review", before = "Validate every module review against current source.", after = "Identify sealed existing module reviews before validating their bindings." },
   { path = "src/supportability_gate/characterization.py", kind = "function", symbol = "_module_review_matches", before = "Require head fingerprints for both admission and preservation.", after = "Keep exact oracle and roots; require head fingerprints for new admissions and preserve historical bindings for unchanged admitted reviews." }
 ]
