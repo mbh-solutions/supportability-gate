@@ -322,8 +322,8 @@ oracle commit, manifest blob/hash, final head and canonical observed-delta diges
 execution failure, missing execution or coverage, quality failure, malformed evidence, stale
 source identities and missing handoff evidence are never reconciled.
 
-An fixed schema-5 manifest has no active correction and follows the ordinary preservation
-path. Existing schema 1-4 manifests keep their existing decisions and wire formats.
+A schema-5 manifest that matches the base has no active correction and follows the ordinary
+preservation path. Each supported manifest selects its matching decision rules and wire format.
 
 The refactor and final-result readers select the schema-4 or schema-5 aggregate transport from
 the exact-head Git manifest. The existing 32,000,000-byte limit and duplicate-key rejection apply
