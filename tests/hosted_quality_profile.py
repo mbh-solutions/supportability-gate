@@ -1123,6 +1123,24 @@ def _run_command(
             raise quality_profile.QualityProfileError("TARGET_SANDBOX_WRITE_DENIED", plan.adapter)
         if completed.returncode == 125 and sandboxed:
             raise quality_profile.QualityProfileError("TARGET_SANDBOX_RUNTIME_FAILED", plan.adapter)
+        if plan.adapter == "typescript.test.v1" and (work / "coverage.lcov").is_file():
+            runtime_report = (work / "coverage.lcov").read_bytes()
+            _retain_diagnostic(
+                diagnostic_output or output,
+                stage="quality-runtime-proof",
+                code="TYPESCRIPT_RUNTIME_OBSERVATION",
+                adapter=plan.adapter,
+                stdout=runtime_report,
+                stderr=json.dumps(
+                    {
+                        "report_sha256": quality_profile._sha256(runtime_report),
+                        "report_bytes": len(runtime_report),
+                        "required_targets": required_targets,
+                    }
+                ).encode(),
+                roots=(repository, mounted_target, output),
+                identity=identity,
+            )
         observed, zero_statement, raw_digest, proof_exit = _proof(
             plan,
             repository,
@@ -1137,17 +1155,6 @@ def _run_command(
         )
         if plan.adapter == "python.pytest.v1" and pytest_shard_index is not None:
             _retain_python_shard(work, diagnostic_output or output, required_targets)
-        if plan.adapter == "typescript.test.v1" and (work / "coverage.lcov").is_file():
-            _retain_diagnostic(
-                diagnostic_output or output,
-                stage="quality-runtime-proof",
-                code="TYPESCRIPT_RUNTIME_OBSERVATION",
-                adapter=plan.adapter,
-                stdout=(work / "coverage.lcov").read_bytes(),
-                stderr=json.dumps({"required_targets": required_targets}).encode(),
-                roots=(repository, mounted_target, output),
-                identity=identity,
-            )
         exit_code = completed.returncode or proof_exit
         if exit_code:
             _retain_diagnostic(

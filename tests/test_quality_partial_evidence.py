@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
 
-from supportability_gate import quality_profile
+from supportability_gate import quality_profile, quality_runner
 
 _SPEC = importlib.util.spec_from_file_location(
     "partial_hosted_quality_profile", Path(__file__).with_name("hosted_quality_profile.py")
@@ -101,3 +102,33 @@ def test_complete_node_profile_retains_both_installed_receipts(tmp_path: Path) -
     assert len(receipts) == 6
     for kind in ("tool", "target"):
         assert any(value.startswith(f"npm-{kind}-installed:") for value in receipts)
+
+
+def test_malformed_lcov_retained_before_parser_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "target"
+    repository.mkdir()
+    output = tmp_path / "output"
+    plan = quality_runner.CommandPlan(
+        "typescript.test.v1",
+        ("node", "--test"),
+        ("node", "--test"),
+        "coverage",
+        ("src/sample.ts",),
+    )
+    work = quality_runner.command_work_directory(output, plan.adapter)
+    work.mkdir(parents=True)
+    raw = b"SF:src/sample.ts\nDA:1,1\nLF:2\nLH:1\nend_of_record\n"
+    (work / "coverage.lcov").write_bytes(raw)
+    monkeypatch.setattr(runner.quality_runner, "sandbox_command", lambda *a, **k: ("unused",))
+    monkeypatch.setattr(
+        runner.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, b"", b"")
+    )
+    with pytest.raises(quality_profile.QualityProfileError, match="LF=2 LH=1 DA=1 DA_hits=1"):
+        runner._run_command(plan, repository, output)
+    name = "quality-runtime-proof--typescript.test.v1"
+    assert (output / "diagnostics" / f"{name}.stdout.log").read_bytes() == raw
+    metadata = json.loads((output / "diagnostics" / f"{name}.stderr.log").read_text())
+    assert metadata["report_sha256"] == quality_profile._sha256(raw)
+    assert metadata["report_bytes"] == len(raw)

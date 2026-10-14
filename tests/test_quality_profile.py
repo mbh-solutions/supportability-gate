@@ -563,7 +563,7 @@ end_of_record
     [
         "SF:src/sample.ts\nDA:1,1\nLF:not-a-number\nLH:1\nend_of_record\n",
         "SF:src/sample.ts\nDA:1,1\nLF:1\nLH:1\n",
-        "SF:src/sample.ts\nDA:1,1\nLF:2\nLH:2\nend_of_record\n",
+        "SF:src/sample.ts\nDA:1,1\nLF:2\nLH:1\nend_of_record\n",
     ],
 )
 def test_typescript_malformed_runtime_trace_fails_closed(tmp_path: Path, report: str) -> None:
@@ -2169,3 +2169,36 @@ maximum = 10
     else:
         assert not blocks
     assert all(command.executed and command.exit_code == 0 for command in evidence.commands)
+
+
+@pytest.mark.parametrize("executed, expected", [(False, ()), (True, ("src/sample.ts",))])
+def test_node_ignored_lines_never_supply_runtime_execution(
+    tmp_path: Path, executed: bool, expected: tuple[str, ...]
+) -> None:
+    report = (
+        f"SF:src/sample.ts\nDA:4,1\nDA:5,{int(executed)}\n"
+        f"LF:5\nLH:{4 + int(executed)}\nend_of_record\n"
+    )
+    observed, zero = quality_profile.typescript_lcov_observation(
+        report, ("src/sample.ts",), tmp_path, ("src/sample.ts::function:run:4-5",)
+    )
+    assert observed == expected
+    assert zero == ()
+
+
+@pytest.mark.parametrize("rows", ["DA:0,1", "DA:1,1\nDA:1,0", "DA:1,1\nDA:1,1"])
+def test_lcov_invalid_or_duplicate_line_identity_is_rejected(tmp_path: Path, rows: str) -> None:
+    with pytest.raises(quality_profile.QualityProfileError):
+        quality_profile.typescript_lcov_observation(
+            f"SF:src/sample.ts\n{rows}\nLF:1\nLH:1\nend_of_record\n",
+            ("src/sample.ts",),
+            tmp_path,
+        )
+
+
+def test_lcov_ignored_only_totals_do_not_cover_a_file(tmp_path: Path) -> None:
+    assert quality_profile.typescript_lcov_observation(
+        "SF:src/sample.ts\nDA:3,0\nLF:3\nLH:2\nend_of_record\n",
+        ("src/sample.ts",),
+        tmp_path,
+    ) == ((), ())
