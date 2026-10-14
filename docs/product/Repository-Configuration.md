@@ -329,8 +329,18 @@ API can witness its actual class helpers without serializing their receivers.
 
 Module review records use schema `2.0`, retaining all ordinary review fields and adding
 `module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. These bind the exact root
-panel, complete function/enum inventory and raw module-oracle bytes. Current runs validate those
-bindings directly, without a duplicate owner introduction grant. Historical authorization schema
+panel, complete function/enum inventory and raw module-oracle bytes at admission. A newly added
+module scenario must bind the exact head source and inventory, including when its source file
+already exists. For subsequent behavior-preserving changes, keep the review file unchanged:
+the same scenario and byte-identical review must already exist in the comparison base. Its source
+and inventory fingerprints record the original admission, rather than requiring review rewrites
+after every implementation change. Both revisions' current source inventories and actual execution
+witnesses are still independently verified; historical review fingerprints never replace that proof.
+The driver, root panel, ordinary golden and module golden remain protected. A changed review is
+still rejected; restore its original bytes for a preserving change. Deliberate behavior changes
+must use the separate correction contract and cannot be hidden by updating review fingerprints.
+Current runs validate these bindings directly, without a duplicate owner introduction grant.
+Historical authorization schema
 `4.0` retains its recorded binding requirements and admits at most 100 actual roots only when
 joined to result `v4`; historical authorization artifacts retain their original byte behavior.
 Existing whole-file birth, anti-copy, no-retirement, sealed-review, exact-head evidence,

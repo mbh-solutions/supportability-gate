@@ -764,7 +764,7 @@ def _api_bindings(
                 repository, base_sha, head_sha, manifest, item, records
             )
         facts[item.id].update(
-            _api_oracle_review(repository, head_sha, item, facts[item.id], records)
+            _api_oracle_review(repository, base_sha, head_sha, item, facts[item.id], records)
         )
         if not admissible:
             blocks.append(f"INVALID_API_INTRODUCTION:{item.id}")
@@ -877,6 +877,7 @@ def _read_api_review(content: bytes) -> Any:
 
 def _api_oracle_review(
     repository: Path,
+    base_sha: str,
     head_sha: str,
     scenario: Scenario,
     fact: dict[str, Any],
@@ -907,7 +908,8 @@ def _api_oracle_review(
         )
     except (git_changes.GitError, CharacterizationError):
         return {"review_sha256": None, "intended_feature": None, "oracle_review_valid": False}
-    valid = _valid_api_oracle_review(row, fact) and _module_review_matches(row, fact)
+    preserved = _preserved_module_review(repository, base_sha, scenario, blob.content, records)
+    valid = _valid_api_oracle_review(row, fact) and _module_review_matches(row, fact, preserved)
     return {
         "review_sha256": _sha256(blob.content),
         "intended_feature": row["intended_feature"] if valid else None,
@@ -936,13 +938,42 @@ def _valid_api_oracle_review(row: dict[str, Any], fact: dict[str, Any]) -> bool:
     )
 
 
-def _module_review_matches(row: dict[str, Any], fact: dict[str, Any]) -> bool:
+def _preserved_module_review(
+    repository: Path,
+    base_sha: str,
+    scenario: Scenario,
+    content: bytes,
+    records: list[git_changes.CommandRecord],
+) -> bool:
+    """Recognize an unchanged review of the same module scenario in the protected base."""
+    if not scenario.module_roots:
+        return False
+    try:
+        base = _manifest(repository, base_sha, records)
+        if scenario not in base.scenarios:
+            return False
+        previous = git_changes.read_regular_blob(
+            repository, base_sha, f"{SCENARIO_ROOT}/{scenario.id}.review.json", records
+        )
+    except (git_changes.GitError, CharacterizationError):
+        return False
+    return previous.content == content
+
+
+def _module_review_matches(row: dict[str, Any], fact: dict[str, Any], preserved: bool) -> bool:
     module = fact.get("module")
     return module is None or bool(
         row["module_roots"] == module["roots"]
-        and row["module_inventory_sha256"] == module["head_inventory"]["inventory_sha256"]
+        and isinstance(row["module_inventory_sha256"], str)
+        and SHA256.fullmatch(row["module_inventory_sha256"])
         and row["module_oracle_sha256"] == module["oracle_sha256"]
-        and row["source_sha256"] == fact["head_source"]["source_sha256"]
+        and (
+            preserved
+            or (
+                row["module_inventory_sha256"] == module["head_inventory"]["inventory_sha256"]
+                and row["source_sha256"] == fact["head_source"]["source_sha256"]
+            )
+        )
     )
 
 
