@@ -2,7 +2,7 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Report actual frozen-oracle violations as Gate 5 policy blocks, preserving unrelated producer ownership checks and all technical enforcement."
+intended_behavior = "Clarify current module-introduction documentation: technical bindings remain required, but historical owner grants are not required in current runs. No executable behavior changes."
 proof = "Direct no-comment Python and TypeScript fixtures, correction history tamper regressions, consumer composition checks, preserved legacy evidence tests and hosted protected qualification."
 
 [characterization]
@@ -12,9 +12,7 @@ proof = "tests/test_refactor_policy.py and tests/test_standard_results.py exerci
 [separation_of_concerns]
 before = "Owner comments mixed work authorization with machine-derived scope and claimed review evidence."
 after = "The existing scope module derives source-bound proof; the final composer independently reconciles it; reporting never infers an owner attestation from a passing check."
-boundaries = [
-  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Refactor-produced behavior violations were rejected as wrong-source evidence.", after = "Recognize the verifier's existing correction-history and characterization responsibilities while retaining wrong-source rejection for unrelated families." }
-]
+boundaries = []
 
 [architecture]
 dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."

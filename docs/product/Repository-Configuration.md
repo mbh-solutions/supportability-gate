@@ -267,7 +267,7 @@ empty array for ordinary or function-only rows. A module row supplies a sorted, 
 public synchronous APIs from the same covered Python file, including its primary `api`. Each
 declared root counts toward schema 4's fixed global limit of 100 observed APIs, including
 ordinary/function-only rows. Roots must be globally unique and each declared root must execute
-as an actual root. Schemas 1Ã¢â‚¬â€œ3 retain their 50-API limit; total scenarios remain limited to 64.
+as an actual root. Schemas 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3 retain their 50-API limit; total scenarios remain limited to 64.
 
 Retain a `$` behavior obligation targeting the primary API. A second `$` behavior obligation may
 target that exact source filepath. File coverage requires a complete source/function/code inventory
@@ -316,10 +316,10 @@ API can witness its actual class helpers without serializing their receivers.
 
 Module review records use schema `2.0`, retaining all ordinary review fields and adding
 `module_roots`, `module_inventory_sha256` and `module_oracle_sha256`. These bind the exact root
-panel, complete function/enum inventory and raw module-oracle bytes. Authenticated introduction grants
-must bind those same three fields in addition to the existing source/driver/oracle/review pins.
-Authorization schema `4.0` preserves these requirements and admits at most 100 actual roots
-only when joined to result `v4`. Historical authorization artifacts retain their recorded limits and byte behavior.
+panel, complete function/enum inventory and raw module-oracle bytes. Current runs validate those
+bindings directly, without a duplicate owner introduction grant. Historical authorization schema
+`4.0` retains its recorded binding requirements and admits at most 100 actual roots only when
+joined to result `v4`; historical authorization artifacts retain their original byte behavior.
 Existing whole-file birth, anti-copy, no-retirement, sealed-review, exact-head evidence,
 golden preservation, resource and quality protections remain mandatory.
 
@@ -482,7 +482,7 @@ execution failure, missing execution or coverage, quality failure, malformed evi
 source identities and missing handoff evidence are never reconciled.
 
 An unchanged schema-5 manifest has no active correction and follows the ordinary preservation
-path. Existing schema 1Ã¢â‚¬â€œ4 manifests keep their existing decisions and wire formats.
+path. Existing schema 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4 manifests keep their existing decisions and wire formats.
 
 The refactor and final-result readers select the schema-4 or schema-5 aggregate transport from
 the exact-head Git manifest. The existing 32,000,000-byte limit and duplicate-key rejection apply
