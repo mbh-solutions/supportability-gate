@@ -154,3 +154,8 @@ There is no separate runner setup or dependency installation just to join those 
 Artifact identity, digest verification, complete test partition checks, and offline bundle
 verification remain mandatory. Slow consumer test drivers and hosted runner scheduling can still
 dominate elapsed time; operational timings distinguish those costs from gate preparation.
+
+Correction-history verification can produce a behavior-preservation violation from the
+work-scope verifier. The composer assigns that violation to Gate 5 as a policy block;
+it does not label a known altered oracle as an evidence-routing technical failure.
+Unrelated block families from the wrong producer still fail evidence validation.

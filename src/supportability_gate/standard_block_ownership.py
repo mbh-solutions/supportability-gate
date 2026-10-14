@@ -234,7 +234,9 @@ _EXACT_TECHNICAL_DEPENDENCIES = {
 _SOURCE_BLOCK_ALLOWED = {
     "characterization-result:policy-blocks": frozenset({5}),
     "complexity-result:policy-blocks": ALL_STANDARDS,
-    "refactor-policy-result:policy-blocks": frozenset({6}),
+    # Refactor verification independently checks frozen correction history and
+    # carries unreconciled characterization violations as well as scope failures.
+    "refactor-policy-result:policy-blocks": frozenset({5, 6}),
 }
 _SOURCE_BLOCK_DEPENDENTS = {
     "characterization-result:policy-blocks": frozenset({5, 6, 8}),

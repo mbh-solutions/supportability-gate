@@ -5679,3 +5679,33 @@ def test_work_evidence_composes_without_owner_attestation(correction: bool) -> N
         row["targets"] = []
     rejected = _compose(inputs, source_outcomes=SUCCESS_OUTCOMES)
     assert any(row["result"] != "PASS" for row in rejected["entries"])
+
+
+@pytest.mark.parametrize("current", [False, True])
+def test_refactor_oracle_history_violation_is_behavior_block(current: bool) -> None:
+    inputs = _correction_inputs()
+    row = inputs[2]
+    if current:
+        for key in ("authorization", "authorization_comment_id", "predecessor"):
+            del row[key]
+        row["schema_version"] = refactor_policy.WORK_RESULT_SCHEMA
+        row["correction_evidence"] = {
+            "oracle_commit_sha": "c" * 40,
+            **{
+                key: inputs[1]["correction"][key]
+                for key in (
+                    "id",
+                    "oracle_manifest_blob_sha",
+                    "oracle_manifest_sha256",
+                    "behavior_delta_sha256",
+                )
+            },
+        }
+    row["policy_blocks"] = ["MODIFIED_CORRECTION_ORACLE"]
+    row["overall_result"] = "BLOCK"
+    row["result_classification"] = "BLOCK"
+    payload = _compose(inputs, source_outcomes={**SUCCESS_OUTCOMES, "refactor": "failure"})
+    assert _entry(payload, 5)["result"] == "BLOCK"
+    assert "MODIFIED_CORRECTION_ORACLE" in _entry(payload, 5)["policy_blocks"]
+    assert _technical_standards(payload) == set()
+    standard_results.validate_payload(payload, IDENTITY)
