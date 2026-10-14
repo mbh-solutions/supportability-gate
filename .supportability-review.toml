@@ -2,7 +2,7 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Owner task authorization is separate from technical proof. Current hosted runs require no owner comment; exact source, coverage, runtime, frozen correction history and all eight checks remain enforced."
+intended_behavior = "Report actual frozen-oracle violations as Gate 5 policy blocks, preserving unrelated producer ownership checks and all technical enforcement."
 proof = "Direct no-comment Python and TypeScript fixtures, correction history tamper regressions, consumer composition checks, preserved legacy evidence tests and hosted protected qualification."
 
 [characterization]
@@ -13,37 +13,21 @@ proof = "tests/test_refactor_policy.py and tests/test_standard_results.py exerci
 before = "Owner comments mixed work authorization with machine-derived scope and claimed review evidence."
 after = "The existing scope module derives source-bound proof; the final composer independently reconciles it; reporting never infers an owner attestation from a passing check."
 boundaries = [
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_oracle_commit", before = "Oracle commit was supplied in a comment.", after = "Derive the earliest matching frozen oracle from Git history." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_work_scope", before = "Scope was duplicated in owner-authored JSON.", after = "Derive actual scope and targets directly from Git." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "correction_evidence", before = "Owner grant carried correction digests.", after = "Retain source-bound oracle and observed-delta receipts." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "introduction_blocks", before = "API birth proof was joined to a duplicate owner grant.", after = "Check the measured API birth proof without an owner grant." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "legacy_main", before = "The current CLI performed comment authentication.", after = "Preserve the historical authenticated evaluation entry for legacy evidence tests." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "main", before = "CLI orchestrated owner comments and predecessor lookups.", after = "CLI reads authenticated captures and verifies work without a comment API." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "verify_work", before = "Current scope enforcement required owner JSON.", after = "Measure scope and runnability with no approval claim." },
-  { path = "src/supportability_gate/refactor_policy.py", kind = "module", symbol = "src/supportability_gate/refactor_policy.py", before = "Only legacy authorization evidence names existed.", after = "Name the fixed technical work-evidence schema and failure ownership." },
-  { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "_evidence_classes", before = "PASS on gates 6 and 8 implied owner attestation.", after = "Report no owner attestation without actual attestation evidence." },
-  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Only legacy authorization evidence names existed.", after = "Name the fixed technical work-evidence schema and failure ownership." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_characterization", before = "Only legacy authorized corrections could reconcile.", after = "Accept independently bound measured corrections as well as historical evidence." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_authorized_correction", before = "Only legacy approval classification was recognized.", after = "Recognize measured correction proof while preserving old evidence." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor", before = "Only legacy authorization-result evidence was accepted.", after = "Dispatch the closed versioned technical evidence reader." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_result_classification", before = "Only owner-authorized correction labels were recognized.", after = "Accept the truthful verified-correction label." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_work_blocks", before = "No approval-free block cross-check existed.", after = "Recompute runnability and bounded-scope consistency." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_work_correction", before = "Correction receipts required owner grants.", after = "Cross-check correction digests and verification failures." },
-  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_work_evidence", before = "No approval-free evidence schema existed.", after = "Validate exact identity, shape, scope, and characterization binding." }
+  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Refactor-produced behavior violations were rejected as wrong-source evidence.", after = "Recognize the verifier's existing correction-history and characterization responsibilities while retaining wrong-source rejection for unrelated families." }
 ]
 
 [architecture]
 dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
-reviewed_paths = ["src/supportability_gate/refactor_policy.py", "src/supportability_gate/reporting.py", "src/supportability_gate/standard_results.py"]
+reviewed_paths = ["src/supportability_gate/standard_block_ownership.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/refactor_policy.py"
-owns = "Git-derived runnable work scope and frozen correction history, with compatibility readers for historical evidence."
+path = "src/supportability_gate/standard_block_ownership.py"
+owns = "Closed ownership mapping of policy blocks to their Standard and permitted evidence producers."
 does_not_own = "Task permission, human code review, consumer execution or waiver of another Standard."
 
 [incremental_refactor]
 target = "Remove the owner authorization failure-and-rerun cycle while preserving exact-change enforcement."
-completed_step = "Remove owner-comment enforcement from current hosted evaluation and retire the receiver, while preserving technical checks and historical evidence."
+completed_step = "Correct qualification-discovered classification of an actual altered-oracle violation while preserving blocking behavior."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
