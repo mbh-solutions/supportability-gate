@@ -1,183 +1,133 @@
 # Evidence Model
 
-The Gate distinguishes the strength of an assertion from its completeness and identity. A
-well-formed current statement is not automatically a measured fact or an owner attestation.
+A complete explanation, an observed test result, and a verified policy decision establish
+different things. The Gate records those differences and binds each result to the source tested.
 
 ## Evidence classes
 
-| Class | What it establishes | What it does not establish |
+| Class | Establishes | Does not establish |
 |---|---|---|
-| `measured_fact` | An independently derived or authenticated observation bound to immutable inputs. | Raw target reports are not automatically trusted; an observation is not exhaustive correctness. |
-| `deterministic_decision` | A reproducible defined rule result over authenticated inputs. | Semantic judgment outside the rule. |
-| `author_declaration` | Complete, current prose bound to the actual source change. | Independent truth, quality, renewed thought, or owner authorship. |
-| `authenticated_owner_attestation` | Historical evidence only; new-policy runs assert none. | Personal code review, technical correctness, or permission to waive a violation. |
+| `measured_fact` | An independently derived or authenticated observation tied to immutable inputs. | Exhaustive correctness or trust in unauthenticated target output. |
+| `deterministic_decision` | A reproducible rule result over authenticated inputs. | Judgment outside that rule. |
+| `author_declaration` | Complete prose tied to the actual source change. | Independent truth, design quality, or owner authorship. |
+| `authenticated_owner_attestation` | Owner authorship when required by the evidence's recorded schema. | Technical correctness or permission to waive a violation. The required workflow emits no owner attestations. |
 
 The canonical 218-clause registry records evidence and retained test-proof classes. Shared
 family-level tests establish traceability and named rule behavior; they are not 218 independent
 semantic proofs.
 
-## Canonical artifacts
+## Find the results
 
-Quality execution starts four independent hosted partitions immediately. Python partitions
-collect the complete test list before selecting their fixed round-robin subset, use two
-isolated coverage workers, and retain full/selected lists, completion receipts and raw branch
-coverage. Node partitions use the fixed native `--test-shard=N/4` option with the same complete
-Git-derived test-file list. Every Node partition retains its exact command scope, partition
-identity, original LCOV bytes and digest, and required responsibility targets.
+The workflow's **supportability-evidence** artifact contains the final decision and its supporting
+records. Its name includes the run ID and attempt. See [Troubleshooting](Troubleshooting.md) for
+download steps and [Eight Gates](Eight-Gates.md) for result meanings.
 
-Partition zero runs the complete non-test adapter sequence. Other partitions run their tests
-and required dependency provisioning; they do not repeat lint, formatting, typing, build or
-import-boundary checks. No required adapter or test is removed from the combined profile.
-
-The quality join downloads the exact native artifacts for the same repository, head,
-run and attempt and verifies their GitHub SHA-256 digests. It rejects missing or duplicate
-partitions, different full collections, missing/failed tests or subtests, absent worker
-coverage, differing command scope, runtimes, dependencies or sandbox controls. Node LCOV records are
-validated individually before actual reported line executions are combined; missing execution
-is never inferred from ignored lines or a successful command. It combines
-raw coverage databases and reapplies the current changed/high-risk responsibility coverage
-requirements to the union. A partial capture has a distinct job identity and cannot satisfy
-the ordinary quality attestation directly. Failed partitions retain their evidence and block
-qualification; they are never republished as a complete passing profile.
-
-The joined quality capture retains each original invocation and identifies the derivation as
-`isolated-target-provenance.sharded.v1`. Combined Python and Node stdout/stderr digests bind explicit
-manifests of the original stream digests. All sixteen mixed-profile adapter results, resource
-limits, timeouts and eight required contexts remain in force. Parallel jobs consume concurrent compute and add join overhead; full-suite timing is measured on the
-consumer rather than inferred from a small benchmark.
-
-The Python characterization observer caches code identity and path classification. It traces
-line events only inside the target tree, while continuing to observe calls back into target
-code from external libraries. Source hashes and exact per-code execution counts are preserved.
-
-Characterization executes at most two scenarios concurrently. Each successful scenario performs
-two fresh disposable executions in sequence; an unsuccessful first execution is retained without
-repeating it and cannot establish determinism. Results retain manifest order, so behavior
-fingerprints and deterministic capture payloads are unchanged by completion order.
-
-| Artifact | Responsibility |
+| Artifact member | Responsibility |
 |---|---|
-| `complexity-result.json` | Authoritative static evaluation, changed identities, contract policy, and source-bound review evidence. |
-| `complexity-result.md` | Human-readable display derived from the JSON. |
-| `quality-provenance.json` | Validated hosted commands, outcomes, receipts, coverage observations, and provenance. |
-| `characterization-result.json` | Authenticated repeatability, behavior identity, obligation coverage, and compatibility results. |
+| `complexity-result.json` | Static evaluation, changed identities, contract policy, and source-bound review evidence. |
+| `complexity-result.md` | Human-readable display derived from that JSON. |
+| `quality-provenance.json` | Validated commands, outcomes, dependency receipts, and coverage observations. |
+| `characterization-result.json` | Repeatability, behavior identity, obligation coverage, and compatibility. |
 | `refactor-policy-result.json` | Git-derived scope, runnability, and frozen correction history. |
-| `standard-results.json` | Canonical `standard-results.v3` composition: applicability, eight owned rows, source outcomes, dependencies, and derived handoff. |
-| `qualification-bundle.zip` | Compact canonical evidence, diagnostics, file digests, and restore metadata; optional qualified release context. |
+| `standard-results.json` | Canonical `standard-results.v3`: eight owned rows, applicability, source outcomes, dependencies, and derived handoff. |
+| `qualification-bundle.zip` | Restorable canonical evidence, diagnostics, file digests, and metadata. |
 
-The quality-profile artifact also retains `quality-timings.json`: bounded elapsed-time diagnostics
-for setup phases and each executed fixed adapter, including successful commands. Characterization
-artifacts retain `characterization-timings.json` for preparation and each executed scenario. Both
-emit concise progress logs. These operational measurements are separate from authoritative
-evidence and never affect a PASS/BLOCK decision.
-The runner materializes exact regular Git blobs in a validated batch and copies that verified
-source into a separate writable wheel-build directory; timings do not change command scope,
-timeouts, or the isolated execution boundary.
+Evidence binds repository name and numeric ID, full base/head commit IDs, relevant Git blobs,
+trusted workflow commit, run and attempt, job/artifact identity, native digests, capture hashes,
+and source hashes. The handoff also binds both review files. Missing, stale, malformed, or
+mismatched required evidence blocks qualification.
 
-The fixed Python test adapter runs the complete suite with two isolated workers and merged branch
-coverage. The read-only collector verifies matching collections, complete outcomes, isolated worker
-startup, and each worker's coverage acknowledgement. Missing completion or coverage, worker errors,
-and attempts to disable coverage fail the command. A sanitized completion receipt is retained as a
-diagnostic; authoritative coverage still comes through the existing source-bound coverage parser.
-Native pytest subtests are counted separately from their parent test phases. Any failed subtest
-fails the parent outcome, while duplicate ordinary phases remain a completion error.
-The fixed 600-second command limit and container resource limits remain unchanged.
+## Complete quality partitions
 
-The collector stops after the first failed mandatory command and retains its executed prefix.
-Dependency receipts cover only completed installations, so staged but uninstalled dependencies
-cannot mask the original failure. A valid failed prefix remains BLOCK in the composed result;
-omitted mandatory commands are never treated as passed. An unexplained incomplete sequence still
-fails evidence validation.
+Four hosted partitions divide the fixed quality profile. Python partitions collect the complete
+test list, select fixed round-robin subsets, and use two isolated coverage workers per partition.
+They retain full and selected lists, complete test/subtest outcomes, worker acknowledgements,
+and raw branch coverage. Node partitions use the fixed native `--test-shard=N/4` option with
+the same complete Git-derived test-file list. Each retains its command scope, partition identity,
+original LCOV coverage bytes and digest, and required responsibility targets.
 
-Evidence binds repository name and numeric ID, full base/head SHAs, relevant Git blobs, pinned
-workflow SHA, run and attempt, job/artifact identity, digests, capture hashes, and source hashes.
-The full-process handoff also binds the base/head review blobs. Required missing, stale, malformed,
-or mismatched evidence fails closed according to its defined policy/technical ownership.
+Partition zero runs the non-test adapters. Other partitions run their tests and dependency
+provisioning. Lint, formatting, typing, build, and import-boundary work therefore executes once
+per combined profile. The mixed profile includes all sixteen required adapter results.
 
-For a schema-5 correction, characterization evidence additionally retains the raw behavior-change
-blocks, frozen oracle file identities, exact declared scenario/obligation/target sets, the complete
-canonical observed delta and its SHA-256. Refactor evidence records the authenticated correction
-join. The authoritative result classifies the outcome as `PASS_NO_BEHAVIOR_CHANGE` or
-`PASS_VERIFIED_BEHAVIOR_CORRECTION`; focused correction failures remain named blocks. This
-classification does not replace any of the eight rows or convert technical failures into PASS.
+The join verifies native artifact identities and SHA-256 digests for the same repository, head,
+run, and attempt. It rejects missing or duplicate partitions, mismatched collections or command
+scope, failed tests or subtests, missing worker coverage, and inconsistent runtime, dependency,
+or sandbox evidence. It combines actual raw coverage and reapplies changed/high-risk responsibility
+requirements to the union. A partial capture cannot directly satisfy the complete quality attestation.
 
-For schema-3 observed Python APIs, the collector records actual call arguments and ordinary
-returns with a closed tagged value codec. Static compilation binds the traced function's code
-to the exact source blob and span. Git-derived whole-file absence is a measured fact rather
-than a claim that an absent API executed. The sealed review artifact is a source-bound
-declaration of intended behavior with validated source binding. This does not certify the
-reviewer's identity, independent human review, or exhaustive correctness.
+The joined capture records `isolated-target-provenance.sharded.v1` and retains original invocation
+receipts. Combined stream digests bind explicit manifests of the original stdout/stderr digests.
+The fixed 600-second command limit and container resource limits apply to each invocation.
+
+Within a partition, collection stops after a failed mandatory command and retains the executed
+prefix. Dependency receipts cover completed installations. A valid failed prefix produces BLOCK;
+an unexplained incomplete sequence fails evidence validation. Omitted commands never count as passed.
+
+## Runtime coverage
+
+Targets refer to surviving responsibilities in the proposed head source, using its line ranges.
+Deleted base bodies participate in change review and behavior compatibility; they are not executable
+head-test targets. Passing a command or merely importing a function does not prove its body ran.
+
+TypeScript tests use source maps. Erased type declarations and non-executable module regions have
+no runtime obligation. Positive LCOV `DA` records establish execution; omitted or ignored lines
+cannot create credit. The reader reconciles ignored type-line totals in `LF`/`LH` and rejects
+duplicate lines, invalid identities, and inconsistent accounting.
+
+Bounded, sanitized coverage diagnostics retain the original report digest and size, including
+parse failures. Truncated diagnostic text does not replace the complete original evidence.
+
+## Repeatable behavior
+
+Characterization runs at most two scenarios concurrently. Each successful scenario performs two
+fresh disposable executions per applicable source commit. A failed first execution is retained
+without repetition and cannot establish determinism. Manifest order determines the result order,
+independently of completion order.
+
+The Python baseline observer classifies code identity and path once, traces target-tree line
+events, and observes calls back into target code from external libraries. It retains source hashes
+and exact per-code execution counts. The separate observed-API protocol captures actual arguments,
+returns, and supported module witnesses; see [Characterization Reference](Characterization-Reference.md).
+
+For a schema-5 correction, evidence binds frozen oracle files, the exact declared scenario,
+obligation and target sets, and the complete observed delta and its digest. The result classifies
+a passing change as `PASS_NO_BEHAVIOR_CHANGE` or `PASS_VERIFIED_BEHAVIOR_CORRECTION`. Classification
+does not replace the eight rows or convert a technical failure into PASS.
+
+## Progress and failure reporting
+
+Capture artifacts contain `characterization-timings.json`; quality artifacts contain
+`quality-timings.json`. These report preparation, scenario, and adapter elapsed time. Progress
+logs and timings help diagnose waiting but do not affect PASS/BLOCK decisions.
+
+A failed scenario is reported when it finishes. Collection jobs upload diagnostics before reporting
+failure. Independent work can finish so the publisher can report all eight requirements.
+The [lifecycle](Pull-Request-Lifecycle.md#parallel-preparation-with-authenticated-producer-completion)
+describes concurrent preparation and authenticated waits. Real test cost, artifact transfer, and
+hosted scheduling determine total time; concurrent jobs also consume overlapping compute.
 
 ## Offline restoration and retention
 
-The workflow must restore its bundle inside the immutable no-network container before authoritative
-upload succeeds. With the matching trusted Gate code and Python environment already available:
+Before authoritative upload, the workflow restores its bundle in the fixed no-network container.
+For a maintainer with the matching trusted Gate environment installed, open a terminal in the
+directory containing the downloaded bundle and run:
 
 ```text
 python -P -m supportability_gate.qualification_bundle restore --bundle qualification-bundle.zip
 ```
 
-Restore validates member bounds, file digests, canonical production validators, bound identities,
-and the recorded decision. Successful restore exits 0 even when the faithfully restored decision
-is BLOCK or TECHNICAL_FAILURE: it means the bundle is valid, not that the original change passed.
-Invalid restoration exits 2.
+Restore validates archive bounds, file digests, canonical validators, identities, and the recorded
+decision. Exit 0 means the bundle is valid, including when its recorded decision is BLOCK or
+TECHNICAL_FAILURE. Exit 2 means restoration failed. See [CLI Reference](CLI-Reference.md) for setup.
 
-Download and retain required bundles before Actions retention expires. Restore does not fetch
-GitHub artifacts or need GitHub network access. A retained bundle does not reconstruct absent
-external logs, rerun the original tests, replace fresh current-head qualification, or turn a
-historical failure into PASS. Host runner image identity and external retention remain explicit
-operational boundaries where their exact data was not recorded.
-
-Optional release context can bind delivery, protection, runtime, lock, source-test, expiry, and
-limitation records. Do not label an ordinary bundle as release-qualified without that validated
-context.
+Download required bundles before Actions retention expires. Restoration needs no GitHub network
+access, but does not fetch missing logs, rerun tests, or qualify another commit. A hosted runner
+label does not identify an immutable host image. Optional release context can bind delivery,
+protection, runtime, lock, test, expiry, and limitation records; an ordinary bundle does not
+establish those extra claims.
 
 Implementation references: [clause registry](../../src/supportability_gate/clause_inventory.py),
-[results](../../src/supportability_gate/standard_results.py),
-[bundle validator](../../src/supportability_gate/qualification_bundle.py), and
-[workflow restore boundary](../../.github/workflows/organization-required.yml).
-
-
-Runtime coverage targets refer to surviving head-revision responsibilities. Deleted base bodies
-remain part of change review but are not execution obligations for head tests. TypeScript tests
-use original source maps; erased type declarations and comment-only or punctuation-only module
-regions are not executable obligations. Function and component bodies remain required, so merely
-importing a function cannot establish its execution.
-
-### Timely failure reporting
-
-When a completed capture already contains the same live authenticated approval, the receiver
-leaves its successful checks in place and skips further evaluation. A changed or unverifiable
-approval cannot take this path.
-
-A new pull-request commit cancels the superseded capture run. The replacement commit must still
-produce its own complete evidence; cancellation never transfers a PASS to a different commit.
-
-Characterization reports an execution failure as soon as its scenario finishes. A failed first
-attempt is retained without spending time on a second attempt; its determinism is unproven and
-it cannot pass. Successful scenarios still run twice in separate isolated containers. Independent
-scenarios continue collecting useful evidence. Collection jobs become failed after uploading
-failed evidence, while the final publisher still evaluates and reports all eight requirements.
-
-The evidence job joins authenticated quality partitions using its existing trusted environment.
-There is no separate runner setup or dependency installation just to join those partitions.
-Artifact identity, digest verification, complete test partition checks, and offline bundle
-verification remain mandatory. Slow consumer test drivers and hosted runner scheduling can still
-dominate elapsed time; operational timings distinguish those costs from gate preparation.
-
-Correction-history verification can produce a behavior-preservation violation from the
-work-scope verifier. The composer assigns that violation to Gate 5 as a policy block;
-it does not label a known altered oracle as an evidence-routing technical failure.
-Unrelated block families from the wrong producer still fail evidence validation.
-
-For the fixed Node coverage adapter, ignored TypeScript-only lines can contribute to LCOV
-`LF`/`LH` totals without a `DA` line record. The reader reconciles exactly that accounting;
-only explicit positive `DA` records can establish file or responsibility execution. Omitted
-lines never create execution credit. Duplicate or invalid line identities and inconsistent
-accounting remain technical failures. Bounded, sanitized LCOV diagnostics and the original
-report digest/size are retained before parsing, including when parsing fails. Large diagnostic
-text can be truncated; its retained digest is not a substitute for a complete original report.
-
-Type-only exported aliases, interfaces and ambient declarations have no runtime obligation;
-their erased `export` wrapper is not executable code. Exported values and executable source
-beside comments retain their runtime obligations.
+[quality join](../../tests/hosted_quality_aggregate.py),
+[results](../../src/supportability_gate/standard_results.py), and
+[bundle validator](../../src/supportability_gate/qualification_bundle.py).

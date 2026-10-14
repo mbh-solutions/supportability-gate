@@ -38,8 +38,8 @@ edit it to make current reader documentation generic; explain its status through
 
 ## One source per wiki page
 
-Canonical pages live in `docs/product/`. Their filenames match wiki page slugs, including the
-existing ten URLs and `Getting-Started`, `Troubleshooting`, and `Refactor-Authorization`.
+Canonical pages live in `docs/product/`; their filenames match wiki page slugs. Keep stable URLs
+and compatibility anchors when moving a detailed subject to its primary reference page.
 Author content in the repository first. Do not repair wording only in the wiki.
 
 Publication is manual and follows a protected source merge:
@@ -49,20 +49,33 @@ Publication is manual and follows a protected source merge:
 2. Copy each canonical page to the wiki's matching filename. Convert a link to another product
    `.md` page into its wiki slug, retaining any fragment. Convert all other repository-relative
    links into full GitHub `blob/<merge-sha>/...` links (or `tree` for directories).
-3. Add a shared footer with the full source SHA and publication date. Update the sidebar with
-   reader navigation: Home, Getting Started, Eight Gates, Repository Configuration, Pull Request
-   Lifecycle, Troubleshooting, Evidence Model, Boundaries and Limitations, Architecture, Validation
-   and Protection, CLI Reference, Refactor Authorization, Module Map.
+3. Use a stable shared footer linking to canonical documentation and this maintenance guide.
+   Group the sidebar into practical use, configuration, and technical references; include every
+   product page. Keep source commit IDs, dates, delivery narratives, and publication records out
+   of reader-facing prose and footers. Retain publication identities in the delivery evidence.
 4. Validate the projected content against the canonical pages: only links and shared publication
    furniture should differ. Commit and push one normal wiki commit on `master`; never force-push.
 5. Open published pages and verify links, tables, navigation, code blocks, and both diagrams. Read
-   back the published wiki revision and the source revision referenced in every footer.
+   back the published wiki commit and compare each page with the exact source used for publication.
 6. Retain the PR/merge/wiki identities and verification results. A merged source PR with an
    unpublished or unverified wiki is partial delivery when the task includes wiki refresh.
 
 No wiki publishing service, secret, scheduled automation, or new CI workflow is required. If
 publication needs correction, fix the canonical source first when the content is wrong; correct
 projection-only mistakes with a normal wiki commit. Never rewrite historical wiki commits.
+
+## Write product documentation
+
+Describe implemented behavior in the present tense. Do not append release notes, "now supports"
+claims, before/after policy narratives, or dated status to product pages. Use exact schema names
+and Git identities where needed to explain a technical contract, not as publication announcements.
+Put detailed subjects in one primary page and link from the others.
+
+Keep the README a concise entry point. Verify that a non-technical owner can find a PR result and
+ask for a repair, and that an implementer can reach configuration, source references, and command
+instructions. Explain where commands run, required replacements, expected outputs, and limits.
+After checking accuracy, remove repetition. Follow this checklist for each documentation change;
+the wiki remains a projection of the canonical pages.
 
 ## Preserve links while retiring documents
 
@@ -74,8 +87,8 @@ resolved at the manifest's immutable source commit.
 
 ## Evidence and stopping condition
 
-Record the actual source changes, validations, exact protected delivery, published wiki revision
+Record the actual source changes, validations, exact protected delivery, published wiki commit
 when applicable, and remaining limitations. Documentation-only work does not require a new Gate
-deployment pin when executable/workflow blobs match the deployed revision. Do not enroll another
+deployment pin when executable/workflow blobs match the deployed commit. Do not enroll another
 repository, change rulesets, create a project, or repair consumer code as incidental documentation
 work. Stop when the task's complete requested outcome is verified.

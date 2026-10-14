@@ -1,6 +1,6 @@
 # Module Map
 
-Each current production module has a named responsibility. Links point to the source that owns
+Each production module has a named responsibility. Links point to the source that owns
 that responsibility; the declared package dependency direction is enforced in
 [pyproject.toml](../../pyproject.toml).
 
@@ -19,7 +19,7 @@ that responsibility; the declared package dependency direction is enforced in
 | [gate_policy.py](../../src/supportability_gate/gate_policy.py) | Fixed adapter coverage and contract anti-weakening |
 | [review_evidence.py](../../src/supportability_gate/review_evidence.py) | Fixed review structure, changed-boundary declarations, and handoff sentinels |
 | [characterization.py](../../src/supportability_gate/characterization.py) | Manifest obligations and authenticated behavior compatibility |
-| [baseline_evidence.py](../../src/supportability_gate/baseline_evidence.py) | First-release source execution witnesses and complete asset snapshot inventories |
+| [baseline_evidence.py](../../src/supportability_gate/baseline_evidence.py) | First-application source execution witnesses and complete asset snapshot inventories |
 | [refactor_targets.py](../../src/supportability_gate/refactor_targets.py) | Derived responsibility target inventory |
 | [refactor_policy.py](../../src/supportability_gate/refactor_policy.py) | Git-derived scope, frozen correction history, and runnability checks |
 | [quality_profile.py](../../src/supportability_gate/quality_profile.py) | Fixed command profiles, source/dependency receipts, suppressions, and observed coverage |
@@ -45,6 +45,12 @@ The fixed [hosted characterization collector](../../tests/hosted_characterizatio
 isolated target boundary for explicit schema-3 APIs. Static source/birth verification remains
 in `characterization`; source-bound work scope stays in `refactor_policy`, and the
 shared result consumer repeats the join without loading target-analysis dependencies at import.
+
+The [quality collector](../../tests/hosted_quality_profile.py) runs fixed native partitions;
+the [quality join](../../tests/hosted_quality_aggregate.py) validates their identities and combines
+raw coverage. The [artifact waiter](../../tests/hosted_artifact_wait.py) synchronizes exact
+same-attempt producers. The [baseline observer](../../tests/baseline_observer.py) records Python
+source execution for first-application scenarios.
 
 ## Change routing
 

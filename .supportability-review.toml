@@ -2,37 +2,37 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Reduce full gate latency while preserving every required adapter, complete test partitions, source-bound observations, isolation and authenticated enforcement."
-proof = "Exact legacy versus optimized observation comparisons, full positive and negative hosted qualification, complete source proof and protected delivery."
+intended_behavior = "Document the Gate's implemented behavior with practical owner guidance and source-grounded technical references."
+proof = "Documentation link, anchor, example and publication checks; required protected source validation; executable and workflow blob equality."
 
 [characterization]
-captured_behavior = "The same scenario repetitions, named-body execution counts and expected outputs remain mandatory."
-proof = "Identical complete consumer observation payloads under the legacy and optimized observers; full source-bound base and head captures."
+captured_behavior = "Documentation changes do not alter executable behavior, characterization definitions, or expected results."
+proof = "Exact immutable hashes, unchanged executable and workflow blobs, and required hosted base/head checks."
 
 [separation_of_concerns]
-before = "External Python lines were repeatedly inspected; native Node tests and non-test checks repeated across partitions; evidence jobs prepared serially."
-after = "Code locations are classified once, complete tests are partitioned, non-test checks execute once, and independent trusted preparation and verification overlap."
+before = "Product instructions mix reader guidance, protocol detail and publication history."
+after = "The README routes readers to practical guides; configuration and characterization have separate references; delivery identities stay in publication evidence."
 boundaries = []
 
 [architecture]
-dependency_direction = "Static evaluation remains unchanged. Target execution remains inside the fixed isolated hosted boundary; a separate authenticated publisher enforces results."
-reviewed_paths = ["tests/baseline_observer.py", "tests/hosted_quality_profile.py", "tests/hosted_quality_aggregate.py", "tests/hosted_artifact_wait.py", ".github/workflows/organization-required.yml"]
+dependency_direction = "Documentation follows the implemented static, isolated execution, evidence and publication boundaries."
+reviewed_paths = ["README.md", "docs/product", "docs/maintenance.md"]
 
 [responsibility_boundary]
-path = "tests/hosted_quality_aggregate.py"
-owns = "Authenticate complete fixed partitions, combine actual runtime coverage and preserve failures."
-does_not_own = "Consumer behavior, arbitrary commands, exclusions, waivers, policy overrides or human attestations."
+path = "docs/product"
+owns = "Canonical reader instructions, supported contracts, evidence meanings and implementation references."
+does_not_own = "Executable policy, workflow configuration, application behavior or deployment enrollment."
 
 [incremental_refactor]
-target = "Remove measured duplicate work and unnecessary serial dependencies from the shared hosted gate."
-completed_step = "Optimize tracing and complete test scheduling with source-bound partition receipts and unchanged final protection."
+target = "Publish accurate, concise README and wiki documentation without revision narratives."
+completed_step = "Organize owner and implementer reading paths, preserve technical detail and compatibility links, and verify publication."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Fixed partitions, authenticated producer waits and observed coverage describe actual responsibilities."
-cohesion = "Existing hosted helpers retain their responsibilities; no new production modules or policy engine."
-intended_behavior = "Complete equivalent checks finish faster; missing execution, failed tests and forged evidence remain blocking."
-reviewability = "Author declaration only. Immutable policy, source integrity, isolated execution and normal protected delivery remain mandatory."
+naming = "Page names identify practical tasks and technical responsibilities."
+cohesion = "Each detailed subject has a primary canonical page."
+intended_behavior = "Reader documentation describes implemented behavior in the present tense."
+reviewability = "Author declaration only; source protection and normal protected delivery apply."

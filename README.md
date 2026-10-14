@@ -1,14 +1,12 @@
 # Supportability Gate
 
-Supportability Gate is a repository-agnostic product assigned through GitHub organization
-rulesets. It evaluates pull-request changes against the
-[Supportability Standard](docs/supportability_standard.md) and produces
-independently enforced checks using authenticated evidence from the exact base and head commits.
+Supportability Gate checks GitHub pull requests against the [Supportability Standard](docs/supportability_standard.md).
+It helps keep code testable, maintainable, and safe to change by checking complexity, dependency
+boundaries, behavior, and test coverage. GitHub blocks merging when required evidence fails or
+cannot be verified.
 
-It helps maintainers keep changes testable and reviewable by controlling complexity, preserving
-known behavior, checking supported dependency boundaries, authenticating quality coverage, and
-requiring a current review handoff. GitHub enforces the protected merge decision through eight
-independent required checks.
+The owner authorizes the work. The implementer prepares the code, tests, and explanations;
+the Gate does not require the owner to review code or post an approval comment.
 
 ## What it provides
 
@@ -21,23 +19,28 @@ independent required checks.
 
 ## Supported scope and assignment
 
-The committed profiles support **Python, TypeScript, and mixed Python/TypeScript repositories**.
+The committed profiles support **Python, TypeScript/JavaScript, and mixed Python/frontend repositories**.
 Organization rulesets select the repositories and branches that receive the Gate; repository
 names and business domains do not select different policy. Declared production paths and admitted
 parser/command boundaries determine what is assessed.
 
-PASS establishes satisfaction of the applicable defined rules and required evidence. Naming,
-cohesion, design quality, and exhaustive intended behavior remain human responsibilities.
+PASS establishes satisfaction of the applicable defined rules and required evidence. It does not
+prove exhaustive correctness, design quality, or security. Test duration and hosted runner
+availability determine waiting time; the Gate does not promise a fixed merge time.
+
+For an enrolled repository, checks start automatically on pull requests. There is no desktop
+application to launch or owner approval-comment setup. An implementer prepares the repository's
+committed inputs; an organization administrator assigns the workflow.
 
 ## Start here
 
 | Goal | Documentation |
 |---|---|
-| Prepare and enroll a repository | [Getting Started](docs/product/Getting-Started.md) |
-| Understand the features and checks | [Eight Gates](docs/product/Eight-Gates.md) |
-| Configure repository inputs | [Repository Configuration](docs/product/Repository-Configuration.md) |
-| Resolve a failed check | [Troubleshooting](docs/product/Troubleshooting.md) |
-| Understand evidence and assurance limits | [Evidence Model](docs/product/Evidence-Model.md) and [Boundaries](docs/product/Boundaries-and-Limitations.md) |
+| Inspect a pull request or prepare a repository | [Getting Started](https://github.com/mbh-solutions/supportability-gate/wiki/Getting-Started) |
+| Understand the features and checks | [Eight Gates](https://github.com/mbh-solutions/supportability-gate/wiki/Eight-Gates) |
+| Configure repository inputs | [Repository Configuration](https://github.com/mbh-solutions/supportability-gate/wiki/Repository-Configuration) |
+| Resolve a failed check | [Troubleshooting](https://github.com/mbh-solutions/supportability-gate/wiki/Troubleshooting) |
+| Understand evidence and assurance limits | [Evidence Model](https://github.com/mbh-solutions/supportability-gate/wiki/Evidence-Model) and [Boundaries](https://github.com/mbh-solutions/supportability-gate/wiki/Boundaries-and-Limitations) |
 | Browse the full product guide | [Documentation home](docs/product/Home.md) or [published wiki](https://github.com/mbh-solutions/supportability-gate/wiki) |
 
 The [Supportability Standard](docs/supportability_standard.md) is the immutable policy source.
