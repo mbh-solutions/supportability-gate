@@ -10,7 +10,7 @@
 | Complexity | Maximum 10 for new/non-legacy touched functions; documented progressive improvement for touched legacy debt. |
 | Execution | Fixed hosted commands with the defined isolated target boundary and authenticated provisioning/receipts. |
 | Behavior | Bounded executable scenarios, observed responsibilities, and preserved admitted assertions. |
-| Review | Structural and source-bound declarations; trusted-owner authentication where required. |
+| Review | Structural and source-bound author declarations; no owner code-review claim. |
 
 Outside-profile code, unclassified/dynamic architecture, subjective cohesion, naming quality, and
 exhaustive intended behavior are not certified. The Gate is not a general security scanner,
@@ -22,7 +22,7 @@ use the fixed Python `.characterization.py` driver. A single scenario mixing Pyt
 source remains ambiguous and blocked. The ordinary snapshot/behavior scenario path is separate
 from the observed Python API introduction mode described below; JavaScript does not gain that
 Python-specific observation protocol. New behavior still requires the applicable exact oracle,
-coverage and owner authorization, rather than an invented unchanged baseline.
+coverage and source-bound technical evidence, rather than an invented unchanged baseline.
 
 HTML admission is limited to explicit balanced markup with assessed repository-local external
 scripts. It does not admit inline executable code or embedded documents as unchecked assets.
@@ -42,15 +42,14 @@ description of a task as small does not authorize skipping checks.
 
 ## Human and configuration limits
 
-People remain responsible for the qualitative truth of names, ownership explanations, cohesion,
-intended behavior, and reviewability. Current complete prose is an author declaration unless the
-existing owner control authenticates it. Neither human approval nor an owner attestation can waive
-a deterministic BLOCK or replace required evidence.
+The owner authorizes the task; the implementer supplies technical work and honest explanations.
+The Gate does not claim the owner reviewed code. Complete current prose remains an author
+declaration, not an independently judged truth about naming, cohesion or intended behavior.
+No comment can waive a deterministic BLOCK or replace required evidence.
 
 Contracts cannot add arbitrary commands, executable paths, environment controls, exclusions,
-waivers, threshold overrides, or report-only PASS conversion. Owner authorization is tied to a
-fixed trusted numeric identity in the current implementation; assignment to another repository
-does not automatically trust its administrators.
+waivers, threshold overrides, or report-only PASS conversion. This policy is fixed in the shared
+source and is not a repository-selectable bypass.
 
 Codex review is optional and advisory. Semantic Review is retired; no model result is required
 for qualification or merge. Native review-thread resolution still applies to actual conversations.
@@ -81,7 +80,7 @@ isolation remain the enforcement boundary; this mode adds no semantic policy eng
 The separate schema-5 first-application baseline supports fixed Python and Node execution
 and complete asset inventories only when production is absent at the PR base. It preserves
 all quality requirements, freezes expected cases before implementation, and requires exact
-owner authorization. Its observers prove static body execution and source identity; the
+source-bound proof. Its observers prove static body execution and source identity; the
 driver's selected JSON observations remain author-authored and do not prove exhaustive
 correctness or semantic independence. Hostile same-process introspection is outside this
 observer boundary. V8 must execute the source directly at its original spans: unsupported
@@ -91,12 +90,12 @@ correctness still needs application tests and review. No new browser engine, com
 service, asset exclusion, approval waiver or existing-application bootstrap is provided.
 
 Subsequent content-only corrections have exact whole-file production asset targets and use the
-existing frozen-oracle and owner-authorization transaction. Assets retain complete byte snapshots
+existing frozen-oracle correction transaction. Assets retain complete byte snapshots
 and format validation; source execution obligations remain attached to source responsibilities.
-Changing the expected content requires evidence and approval of that exact change. Target
+Changing the expected content requires technical evidence of that exact change. Target
 derivation alone does not waive scenario inventory constraints for asset deletion or relocation.
 
 Implementation references: [short-task classifier](../../src/supportability_gate/standard_results.py),
 [profile limits](../../src/supportability_gate/contract.py),
-[owner identity](../../src/supportability_gate/refactor_policy.py), and
+[work evidence](../../src/supportability_gate/refactor_policy.py), and
 [receipt validation](../../src/supportability_gate/quality_profile.py).

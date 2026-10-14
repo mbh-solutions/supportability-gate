@@ -10,7 +10,7 @@ well-formed current statement is not automatically a measured fact or an owner a
 | `measured_fact` | An independently derived or authenticated observation bound to immutable inputs. | Raw target reports are not automatically trusted; an observation is not exhaustive correctness. |
 | `deterministic_decision` | A reproducible defined rule result over authenticated inputs. | Semantic judgment outside the rule. |
 | `author_declaration` | Complete, current prose bound to the actual source change. | Independent truth, quality, renewed thought, or owner authorship. |
-| `authenticated_owner_attestation` | A declaration authenticated through the existing trusted-owner control. | Permission to waive a deterministic violation or certification of prose quality. |
+| `authenticated_owner_attestation` | Historical evidence only; new-policy runs assert none. | Personal code review, technical correctness, or permission to waive a violation. |
 
 The canonical 218-clause registry records evidence and retained test-proof classes. Shared
 family-level tests establish traceability and named rule behavior; they are not 218 independent
@@ -51,7 +51,7 @@ fingerprints and deterministic capture payloads are unchanged by completion orde
 | `complexity-result.md` | Human-readable display derived from the JSON. |
 | `quality-provenance.json` | Validated hosted commands, outcomes, receipts, coverage observations, and provenance. |
 | `characterization-result.json` | Authenticated repeatability, behavior identity, obligation coverage, and compatibility results. |
-| `refactor-policy-result.json` | Scope, owner authorization, sequence, and runnability decisions. |
+| `refactor-policy-result.json` | Git-derived scope, runnability, and frozen correction history. |
 | `standard-results.json` | Canonical `standard-results.v3` composition: applicability, eight owned rows, source outcomes, dependencies, and derived handoff. |
 | `qualification-bundle.zip` | Compact canonical evidence, diagnostics, file digests, and restore metadata; optional qualified release context. |
 
@@ -88,16 +88,15 @@ For a schema-5 correction, characterization evidence additionally retains the ra
 blocks, frozen oracle file identities, exact declared scenario/obligation/target sets, the complete
 canonical observed delta and its SHA-256. Refactor evidence records the authenticated correction
 join. The authoritative result classifies the outcome as `PASS_NO_BEHAVIOR_CHANGE` or
-`PASS_AUTHORIZED_BEHAVIOR_CORRECTION`; focused correction failures remain named blocks. This
+`PASS_VERIFIED_BEHAVIOR_CORRECTION`; focused correction failures remain named blocks. This
 classification does not replace any of the eight rows or convert technical failures into PASS.
 
 For schema-3 observed Python APIs, the collector records actual call arguments and ordinary
 returns with a closed tagged value codec. Static compilation binds the traced function's code
 to the exact source blob and span. Git-derived whole-file absence is a measured fact rather
 than a claim that an absent API executed. The sealed review artifact is a source-bound
-declaration of intended behavior; the existing trusted-owner grant authenticates its exact
-feature scope and independently reviewed oracle assertion. This does not certify the reviewer's
-identity or qualitative independence through a new service, or prove exhaustive correctness.
+declaration of intended behavior with validated source binding. This does not certify the
+reviewer's identity, independent human review, or exhaustive correctness.
 
 ## Offline restoration and retention
 

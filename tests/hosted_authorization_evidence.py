@@ -59,6 +59,8 @@ def quality_artifact(payload: dict[str, Any]) -> dict[str, object]:
 def _waiting_rows(
     payload: dict[str, Any], characterization: dict[str, Any], refactor: dict[str, Any]
 ) -> frozenset[int]:
+    if refactor.get("schema_version") == "refactor-policy-result.v2":
+        return frozenset()
     blocks = set(refactor["policy_blocks"])
     absent = {"MISSING_OWNER_AUTHORIZATION", "STALE_OWNER_AUTHORIZATION"}
     if refactor["authorization"] is not None or not blocks.intersection(absent):

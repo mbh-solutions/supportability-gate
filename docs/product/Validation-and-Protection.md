@@ -37,7 +37,7 @@ The consumer's fixed quality profile remains part of its eight-lane evaluation.
 Quality runtime coverage is evaluated against the head source tree. Changed surviving bodies
 use their head line ranges, additions and renames require head responsibilities, and unchanged
 high-risk bodies remain required. Deleted base bodies are retained for change review,
-characterization, and exact authorization, but are not treated as executable head code.
+characterization, and source-bound change evidence, but are not treated as executable head code.
 A successful test command alone does not prove coverage of these responsibilities.
 The fixed Node test command enables source maps so transformed TypeScript coverage is attributed
 to original source lines. Merely importing a function is insufficient to observe its body.

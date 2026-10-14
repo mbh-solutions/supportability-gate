@@ -10,8 +10,6 @@ concurrency:
 permissions:
   actions: read
   contents: read
-  issues: read
-  pull-requests: read
 
 jobs:
   characterize-base:
@@ -519,15 +517,13 @@ jobs:
           fi
           exit "$status"
 
-      - name: Enforce refactor policy
+      - name: Verify runnable work and frozen correction evidence
         id: refactor_policy
         if: >-
           steps.install.outcome == 'success' &&
           steps.download_base.outcome == 'success' &&
           steps.download_head.outcome == 'success'
         continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ${{ runner.temp }}
         run: |
           set +e
@@ -782,9 +778,7 @@ jobs:
               --repository-id "$GITHUB_REPOSITORY_ID" \
               --summary "$result"
             publish_status=$?
-            if [ "$publish_status" -eq 3 ]; then
-              printf '%s\n' 'Awaiting owner authorization; required check remains pending.'
-            elif [ "$publish_status" -ne 0 ]; then
+            if [ "$publish_status" -ne 0 ]; then
               overall=2
             elif [ "$result_status" -ne 0 ] && [ "$overall" -eq 0 ]; then
               overall=1

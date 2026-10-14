@@ -2,37 +2,55 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Bind source authorization events to the exact merged release that safely withholds completed checks."
-proof = "Authorization wait, stale identity, wrong source workflow, artifact tampering, event ordering and check identity regressions; hosted continuation qualification and complete source validation."
+intended_behavior = "Owner task authorization is separate from technical proof. Current hosted runs require no owner comment; exact source, coverage, runtime, frozen correction history and all eight checks remain enforced."
+proof = "Direct no-comment Python and TypeScript fixtures, correction history tamper regressions, consumer composition checks, preserved legacy evidence tests and hosted protected qualification."
 
 [characterization]
-captured_behavior = "Executable policy, characterization definitions and goldens are unchanged. Hosted check publication distinguishes initial pending checks from completed checks that require renewed authorization."
-proof = "tests/test_consumer_runtime_contract.py plus existing characterization and quality suites."
+captured_behavior = "Existing characterization definitions and legacy evidence outputs remain preserved. The hosted entry now emits measured work evidence without owner attestation fields."
+proof = "tests/test_refactor_policy.py and tests/test_standard_results.py exercise new work evidence and retained technical enforcement; existing fixed characterization scenarios remain authoritative."
 
 [separation_of_concerns]
-before = "The publisher completed authorization-dependent checks as failures and comments did not resume evaluation."
-after = "The publisher distinguishes an authorization wait; a read-only supervisor reuses source-bound evidence, while a separate publisher updates original checks after freshness validation."
-boundaries = []
+before = "Owner comments mixed work authorization with machine-derived scope and claimed review evidence."
+after = "The existing scope module derives source-bound proof; the final composer independently reconciles it; reporting never infers an owner attestation from a passing check."
+boundaries = [
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_oracle_commit", before = "Oracle commit was supplied in a comment.", after = "Derive the earliest matching frozen oracle from Git history." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "_work_scope", before = "Scope was duplicated in owner-authored JSON.", after = "Derive actual scope and targets directly from Git." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "correction_evidence", before = "Owner grant carried correction digests.", after = "Retain source-bound oracle and observed-delta receipts." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "introduction_blocks", before = "API birth proof was joined to a duplicate owner grant.", after = "Check the measured API birth proof without an owner grant." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "legacy_main", before = "The current CLI performed comment authentication.", after = "Preserve the historical authenticated evaluation entry for legacy evidence tests." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "main", before = "CLI orchestrated owner comments and predecessor lookups.", after = "CLI reads authenticated captures and verifies work without a comment API." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "function", symbol = "verify_work", before = "Current scope enforcement required owner JSON.", after = "Measure scope and runnability with no approval claim." },
+  { path = "src/supportability_gate/refactor_policy.py", kind = "module", symbol = "src/supportability_gate/refactor_policy.py", before = "Only legacy authorization evidence names existed.", after = "Name the fixed technical work-evidence schema and failure ownership." },
+  { path = "src/supportability_gate/reporting.py", kind = "function", symbol = "_evidence_classes", before = "PASS on gates 6 and 8 implied owner attestation.", after = "Report no owner attestation without actual attestation evidence." },
+  { path = "src/supportability_gate/standard_block_ownership.py", kind = "module", symbol = "src/supportability_gate/standard_block_ownership.py", before = "Only legacy authorization evidence names existed.", after = "Name the fixed technical work-evidence schema and failure ownership." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_add_characterization", before = "Only legacy authorized corrections could reconcile.", after = "Accept independently bound measured corrections as well as historical evidence." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_authorized_correction", before = "Only legacy approval classification was recognized.", after = "Recognize measured correction proof while preserving old evidence." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_refactor", before = "Only legacy authorization-result evidence was accepted.", after = "Dispatch the closed versioned technical evidence reader." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_result_classification", before = "Only owner-authorized correction labels were recognized.", after = "Accept the truthful verified-correction label." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_work_blocks", before = "No approval-free block cross-check existed.", after = "Recompute runnability and bounded-scope consistency." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_work_correction", before = "Correction receipts required owner grants.", after = "Cross-check correction digests and verification failures." },
+  { path = "src/supportability_gate/standard_results.py", kind = "function", symbol = "_s02_work_evidence", before = "No approval-free evidence schema existed.", after = "Validate exact identity, shape, scope, and characterization binding." }
+]
 
 [architecture]
 dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
-reviewed_paths = ["tests/hosted_authorization_evidence.py", "tests/hosted_authorization_resume.py", "src/supportability_gate/characterization.py", "src/supportability_gate/standard_results.py"]
+reviewed_paths = ["src/supportability_gate/refactor_policy.py", "src/supportability_gate/reporting.py", "src/supportability_gate/standard_results.py"]
 
 [responsibility_boundary]
-path = "tests/hosted_authorization_resume.py"
-owns = "Authenticated event-driven continuation of owner authorization over retained evidence."
-does_not_own = "Consumer execution, policy definitions, fabricated owner authority or bypassing required checks."
+path = "src/supportability_gate/refactor_policy.py"
+owns = "Git-derived runnable work scope and frozen correction history, with compatibility readers for historical evidence."
+does_not_own = "Task permission, human code review, consumer execution or waiver of another Standard."
 
 [incremental_refactor]
 target = "Remove the owner authorization failure-and-rerun cycle while preserving exact-change enforcement."
-completed_step = "Add an explicit pending presentation and a pinned reusable continuation with a minimal event receiver."
+completed_step = "Remove owner-comment enforcement from current hosted evaluation and retire the receiver, while preserving technical checks and historical evidence."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Evidence eligibility, authorization evaluation and check publication have separate named responsibilities."
-cohesion = "New hosted modules own authorization continuation; the existing fixed quality profile owns the source-map execution option."
-intended_behavior = "Missing authorization waits; valid owner evidence resumes the original checks; technical failures, stale identities and invalid grants remain blocking."
-reviewability = "Pinned shared receiver, isolated privilege boundaries, focused hostile-input regressions and source validation; immutable Standard and owner policy remain unchanged; the fixed Node command corrects observed-line attribution."
+naming = "Work evidence, correction history, consumer reconciliation and legacy authorization have explicit names."
+cohesion = "No new production module. Existing scope, reporting and composition modules retain their responsibilities."
+intended_behavior = "No approval ritual. Stale technical evidence, runtime and coverage gaps, changed frozen expectations and unsupported scope still block."
+reviewability = "Author declaration only, not owner technical review. Immutable Standard, roadmap, source guard, isolated execution and strict protected delivery remain unchanged."

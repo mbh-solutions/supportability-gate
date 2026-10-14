@@ -1,0 +1,9 @@
+{
+  "base_sha": "dcaef7ec989c3c969f47658b7295db1c91b5edd7",
+  "evidence_class": "measured_fact",
+  "schema_version": "1.0",
+  "scope": "Source-bound report classification; no claim of independent human technical review.",
+  "sources": {
+    "src/supportability_gate/reporting.py": "6f4e366f46c7902830cea221e42a9554f4015ea508f14d1c5ce2e7b1896aada6"
+  }
+}

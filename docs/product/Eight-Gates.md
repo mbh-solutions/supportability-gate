@@ -1,7 +1,7 @@
 # Eight Gates
 
 Each required check owns a defined Standard responsibility. The Gate uses measured facts,
-deterministic decisions, author declarations, and authenticated owner attestations at different
+deterministic decisions and author declarations at different
 strengths. [Evidence Model](Evidence-Model.md) defines those terms.
 
 | # | Exact required check context | Purpose |
@@ -11,7 +11,7 @@ strengths. [Evidence Model](Evidence-Model.md) defines those terms.
 | 3 | `Supportability 3 - Dependency Direction` | Check supported static import direction and cycles. |
 | 4 | `Supportability 4 - Domain Modularity` | Govern new production locations and their coverage and ownership records. |
 | 5 | `Supportability 5 - Characterization` | Preserve known behavior using authenticated repeatable captures. |
-| 6 | `Supportability 6 - Incremental Refactor` | Enforce authorized, bounded, runnable refactor steps and series. |
+| 6 | `Supportability 6 - Incremental Refactor` | Verify Git-derived bounded scope, runnable changes and frozen correction history. |
 | 7 | `Supportability 7 - Quality Gates` | Authenticate fixed quality commands and changed/high-risk coverage. |
 | 8 | `Supportability 8 - Review Handoff` | Require current source-bound review and derived handoff evidence. |
 
@@ -65,7 +65,7 @@ intended oracle. The absence row records no executed command. Once merged, the s
 requires real compatible base/head execution. Supported schema-2 and schema-3 obligations keep
 assertion identities stable when scenario packaging changes.
 
-Schema 5 adds one explicit exception to preservation: an authenticated correction may reconcile
+Schema 5 adds one explicit exception to preservation: a technically verified correction may reconcile
 only its declared changed definitions, goldens and incompatible observations. The oracle commit
 must precede production implementation and remain byte-frozen. Head outputs, deterministic replay,
 API execution, coverage and every other Gate remain mandatory.
@@ -77,18 +77,17 @@ meaningful behavior coverage.
 
 ## 6. Incremental Refactor
 
-**Enforcement and evidence:** deterministic scope, target, sequencing, and runnability checks.
-Where authorization is required, an authenticated owner attestation binds the exact repository,
-base/head, changed scope, targets, and refactor series. Related tests have exact source associations.
-Introduced API proof additionally requires the same owner's exact feature and reviewed-oracle
-grant, joined to the measured source, driver, oracle, and review digests.
+**Enforcement and evidence:** Git-derived scope, bounded targets, runnability and source-bound
+correction history. The owner authorizes the work outside the Gate; no code-review attestation or
+comment is required. Introduced APIs retain their actual execution and sealed expected-case proof.
 
-A correction authorization additionally binds the oracle commit and manifest, correction ID,
-final head and canonical complete observed-delta digest. It authenticates scope, not semantic truth.
+Deliberate corrections bind the frozen oracle commit and manifest, correction ID, final comparison
+and complete observed delta. Missing or altered proof remains blocking.
 
-**Example failure:** an authorization names an earlier head or skips a predecessor step.
-**Limit:** path and span bounds do not establish semantic smallness or quality. The format and
-trusted-owner boundary are in [Refactor Authorization](Refactor-Authorization.md).
+**Example failure:** a changed responsibility has no behavior coverage or an oracle was edited
+after implementation started. **Limit:** path/span measurements and author explanations do not
+establish semantic smallness, naming quality or independent human review. See
+[Refactor Authorization](Refactor-Authorization.md).
 
 ## 7. Quality Gates
 
