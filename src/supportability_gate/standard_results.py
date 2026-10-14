@@ -1904,7 +1904,10 @@ def _s02_refactor_runnability_blocks(
 
 
 def _s02_authorized_correction(classification: str | None, value: object) -> bool:
-    return classification == "PASS_AUTHORIZED_BEHAVIOR_CORRECTION" and isinstance(value, dict)
+    return classification in {
+        "PASS_AUTHORIZED_BEHAVIOR_CORRECTION",
+        refactor_policy.CORRECTION_PASS,
+    } and isinstance(value, dict)
 
 
 def _s02_unreconciled_blocks(value: dict[str, Any], authorized: bool, correction: object) -> bool:
@@ -2059,6 +2062,11 @@ def _s02_refactor(
     identity: RunIdentity,
     complexity: _S02Complexity | None,
 ) -> list[str]:
+    if (
+        isinstance(value, dict)
+        and value.get("schema_version") == refactor_policy.WORK_RESULT_SCHEMA
+    ):
+        return _s02_work_evidence(value, characterization, identity, complexity)
     code = "MALFORMED_REFACTOR_RESULT"
     keys = set(_S02_REFACTOR_KEYS)
     if isinstance(value, dict) and "result_classification" in value:
@@ -2121,6 +2129,127 @@ def _s02_refactor(
         raise StandardResultsError("REFACTOR_RESULT_BINDING_MISMATCH")
     _s02_introduction_binding(row, authorization, characterization)
     return blocks
+
+
+def _s02_work_correction(
+    row: dict[str, Any], characterization_result: dict[str, Any], code: str
+) -> None:
+    correction = characterization_result.get("correction")
+    evidence = row["correction_evidence"]
+    blocks = row["policy_blocks"]
+    expected = (
+        "BLOCK"
+        if blocks
+        else (
+            refactor_policy.CORRECTION_PASS
+            if isinstance(correction, dict)
+            else "PASS_NO_BEHAVIOR_CHANGE"
+        )
+    )
+    if row["result_classification"] != expected:
+        raise StandardResultsError(code)
+    if correction is None:
+        if evidence is not None:
+            raise StandardResultsError(code)
+        return
+    if evidence is None and "STALE_CORRECTION_ORACLE" in blocks:
+        return
+    receipt = _s02_exact(
+        evidence,
+        {
+            "id",
+            "oracle_commit_sha",
+            "oracle_manifest_blob_sha",
+            "oracle_manifest_sha256",
+            "behavior_delta_sha256",
+        },
+        code,
+    )
+    if (
+        not _s02_sha(receipt["oracle_commit_sha"], _S02_SHA40)
+        or any(receipt[key] != correction[key] for key in receipt if key != "oracle_commit_sha")
+        or not set(correction["verification_blocks"]).issubset(blocks)
+    ):
+        raise StandardResultsError(code)
+
+
+def _s02_work_evidence(
+    value: dict[str, Any],
+    characterization_result: object,
+    identity: RunIdentity,
+    complexity: _S02Complexity | None,
+) -> list[str]:
+    code = "REFACTOR_RESULT_BINDING_MISMATCH"
+    keys = {
+        "schema_version",
+        "repository",
+        "base_sha",
+        "head_sha",
+        "applicable",
+        "changed_paths",
+        "targets",
+        "unbounded_paths",
+        "characterization_sha256",
+        "correction_evidence",
+        "other_standard_clauses_waived",
+        "policy_blocks",
+        "overall_result",
+        "result_classification",
+    }
+    row = _s02_exact(value, keys, code)
+    if not isinstance(characterization_result, dict):
+        raise StandardResultsError(code)
+    blocks = _string_list(row["policy_blocks"], code)
+    if (
+        tuple(row[key] for key in ("repository", "base_sha", "head_sha"))
+        != (identity.repository, identity.base_sha, identity.head_sha)
+        or type(row["applicable"]) is not bool
+        or row["other_standard_clauses_waived"] is not False
+        or blocks != sorted(set(blocks))
+        or row["overall_result"] != ("BLOCK" if blocks else "PASS")
+        or row["characterization_sha256"]
+        != hashlib.sha256(_canonical(characterization_result)).hexdigest()
+    ):
+        raise StandardResultsError(code)
+    for name in ("changed_paths", "targets", "unbounded_paths"):
+        _s02_strings(row[name], code)
+    if complexity is not None:
+        unavailable = "REFACTOR_TARGET_DERIVATION_FAILURE" in complexity.technical
+        _s02_refactor_shape(
+            row,
+            complexity.changed_files,
+            None if unavailable else complexity.responsibility_targets,
+            None if unavailable else complexity.unbounded_production_paths,
+            complexity.source["language"],
+        )
+    _s02_work_correction(row, characterization_result, code)
+    _s02_work_blocks(row, characterization_result, identity, code)
+    return blocks
+
+
+def _s02_work_blocks(
+    row: dict[str, Any], value: dict[str, Any], identity: RunIdentity, code: str
+) -> None:
+    blocks = set(row["policy_blocks"])
+    expected = (
+        _s02_refactor_runnability_blocks(
+            value, identity, row["targets"], row["unbounded_paths"], row["result_classification"]
+        )
+        if row["applicable"]
+        else set()
+    )
+    if blocks & _S02_REFACTOR_RUNNABILITY_BLOCKS != expected:
+        raise StandardResultsError(code)
+    bounded = {"UNVERIFIABLE_BOUNDED_TARGET"} if row["unbounded_paths"] else set()
+    if blocks & {"UNVERIFIABLE_BOUNDED_TARGET"} != bounded:
+        raise StandardResultsError(code)
+    introductions = set(refactor_policy.introduction_blocks(value, tuple(row["targets"])))
+    if {
+        block for block in blocks if block.startswith("MISSING_INTRODUCTION_PROOF")
+    } != introductions:
+        raise StandardResultsError(code)
+    if blocks & (_S02_REFACTOR_AUTHORIZATION_BLOCKS - {"UNVERIFIABLE_BOUNDED_TARGET"}):
+        raise StandardResultsError(code)
 
 
 def _s02_introduction_binding(
@@ -2621,7 +2750,8 @@ def _s02_add_characterization(
         isinstance(characterization, dict)
         and isinstance(characterization.get("correction"), dict)
         and isinstance(refactor, dict)
-        and refactor.get("result_classification") == "PASS_AUTHORIZED_BEHAVIOR_CORRECTION"
+        and refactor.get("result_classification")
+        in {"PASS_AUTHORIZED_BEHAVIOR_CORRECTION", refactor_policy.CORRECTION_PASS}
     ):
         try:
             if not _s02_refactor(refactor, characterization, identity, data):
@@ -3393,6 +3523,7 @@ def _s02_result_classification(row: dict[str, Any]) -> None:
     if "result_classification" in row and row["result_classification"] not in {
         "BLOCK",
         "PASS_AUTHORIZED_BEHAVIOR_CORRECTION",
+        refactor_policy.CORRECTION_PASS,
         "PASS_NO_BEHAVIOR_CHANGE",
     }:
         raise StandardResultsError("MALFORMED_STANDARD_RESULTS_ARTIFACT")

@@ -9,8 +9,6 @@ import re
 import urllib.request
 from pathlib import Path
 
-import hosted_authorization_evidence
-
 from supportability_gate import standard_results
 
 _FULL_SHA = re.compile(r"[0-9a-f]{40}")
@@ -61,30 +59,6 @@ def _payload(arguments: argparse.Namespace) -> dict[str, object]:
             "summary": summary[:_SUMMARY_LIMIT],
         },
     }
-    if arguments.evidence_directory is not None and arguments.result_exit_code == 1:
-        expected = standard_results.RunIdentity(
-            arguments.repository,
-            arguments.repository_id,
-            arguments.base_sha,
-            arguments.head_sha,
-            arguments.workflow_sha,
-            arguments.run_id,
-            arguments.run_attempt,
-        )
-        if arguments.standard in hosted_authorization_evidence.awaiting_standards(
-            arguments.evidence_directory, expected
-        ):
-            payload["status"] = "in_progress"
-            del payload["conclusion"]
-            payload["output"] = {
-                "title": "Awaiting owner authorization",
-                "summary": (
-                    "Evidence collection is complete. Merge remains blocked until the owner "
-                    "authorizes this exact base and head. The authorization receiver resumes "
-                    "the decision using the retained evidence; application tests are not rerun.\n\n"
-                    + summary[: _SUMMARY_LIMIT - 500]
-                ),
-            }
     return payload
 
 
@@ -111,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise RuntimeError("unexpected GitHub response")
             result = json.load(response)
         print(json.dumps({"check_run_id": result["id"], "standard": arguments.standard}))
-        return 3 if payload["status"] == "in_progress" else 0
+        return 0
     except Exception as error:
         print(f"CHECK_RUN_PUBLICATION_FAILED:{type(error).__name__}")
         return 2

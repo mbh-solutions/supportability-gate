@@ -102,7 +102,7 @@ def test_wait_rejects_substituted_sources(tmp_path: Path) -> None:
         hosted.awaiting_standards(directory, fixtures.IDENTITY)
 
 
-def test_pending_publication_has_no_success_conclusion(tmp_path: Path) -> None:
+def test_current_publication_never_waits_for_an_owner_comment(tmp_path: Path) -> None:
     directory = tmp_path / "evidence"
     _waiting_evidence(directory)
     summary = tmp_path / "summary.txt"
@@ -134,6 +134,6 @@ def test_pending_publication_has_no_success_conclusion(tmp_path: Path) -> None:
         ]
     )
     value = publisher._payload(arguments)
-    assert value["status"] == "in_progress"
-    assert "conclusion" not in value
-    assert value["output"]["title"] == "Awaiting owner authorization"
+    assert value["status"] == "completed"
+    assert value["conclusion"] == "failure"
+    assert value["output"]["title"] == "Supportability 6 - Incremental Refactor"

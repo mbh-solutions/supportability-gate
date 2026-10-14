@@ -21,7 +21,7 @@ that responsibility; the declared package dependency direction is enforced in
 | [characterization.py](../../src/supportability_gate/characterization.py) | Manifest obligations and authenticated behavior compatibility |
 | [baseline_evidence.py](../../src/supportability_gate/baseline_evidence.py) | First-release source execution witnesses and complete asset snapshot inventories |
 | [refactor_targets.py](../../src/supportability_gate/refactor_targets.py) | Derived responsibility target inventory |
-| [refactor_policy.py](../../src/supportability_gate/refactor_policy.py) | Trusted-owner scope, sequence, and runnability checks |
+| [refactor_policy.py](../../src/supportability_gate/refactor_policy.py) | Git-derived scope, frozen correction history, and runnability checks |
 | [quality_profile.py](../../src/supportability_gate/quality_profile.py) | Fixed command profiles, source/dependency receipts, suppressions, and observed coverage |
 | [quality_runner.py](../../src/supportability_gate/quality_runner.py) | Command construction, supervisor provisioning paths, and isolated target execution |
 | [clause_inventory.py](../../src/supportability_gate/clause_inventory.py) | Immutable Standard traceability and canonical evidence/test-proof classifications |
@@ -43,7 +43,7 @@ their direct tests live under [tests](../../tests). The independently pinned
 The fixed [hosted characterization collector](../../tests/hosted_characterization.py) runs
 [the observed Python API collector](../../tests/characterization_observer.py) inside the existing
 isolated target boundary for explicit schema-3 APIs. Static source/birth verification remains
-in `characterization`; exact trusted-owner feature scope stays in `refactor_policy`, and the
+in `characterization`; source-bound work scope stays in `refactor_policy`, and the
 shared result consumer repeats the join without loading target-analysis dependencies at import.
 
 ## Change routing
