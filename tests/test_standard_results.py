@@ -5518,7 +5518,7 @@ def _job(name: str, next_name: str | None) -> str:
 def test_capture_jobs_pin_identical_exact_runtime_versions() -> None:
     jobs = (
         _job("characterize-base", "characterize-head"),
-        _job("characterize-head", "quality-profile-plan"),
+        _job("characterize-head", "quality-profile-shards"),
         _job("quality-profile-shards", "deterministic-evidence"),
     )
 
@@ -5613,17 +5613,19 @@ def test_workflow_keeps_advisory_review_out_of_the_required_path() -> None:
         for field in ("artifact-id", "artifact-digest", "capture-sha256"):
             assert (
                 f"--expected-{side}-characterization-{field} "
-                f'"${{{{ needs.characterize-{side}.outputs.{field} }}}}"' in evidence
+                f'"${{{{ steps.await_capture.outputs.{side}-{field} }}}}"' in evidence
             )
     assert (
         "group: supportability-capture-${{ github.repository }}-${{ github.event.pull_request.number }}"
         in workflow
     )
     assert "cancel-in-progress: true" in workflow
-    assert (
-        "needs: [characterize-base, characterize-head, quality-profile-plan, quality-profile-shards]"
-        in evidence
-    )
+    assert "needs:" not in evidence
+    assert 'hosted_artifact_wait.py" capture' in evidence
+    assert 'hosted_artifact_wait.py" publish' in publisher
+    assert "checks: write" not in evidence
+    assert "quality-profile-plan:" not in workflow
+    assert "shard: [0, 1, 2, 3]" in quality
     assert "observe-codex-review:" not in workflow
     assert "collect-codex-review:" not in workflow
     assert "review-required" not in workflow

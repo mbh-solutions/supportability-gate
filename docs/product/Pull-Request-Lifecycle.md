@@ -77,3 +77,13 @@ conversation it creates remains subject to native thread resolution. Semantic Re
 Implementation references: [required workflow](../../.github/workflows/organization-required.yml),
 [producer](../../src/supportability_gate/standard_results_producer.py), and
 [enforcer](../../src/supportability_gate/standard_results_enforcer.py).
+
+## Parallel preparation with authenticated producer completion
+
+Quality partitions, characterization, the static evidence job, and the separate publisher can
+prepare their environments concurrently. Preparation does not authorize a result. Before consuming
+an artifact, downstream jobs wait for the exact producer jobs from the same run attempt, read
+native artifact identities, and enforce the existing repository, head, digest and evidence checks.
+A failed producer remains failed; a missing, stale, duplicate or malformed artifact cannot satisfy
+the join. Waiting is bounded and errors flow through the normal blocking result path. The publisher
+retains its separate permission boundary and cannot publish a PASS from incomplete evidence.

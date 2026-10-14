@@ -18,7 +18,7 @@ import traceback
 import zipfile
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path, PurePosixPath
@@ -1016,6 +1016,55 @@ def _run_until_required_command_fails(
     return tuple(results)
 
 
+def partition_adapters(language: str, index: int | None) -> tuple[str, ...]:
+    """Run common checks once; every partition retains its required test/dependency work."""
+    required = quality_profile.required_adapters(language)
+    if index in (None, 0):
+        return required
+    return tuple(
+        adapter
+        for adapter in required
+        if adapter
+        in {
+            "python.pytest.v1",
+            "typescript.tool-install.v1",
+            "typescript.target-install.v1",
+            "typescript.test.v1",
+        }
+    )
+
+
+def _retain_typescript_shard(
+    work: Path,
+    output: Path,
+    targets: tuple[str, ...],
+    index: int,
+    count: int,
+    command: tuple[str, ...],
+) -> None:
+    destination = output / "typescript-shard"
+    destination.mkdir(parents=True, exist_ok=True)
+    report = work / "coverage.lcov"
+    if not report.is_file() or report.is_symlink():
+        raise quality_profile.QualityProfileError("MISSING_QUALITY_PARTITION_PROOF", "LCOV")
+    raw = report.read_bytes()
+    (destination / "coverage.lcov").write_bytes(raw)
+    (destination / "partition.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "quality-node-partition.v1",
+                "index": index,
+                "count": count,
+                "required_targets": targets,
+                "command": command,
+                "coverage_sha256": quality_profile._sha256(raw),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _retain_python_shard(work: Path, output: Path, required_targets: tuple[str, ...]) -> None:
     """Retain raw branch data and complete partition identity for the trusted join."""
     destination = output / "python-shard"
@@ -1066,6 +1115,15 @@ def _run_command(
                 SUPPORTABILITY_QUALITY_SHARD_INDEX=str(pytest_shard_index),
                 SUPPORTABILITY_QUALITY_SHARD_COUNT=str(pytest_shard_count),
             )
+    if plan.adapter == "typescript.test.v1" and pytest_shard_index is not None:
+        plan = replace(
+            plan,
+            actual=(
+                plan.actual[0],
+                f"--test-shard={pytest_shard_index + 1}/{pytest_shard_count}",
+                *plan.actual[1:],
+            ),
+        )
     if plan.adapter == "python.build-wheel.v1":
         build_source = work / "source"
         shutil.copytree(mounted_target, build_source)
@@ -1150,11 +1208,21 @@ def _run_command(
             head_sha,
             records,
             ()
-            if plan.adapter == "python.pytest.v1" and pytest_shard_index is not None
+            if plan.adapter in {"python.pytest.v1", "typescript.test.v1"}
+            and pytest_shard_index is not None
             else required_targets,
         )
         if plan.adapter == "python.pytest.v1" and pytest_shard_index is not None:
             _retain_python_shard(work, diagnostic_output or output, required_targets)
+        if plan.adapter == "typescript.test.v1" and pytest_shard_index is not None:
+            _retain_typescript_shard(
+                work,
+                diagnostic_output or output,
+                required_targets,
+                pytest_shard_index,
+                pytest_shard_count,
+                (evidence_plan or plan).actual,
+            )
         exit_code = completed.returncode or proof_exit
         if exit_code:
             _retain_diagnostic(
@@ -1645,7 +1713,11 @@ def run_profile(arguments: argparse.Namespace) -> quality_profile.QualityEvidenc
             )
         results = _run_until_required_command_fails(
             policy.language,
-            tuple(zip(plans, public_plans, strict=True)),
+            tuple(
+                (plan, public)
+                for plan, public in zip(plans, public_plans, strict=True)
+                if plan.adapter in partition_adapters(policy.language, shard_index)
+            ),
             lambda plan, public_plan: _timed_command(
                 timings,
                 plan.adapter,

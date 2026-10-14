@@ -30,18 +30,36 @@ def main() -> None:
     code_ids = {}
     root = Path(os.environ["SUPPORTABILITY_CHARACTERIZATION_TARGET"]).resolve()
 
+    locations = {}
+
     def trace(frame, event, arg):
-        filename = Path(frame.f_code.co_filename)
-        if event == "line" and filename.is_absolute() and filename.is_relative_to(root):
-            path = filename.relative_to(root).as_posix()
-            if frame.f_code not in code_ids:
-                code_ids[frame.f_code] = hashlib.sha256(
-                    marshal.dumps(canonical_code(frame.f_code, root), 2)
-                ).hexdigest()
-            key = code_ids[frame.f_code]
-            file_hits = hits.setdefault(path, {})
-            file_hits[key] = file_hits.get(key, 0) + 1
-        return trace
+        code = frame.f_code
+        identity = id(code)
+        if identity not in locations:
+            filename = Path(code.co_filename)
+            path = (
+                filename.relative_to(root).as_posix()
+                if filename.is_absolute() and filename.is_relative_to(root)
+                else None
+            )
+            # Retain the object so its identity cannot be reused during the run.
+            locations[identity] = (code, path)
+        _, path = locations[identity]
+        if path is None:
+            return None
+
+        def record(frame, event, arg):
+            if event == "line":
+                if identity not in code_ids:
+                    code_ids[identity] = hashlib.sha256(
+                        marshal.dumps(canonical_code(code, root), 2)
+                    ).hexdigest()
+                key = code_ids[identity]
+                file_hits = hits.setdefault(path, {})
+                file_hits[key] = file_hits.get(key, 0) + 1
+            return record
+
+        return record
 
     output = io.StringIO()
     sys.settrace(trace)
