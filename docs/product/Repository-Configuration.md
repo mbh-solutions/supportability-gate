@@ -253,6 +253,19 @@ Obligation categories are `behavior`, `cli_help`, and `static`. A static obligat
 to supported replacements; replacing an ID alone cannot discard an old requirement. Legacy
 schema `1.0` remains admitted by the parser but does not add schema-2 obligation fields.
 
+For changed functions or components, a successful file-scoped legacy scenario alone does not
+supply a behavioral obligation. Add schema-2 behavior obligations selecting meaningful observed
+input/output cases. A whole-file behavior target can cover that file's changed responsibility
+identities; a function target uses its stable identity without a line-range suffix. Preserve
+existing scenario IDs and golden values. Additional regression scenarios can run against both
+real revisions to supply missing proof without relabelling existing expectations.
+
+Compatibility obligations can include a removed or renamed base responsibility: demonstrate
+preserved external behavior through the surviving interface. They do not require executing a
+deleted function at head. Gate 7 runtime targets are independently derived from surviving head
+source and current line ranges. An intentional behavior change still requires the supported
+oracle-first correction transaction; changing test expectations is not a refactor shortcut.
+
 Implementation references: [contract schema](../../src/supportability_gate/contract.py),
 [anti-weakening](../../src/supportability_gate/gate_policy.py),
 [review schema](../../src/supportability_gate/review_evidence.py), and

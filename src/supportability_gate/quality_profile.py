@@ -1126,11 +1126,15 @@ def _lcov_path(value: str, repository: Path) -> str:
     return path.as_posix()
 
 
-def _lcov_executed_line(line: str) -> int | None:
+def _lcov_executed_line(line: str, reported: set[int]) -> int | None:
     fields = line[3:].split(",", 2)
     if len(fields) < 2 or not all(item.isdigit() for item in fields[:2]):
         raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV line")
-    return int(fields[0]) if int(fields[1]) > 0 else None
+    number = int(fields[0])
+    if number < 1 or number in reported:
+        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV line identity")
+    reported.add(number)
+    return number if int(fields[1]) > 0 else None
 
 
 def _lcov_total(line: str) -> int:
@@ -1146,11 +1150,19 @@ def _store_lcov_record(
     found: int | None,
     hits: int | None,
     executed: set[int],
+    reported: set[int],
 ) -> None:
     if current is None or found is None or hits is None or current in records:
         raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV record")
-    if found < hits or hits != len(executed):
-        raise QualityProfileError("MALFORMED_QUALITY_PROOF", "invalid LCOV totals")
+    # Node counts ignored/type-only source lines in LF and LH but omits their DA
+    # rows. Reconcile that exact accounting without inventing executed lines.
+    omitted = found - len(reported)
+    if omitted < 0 or hits != len(executed) + omitted:
+        raise QualityProfileError(
+            "MALFORMED_QUALITY_PROOF",
+            f"invalid LCOV totals: {current} LF={found} LH={hits} "
+            f"DA={len(reported)} DA_hits={len(executed)}",
+        )
     records[current] = (found, hits, frozenset(executed))
 
 
@@ -1159,20 +1171,22 @@ def _lcov_records(report: str, repository: Path) -> dict[str, tuple[int, int, fr
     current: str | None = None
     found = hits = None
     executed: set[int] = set()
+    reported: set[int] = set()
     for line in report.splitlines():
         if line.startswith("SF:"):
             current = _lcov_path(line[3:], repository)
             found = hits = None
             executed = set()
+            reported = set()
         elif line.startswith("DA:"):
-            if (executed_line := _lcov_executed_line(line)) is not None:
+            if (executed_line := _lcov_executed_line(line, reported)) is not None:
                 executed.add(executed_line)
         elif line.startswith("LF:"):
             found = _lcov_total(line)
         elif line.startswith("LH:"):
             hits = _lcov_total(line)
         elif line == "end_of_record":
-            _store_lcov_record(records, current, found, hits, executed)
+            _store_lcov_record(records, current, found, hits, executed, reported)
             current = None
     if current is not None:
         raise QualityProfileError("MALFORMED_QUALITY_PROOF", "incomplete LCOV record")
@@ -1191,7 +1205,7 @@ def typescript_lcov_observation(
         path
         for path in source_files
         if (record := records.get(path)) is not None
-        and record[1] > 0
+        and bool(record[2])
         and all(_span_observed(span, record[2]) for span in _required_spans(required_targets, path))
     )
     zero_statement = tuple(

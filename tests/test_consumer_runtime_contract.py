@@ -203,8 +203,9 @@ console.log(JSON.stringify({schema_version:"1.0", scenario:"locked", behavior:{n
     os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted",
     reason="native target execution requires hosted isolation",
 )
+@pytest.mark.parametrize("type_only", [False, True])
 def test_hosted_typescript_import_only_does_not_prove_body_execution(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], type_only: bool
 ) -> None:
     repo, _, _, _ = _repository(tmp_path, language="typescript")
     _write(
@@ -213,7 +214,12 @@ def test_hosted_typescript_import_only_does_not_prove_body_execution(
     )
     _write(
         repo / "src/sample.ts",
-        "/** Add one. */\nexport function calculate(value: number): number {\n  return 1 + value;\n}\n",
+        (
+            "export type Input = number;\nexport interface Shape {\n  value: number;\n}\n"
+            if type_only
+            else ""
+        )
+        + "/** Add one. */\nexport function calculate(value: number): number {\n  return 1 + value;\n}\n",
     )
     _write(
         repo / "tests/sample.test.mjs",
@@ -269,18 +275,23 @@ console.log(JSON.stringify({schema_version:"1.0",scenario:"coverage",behavior}))
     with capsys.disabled():
         print("HOSTED_TYPESCRIPT_COVERAGE_PROBE " + json.dumps(behavior, sort_keys=True))
     assert behavior["maps"]["code"] == 0, behavior
+    if type_only:
+        lines = behavior["maps"]["lcov"].splitlines()
+        hits = int(next(line[3:] for line in lines if line.startswith("LH:")))
+        executed = sum(int(line.split(",")[1]) > 0 for line in lines if line.startswith("DA:"))
+        assert hits > executed, behavior
     observed, _ = quality_profile.typescript_lcov_observation(
         behavior["maps"]["lcov"],
         ("src/sample.ts",),
         Path("/target"),
-        ("src/sample.ts::function:calculate:2-4",),
+        (f"src/sample.ts::function:calculate:{6 if type_only else 2}-{8 if type_only else 4}",),
     )
     assert not observed, behavior
     called, _ = quality_profile.typescript_lcov_observation(
         behavior["called"]["lcov"],
         ("src/sample.ts",),
         Path("/target"),
-        ("src/sample.ts::function:calculate:2-4",),
+        (f"src/sample.ts::function:calculate:{6 if type_only else 2}-{8 if type_only else 4}",),
     )
     assert called == ("src/sample.ts",), behavior
 
@@ -320,3 +331,22 @@ const mixed = Card(); /* same-line comment */
     erased = b"declare global { interface Window { sample: string; } }\n"
     erased_spans = function_changes.responsibility_spans("src/types.ts", erased, {1})
     assert quality._runtime_spans("src/types.ts", erased, erased_spans) == ()
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        b"export type Input = number;\n",
+        b"export interface Shape { value: number; }\n",
+    ],
+)
+def test_exported_type_declarations_have_no_runtime_target(source: bytes) -> None:
+    spans = function_changes.responsibility_spans("src/types.ts", source, {1})
+    assert quality._runtime_spans("src/types.ts", source, spans) == ()
+
+
+def test_export_with_comment_keeps_real_runtime_target() -> None:
+    source = b"export /* explanation */ const live = 1;\n"
+    spans = function_changes.responsibility_spans("src/live.ts", source, {1})
+    assert quality._runtime_spans("src/live.ts", source, spans) == spans
+    assert spans

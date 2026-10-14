@@ -159,3 +159,15 @@ Correction-history verification can produce a behavior-preservation violation fr
 work-scope verifier. The composer assigns that violation to Gate 5 as a policy block;
 it does not label a known altered oracle as an evidence-routing technical failure.
 Unrelated block families from the wrong producer still fail evidence validation.
+
+For the fixed Node coverage adapter, ignored TypeScript-only lines can contribute to LCOV
+`LF`/`LH` totals without a `DA` line record. The reader reconciles exactly that accounting;
+only explicit positive `DA` records can establish file or responsibility execution. Omitted
+lines never create execution credit. Duplicate or invalid line identities and inconsistent
+accounting remain technical failures. Bounded, sanitized LCOV diagnostics and the original
+report digest/size are retained before parsing, including when parsing fails. Large diagnostic
+text can be truncated; its retained digest is not a substitute for a complete original report.
+
+Type-only exported aliases, interfaces and ambient declarations have no runtime obligation;
+their erased `export` wrapper is not executable code. Exported values and executable source
+beside comments retain their runtime obligations.

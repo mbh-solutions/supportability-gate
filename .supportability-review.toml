@@ -2,37 +2,42 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Clarify current module-introduction documentation: technical bindings remain required, but historical owner grants are not required in current runs. Repair two rendered schema-range encoding defects. No executable behavior changes."
-proof = "Direct no-comment Python and TypeScript fixtures, correction history tamper regressions, consumer composition checks, preserved legacy evidence tests and hosted protected qualification."
+intended_behavior = "Accept Node LCOV ignored-line accounting while deriving coverage only from positive explicit line records. Preserve malformed-proof rejection and retain bounded failure diagnostics. Erased type exports do not create runtime obligations."
+proof = "Direct positive/negative LCOV parser tests, retention-on-parse-failure regression, and fixed isolated hosted Node coverage probes with type-only source and uncalled functions."
 
 [characterization]
-captured_behavior = "Existing characterization definitions and legacy evidence outputs remain preserved. The hosted entry now emits measured work evidence without owner attestation fields."
-proof = "tests/test_refactor_policy.py and tests/test_standard_results.py exercise new work evidence and retained technical enforcement; existing fixed characterization scenarios remain authoritative."
+captured_behavior = "Existing quality-profile command and result characterization remains unchanged. Node native coverage probes measure real source-mapped test execution."
+proof = "Existing m9-quality-profile and quality-runner-boundary scenarios remain frozen; exact final source and consumer qualification validate preserved isolation and execution requirements."
 
 [separation_of_concerns]
-before = "Owner comments mixed work authorization with machine-derived scope and claimed review evidence."
-after = "The existing scope module derives source-bound proof; the final composer independently reconciles it; reporting never infers an owner attestation from a passing check."
-boundaries = []
+before = "LCOV parsing required aggregate hit counts to equal explicit executed lines, and orchestration retained the trace only after parsing succeeded."
+after = "The parser validates native accounting without inventing execution, while orchestration retains bounded diagnostic evidence before parsing."
+boundaries = [
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_lcov_executed_line", before = "Parse positive execution counts.", after = "Also validate unique positive line identities and record all reported lines." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_store_lcov_record", before = "Require hit totals equal explicit positive line count.", after = "Reconcile omitted ignored-line totals without assigning them execution." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "_lcov_records", before = "Collect only positive line identities.", after = "Track all explicit line identities for exact accounting." },
+  { path = "src/supportability_gate/quality_profile.py", kind = "function", symbol = "typescript_lcov_observation", before = "Use aggregate hits for the file execution prerequisite.", after = "Require an explicit positive line record, including when no responsibility range is supplied." }
+]
 
 [architecture]
-dependency_direction = "Hosted orchestration depends on the existing deterministic composer, bundle validator and refactor policy. These production modules do not depend on orchestration."
-reviewed_paths = ["src/supportability_gate/standard_block_ownership.py"]
+dependency_direction = "Hosted orchestration calls the deterministic quality-profile reader. The reader does not depend on orchestration or execute target source."
+reviewed_paths = ["src/supportability_gate/quality_profile.py"]
 
 [responsibility_boundary]
-path = "src/supportability_gate/standard_block_ownership.py"
-owns = "Closed ownership mapping of policy blocks to their Standard and permitted evidence producers."
-does_not_own = "Task permission, human code review, consumer execution or waiver of another Standard."
+path = "src/supportability_gate/quality_profile.py"
+owns = "Fixed quality evidence parsing, accounting, and coverage decisions."
+does_not_own = "Consumer test behavior, sandbox setup, owner permission, or policy waivers."
 
 [incremental_refactor]
-target = "Remove the owner authorization failure-and-rerun cycle while preserving exact-change enforcement."
-completed_step = "Correct qualification-discovered classification of an actual altered-oracle violation while preserving blocking behavior."
+target = "Repair the LCOV accounting and lost diagnostic evidence exposed by a legitimate TypeScript consumer."
+completed_step = "Accept the fixed Node reporter format while preserving explicit execution coverage and invalid-proof rejection."
 
 [review_handoff]
 summary = "DERIVED_FROM_AUTHENTICATED_EVIDENCE"
 remaining_risks = ["DERIVED_FROM_AUTHENTICATED_EVIDENCE"]
 
 [human_review]
-naming = "Work evidence, correction history, consumer reconciliation and legacy authorization have explicit names."
-cohesion = "No new production module. Existing scope, reporting and composition modules retain their responsibilities."
-intended_behavior = "No approval ritual. Stale technical evidence, runtime and coverage gaps, changed frozen expectations and unsupported scope still block."
-reviewability = "Author declaration only, not owner technical review. Immutable Standard, roadmap, source guard, isolated execution and strict protected delivery remain unchanged."
+naming = "Reported lines and executed lines name separate evidence sets."
+cohesion = "Existing parser and hosted orchestration retain their own responsibilities; no new production module."
+intended_behavior = "Type-only omitted rows do not block valid native reports and never provide runtime credit. Uncalled bodies and malformed traces remain blocking."
+reviewability = "Author declaration only. Existing immutable policy, source integrity, isolated execution, and protected delivery remain mandatory."
