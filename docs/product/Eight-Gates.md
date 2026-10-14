@@ -11,7 +11,7 @@ strengths. [Evidence Model](Evidence-Model.md) defines those terms.
 | 3 | `Supportability 3 - Dependency Direction` | Check supported static import direction and cycles. |
 | 4 | `Supportability 4 - Domain Modularity` | Govern new production locations and their coverage and ownership records. |
 | 5 | `Supportability 5 - Characterization` | Preserve known behavior using authenticated repeatable captures. |
-| 6 | `Supportability 6 - Incremental Refactor` | Enforce authorized, bounded, runnable refactor steps and series. |
+| 6 | `Supportability 6 - Incremental Refactor` | Verify Git-derived bounded scope, runnable changes and frozen correction history. |
 | 7 | `Supportability 7 - Quality Gates` | Authenticate fixed quality commands and changed/high-risk coverage. |
 | 8 | `Supportability 8 - Review Handoff` | Require current source-bound review and derived handoff evidence. |
 

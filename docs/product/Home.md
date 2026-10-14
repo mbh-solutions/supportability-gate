@@ -44,7 +44,7 @@ profile and supported parser/command boundaries determine **what it can assess**
 | Understand what PASS establishes | [Evidence Model](Evidence-Model.md) and [Boundaries and Limitations](Boundaries-and-Limitations.md) |
 | Administer protection | [Validation and Protection](Validation-and-Protection.md) |
 | Inspect the design and implementation | [Architecture](Architecture.md) and [Module Map](Module-Map.md) |
-| Use the evaluator or authorize a refactor | [CLI Reference](CLI-Reference.md) and [Refactor Authorization](Refactor-Authorization.md) |
+| Use the evaluator or understand work authorization | [CLI Reference](CLI-Reference.md) and [Refactor Authorization](Refactor-Authorization.md) |
 
 The [Supportability Standard](../supportability_standard.md) is the immutable policy source.
 PASS means the applicable defined rules and required evidence are satisfied. Human declarations

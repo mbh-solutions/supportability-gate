@@ -15,7 +15,8 @@ preserve dated delivery evidence and do not authorize new work.
 
 Run the complete source-proof commands in [AGENTS.md](../AGENTS.md), with Python 3.12 and the exact
 lock. Keep generated caches/build outputs in owned temporary paths where practical. Refresh the
-current review evidence and exact owner authorization only when the defined policy requires it.
+current source-bound review evidence. The owner authorizes the work; current Gate runs do not
+require an owner technical-review comment.
 Deliver through the normal protected PR path and verify final-head checks, merge, and scope.
 
 ## Capability documentation checklist
