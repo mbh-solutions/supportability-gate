@@ -2,7 +2,7 @@ schema_version = "1.0"
 module_boundaries = []
 
 [behavior]
-intended_behavior = "Accept Node LCOV ignored-line accounting while deriving coverage only from positive explicit line records. Preserve malformed-proof rejection and retain bounded failure diagnostics."
+intended_behavior = "Accept Node LCOV ignored-line accounting while deriving coverage only from positive explicit line records. Preserve malformed-proof rejection and retain bounded failure diagnostics. Erased type exports do not create runtime obligations."
 proof = "Direct positive/negative LCOV parser tests, retention-on-parse-failure regression, and fixed isolated hosted Node coverage probes with type-only source and uncalled functions."
 
 [characterization]

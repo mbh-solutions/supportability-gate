@@ -167,3 +167,7 @@ lines never create execution credit. Duplicate or invalid line identities and in
 accounting remain technical failures. Bounded, sanitized LCOV diagnostics and the original
 report digest/size are retained before parsing, including when parsing fails. Large diagnostic
 text can be truncated; its retained digest is not a substitute for a complete original report.
+
+Type-only exported aliases, interfaces and ambient declarations have no runtime obligation;
+their erased `export` wrapper is not executable code. Exported values and executable source
+beside comments retain their runtime obligations.

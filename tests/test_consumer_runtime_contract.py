@@ -331,3 +331,22 @@ const mixed = Card(); /* same-line comment */
     erased = b"declare global { interface Window { sample: string; } }\n"
     erased_spans = function_changes.responsibility_spans("src/types.ts", erased, {1})
     assert quality._runtime_spans("src/types.ts", erased, erased_spans) == ()
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        b"export type Input = number;\n",
+        b"export interface Shape { value: number; }\n",
+    ],
+)
+def test_exported_type_declarations_have_no_runtime_target(source: bytes) -> None:
+    spans = function_changes.responsibility_spans("src/types.ts", source, {1})
+    assert quality._runtime_spans("src/types.ts", source, spans) == ()
+
+
+def test_export_with_comment_keeps_real_runtime_target() -> None:
+    source = b"export /* explanation */ const live = 1;\n"
+    spans = function_changes.responsibility_spans("src/live.ts", source, {1})
+    assert quality._runtime_spans("src/live.ts", source, spans) == spans
+    assert spans

@@ -1371,6 +1371,12 @@ def _runtime_spans(
             "type_alias_declaration",
             "comment",
         }:
+            if (
+                node.type != "comment"
+                and node.parent is not None
+                and node.parent.type == "export_statement"
+            ):
+                node = node.parent
             for offset in range(node.start_byte, node.end_byte):
                 if runtime[offset] not in (10, 13):
                     runtime[offset] = 32
