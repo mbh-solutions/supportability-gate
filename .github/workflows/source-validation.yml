@@ -43,9 +43,6 @@ jobs:
       - name: Ruff lint
         run: python -m ruff check src tests --no-cache
 
-      - name: Verify literal authorization supervisor matches candidate runtime
-        run: python -P tests/verify_authorization_pin.py
-
       - name: Ruff format
         run: python -m ruff format --check src tests --no-cache
 

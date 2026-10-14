@@ -10,7 +10,7 @@ preparation. Use a fictional repository such as `example-org/order-service` when
   permission to select repositories and branches. The Gate does not emulate an unavailable feature.
 - Identify the already qualified Gate workflow revision. Enrollment must use a full trusted commit
   SHA, not a moving branch or an unqualified candidate.
-- Confirm who can provide the existing trusted-owner authorization when a change requires it.
+- Agree on the work with the owner; the Gate will verify technical evidence, not human code review.
   Repository admin status alone does not confer that identity; see [Refactor Authorization](Refactor-Authorization.md).
 
 ## 2. Prepare the repository baseline
@@ -54,12 +54,12 @@ repository's rule; see [Validation and Protection](Validation-and-Protection.md)
 ## 4. Make the first protected change
 
 1. Make a small, real change and refresh the review evidence for its exact changed boundaries.
-2. Open a pull request. Supply exact-change owner authorization if the applicable refactor policy
-   requires it; it must bind the current base and head.
+2. Open a pull request with current source-bound intent and evidence. No owner approval comment
+   or event receiver is required.
 3. Inspect all eight check results and the attached canonical evidence. A local green result or
    aggregate summary cannot replace a required lane.
 4. Resolve policy defects or evidence/runtime failures using [Troubleshooting](Troubleshooting.md).
-   Every new push needs fresh evidence and checks; refresh stale authorization when necessary.
+   Every new push needs fresh evidence and checks.
 5. Merge normally only after required checks and native thread resolution pass on the final head.
 
 Follow the [Pull Request Lifecycle](Pull-Request-Lifecycle.md) for the full process. No repository

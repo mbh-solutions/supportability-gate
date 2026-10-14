@@ -2,44 +2,10 @@
 
 ## Authorization event receiver
 
-An enrolled repository needs a small event receiver on its default branch to resume authorization
-without rerunning captured tests. Organization-required workflows support pull-request events but
-cannot subscribe to issue comments. The receiver contains no policy or consumer commands; it calls
-the shared reusable workflow at the same full, qualified revision as the organization-required
-workflow. Keep the existing eight required check names and their GitHub Actions App binding.
-
-```yaml
-name: Supportability Authorization Events
-on:
-  issue_comment:
-    types: [created, edited, deleted]
-  workflow_run:
-    workflows: [Organization Required Supportability Gate]
-    types: [completed]
-permissions:
-  actions: read
-  checks: write
-  contents: read
-  issues: read
-  pull-requests: read
-concurrency:
-  group: supportability-authorization-${{ github.event.issue.number || github.event.workflow_run.pull_requests[0].number || github.run_id }}
-  cancel-in-progress: false
-jobs:
-  resume:
-    if: github.event_name == 'workflow_run' || github.event.issue.pull_request
-    uses: mbh-solutions/supportability-gate/.github/workflows/authorization-resume.yml@FULL_QUALIFIED_COMMIT_SHA
-```
-
-Replace the revision placeholder with the exact qualified deployment SHA; do not use a branch or
-tag. No cross-repository secret, bot service, administrative bypass, or additional required check
-is needed. `checks: write` is confined to the shared publication job. The static evaluation job
-has read-only permissions and does not execute consumer code. Consumer changes to this receiver
-do not replace or disable the organization-required workflow or its eight required contexts.
-
-The completion event closes the race between a comment and the initial evidence upload. See
-[Pull Request Lifecycle](Pull-Request-Lifecycle.md#authorization-continuation) for retained identities,
-freshness checks, failure handling, and evidence-expiration limits.
+No event receiver is needed under the current work-authorization policy. The organization-level
+workflow evaluates technical evidence directly. Historical receivers pinned to older releases
+cannot authorize new-policy runs; remove them through normal repository delivery when upgrading.
+See [Refactor Authorization](Refactor-Authorization.md) for the owner's role and retained proof.
 
 Each enrolled repository commits three fixed inputs. The contract establishes supported source
 scope; review evidence describes the actual change; characterization declares executable proof.
@@ -301,7 +267,7 @@ empty array for ordinary or function-only rows. A module row supplies a sorted, 
 public synchronous APIs from the same covered Python file, including its primary `api`. Each
 declared root counts toward schema 4's fixed global limit of 100 observed APIs, including
 ordinary/function-only rows. Roots must be globally unique and each declared root must execute
-as an actual root. Schemas 1–3 retain their 50-API limit; total scenarios remain limited to 64.
+as an actual root. Schemas 1Ã¢â‚¬â€œ3 retain their 50-API limit; total scenarios remain limited to 64.
 
 Retain a `$` behavior obligation targeting the primary API. A second `$` behavior obligation may
 target that exact source filepath. File coverage requires a complete source/function/code inventory
@@ -353,9 +319,8 @@ Module review records use schema `2.0`, retaining all ordinary review fields and
 panel, complete function/enum inventory and raw module-oracle bytes. Authenticated introduction grants
 must bind those same three fields in addition to the existing source/driver/oracle/review pins.
 Authorization schema `4.0` preserves these requirements and admits at most 100 actual roots
-only when joined to result `v4`. The measured authorization retains this version through both
-owner joins. Existing authorization versions retain their 50-root limits and byte behavior.
-Existing whole-file birth, anti-copy, no-retirement, independent-review, exact-head authorization,
+only when joined to result `v4`. Historical authorization artifacts retain their recorded limits and byte behavior.
+Existing whole-file birth, anti-copy, no-retirement, sealed-review, exact-head evidence,
 golden preservation, resource and quality protections remain mandatory.
 
 The fixed producer returns capture/result schema `v4` for schema-4 manifests. Existing manifests
@@ -375,7 +340,7 @@ module evidence still fails closed; limits cannot be selected by a consumer repo
 
 The fixed manifest capacity is 64 total scenarios, including at most 50 observed Python API
 scenarios. The Gate rejects larger manifests before target execution. Serialized results retain
-the same 64-scenario limit; observed API facts and owner introduction grants remain limited to
+the same 64-scenario limit; observed API facts remain limited to
 50 each. A manifest supports at most 200 obligations. These are resource bounds, not permission
 to omit required behavior or combine distinct API identities into one proof.
 
@@ -413,8 +378,8 @@ Commit a separately reviewed intended-oracle record at
 `tests/characterization/new-total.review.json` with exactly `schema_version: "1.0"`, `api`,
 `source_sha256`, `driver_sha256`, `oracle_sha256`, `intended_feature`, `reviewer` and
 `verdict: "ACCEPTED"`. SHA-256 fields bind the actual source/driver/golden file bytes. The review
-record is a declared review artifact, with its independence and intent authenticated by the
-existing owner control; the Gate does not judge prose or reviewer independence.
+record is an author-declared review artifact with validated source binding. Neither the
+record nor an owner credential establishes independent human review.
 
 The Gate derives introduction from exact Git absence of the whole file at base and exact source
 presence at head. Only genuinely added files qualify; copied or renamed source, existing paths,
@@ -422,8 +387,7 @@ and changes simultaneously retiring/moving production paths or function identiti
 the initial birth route. Existing function identities in modified production files must remain
 present, so padding a moved function below Git's copy threshold cannot make it introduced.
 The authenticated base capture records absence and no execution command. The head runs the
-observer twice and must match the sealed intended oracle. The exact owner authorization also
-pins this introduction; see [Refactor Authorization](Refactor-Authorization.md).
+observer twice and must match the sealed intended oracle. No duplicate owner grant is needed; see [Refactor Authorization](Refactor-Authorization.md).
 
 After merge, the same observed scenario runs twice at both base and head and must preserve its
 observations. Existing scenario/obligation identities cannot be relabeled, and admitted driver,
@@ -472,9 +436,8 @@ Commit the schema-5 correction manifest, drivers, goldens, review and source rec
 before production implementation. Both the driver and golden must be listed among the
 frozen oracle files. The base collector records Git-derived absence explicitly; it does
 not execute the candidate as a substitute base. The head runs twice and must match the
-frozen golden and source-bound execution witnesses. Exact schema-5 owner authorization
-is still required. A false absence, missing execution, replay drift or mismatch cannot
-be reconciled by authorization.
+frozen golden and source-bound execution witnesses. Frozen oracle history and exact observed-delta evidence are still required. A false absence, missing execution, replay drift or mismatch cannot
+be reconciled by a correction declaration.
 
 After introduction, both sides execute against their real source revisions and the same
 goldens protect later behavior. A baseline group's file inventory cannot be narrowed or
@@ -483,7 +446,7 @@ to an already populated production tree.
 
 Later corrections to existing production content use the same schema-5 correction transaction
 with [whole-file asset targets](Refactor-Authorization.md#content-only-corrections). Both real
-revisions are captured, and the expected content and exact owner approval remain mandatory.
+revisions are captured, and the expected content and exact technical evidence remain mandatory.
 
 Schema `5.0` preserves schema 4 and adds a closed `corrections` collection. A correction has one
 stable ID and exact sorted scenario, obligation and production-target identities. Its
@@ -508,18 +471,18 @@ and handoff evidence.
 
 A declared changed behavior obligation can prove coverage when both sides execute meaningful
 cases and the corrected head matches its frozen golden. Its raw compatibility result remains
-`BLOCK` until the correction receives exact owner authorization. Missing execution, replay drift,
+`BLOCK` in the raw capture; only verified declared corrections are reconciled in the final result. Missing execution, replay drift,
 golden mismatch and every other technical block prevent correction coverage credit.
 
 The raw characterization blocks remain in retained evidence. Only the exact declared instances of
 `CHANGED_CHARACTERIZATION_DEFINITION`, `CHANGED_GOLDEN_OUTPUT` and
-`INCOMPATIBLE_POST_CHANGE_BEHAVIOR` can be reconciled after schema-5 owner authorization joins the
+`INCOMPATIBLE_POST_CHANGE_BEHAVIOR` can be reconciled after the technical verifier joins the
 oracle commit, manifest blob/hash, final head and canonical observed-delta digest. Golden mismatch,
 execution failure, missing execution or coverage, quality failure, malformed evidence, stale
-authorization and missing handoff evidence are never reconciled.
+source identities and missing handoff evidence are never reconciled.
 
 An unchanged schema-5 manifest has no active correction and follows the ordinary preservation
-path. Existing schema 1–4 manifests keep their existing decisions and wire formats.
+path. Existing schema 1Ã¢â‚¬â€œ4 manifests keep their existing decisions and wire formats.
 
 The refactor and final-result readers select the schema-4 or schema-5 aggregate transport from
 the exact-head Git manifest. The existing 32,000,000-byte limit and duplicate-key rejection apply

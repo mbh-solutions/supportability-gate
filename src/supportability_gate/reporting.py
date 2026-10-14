@@ -330,13 +330,8 @@ def _evidence_classes(entry: dict[str, object], sources: list[str]) -> dict[str,
         if ":review_evidence." in source and "review_evidence_binding" not in source
     ]
     measured = [source for source in sources if source not in declarations]
-    owner_attestations = (
-        ["refactor-policy-result.json:authorization"]
-        if entry["result"] == "PASS" and entry["standard"] in {6, 8}
-        else []
-    )
     return {
-        "authenticated_owner_attestation": owner_attestations,
+        "authenticated_owner_attestation": [],
         "author_declaration": declarations,
         "measured_fact": measured,
     }

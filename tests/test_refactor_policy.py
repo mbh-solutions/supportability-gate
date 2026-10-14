@@ -172,6 +172,52 @@ def test_schema5_authorization_parses_exact_correction_identity() -> None:
     assert parsed.behavior_delta_sha256 == "2" * 64
 
 
+@pytest.mark.parametrize(
+    "language,path",
+    [("python", "src/sample.py"), ("typescript", "src/sample.ts"), ("tsx", "src/sample.tsx")],
+)
+def test_work_policy_needs_no_owner_comment(tmp_path: Path, language: str, path: str) -> None:
+    repository, base, head = _repository(tmp_path, language)
+    event = _event(base, head, None)
+    capture = _characterization(base, head, [path])
+    _verify(repository, event, capture)  # populate real Git-derived runnability only
+    result = refactor_policy.verify_work(repository, event, capture)
+    assert result["overall_result"] == "PASS"
+    assert result["schema_version"] == "refactor-policy-result.v2"
+    assert "authorization" not in result
+    assert "authorization_comment_id" not in result
+    assert result["targets"] == list(_derived_targets(repository, base, head)[0])
+    event["pull_request"]["body"] = "Supportability-Refactor-Authorization: malformed"  # type: ignore[index]
+    assert refactor_policy.verify_work(repository, event, capture) == result
+
+
+@pytest.mark.parametrize(
+    "fault,expected",
+    [
+        ("stale", "STALE_RUNNABILITY_EVIDENCE"),
+        ("missing", "UNAUTHENTICATED_RUNNABILITY_EVIDENCE"),
+        ("coverage", "MISSING_RUNNABILITY_COVERAGE"),
+        ("runnable", "NON_RUNNABLE_LOGICAL_STEP"),
+    ],
+)
+def test_work_policy_keeps_technical_failures(tmp_path: Path, fault: str, expected: str) -> None:
+    repository, base, head = _repository(tmp_path)
+    event = _event(base, head, None)
+    capture = _characterization(base, head, ["src/sample.py"])
+    _verify(repository, event, capture)
+    if fault == "stale":
+        capture["head_sha"] = "e" * 40
+    elif fault == "missing":
+        del capture["refactor_runnability"]
+    elif fault == "coverage":
+        capture["coverage"] = {"covered_paths": [], "required_paths": ["src/sample.py"]}
+    else:
+        capture["refactor_runnability"]["runnable"] = False  # type: ignore[index]
+    result = refactor_policy.verify_work(repository, event, capture)
+    assert result["overall_result"] == "BLOCK"
+    assert expected in result["policy_blocks"]
+
+
 @pytest.mark.parametrize("restore", ["none", "linear", "merged-branch"])
 @pytest.mark.parametrize(
     "modified_path",
@@ -255,6 +301,12 @@ def test_correction_transaction_freezes_oracle_before_implementation(
     policy = contract.parse_contract((repository / ".supportability.toml").read_bytes())
     records: list[git_changes.CommandRecord] = []
 
+    receipt, work_blocks = refactor_policy.correction_evidence(
+        repository, policy, base_sha, head_sha, {"correction": correction}, records
+    )
+    assert work_blocks == []
+    assert receipt is not None and receipt["oracle_commit_sha"] == oracle_sha
+
     blocks, _, _ = refactor_policy._correction_transaction_blocks(
         repository,
         policy,
@@ -298,6 +350,10 @@ def test_correction_transaction_freezes_oracle_before_implementation(
     )
 
     assert "MODIFIED_CORRECTION_ORACLE" in blocks
+    _, work_blocks = refactor_policy.correction_evidence(
+        repository, policy, base_sha, modified_head, {"correction": correction}, records
+    )
+    assert "MODIFIED_CORRECTION_ORACLE" in work_blocks
 
 
 def test_correction_history_git_failure_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1639,7 +1695,7 @@ def test_current_authorization_evidence_failure_is_a_gate_six_block(
     if failure == "api":
         monkeypatch.setattr(refactor_policy, "_github_comments", fail_comments)
 
-    exit_code = refactor_policy.main(
+    exit_code = refactor_policy.legacy_main(
         [
             "--repository",
             str(repository),
@@ -2121,7 +2177,7 @@ def test_main_checks_predecessor_before_allowing_step_one(
 
     monkeypatch.setattr(refactor_policy, "verify_refactor", verify)
 
-    exit_code = refactor_policy.main(
+    exit_code = refactor_policy.legacy_main(
         [
             "--repository",
             str(tmp_path),
@@ -2159,7 +2215,7 @@ def test_refactor_result_is_independent_of_connector_completion(
     )
     monkeypatch.setattr(refactor_policy, "verify_refactor", lambda *args: result)
 
-    exit_code = refactor_policy.main(
+    exit_code = refactor_policy.legacy_main(
         [
             "--repository",
             str(tmp_path),
@@ -2174,3 +2230,37 @@ def test_refactor_result_is_independent_of_connector_completion(
 
     assert exit_code == 1
     assert json.loads(output.read_text(encoding="utf-8")) == result
+
+
+def test_current_hosted_entry_does_not_fetch_owner_comments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RUNNER_ENVIRONMENT", "github-hosted")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    event = tmp_path / "event.json"
+    event.write_text("{}")
+    monkeypatch.setattr(refactor_policy, "_read_characterization_result", lambda *args: ({}, b""))
+    monkeypatch.setattr(refactor_policy, "verify_work", lambda *args: {"overall_result": "PASS"})
+
+    def forbidden(*args: object) -> None:
+        raise AssertionError("Owner comment lookup must not run")
+
+    monkeypatch.setattr(refactor_policy, "_github_comments", forbidden)
+    output = tmp_path / "result.json"
+    assert (
+        refactor_policy.main(
+            [
+                "--repository",
+                str(tmp_path),
+                "--event",
+                str(event),
+                "--characterization-result",
+                str(tmp_path / "capture.json"),
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    assert json.loads(output.read_bytes()) == {"overall_result": "PASS"}
